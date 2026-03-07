@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Редактировать документ{% else %}Добавить документ{% endif %} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'works:list' %}">Работы</a>
+<span>/</span>
+{% if object %}
+<a href="{% url 'works:detail' object.work_id %}">Работа</a>
+<span>/</span>
+<span class="breadcrumb-current">Редактировать документ</span>
+{% else %}
+<span class="breadcrumb-current">Добавить документ</span>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% if object %}Редактировать документ{% else %}Добавить документ{% endif %}</h1>
+</div>
+
+<div class="form-container">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert-error">
+      {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+    </div>
+    {% endif %}
+
+    {% for field in form %}
+    <div class="form-group {% if field.errors %}has-error{% endif %}">
+      <label>{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<span class="form-error">{{ field.errors.0 }}</span>{% endif %}
+      {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      <a href="javascript:history.back()" class="btn btn-outline">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

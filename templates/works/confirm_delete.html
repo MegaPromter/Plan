@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Удаление — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'works:list' %}">Работы</a>
+<span>/</span>
+<span class="breadcrumb-current">Удаление</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Подтверждение удаления</h1>
+</div>
+
+<div class="confirm-box">
+  <p>Вы уверены, что хотите удалить <strong>{{ object }}</strong>?</p>
+  <p class="confirm-warning">Это действие необратимо.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Удалить</button>
+      <a href="javascript:history.back()" class="btn btn-outline">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

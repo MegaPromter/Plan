@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}План отпусков — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">План отпусков</span>
+{% endblock %}
+
+{% block nav_vacation_plan %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <a href="{% url 'employees:list' %}" class="btn btn-outline btn-sm">
+    <i class="fas fa-user"></i> К сотрудникам
+  </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>План отпусков</h1>
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." class="filter-input">
+  <input type="text" name="dept" value="{{ request.GET.dept }}" placeholder="Код отдела" class="filter-input filter-input--sm">
+  <select name="year" class="filter-select">
+    <option value="">Все годы</option>
+    {% for y in years %}
+      <option value="{{ y }}" {% if request.GET.year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Найти</button>
+  <a href="{% url 'employees:vacation_plan' %}" class="btn btn-outline">Сброс</a>
+</form>
+
+{% if vacations %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th style="width:36px;">№</th>
+      <th>ФИО</th>
+      <th>Отдел</th>
+      <th>Должность</th>
+      <th style="white-space:nowrap;">Дата начала</th>
+      <th style="white-space:nowrap;">Дата окончания</th>
+      <th>Примечание</th>
+      <th style="width:48px;"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in vacations %}
+    <tr>
+      <td class="text-muted">{{ forloop.counter }}</td>
+      <td>
+        <a href="{% url 'employees:detail' v.employee.pk %}">{{ v.employee.full_name }}</a>
+      </td>
+      <td style="font-size:13px;">{{ v.employee.department|default:"—" }}</td>
+      <td style="font-size:13px;">{{ v.employee.get_position_display|default:"—" }}</td>
+      <td style="font-size:13px;white-space:nowrap;">{{ v.date_start|default:"—" }}</td>
+      <td style="font-size:13px;white-space:nowrap;">{{ v.date_end|default:"—" }}</td>
+      <td style="font-size:13px;color:var(--muted);">{{ v.notes|default:"—" }}</td>
+      <td>
+        {% if request.user|is_writer %}
+          <a href="{% url 'employees:vacation_edit' v.pk %}" class="btn btn-sm btn-outline" title="Редактировать">
+            <i class="fas fa-edit"></i>
+          </a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}{% if request.GET.year %}year={{ request.GET.year }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="page-link active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}{% if request.GET.year %}year={{ request.GET.year }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}{% if request.GET.year %}year={{ request.GET.year }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
+  {% endif %}
+  <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (всего {{ page_obj.paginator.count }})</span>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="fas fa-calendar-times"></i></div>
+  <p>Отпусков не найдено</p>
+</div>
+{% endif %}
+{% endblock %}

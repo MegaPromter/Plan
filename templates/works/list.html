@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}
+  {% if request.GET.source == 'pp' %}Производственный план{% else %}План/отчёт{% endif %} — Система управления
+{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">
+  {% if request.GET.source == 'pp' %}Производственный план{% else %}План/отчёт{% endif %}
+</span>
+{% endblock %}
+
+{% block nav_tasks %}{% if request.GET.source != 'pp' %}active{% endif %}{% endblock %}
+{% block nav_pp %}{% if request.GET.source == 'pp' %}active{% endif %}{% endblock %}
+
+{% block topbar_actions %}
+  {% if request.user|is_writer %}
+    <a href="{% url 'works:create' %}{% if request.GET.source %}?source={{ request.GET.source }}{% endif %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus"></i> Добавить
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Filter bar -->
+<form method="get" class="filter-bar">
+  {% if request.GET.source %}
+    <input type="hidden" name="source" value="{{ request.GET.source }}">
+  {% endif %}
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="🔍 Поиск по названию, исполнителю...">
+  <select name="dept">
+    <option value="">Все отделы</option>
+    {% for dept in departments %}
+      <option value="{{ dept.code }}" {% if request.GET.dept == dept.code %}selected{% endif %}>{{ dept.code }} — {{ dept.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="year">
+    <option value="">Все годы</option>
+    {% for y in years %}
+      <option value="{{ y }}" {% if request.GET.year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i class="fas fa-filter"></i> Применить
+  </button>
+  <a href="{% url 'works:list' %}{% if request.GET.source %}?source={{ request.GET.source }}{% endif %}" class="btn btn-outline btn-sm">
+    <i class="fas fa-times"></i> Сбросить
+  </a>
+</form>
+
+<!-- Table -->
+<div class="section">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:36px;">№</th>
+          <th style="width:46px;">Тип</th>
+          <th>Отдел</th>
+          <th>Сектор</th>
+          <th>Проект</th>
+          <th>Этап</th>
+          <th>Обоснование</th>
+          <th>Обозначение</th>
+          <th>Наименование</th>
+          <th>№ работы</th>
+          <th>ФИО сотрудника/ план(ч)</th>
+          <th style="white-space:nowrap;">Дата начала</th>
+          <th style="white-space:nowrap;">Дата окончания</th>
+          <th style="white-space:nowrap;">Срок по ПП/ПГ/ТР</th>
+          {% if request.user|is_writer %}<th>Действия</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for work in works %}
+        <tr>
+          <td style="color:var(--muted);font-size:12px;">{{ forloop.counter }}</td>
+          <td>
+            {% if work.source_type == 'task' %}
+              <span class="badge badge-blue">ПО</span>
+            {% else %}
+              <span class="badge badge-green">ПП</span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">{% if work.department %}{{ work.department.code }}{% else %}—{% endif %}</td>
+          <td style="font-size:13px;">{% if work.sector %}{{ work.sector.code }}{% else %}—{% endif %}</td>
+          <td style="font-size:13px;">{% if work.project %}{{ work.project.name|truncatechars:30 }}{% else %}—{% endif %}</td>
+          <td style="font-size:13px;">
+            {% if work.source_type == 'task' %}{% with td=work.task_detail %}{% if td %}{{ td.stage|default:"—" }}{% else %}—{% endif %}{% endwith %}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:13px;max-width:160px;">
+            {% if work.source_type == 'task' %}{% with td=work.task_detail %}{% if td %}{{ td.justification|default:"—"|truncatechars:40 }}{% else %}—{% endif %}{% endwith %}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:13px;">{{ work.work_number|default:"—" }}</td>
+          <td>
+            <a href="{% url 'works:detail' work.pk %}" style="color:var(--text);text-decoration:none;font-weight:500;">
+              {{ work.work_name|default:"—"|truncatechars:60 }}
+            </a>
+          </td>
+          <td style="color:var(--text2);font-size:13px;">{{ work.work_number|default:"—" }}</td>
+          <td style="font-size:13px;">{{ work.executor_name_raw|default:"—" }}</td>
+          <td style="color:var(--text2);font-size:13px;white-space:nowrap;">{{ work.date_start|default:"—" }}</td>
+          <td style="color:var(--text2);font-size:13px;white-space:nowrap;">{{ work.date_end|default:"—" }}</td>
+          <td style="color:var(--text2);font-size:13px;white-space:nowrap;">{{ work.deadline|default:"—" }}</td>
+          {% if request.user|is_writer %}
+          <td style="white-space:nowrap;">
+            <a href="{% url 'works:edit' work.pk %}" class="btn btn-sm btn-outline" title="Редактировать">
+              <i class="fas fa-edit"></i>
+            </a>
+            <a href="{% url 'works:delete' work.pk %}" class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" title="Удалить">
+              <i class="fas fa-trash"></i>
+            </a>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr class="empty">
+          <td colspan="{% if request.user|is_writer %}15{% else %}14{% endif %}">
+            <div class="empty-state">
+              <div class="empty-icon"><i class="fas fa-tasks"></i></div>
+              <div class="empty-title">Записей не найдено</div>
+              <div class="empty-desc">Попробуйте изменить фильтры или добавьте первую запись</div>
+              {% if request.user|is_writer %}
+                <a href="{% url 'works:create' %}{% if request.GET.source %}?source={{ request.GET.source }}{% endif %}" class="btn btn-primary">
+                  <i class="fas fa-plus"></i> Добавить
+                </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?{% if request.GET.source %}source={{ request.GET.source }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ page_obj.previous_page_number }}">&laquo;</a>
+  {% else %}
+    <span class="disabled">&laquo;</span>
+  {% endif %}
+
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="current">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?{% if request.GET.source %}source={{ request.GET.source }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ num }}">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {% if page_obj.has_next %}
+    <a href="?{% if request.GET.source %}source={{ request.GET.source }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ page_obj.next_page_number }}">&raquo;</a>
+  {% else %}
+    <span class="disabled">&raquo;</span>
+  {% endif %}
+  <span style="color:var(--muted);font-size:13px;margin-left:8px;">Всего: {{ paginator.count }}</span>
+</div>
+{% endif %}
+
+{% endblock %}

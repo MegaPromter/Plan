@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Редактировать KPI{% else %}Добавить KPI{% endif %} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'employees:list' %}">Сотрудники</a>
+<span>/</span>
+<a href="{% url 'employees:detail' employee.pk %}">{{ employee.short_name }}</a>
+<span>/</span>
+<a href="{% url 'employees:kpi_list' employee.pk %}">KPI</a>
+<span>/</span>
+{% if form.instance.pk %}
+<span class="breadcrumb-current">Редактировать</span>
+{% else %}
+<span class="breadcrumb-current">Добавить</span>
+{% endif %}
+{% endblock %}
+
+{% block nav_employees %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% if form.instance.pk %}Редактировать KPI{% else %}Добавить KPI{% endif %}</h1>
+    <p class="text-muted">{{ employee.full_name }}</p>
+  </div>
+</div>
+
+<div class="form-container">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert-error">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group {% if form.year.errors %}has-error{% endif %}">
+        <label>{{ form.year.label }}</label>
+        {{ form.year }}
+        {% if form.year.errors %}<span class="form-error">{{ form.year.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.month.errors %}has-error{% endif %}">
+        <label>{{ form.month.label }}</label>
+        {{ form.month }}
+        {% if form.month.errors %}<span class="form-error">{{ form.month.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group {% if form.plan_hours.errors %}has-error{% endif %}">
+        <label>{{ form.plan_hours.label }}</label>
+        {{ form.plan_hours }}
+        {% if form.plan_hours.errors %}<span class="form-error">{{ form.plan_hours.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.fact_hours.errors %}has-error{% endif %}">
+        <label>{{ form.fact_hours.label }}</label>
+        {{ form.fact_hours }}
+        {% if form.fact_hours.errors %}<span class="form-error">{{ form.fact_hours.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group {% if form.norm_control_remarks.errors %}has-error{% endif %}">
+        <label>{{ form.norm_control_remarks.label }}</label>
+        {{ form.norm_control_remarks }}
+        {% if form.norm_control_remarks.errors %}<span class="form-error">{{ form.norm_control_remarks.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.docs_issued.errors %}has-error{% endif %}">
+        <label>{{ form.docs_issued.label }}</label>
+        {{ form.docs_issued }}
+        {% if form.docs_issued.errors %}<span class="form-error">{{ form.docs_issued.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group {% if form.score.errors %}has-error{% endif %}">
+        <label>{{ form.score.label }}</label>
+        {{ form.score }}
+        {% if form.score.errors %}<span class="form-error">{{ form.score.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group"></div>
+    </div>
+
+    <div class="form-group {% if form.notes.errors %}has-error{% endif %}">
+      <label>{{ form.notes.label }}</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<span class="form-error">{{ form.notes.errors.0 }}</span>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      <a href="{% url 'employees:kpi_list' employee.pk %}" class="btn btn-outline">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

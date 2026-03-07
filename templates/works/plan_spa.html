@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>План/отчёт — Система управления</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e1117; --surface: #161b27; --surface2: #1e2536;
+  --border: #2a3347; --border2: #3a4a63;
+  --accent: #3b82f6; --accent2: #1d4ed8; --accent-glow: rgba(59,130,246,0.15);
+  --text: #e2e8f0; --muted: #64748b; --muted2: #94a3b8;
+  --danger: #ef4444; --success: #22c55e; --warning: #f59e0b;
+  --font: 'IBM Plex Sans', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --header-h: 56px; --toolbar-h: 100px; --search-h: 42px;
+  --sidebar-width: 260px;
+}
+.sidebar { position:fixed; top:0; left:0; width:var(--sidebar-width); height:100vh; min-height:100vh;
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:200; transition:transform 0.3s ease; overflow:hidden; }
+.sidebar.collapsed { transform:translateX(-100%); }
+.sidebar-header { padding:20px; border-bottom:1px solid var(--border); }
+.sidebar-logo { display:flex; align-items:center; gap:12px; font-size:22px; font-weight:700; color:var(--text); text-decoration:none; }
+.sidebar-logo-icon { width:36px; height:36px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+.sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; }
+.nav-section { margin-bottom:24px; }
+.nav-section-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; padding:0 12px; margin-bottom:8px; }
+.nav-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; color:var(--muted2); text-decoration:none; font-size:14px; font-weight:500; transition:all 0.15s ease; margin-bottom:4px; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent-glow); color:var(--accent); }
+.nav-item i { width:20px; text-align:center; font-size:16px; }
+.nav-section-btn { font-size:13px; font-weight:600; color:var(--muted); }
+.nav-section-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-section-btn.active { background:var(--accent-glow); color:var(--accent); }
+.nav-subitem { padding-left:28px; font-size:13px; }
+.nav-dropdown { margin-bottom:4px; }
+.nav-dropdown-toggle { width:100%; background:none; border:none; cursor:pointer; font-family:inherit; justify-content:flex-start; }
+.nav-chevron { margin-left:auto !important; width:auto !important; font-size:11px !important; transition:transform 0.2s; }
+.nav-dropdown-toggle.open .nav-chevron { transform:rotate(180deg); }
+.nav-dropdown-menu { display:none; }
+.nav-dropdown-menu.open { display:block; }
+.sidebar-footer { padding:16px; border-top:1px solid var(--border); }
+.user-card { display:flex; align-items:center; gap:12px; padding:12px; background:var(--surface2); border-radius:10px; }
+.user-avatar { width:40px; height:40px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px; }
+.user-info { flex:1; min-width:0; }
+.user-name { font-weight:600; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-role { font-size:12px; color:var(--muted); }
+.logout-btn { width:36px; height:36px; border:none; background:transparent; color:var(--muted); border-radius:8px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
+.logout-btn:hover { background:rgba(239,68,68,0.1); color:var(--danger); }
+.sidebar-toggle { display:flex; width:36px; height:36px; border:none; background:var(--surface2); color:var(--text); border-radius:8px; cursor:pointer; font-size:20px; align-items:center; justify-content:center; margin-right:8px; }
+.sidebar-toggle:hover { background:var(--accent); }
+body { background: var(--bg); font-family: var(--font); color: var(--text); font-size:17px; overflow-x: hidden; }
+.topbar { position:fixed; top:0; left:var(--sidebar-width); right:0; z-index:100; height:var(--header-h);
+  background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:16px; transition:left 0.3s ease; }
+.topbar.sidebar-collapsed { left:0; }
+.topbar-logo { display:flex; align-items:center; gap:10px; font-weight:700; font-size:32px; position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; }
+.topbar-logo span { font-size:24px; }
+.topbar-sep { flex:1; }
+.topbar-user { font-size:16px; color:var(--muted2); background:var(--surface2);
+  border:1px solid var(--border); padding:5px 12px; border-radius:6px; }
+.topbar-btn { padding:6px 14px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--muted2); font-family:var(--font);
+  font-size:16px; cursor:pointer; transition:all 0.15s; }
+.topbar-btn:hover { border-color:var(--accent); color:var(--text); }
+.topbar-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.topbar-btn.primary:hover { background:var(--accent2); }
+.topbar-btn.danger { border-color:var(--danger); color:var(--danger); }
+.toolbar { position:fixed; top:var(--header-h); left:var(--sidebar-width); right:0; z-index:90;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; min-height:var(--toolbar-h); transition:left 0.3s ease; }
+.toolbar.sidebar-collapsed { left:0; }
+.cal-block { display:flex; align-items:center; gap:8px; }
+.cal-label { font-size:15px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; }
+.cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--muted2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:18px; transition:all 0.15s; }
+.cal-nav:hover { border-color:var(--accent); color:var(--text); }
+.cal-display { min-width:130px; text-align:center; font-size:18px; font-weight:600;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 14px; color:var(--text); }
+.cal-months { display:flex; gap:4px; flex-wrap:wrap; }
+.cal-month { padding:4px 10px; border-radius:5px; font-size:15px; cursor:pointer;
+  border:1px solid transparent; color:var(--muted2); transition:all 0.15s; }
+.cal-month:hover { background:var(--surface2); color:var(--text); }
+.cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.cal-clear { font-size:15px; color:var(--muted); cursor:pointer; text-decoration:underline; }
+.cal-clear:hover { color:var(--text); }
+.searchbar { position:fixed; top:calc(var(--header-h) + var(--toolbar-h)); left:var(--sidebar-width); right:0; z-index:80;
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:6px 20px; display:flex; align-items:center; gap:10px; height:var(--search-h); transition:left 0.3s ease; }
+.searchbar.sidebar-collapsed { left:0; }
+.search-icon { color:var(--muted); font-size:18px; }
+.search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:17px; }
+.search-input::placeholder { color:var(--muted); }
+.search-count { font-size:15px; color:var(--muted); font-family:var(--mono); }
+.table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h)); margin-left:var(--sidebar-width);
+  overflow-x:auto; overflow-y:auto; padding-bottom:52px;
+  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h)); transition:margin-left 0.3s ease; }
+.table-wrap.sidebar-collapsed { margin-left:0; }
+table { border-collapse:collapse; min-width:2400px; width:100%; font-size:16px; }
+thead th { position:sticky; top:0; z-index:10; background:#0d1520;
+  border-bottom:2px solid var(--accent); border-right:1px solid rgba(255,255,255,0.35); padding:0; white-space:nowrap; }
+.th-inner { padding:10px 8px; font-size:15px; font-weight:600; color:var(--muted2);
+  letter-spacing:0.04em; text-transform:uppercase;
+  display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
+.th-num { background:#080d14; min-width:40px; width:40px; }
+.col-resize { width:10px; cursor:col-resize; flex-shrink:0;
+  border-right:2px solid transparent; transition:border-color 0.15s;
+  position:absolute; right:-5px; top:0; bottom:0; z-index:20; }
+.col-resize:hover { border-color:var(--accent); }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+tbody tr:hover { background:rgba(59,130,246,0.04); }
+tbody tr.new-row { background:rgba(34,197,94,0.05); animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1} }
+td { border-right:1px solid var(--border); padding:0; vertical-align:top; }
+td.num-cell { text-align:center; color:var(--muted); font-family:var(--mono);
+  font-size:15px; padding:8px 4px; width:40px; min-width:40px; background:rgba(0,0,0,0.2); }
+.cell-edit { width:100%; min-height:36px; padding:7px 8px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:16px; resize:none; overflow:hidden; display:block; }
+.cell-edit:focus { background:rgba(59,130,246,0.06); }
+.cell-edit.date { font-family:var(--mono); font-size:15px; min-width:120px; }
+.cell-select { width:100%; padding:7px 8px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:16px; cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
+.cell-select:focus { background-color:rgba(59,130,246,0.06); }
+.cell-select option { background:var(--surface); color:var(--text); }
+.btn-edit-row { padding:4px 8px; border-radius:5px; border:1px solid var(--border2);
+  background:transparent; color:var(--muted2); font-size:16px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.btn-edit-row:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+.btn-report { padding:4px 10px; border-radius:5px; border:1px solid var(--accent);
+  background:var(--accent-glow); color:var(--accent); font-size:15px;
+  cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
+.btn-report:hover { background:var(--accent); color:#fff; }
+.btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.btn-del:hover { background:rgba(239,68,68,0.1); }
+.btn-reset-pw { padding:4px 8px; border-radius:5px; border:1px solid rgba(245,158,11,0.3);
+  background:transparent; color:var(--warning); font-size:15px; cursor:pointer; font-family:var(--font); transition:all 0.15s; margin-right:4px; }
+.btn-reset-pw:hover { background:rgba(245,158,11,0.1); }
+.actions-cell { padding:6px 8px; display:flex; gap:4px; align-items:center; }
+tr.pp-locked { background: rgba(59,130,246,0.03); }
+tr.pp-locked .cell-edit[readonly],
+tr.pp-locked .cell-edit:disabled {
+  background: transparent; border-color: transparent;
+  color: var(--text); cursor: default; resize: none; pointer-events: none;
+}
+tr.pp-locked .cell-select:disabled {
+  background: transparent; border-color: transparent;
+  color: var(--text); cursor: default; pointer-events: none; opacity: 1;
+  appearance: none; -webkit-appearance: none;
+}
+tr.pp-locked .pp-lock-badge {
+  font-size: 9px; color: var(--accent); opacity: 0.7;
+  display: block; text-align: center; line-height: 1;
+  margin-top: 2px; letter-spacing: 0.02em;
+}
+.add-row-wrap { padding:12px 20px; background:var(--surface2); border-top:1px solid var(--border);
+  position:fixed; bottom:0; left:var(--sidebar-width); right:0; z-index:10000; }
+.add-row-wrap.sidebar-collapsed { left:0; }
+.btn-add { padding:7px 18px; border-radius:6px; border:1px dashed var(--border2);
+  background:transparent; color:var(--muted2); font-family:var(--font); font-size:16px; cursor:pointer; transition:all 0.15s; }
+.btn-add:hover { border-color:var(--success); color:var(--success); }
+.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  width:95vw; max-width:1100px; max-height:90vh; display:flex; flex-direction:column;
+  box-shadow:0 32px 100px rgba(0,0,0,0.6); }
+.modal-header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-title { font-size:19px; font-weight:600; }
+.modal-task-ref { font-size:15px; color:var(--muted); font-family:var(--mono); }
+.modal-close { width:30px; height:30px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--muted2); cursor:pointer; font-size:20px;
+  display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.modal-close:hover { border-color:var(--danger); color:var(--danger); }
+.modal-body { flex:1; overflow:auto; padding:16px 24px; }
+.modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.report-table-wrap { overflow-x:auto; }
+.report-table { border-collapse:collapse; min-width:1600px; width:100%; font-size:16px; }
+.report-table th { background:#0d1520; border:1px solid var(--border); padding:8px 10px;
+  font-size:14px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; }
+.report-table td { border:1px solid var(--border); padding:0; vertical-align:top; }
+.report-table .r-cell { width:100%; padding:6px 8px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:16px; min-height:32px; resize:none; overflow:hidden; display:block; }
+.report-table .r-cell:focus { background:rgba(59,130,246,0.06); }
+.r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
+.r-del:hover { background:rgba(239,68,68,0.1); }
+.users-table { width:100%; border-collapse:collapse; font-size:17px; min-width:unset; }
+.users-table th { padding:8px 12px; text-align:left; font-size:15px; color:var(--muted);
+  border-bottom:1px solid var(--border); text-transform:uppercase; }
+.users-table td { padding:8px 12px; border-bottom:1px solid var(--border); }
+.topbar-btn.errors { border-color:#f59e0b; color:#f59e0b; position:relative; }
+.topbar-btn.errors:hover { background:#f59e0b22; }
+.topbar-btn.errors.has-errors { border-color:var(--danger); color:var(--danger); animation:pulse-err 2s infinite; }
+.topbar-btn.errors.no-errors { border-color:#22c55e; color:#22c55e; }
+@keyframes pulse-err {
+  0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); }
+  50%      { box-shadow:0 0 0 4px rgba(239,68,68,0.25); }
+}
+.err-badge { display:inline-block; background:var(--danger); color:#fff;
+  border-radius:10px; font-size:14px; padding:1px 5px; margin-left:4px; font-weight:700; }
+.pe-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:500;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.pe-overlay.open { opacity:1; pointer-events:all; }
+.pe-box { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+  width:780px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,0.6); overflow:hidden; }
+.pe-header { padding:18px 24px 12px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; }
+.pe-title { font-size:20px; font-weight:700; color:var(--text); }
+.pe-meta { font-size:16px; color:var(--muted); margin-top:3px; }
+.pe-body { overflow-y:auto; flex:1; }
+.pe-section { border-bottom:1px solid var(--border); }
+.pe-section-hdr { padding:12px 20px; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; user-select:none; background:var(--surface2); }
+.pe-section-hdr:hover { background:rgba(255,255,255,0.03); }
+.pe-section-title { font-size:17px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+.pe-count-badge { background:var(--danger); color:#fff; border-radius:8px;
+  font-size:14px; padding:2px 7px; font-weight:700; }
+.pe-count-badge.warn { background:#f59e0b; }
+.pe-count-badge.ok { background:#22c55e; }
+.pe-section-body { display:none; }
+.pe-section-body.open { display:block; }
+.pe-item { padding:10px 24px; border-bottom:1px solid var(--border); display:flex;
+  align-items:flex-start; gap:12px; }
+.pe-item:last-child { border-bottom:none; }
+.pe-item-info { flex:1; }
+.pe-item-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.pe-item-meta { font-size:15px; color:var(--muted); }
+.pe-item-meta span { color:#f87171; font-weight:600; }
+.pe-item-actions { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.pe-btn { padding:4px 10px; border-radius:5px; font-size:15px; font-family:var(--font);
+  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
+  color:var(--text); transition:all 0.15s; }
+.pe-btn:hover { border-color:var(--accent); color:var(--accent); }
+.pe-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.pe-btn.primary:hover { background:var(--accent2); }
+.pe-footer { padding:12px 24px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; }
+.pe-last-check { font-size:15px; color:var(--muted); }
+.month-check-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:500;
+  display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.month-check-overlay.open { opacity:1; pointer-events:all; }
+.month-check-box { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+  width:700px; max-width:95vw; max-height:88vh; display:flex; flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,0.6); overflow:hidden; }
+.month-check-header { padding:18px 24px 14px; border-bottom:1px solid var(--border); }
+.month-check-title { font-size:20px; font-weight:700; color:var(--text); }
+.month-check-sub { font-size:16px; color:var(--muted); margin-top:4px; }
+.month-check-body { overflow-y:auto; flex:1; padding:0; }
+.mcc-task { border-bottom:1px solid var(--border); padding:16px 24px; }
+.mcc-task:last-child { border-bottom:none; }
+.mcc-task-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.mcc-task-meta { font-size:15px; color:var(--muted); margin-bottom:12px; }
+.mcc-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.mcc-btn { padding:6px 14px; border-radius:6px; font-size:16px; font-family:var(--font);
+  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
+  color:var(--text); transition:all 0.15s; white-space:nowrap; }
+.mcc-btn:hover { border-color:var(--accent); color:var(--accent); }
+.mcc-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.mcc-btn.primary:hover { background:var(--accent2); }
+.mcc-btn.danger { border-color:var(--danger); color:var(--danger); }
+.mcc-btn.danger:hover { background:var(--danger); color:#fff; }
+.mcc-btn.done { border-color:#22c55e; color:#22c55e; opacity:0.5; cursor:default; }
+.mcc-postpone-form { margin-top:10px; padding:12px; background:var(--bg);
+  border-radius:8px; border:1px solid var(--border); display:none; }
+.mcc-postpone-form.open { display:block; }
+.mcc-form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end; }
+.mcc-form-field { display:flex; flex-direction:column; gap:4px; }
+.mcc-form-field label { font-size:14px; color:var(--muted); text-transform:uppercase; font-weight:600; }
+.mcc-form-field input, .mcc-form-field select { padding:5px 8px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:5px; color:var(--text);
+  font-family:var(--font); font-size:16px; outline:none; }
+.mcc-form-field input:focus, .mcc-form-field select:focus { border-color:var(--accent); }
+.month-check-footer { padding:12px 24px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.mcc-progress { font-size:16px; color:var(--muted); }
+.mf-wrap { position:relative; width:100%; }
+.mf-trigger { width:100%; padding:4px 22px 4px 6px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:4px; color:var(--text);
+  font-family:var(--font); font-size:15px; outline:none; cursor:pointer;
+  text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:border-color 0.15s; box-sizing:border-box; }
+.mf-trigger.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+.mf-trigger::after { content:"▾"; position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  font-size:13px; color:var(--muted); pointer-events:none; }
+.mf-dropdown { position:fixed; z-index:9999; min-width:160px; max-width:240px;
+  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); padding:6px 0; display:none; max-height:260px; overflow-y:auto; }
+.mf-dropdown.open { display:block; }
+.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-size:15px; padding:3px 6px;
+  outline:none; font-family:var(--font); box-sizing:border-box; }
+.mf-option { display:flex; align-items:center; gap:7px; padding:5px 10px;
+  cursor:pointer; font-size:16px; color:var(--text); transition:background 0.1s; }
+.mf-option:hover { background:var(--surface2); }
+.mf-option input[type=checkbox] { accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+.mf-actions { display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-btn { flex:1; padding:3px 0; font-size:14px; border-radius:4px; border:1px solid var(--border);
+  background:transparent; color:var(--muted); cursor:pointer; font-family:var(--font); }
+.mf-btn:hover { border-color:var(--accent); color:var(--accent); }
+.filter-mode-toggle { display:flex; align-items:center; gap:6px; font-size:15px;
+  color:var(--muted); white-space:nowrap; margin-left:8px; flex-shrink:0; }
+.filter-mode-toggle input[type=checkbox] { accent-color:var(--accent); cursor:pointer; }
+.filter-mode-toggle label { cursor:pointer; user-select:none; }
+.plan-summary { display:flex; align-items:center; gap:10px; margin-left:auto;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  padding:8px 16px; flex-shrink:0; }
+.plan-summary-label { font-size:15px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:0.06em; font-weight:600; white-space:nowrap; }
+.plan-summary-value { font-size:26px; font-weight:700; color:var(--accent);
+  font-family:var(--mono); white-space:nowrap; }
+.plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
+.filter-row th { padding:4px 4px 6px; background:#080d14; border-bottom:2px solid var(--accent); }
+.col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box; text-align:center; }
+.col-filter:focus { border-color:var(--accent); background:rgba(59,130,246,0.08); }
+.col-filter.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+.filter-clear-btn { width:20px; height:20px; border-radius:3px; border:none; background:transparent;
+  color:var(--muted); cursor:pointer; font-size:16px; padding:0; line-height:1;
+  display:none; align-items:center; justify-content:center; flex-shrink:0; }
+.filter-clear-btn.visible { display:flex; }
+.filter-clear-btn:hover { color:var(--danger); }
+.filter-cell { display:flex; align-items:center; gap:2px; }
+.filters-active-badge { display:none; font-size:14px; color:var(--accent); margin-left:6px; cursor:pointer; }
+.filters-active-badge.visible { display:inline; }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+.notif { position:fixed; bottom:60px; right:20px; z-index:400; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; padding:10px 16px; font-size:17px;
+  animation:slideUp 0.25s ease; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+@keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1} }
+.notif.ok { border-color:var(--success); color:var(--success); }
+.notif.err { border-color:var(--danger); color:var(--danger); }
+.type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; }
+.type-modal.open { display:flex; }
+.type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:32px 36px; width:480px; box-shadow:0 32px 80px rgba(0,0,0,0.6); }
+.type-modal-title { font-size:20px; font-weight:600; margin-bottom:6px; }
+.type-modal-sub { font-size:16px; color:var(--muted); margin-bottom:24px; }
+.type-options { display:flex; flex-direction:column; gap:10px; }
+.type-option { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:10px;
+  border:1px solid var(--border); cursor:pointer; transition:all 0.15s; background:var(--surface2); }
+.type-option:hover { border-color:var(--accent); background:var(--accent-glow); transform:translateX(4px); }
+.type-icon { font-size:26px; width:36px; text-align:center; }
+.type-label { font-size:17px; font-weight:500; }
+.type-badge { display:inline-block; padding:2px 8px; border-radius:4px;
+  font-size:14px; font-weight:600; letter-spacing:0.04em; white-space:nowrap; }
+.type-badge.разработка { background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); }
+.type-badge.выпуск { background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); }
+.type-badge.корректировка { background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); }
+.type-badge.сопровождение { background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.25); }
+.new-task-modal { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; }
+.new-task-modal.open { display:flex; }
+.new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
+  box-shadow:0 32px 80px rgba(0,0,0,0.6); }
+.new-task-header { padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; justify-content:space-between; }
+.new-task-title { font-size:19px; font-weight:600; margin-bottom:6px; }
+.new-task-body { flex:1; overflow-y:auto; padding:20px 24px; }
+.new-task-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-field { display:flex; flex-direction:column; gap:6px; }
+.form-field.full { grid-column:1/-1; }
+.form-label { font-size:15px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.form-input { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none; }
+.form-input:focus { border-color:var(--accent); }
+.form-select { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+.form-select:focus { border-color:var(--accent); }
+.form-select option { background:var(--surface); }
+.form-textarea { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  resize:vertical; min-height:60px; }
+.form-textarea:focus { border-color:var(--accent); }
+.form-input:disabled, .form-select:disabled, .form-textarea:disabled {
+  opacity:0.5; cursor:not-allowed; background:rgba(30,37,54,0.6);
+  border-color:var(--border); color:var(--muted);
+}
+.pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
+  border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
+.pp-edit-hint b { color:var(--accent); }
+.executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.executor-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.executor-name { font-size:18px; font-weight:600; color:var(--text); }
+.executor-remove { padding:4px 10px; border-radius:5px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
+.executor-remove:hover { background:rgba(239,68,68,0.1); border-color:var(--danger); }
+.executor-hours { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
+.executor-month { display:flex; flex-direction:column; gap:4px; }
+.executor-month-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.executor-month-input { padding:6px 8px; background:var(--bg); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; outline:none;
+  text-align:center; width:100%; }
+.executor-month-input:focus { border-color:var(--accent); }
+.nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
+.nt-executor-name { font-size:17px; font-weight:500; color:var(--text); }
+.nt-executor-remove { padding:3px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
+.nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/accounts/dashboard/" class="sidebar-logo">
+      <div class="sidebar-logo-icon">📋</div>
+      <span>Планирование</span>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Обзор</div>
+      <a href="/accounts/dashboard/" class="nav-item"><i class="fas fa-th-large"></i><span>Стартовая страница</span></a>
+    </div>
+    <div class="nav-section">
+      <a href="/accounts/stub/projects-list/" class="nav-item nav-section-btn"><i class="fas fa-project-diagram"></i><span>1. Управление проектами</span></a>
+    </div>
+    <div class="nav-section">
+      <a href="/works/production-plan/" class="nav-item nav-section-btn"><i class="fas fa-industry"></i><span>2. Производственный план</span></a>
+    </div>
+    <div class="nav-section">
+      <a href="/works/plan/" class="nav-item nav-section-btn active"><i class="fas fa-tasks"></i><span>3. Сводное планирование (План/отчёт)</span></a>
+      <a href="/works/notices/" class="nav-item nav-subitem"><i class="fas fa-envelope"></i><span>Журнал извещений</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">4. Аналитика</div>
+      <a href="/accounts/stub/analytics-workload/" class="nav-item"><i class="fas fa-chart-bar"></i><span>Загрузка сотрудников</span></a>
+      <a href="/accounts/stub/analytics-deadlines/" class="nav-item"><i class="fas fa-chart-line"></i><span>Исполнение сроков</span></a>
+      <a href="/accounts/stub/analytics-reports/" class="nav-item"><i class="fas fa-file-alt"></i><span>Отчёты</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">5. Администрирование</div>
+      <div class="nav-dropdown">
+        <button class="nav-item nav-dropdown-toggle" onclick="toggleNavDropdown(this)">
+          <i class="fas fa-users"></i><span>Сотрудники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="/employees/" class="nav-item nav-subitem"><i class="fas fa-list"></i><span>Список сотрудников</span></a>
+          <a href="/employees/vacation-plan/" class="nav-item nav-subitem"><i class="fas fa-calendar-alt"></i><span>План отпусков</span></a>
+        </div>
+      </div>
+      <a href="/accounts/stub/subdivisions/" class="nav-item"><i class="fas fa-sitemap"></i><span>Подразделения</span></a>
+      {% if role == 'admin' %}
+      <a href="/accounts/admin-spa/" class="nav-item"><i class="fas fa-sliders-h"></i><span>Справочники</span></a>
+      <a href="/admin/" class="nav-item"><i class="fas fa-cogs"></i><span>Настройки системы</span></a>
+      {% endif %}
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">{{ username|first|upper|default:"A" }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ username|default:"Пользователь" }}</div>
+        <div class="user-role">{% if role == 'admin' %}Администратор{% else %}Пользователь{% endif %}</div>
+      </div>
+      <a href="/accounts/logout/" class="logout-btn" title="Выйти"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+  </div>
+</aside>
+
+<div class="topbar" id="topbar">
+  <button class="sidebar-toggle" id="sidebarToggle" title="Скрыть/показать меню"><i class="fas fa-bars"></i></button>
+  <div class="topbar-logo"><span>📋</span> Модуль планирования и отчётности</div>
+  <div class="topbar-sep"></div>
+  <button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()">⚠️ Ошибки планирования</button>
+  <div class="topbar-user">{{ username }}</div>
+  <a href="/accounts/logout/"><button class="topbar-btn danger">Выйти</button></a>
+</div>
+
+<div class="toolbar">
+  <span class="cal-label">Период:</span>
+  <div class="cal-block">
+    <button class="cal-nav" onclick="changeYear(-1)">‹</button>
+    <div class="cal-display" id="yearDisplay">2024</div>
+    <button class="cal-nav" onclick="changeYear(1)">›</button>
+  </div>
+  <div class="cal-months">
+    <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
+    <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
+    <span class="cal-month" data-m="5" onclick="selectMonth(5)">Май</span><span class="cal-month" data-m="6" onclick="selectMonth(6)">Июн</span>
+    <span class="cal-month" data-m="7" onclick="selectMonth(7)">Июл</span><span class="cal-month" data-m="8" onclick="selectMonth(8)">Авг</span>
+    <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
+    <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
+  </div>
+  <span class="cal-clear" onclick="clearFilter()">Показать все</span>
+  <div class="plan-summary">
+    <div>
+      <div class="plan-summary-label">Суммарная трудоёмкость</div>
+      <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
+    </div>
+    <div class="plan-summary-value" id="planSummaryValue">—</div>
+  </div>
+</div>
+
+<div class="searchbar">
+  <span class="search-icon">🔍</span>
+  <input class="search-input" id="searchInput" placeholder="Поиск по всем полям..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+  <span class="search-count" id="searchCount"></span>
+  <span class="filters-active-badge" id="filtersActiveBadge" onclick="clearAllColFilters()">✕ Сбросить фильтры</span>
+  <div class="filter-mode-toggle">
+    <input type="checkbox" id="filterInstant" onchange="toggleFilterMode(this)">
+    <label for="filterInstant">Мгновенный фильтр</label>
+  </div>
+</div>
+
+<div class="table-wrap">
+<table id="mainTable">
+<thead><tr>
+  <th class="th-num"><div class="th-inner" style="justify-content:center;">№</div></th>
+  <th id="th-type"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-dept"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector"><div class="th-inner">Сектор<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-stage"><div class="th-inner">Этап<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-just"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-desc"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-wnum"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-exec"><div class="th-inner">ФИО сотрудника/ план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-ds"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
+  <th id="th-de"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
+  <th id="th-dead"><div class="th-inner">Срок по ПП/ПГ/ТР<div class="col-resize" data-col="dead"></div></div></th>
+  <th id="th-rep" style="display:table-cell"><div class="th-inner">Действия</div></th>
+</tr></thead>
+<tr class="filter-row" id="filterRow">
+  <th class="th-num"></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="justification" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="description" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="work_name" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="work_number" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="date_start" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="date_end" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="deadline" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th></th>
+</tr>
+<tbody id="taskBody"></tbody>
+</table>
+</div>
+
+<div class="add-row-wrap">
+  <button class="btn-add" id="btnAddTask" onclick="openInlineNewRow()">＋ Добавить задачу</button>
+</div>
+
+<!-- TYPE MODAL -->
+<div class="type-modal" id="typeModal">
+<div class="type-modal-box">
+  <div class="type-modal-title">Выберите тип задачи</div>
+  <div class="type-modal-sub">Нажмите — откроется форма заполнения</div>
+  <div class="type-options">
+    <div class="type-option" data-type="Разработка" onclick="selectTypeAndProceed(this)">
+      <span class="type-icon">⚙️</span><span class="type-label">Разработка</span>
+    </div>
+    <div class="type-option" data-type="Выпуск нового документа" onclick="selectTypeAndProceed(this)">
+      <span class="type-icon">📄</span><span class="type-label">Выпуск нового документа</span>
+    </div>
+    <div class="type-option" data-type="Корректировка документа" onclick="selectTypeAndProceed(this)">
+      <span class="type-icon">✏️</span><span class="type-label">Корректировка документа</span>
+    </div>
+    <div class="type-option" data-type="Сопровождение (ОКАН)" onclick="selectTypeAndProceed(this)">
+      <span class="type-icon">🔧</span><span class="type-label">Сопровождение (ОКАН)</span>
+    </div>
+  </div>
+  <div style="margin-top:20px;text-align:right">
+    <button class="topbar-btn" onclick="closeTypeModal()">Отмена</button>
+  </div>
+</div>
+</div>
+
+<!-- NEW TASK / EDIT TASK FORM MODAL -->
+<div class="new-task-modal" id="newTaskModal">
+<div class="new-task-box">
+  <div class="new-task-header">
+    <div>
+      <div class="new-task-title" id="newTaskModalTitle">Новая задача</div>
+      <div id="newTaskTypeBadgeWrap" style="margin-top:6px"></div>
+    </div>
+    <button class="modal-close" onclick="closeNewTaskModal()">✕</button>
+  </div>
+  <div class="new-task-body">
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="form-label">Отдел</label>
+        <select class="form-select" id="nt-dept" onchange="onNewTaskDeptChange()"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Сектор</label>
+        <select class="form-select" id="nt-sector"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Проект</label>
+        <select class="form-select" id="nt-project" onchange="onNewTaskProjectChange()"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Этап</label>
+        <select class="form-select" id="nt-stage"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">№ работы</label>
+        <input class="form-input" id="nt-work_number" type="text" placeholder="Номер работы">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Срок ПГ/ТР</label>
+        <input class="form-input" id="nt-deadline" type="date">
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Наименование работ</label>
+        <input class="form-input" id="nt-work_name" type="text" placeholder="Наименование работ">
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Исполнители</label>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <select class="form-select" id="nt-executor-select" style="flex:1;">
+            <option value="">Выберите сотрудника...</option>
+          </select>
+          <button class="topbar-btn primary" type="button" onclick="addExecutorToNewTask()">+ Добавить</button>
+        </div>
+        <div id="nt-executors-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div class="form-field full" id="nt-justification-wrap" style="display:none">
+        <label class="form-label">Обоснование выполнения работ</label>
+        <textarea class="form-textarea" id="nt-justification" placeholder="Обоснование..."></textarea>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Дата начала</label>
+        <input class="form-input" id="nt-date_start" type="date" onchange="onNewTaskDateChange()">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Дата окончания</label>
+        <input class="form-input" id="nt-date_end" type="date" onchange="onNewTaskDateChange()">
+      </div>
+      <div class="form-field" id="nt-plan-single-wrap">
+        <label class="form-label">План труд (часы)</label>
+        <input class="form-input" id="nt-plan_hours_single" type="number" placeholder="0">
+      </div>
+      <div class="form-field full" id="nt-plan-months-wrap" style="display:none">
+        <label class="form-label" style="margin-bottom:10px">📅 План труд по месяцам (ч)</label>
+      </div>
+      <div class="form-field full" id="nt-labor-row" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;">
+          <div id="nt-total-wrap">
+            <label class="form-label">Распланированная трудоёмкость (ч)</label>
+            <div id="nt-total-hours" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--accent);min-height:38px;display:flex;align-items:center;margin-top:6px;">0</div>
+          </div>
+          <div id="nt-pp-labor-wrap" style="display:none">
+            <label class="form-label">Плановая трудоемкость (ч)</label>
+            <div id="nt-pp-labor" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--success);min-height:38px;display:flex;align-items:center;margin-top:6px;">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-field full" id="nt-actions-wrap">
+        <label class="form-label">Действия</label>
+        <textarea class="form-textarea" id="nt-actions" placeholder="Действия..."></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="new-task-footer">
+    <button class="topbar-btn" onclick="closeNewTaskModal()">Отмена</button>
+    <button class="topbar-btn primary" id="newTaskSubmitBtn" onclick="submitNewTask()">✓ Создать задачу</button>
+  </div>
+</div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportModal">
+<div class="modal">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">📄 Отчёт по задаче</div>
+      <div class="modal-task-ref" id="reportTaskRef"></div>
+    </div>
+    <button class="modal-close" onclick="closeReportModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="report-table-wrap">
+    <table class="report-table">
+      <thead><tr>
+        <th>Наименование отчётного документа</th><th>Обозначение</th><th>Инвентарный №</th>
+        <th>Дата принятия</th><th>Вид doc</th><th>Класс doc</th><th>Листов А4</th>
+        <th>Норматив</th><th>Коэфф. сл./новизны</th><th>БВД (ч)</th><th>Нормоконтроль</th><th>Ссылка</th><th></th>
+      </tr></thead>
+      <tbody id="reportBody"></tbody>
+    </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="topbar-btn primary" onclick="addReportRow()">＋ Добавить строку</button>
+    <button class="topbar-btn" onclick="saveAllReports()">💾 Сохранить всё</button>
+    <button class="topbar-btn" onclick="closeReportModal()">Закрыть</button>
+  </div>
+</div>
+</div>
+
+<!-- USERS MODAL -->
+<div class="modal-overlay" id="usersModal">
+<div class="modal" style="max-width:600px">
+  <div class="modal-header">
+    <div class="modal-title">👥 Управление пользователями</div>
+    <button class="modal-close" onclick="document.getElementById('usersModal').classList.remove('open')">✕</button>
+  </div>
+  <div class="modal-body">
+    <table class="users-table" id="usersTable"></table>
+    <div style="margin-top:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="newUser" placeholder="Логин" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none;width:140px">
+      <input id="newPass" type="password" placeholder="Пароль" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none;width:140px">
+      <select id="newRole" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none">
+        <option value="user">Пользователь</option><option value="admin">Администратор</option>
+      </select>
+      <button class="topbar-btn primary" onclick="createUser()">Создать</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- EXECUTORS MODAL -->
+<div class="modal-overlay" id="executorsModal">
+<div class="modal" style="max-width:900px">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title">👥 Управление исполнителями</div>
+      <div class="modal-task-ref" id="executorsTaskRef"></div>
+    </div>
+    <button class="modal-close" onclick="closeExecutorsModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="margin-bottom:20px;">
+      <div class="form-label">Добавить исполнителя</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+        <select id="newExecutorSelect" class="form-select" style="flex:1;">
+          <option value="">Выберите сотрудника...</option>
+        </select>
+        <button class="topbar-btn primary" onclick="addExecutorToTask()">+ Добавить</button>
+      </div>
+    </div>
+    <div id="executorsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="topbar-btn primary" onclick="saveTaskExecutors()">💾 Сохранить</button>
+    <button class="topbar-btn" onclick="closeExecutorsModal()">Закрыть</button>
+  </div>
+</div>
+</div>
+
+<!-- DATE CHANGE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="dateChangeModal" style="display:none;">
+<div class="modal" style="max-width:500px">
+  <div class="modal-header">
+    <div class="modal-title">⚠️ Изменение периода задачи</div>
+    <button class="modal-close" onclick="closeDateChangeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <p id="dateChangeMessage" style="font-size:17px;color:var(--text);line-height:1.6;margin-bottom:20px;"></p>
+    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;font-size:16px;color:var(--warning);">
+      <strong>📌 Внимание:</strong> Для новых месяцев часы исполнителей будут равны нулю. Вам нужно заполнить их вручную в окне редактирования.
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="topbar-btn" onclick="cancelDateChange()">Отмена</button>
+    <button class="topbar-btn" onclick="fillLaterDateChange()">Заполню позже</button>
+    <button class="topbar-btn primary" onclick="confirmDateChange()">Открыть редактирование</button>
+  </div>
+</div>
+</div>
+
+<!-- VACATION CONFLICT MODAL -->
+<div class="modal-overlay" id="vacationConflictModal" style="display:none;">
+<div class="modal" style="max-width:500px">
+  <div class="modal-header">
+    <div class="modal-title">⚠️ Пересечение с отпусками</div>
+    <button class="modal-close" onclick="closeVacationConflictModal('cancel')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+      <strong style="color:#ef4444;">❌ Обнаружены пересечения!</strong>
+    </div>
+    <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Задача пересекается с отпусками сотрудников:</p>
+    <pre id="vacationConflictMessage" style="font-size:16px;color:var(--text);line-height:1.6;background:var(--surface2);padding:12px;border-radius:6px;white-space:pre-wrap;font-family:var(--mono);"></pre>
+  </div>
+  <div class="modal-footer">
+    <button class="topbar-btn" onclick="closeVacationConflictModal('cancel')">Отмена</button>
+    <button class="topbar-btn" onclick="closeVacationConflictModal('later')">Заполню позже</button>
+    <button class="topbar-btn primary" onclick="closeVacationConflictModal('adjust')">Откорректировать сроки</button>
+  </div>
+</div>
+</div>
+
+<!-- PLANNING ERRORS MODAL -->
+<div class="pe-overlay" id="peModal">
+  <div class="pe-box">
+    <div class="pe-header">
+      <div>
+        <div class="pe-title">⚠️ Ошибки планирования</div>
+        <div class="pe-meta" id="peMeta"></div>
+      </div>
+      <button class="topbar-btn" onclick="closePeModal()">✕ Закрыть</button>
+    </div>
+    <div class="pe-body" id="peBody"></div>
+    <div class="pe-footer">
+      <span class="pe-last-check" id="peLastCheck"></span>
+      <button class="topbar-btn primary" onclick="refreshPlanningErrors()">🔄 Обновить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MONTH CHECK MODAL -->
+<div class="month-check-overlay" id="monthCheckModal">
+  <div class="month-check-box">
+    <div class="month-check-header">
+      <div class="month-check-title">📋 Проверка отчётности за прошедший месяц</div>
+      <div class="month-check-sub" id="monthCheckSub"></div>
+    </div>
+    <div class="month-check-body" id="monthCheckBody"></div>
+    <div class="month-check-footer">
+      <span class="mcc-progress" id="mccProgress"></span>
+      <div style="display:flex;gap:8px">
+        <button class="topbar-btn" onclick="closeMonthCheckModal()">Закрыть</button>
+        <button class="topbar-btn primary" id="mccDoneAllBtn" onclick="mccDoneAll()">Применить все</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === DJANGO CSRF HELPER === */
+function getCSRF() {
+  const c = document.cookie.match(/csrftoken=([^;]+)/);
+  return c ? c[1] : '';
+}
+function apiHeaders(extra) {
+  return Object.assign({'Content-Type':'application/json','X-CSRFToken':getCSRF()}, extra||{});
+}
+</script>
+
+<script>
+const _now = new Date();
+let selectedYear  = parseInt(localStorage.getItem("plan_year")  || _now.getFullYear());
+let selectedMonth = localStorage.getItem("plan_month") !== null
+  ? (localStorage.getItem("plan_month") === "null" ? null : parseInt(localStorage.getItem("plan_month")))
+  : (_now.getMonth() + 1);
+let dirs = {};
+let tasks = [];
+let colSettings = {{ col_settings|safe }};
+let currentTaskId = null;
+let reportRows = [];
+let pendingTaskType = null;
+let newTaskExecutorsList = [];
+
+const MONTH_NAMES = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────
+function changeYear(d) {
+  selectedYear += d;
+  showAll = false;
+  localStorage.setItem("plan_year", selectedYear);
+  document.getElementById("yearDisplay").textContent = selectedYear;
+  loadTasks();
+}
+function selectMonth(m) {
+  if (selectedMonth === m) { selectedMonth = null; } else { selectedMonth = m; }
+  showAll = false;
+  document.querySelectorAll(".cal-month").forEach(el => {
+    el.classList.toggle("active", parseInt(el.dataset.m) === selectedMonth);
+  });
+  localStorage.setItem("plan_month", selectedMonth === null ? "null" : selectedMonth);
+  loadTasks();
+}
+let showAll = false;
+
+function clearFilter() {
+  selectedMonth = null;
+  showAll = true;
+  localStorage.setItem("plan_month", "null");
+  document.querySelectorAll(".cal-month").forEach(e => e.classList.remove("active"));
+  loadTasks();
+}
+
+function toggleNavDropdown(btn) {
+  btn.classList.toggle('open');
+  var menu = btn.nextElementSibling;
+  if (menu) menu.classList.toggle('open');
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  // Сбрасываем скролл сайдбара в начало — браузер может автоскроллить к .active
+  var sidebarNav = document.querySelector('.sidebar-nav');
+  if (sidebarNav) sidebarNav.scrollTop = 0;
+
+  document.getElementById("yearDisplay").textContent = selectedYear;
+  if (selectedMonth) {
+    const el = document.querySelector(`.cal-month[data-m="${selectedMonth}"]`);
+    if (el) el.classList.add("active");
+  }
+  const si = document.getElementById("searchInput");
+  si.value = "";
+  setTimeout(() => { si.value = ""; }, 50);
+  setTimeout(() => { si.value = ""; }, 200);
+  si.addEventListener("input", () => loadTasks());
+  await loadDirs();
+  await loadTasks();
+  initColResize();
+  applyColSettings();
+  initFilterMode();
+  runMonthCheckIfNeeded();
+  refreshPlanningErrors();
+});
+
+// ── TASKS ─────────────────────────────────────────────────────────────────
+async function loadTasks() {
+  const search = document.getElementById("searchInput").value.trim();
+  let url;
+  if (showAll) {
+    url = `/api/tasks/?all=1`;
+  } else {
+    url = `/api/tasks/?year=${selectedYear}`;
+    if (selectedMonth) url += `&month=${selectedMonth}`;
+  }
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+
+  document.getElementById("taskBody").innerHTML = "";
+  document.getElementById("searchCount").textContent = "...";
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) { console.error("loadTasks HTTP error:", res.status); return; }
+    tasks = await res.json();
+    initMfTriggers();
+    renderTable();
+  } catch(e) {
+    console.error("loadTasks error:", e);
+    document.getElementById("searchCount").textContent = "Ошибка загрузки";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PLANNING ERRORS
+// ══════════════════════════════════════════════════════════════════════════
+const MONTH_NORM = 170;
+
+async function calcPlanningErrors() {
+  const now = new Date();
+  const curYear  = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const curKey   = `${curYear}-${String(curMonth).padStart(2,"0")}`;
+  const todayStr = now.toISOString().slice(0,10);
+
+  let allTasks;
+  if (!showAll && selectedYear === curYear && selectedMonth === curMonth && tasks.length > 0) {
+    allTasks = tasks;
+  } else {
+    allTasks = await fetch(`/api/tasks/?year=${curYear}&month=${curMonth}`).then(r=>r.json());
+  }
+
+  const overdueChecks = await Promise.all(
+    allTasks
+      .filter(t => {
+        const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
+        const dead = t.deadline  ? t.deadline.slice(0,10) : null;
+        return (de && de < todayStr) || (dead && dead < todayStr);
+      })
+      .map(async t => {
+        const reports = await fetch(`/api/reports/${t.id}/`).then(r=>r.json());
+        return { task: t, hasReport: reports.length > 0 };
+      })
+  );
+  const overdue = overdueChecks.filter(c => !c.hasReport).map(c => c.task);
+
+  const execLoad = {};
+  allTasks.forEach(t => {
+    if (!t.executor) return;
+    const ph = t.plan_hours_all || {};
+    const hours = parseFloat(ph[curKey] || 0);
+    if (!(t.executor in execLoad)) execLoad[t.executor] = 0;
+    execLoad[t.executor] += hours;
+  });
+
+  const allExecutors = (dirs["_ids_employees"] || []).map(e => e.value);
+  const underloaded = allExecutors
+    .map(name => ({ name, hours: execLoad[name] || 0 }))
+    .filter(e => e.hours < MONTH_NORM);
+
+  return { overdue, underloaded, curYear, curMonth, curKey, todayStr };
+}
+
+async function refreshPlanningErrors() {
+  const btn = document.getElementById("errorsBtn");
+  btn.textContent = "⏳ Проверка...";
+  btn.className = "topbar-btn errors";
+
+  const { overdue, underloaded, curYear, curMonth, curKey } = await calcPlanningErrors();
+  const total = overdue.length + underloaded.length;
+
+  const MONTHS = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+  if (total === 0) {
+    btn.textContent = "✓ Нет ошибок";
+    btn.className = "topbar-btn errors no-errors";
+  } else {
+    btn.innerHTML = `⚠️ Ошибки планирования <span class="err-badge">${total}</span>`;
+    btn.className = "topbar-btn errors has-errors";
+  }
+  return { overdue, underloaded, curYear, curMonth, curKey, total };
+}
+
+async function openPlanningErrors() {
+  document.getElementById("peBody").innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted)">⏳ Анализ данных...</div>';
+  document.getElementById("peModal").classList.add("open");
+
+  const { overdue, underloaded, curYear, curMonth, curKey, total } = await refreshPlanningErrors();
+  const MONTHS = ["","Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+
+  document.getElementById("peMeta").textContent =
+    `${MONTHS[curMonth]} ${curYear} · Найдено ошибок: ${total} · Норма: ${MONTH_NORM} ч/мес`;
+  document.getElementById("peLastCheck").textContent =
+    "Проверено: " + new Date().toLocaleTimeString("ru-RU");
+
+  const body = document.getElementById("peBody");
+  body.innerHTML = "";
+
+  const sec1 = buildPeSection(
+    `🔴 Просроченные работы`, overdue.length, overdue.length > 0 ? "danger" : "ok",
+    overdue.map(t => {
+      const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
+      const dead = t.deadline ? t.deadline.slice(0,10)  : null;
+      const today = new Date().toISOString().slice(0,10);
+      const overdueDays = de
+        ? Math.floor((new Date(today)-new Date(de))/(86400000))
+        : (dead ? Math.floor((new Date(today)-new Date(dead))/(86400000)) : 0);
+      return {
+        title: t.work_name || `Работа #${t.id}`,
+        meta: `${t.task_type||""} · ${t.executor||"—"} · Дата окончания: ${de||"—"} · Срок ПГ/ТР: ${dead||"—"}`,
+        highlight: `Просрочено на ${overdueDays} дн.`,
+        actions: [
+          { label: "✏️ Редактировать", fn: `closePeModal();openEditTaskModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
+          { label: "📝 Внести отчёт",  fn: `closePeModal();openReportModal(${t.id},'${(t.work_name||"").replace(/'/g,"\\'")}')` },
+        ]
+      };
+    })
+  );
+  body.appendChild(sec1);
+
+  const sec2 = buildPeSection(
+    `🟡 Недозагруженные сотрудники (норма ${MONTH_NORM} ч)`, underloaded.length, underloaded.length > 0 ? "warn" : "ok",
+    underloaded.map(e => ({
+      title: e.name,
+      meta: `Загрузка в ${MONTHS[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч из ${MONTH_NORM} ч`,
+      highlight: `Дефицит: ${(MONTH_NORM - e.hours).toFixed(1)} ч`,
+      actions: [
+        { label: "🔍 Показать работы", fn: `closePeModal();filterByExecutor('${e.name.replace(/'/g,"\\'")}')` }
+      ]
+    }))
+  );
+  body.appendChild(sec2);
+
+  if (overdue.length > 0)     sec1.querySelector(".pe-section-body").classList.add("open");
+  if (underloaded.length > 0) sec2.querySelector(".pe-section-body").classList.add("open");
+}
+
+function buildPeSection(title, count, badgeClass, items) {
+  const sec = document.createElement("div");
+  sec.className = "pe-section";
+  const badge = count > 0 ? `<span class="pe-count-badge ${badgeClass}">${count}</span>` : `<span class="pe-count-badge ok">0</span>`;
+  const arrow = document.createElement("span");
+  arrow.style.cssText = "font-size:14px;color:var(--muted);transition:transform 0.2s";
+  const body = document.createElement("div");
+  body.className = "pe-section-body";
+
+  const hdr = document.createElement("div");
+  hdr.className = "pe-section-hdr";
+  hdr.innerHTML = `<span class="pe-section-title">${title} ${badge}</span>`;
+  hdr.appendChild(arrow);
+  hdr.onclick = () => {
+    body.classList.toggle("open");
+    arrow.textContent = body.classList.contains("open") ? "▲" : "▼";
+  };
+  arrow.textContent = "▼";
+
+  items.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "pe-item";
+    const actionsHtml = item.actions.map(a =>
+      `<button class="pe-btn" onclick="${a.fn}">${a.label}</button>`
+    ).join("");
+    row.innerHTML = `
+      <div class="pe-item-info">
+        <div class="pe-item-name">${item.title}</div>
+        <div class="pe-item-meta">${item.meta} · <span>${item.highlight}</span></div>
+        <div class="pe-item-actions">${actionsHtml}</div>
+      </div>`;
+    body.appendChild(row);
+  });
+
+  if (items.length === 0) {
+    body.innerHTML = '<div style="padding:14px 24px;font-size:16px;color:var(--muted)">✓ Ошибок не найдено</div>';
+  }
+
+  sec.appendChild(hdr);
+  sec.appendChild(body);
+  return sec;
+}
+
+function closePeModal() { document.getElementById("peModal").classList.remove("open"); }
+
+function filterByExecutor(name) {
+  clearAllColFilters();
+  const sel = new Set([name]);
+  mfSelections["executor"] = sel;
+  colFilters["mf_executor"] = sel;
+  document.querySelectorAll(".mf-trigger[data-col='executor']").forEach(btn => {
+    btn.textContent = name;
+    btn.classList.add("active");
+  });
+  document.getElementById("filtersActiveBadge").classList.add("visible");
+  renderTable();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MONTH-START CHECK
+// ══════════════════════════════════════════════════════════════════════════
+const MCC_KEY = "mcc_last_checked";
+
+async function checkMonthStart() {
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const lastChecked = localStorage.getItem(MCC_KEY);
+  if (now.getDate() !== 1 || lastChecked === todayKey) return;
+
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+  const prevYear  = now.getMonth() === 0 ? now.getFullYear()-1 : now.getFullYear();
+
+  const res = await fetch(`/api/tasks/?year=${prevYear}&month=${prevMonth}`);
+  const monthTasks = await res.json();
+  if (!monthTasks.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
+
+  const checks = await Promise.all(monthTasks.map(async t => {
+    const r = await fetch(`/api/reports/${t.id}/`);
+    const reports = await r.json();
+    return { task: t, hasReport: reports.length > 0 };
+  }));
+
+  const missing = checks.filter(c => !c.hasReport);
+  if (!missing.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
+  openMonthCheckModal(missing.map(c => c.task), prevYear, prevMonth, todayKey);
+}
+
+const mccDecisions = {};
+let mccTodayKey = "";
+
+function openMonthCheckModal(tasksList, year, month, todayKey) {
+  mccTodayKey = todayKey;
+  const MONTHS = ["","Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  document.getElementById("monthCheckSub").textContent =
+    `${MONTHS[month]} ${year} — ${tasksList.length} работ без отчёта`;
+
+  const body = document.getElementById("monthCheckBody");
+  body.innerHTML = "";
+
+  tasksList.forEach(t => {
+    const block = document.createElement("div");
+    block.className = "mcc-task";
+    block.id = `mcc-task-${t.id}`;
+    const execStr = t.executor ? ` · ${t.executor}` : "";
+    const deptStr = t.dept ? ` · ${t.dept}` : "";
+    block.innerHTML = `
+      <div class="mcc-task-name">${t.work_name || `Работа #${t.id}`}</div>
+      <div class="mcc-task-meta">${t.task_type||""}${deptStr}${execStr} · ${t.date_start||"—"} → ${t.date_end||"—"}</div>
+      <div class="mcc-actions">
+        <button class="mcc-btn" onclick="mccTogglePostpone(${t.id})">📅 Перенести на следующий месяц</button>
+        <button class="mcc-btn danger" onclick="mccFinish(${t.id}, this)">✓ Завершить работу</button>
+        <button class="mcc-btn primary" onclick="mccOpenReport(${t.id}, '${(t.work_name||"").replace(/'/g,"\\'")}')">📝 Внести отчёт</button>
+      </div>
+      <div class="mcc-postpone-form" id="mcc-pform-${t.id}">
+        <div class="mcc-form-row">
+          <div class="mcc-form-field">
+            <label>Новая дата начала</label>
+            <input type="date" id="mcc-ds-${t.id}" value="${t.date_start||""}">
+          </div>
+          <div class="mcc-form-field">
+            <label>Новая дата окончания</label>
+            <input type="date" id="mcc-de-${t.id}" value="">
+          </div>
+          <div class="mcc-form-field">
+            <label>Срок ПГ/ТР</label>
+            <input type="date" id="mcc-dead-${t.id}" value="${t.deadline||""}">
+          </div>
+          <div class="mcc-form-field" style="min-width:140px">
+            <label>Исполнитель</label>
+            <select id="mcc-exec-${t.id}"></select>
+          </div>
+          <div class="mcc-form-field">
+            <label>План (ч) след. месяц</label>
+            <input type="number" id="mcc-hours-${t.id}" value="" placeholder="0" style="width:80px">
+          </div>
+        </div>
+        <button class="mcc-btn primary" onclick="mccConfirmPostpone(${t.id})">✓ Подтвердить перенос</button>
+      </div>`;
+
+    const sel = block.querySelector(`#mcc-exec-${t.id}`);
+    (dirs["_ids_employees"] || []).forEach(e => {
+      const o = document.createElement("option");
+      o.value = e.value; o.textContent = e.value;
+      if (e.value === t.executor) o.selected = true;
+      sel.appendChild(o);
+    });
+    body.appendChild(block);
+  });
+
+  mccUpdateProgress(tasksList.length);
+  document.getElementById("monthCheckModal").classList.add("open");
+}
+
+function closeMonthCheckModal() {
+  document.getElementById("monthCheckModal").classList.remove("open");
+  if (mccTodayKey) localStorage.setItem(MCC_KEY, mccTodayKey);
+}
+function mccUpdateProgress(total) {
+  const done = Object.keys(mccDecisions).length;
+  document.getElementById("mccProgress").textContent = `Обработано: ${done} из ${total}`;
+}
+function mccTogglePostpone(taskId) { document.getElementById(`mcc-pform-${taskId}`).classList.toggle("open"); }
+function mccFinish(taskId, btn) {
+  mccDecisions[taskId] = { action: "finish" };
+  const block = document.getElementById(`mcc-task-${taskId}`);
+  block.querySelectorAll(".mcc-btn").forEach(b => b.classList.remove("done"));
+  btn.classList.add("done");
+  btn.textContent = "✓ Будет завершена";
+  mccUpdateProgress(document.querySelectorAll(".mcc-task").length);
+}
+function mccConfirmPostpone(taskId) {
+  const ds   = document.getElementById(`mcc-ds-${taskId}`).value;
+  const de   = document.getElementById(`mcc-de-${taskId}`).value;
+  const dead = document.getElementById(`mcc-dead-${taskId}`).value;
+  const exec = document.getElementById(`mcc-exec-${taskId}`).value;
+  const hrs  = parseFloat(document.getElementById(`mcc-hours-${taskId}`).value) || 0;
+  if (!de) { notify("Укажите новую дату окончания", "err"); return; }
+  mccDecisions[taskId] = { action: "postpone", ds, de, dead, executor: exec, hours: hrs };
+  const block = document.getElementById(`mcc-task-${taskId}`);
+  document.getElementById(`mcc-pform-${taskId}`).classList.remove("open");
+  const postponeBtn = block.querySelector(".mcc-btn");
+  postponeBtn.textContent = `📅 Перенос → ${de}`;
+  postponeBtn.classList.add("done");
+  mccUpdateProgress(document.querySelectorAll(".mcc-task").length);
+}
+function mccOpenReport(taskId, taskName) {
+  closeMonthCheckModal();
+  openReportModal(taskId, taskName);
+  const origClose = window._origCloseReport || closeReportModal;
+  window._origCloseReport = closeReportModal;
+  window.closeReportModal = function() {
+    origClose();
+    mccDecisions[taskId] = { action: "reported" };
+    document.getElementById("monthCheckModal").classList.add("open");
+    window.closeReportModal = origClose;
+    mccUpdateProgress(document.querySelectorAll(".mcc-task").length);
+    const block = document.getElementById(`mcc-task-${taskId}`);
+    if (block) {
+      const btn = block.querySelector(".mcc-btn.primary");
+      if (btn) { btn.textContent = "✓ Отчёт внесён"; btn.classList.add("done"); }
+    }
+  };
+}
+async function mccDoneAll() {
+  let processed = 0;
+  for (const [taskId, decision] of Object.entries(mccDecisions)) {
+    const id = parseInt(taskId);
+    if (decision.action === "finish") {
+      await fetch(`/api/tasks/${id}/`, {
+        method:"PUT", headers:apiHeaders(),
+        body: JSON.stringify({ _mcc_finish: true })
+      });
+      processed++;
+    } else if (decision.action === "postpone") {
+      const ph = {};
+      if (decision.hours > 0 && decision.de) {
+        const de = new Date(decision.de);
+        const key = `${de.getFullYear()}-${String(de.getMonth()+1).padStart(2,"0")}`;
+        ph[key] = decision.hours;
+      }
+      await fetch(`/api/tasks/${id}/`, {
+        method:"PUT", headers:apiHeaders(),
+        body: JSON.stringify({
+          date_start: decision.ds || null,
+          date_end: decision.de,
+          deadline: decision.dead || null,
+          executor: decision.executor || null,
+          plan_hours_update: ph
+        })
+      });
+      processed++;
+    }
+  }
+  closeMonthCheckModal();
+  if (processed > 0) { await loadTasks(); notify(`✓ Обработано ${processed} работ`, "ok"); }
+}
+async function runMonthCheckIfNeeded() { await checkMonthStart(); }
+
+// ── PLAN SUMMARY ──────────────────────────────────────────────────────────
+function updatePlanSummary() {
+  const rows = document.querySelectorAll("#taskBody tr");
+  let total = 0;
+  const monthKey = selectedMonth
+    ? `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`
+    : null;
+  const visibleIds = new Set();
+  rows.forEach(tr => visibleIds.add(parseInt(tr.dataset.id)));
+
+  tasks.filter(t => visibleIds.has(t.id)).forEach(t => {
+    const ph = t.plan_hours_all || {};
+    if (monthKey) {
+      total += parseFloat(ph[monthKey] || 0);
+    } else if (showAll) {
+      total += Object.values(ph).reduce((s,v) => s + (parseFloat(v)||0), 0);
+    } else {
+      Object.entries(ph).forEach(([k,v]) => {
+        if (k.startsWith(String(selectedYear))) total += parseFloat(v)||0;
+      });
+    }
+  });
+
+  document.getElementById("planSummaryValue").textContent =
+    total > 0 ? total.toLocaleString("ru-RU") + " ч" : "0 ч";
+
+  const MONTHS = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+  let periodLabel;
+  if (monthKey) { periodLabel = `${MONTHS[selectedMonth]} ${selectedYear}`; }
+  else if (showAll) { periodLabel = "Все периоды"; }
+  else { periodLabel = `Год ${selectedYear}`; }
+  const filtered = visibleIds.size;
+  const all = tasks.length;
+  document.getElementById("planSummaryPeriod").textContent =
+    `${periodLabel} · ${filtered === all ? filtered + " зап." : filtered + " из " + all}`;
+}
+
+// ── MULTI-SELECT FILTER ───────────────────────────────────────────────────
+const mfSelections = {};
+let activeMfBtn = null;
+let activeMfDropdown = null;
+const MF_DEFAULTS = {
+  task_type: "▼", dept: "▼", sector: "▼",
+  project: "▼", stage: "▼", executor: "▼"
+};
+
+function getMfValues(col) {
+  const vals = new Set();
+  tasks.forEach(t => { if (t[col]) vals.add(t[col]); });
+  return [...vals].sort((a,b) => a.localeCompare(b, "ru"));
+}
+
+function buildMfDropdown(btn, col) {
+  if (activeMfDropdown) activeMfDropdown.remove();
+  const vals = getMfValues(col);
+  const selected = mfSelections[col] || new Set();
+  const drop = document.createElement("div");
+  drop.className = "mf-dropdown open";
+  drop.dataset.col = col;
+
+  const searchWrap = document.createElement("div");
+  searchWrap.className = "mf-search";
+  const searchInp = document.createElement("input");
+  searchInp.placeholder = "Поиск...";
+  searchInp.autocomplete = "off";
+  searchInp.oninput = () => {
+    const q = searchInp.value.toLowerCase();
+    drop.querySelectorAll(".mf-option").forEach(opt => {
+      opt.style.display = opt.dataset.val.toLowerCase().includes(q) ? "" : "none";
+    });
+  };
+  searchWrap.appendChild(searchInp);
+  drop.appendChild(searchWrap);
+
+  const actions = document.createElement("div");
+  actions.className = "mf-actions";
+  const selectAll = document.createElement("button");
+  selectAll.className = "mf-btn"; selectAll.textContent = "Выбрать все";
+  selectAll.onclick = (e) => {
+    e.stopPropagation();
+    const sel = new Set(vals);
+    mfSelections[col] = sel;
+    drop.querySelectorAll(".mf-option input").forEach(cb => cb.checked = true);
+    applyMfFilter(col, btn);
+  };
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "mf-btn"; clearBtn.textContent = "Сбросить";
+  clearBtn.onclick = (e) => {
+    e.stopPropagation();
+    mfSelections[col] = new Set();
+    drop.querySelectorAll(".mf-option input").forEach(cb => cb.checked = false);
+    applyMfFilter(col, btn);
+  };
+  actions.appendChild(selectAll); actions.appendChild(clearBtn);
+  drop.appendChild(actions);
+
+  vals.forEach(val => {
+    const opt = document.createElement("div");
+    opt.className = "mf-option";
+    opt.dataset.val = val;
+    opt.tabIndex = 0;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selected.has(val);
+    cb.tabIndex = -1;
+    const toggle = () => {
+      cb.checked = !cb.checked;
+      const sel = mfSelections[col] || new Set();
+      if (cb.checked) sel.add(val); else sel.delete(val);
+      mfSelections[col] = sel;
+      applyMfFilter(col, btn);
+    };
+    cb.onchange = () => {
+      const sel = mfSelections[col] || new Set();
+      if (cb.checked) sel.add(val); else sel.delete(val);
+      mfSelections[col] = sel;
+      applyMfFilter(col, btn);
+    };
+    opt.onclick = (e) => { if (e.target !== cb) toggle(); };
+    opt.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+    };
+    opt.appendChild(cb);
+    opt.appendChild(document.createTextNode(val));
+    drop.appendChild(opt);
+  });
+
+  document.body.appendChild(drop);
+  const rect = btn.getBoundingClientRect();
+  drop.style.top = (rect.bottom + window.scrollY + 2) + "px";
+  drop.style.left = Math.min(rect.left, window.innerWidth - 250) + "px";
+  activeMfDropdown = drop;
+  activeMfBtn = btn;
+  setTimeout(() => searchInp.focus(), 50);
+}
+
+function toggleMf(btn) {
+  if (activeMfDropdown && activeMfBtn === btn) {
+    activeMfDropdown.remove();
+    activeMfDropdown = null; activeMfBtn = null;
+    return;
+  }
+  buildMfDropdown(btn, btn.dataset.col);
+}
+
+function applyMfFilter(col, btn) {
+  const sel = mfSelections[col] || new Set();
+  const def = MF_DEFAULTS[col] || "▼";
+  if (sel.size === 0) {
+    delete colFilters["mf_" + col];
+    btn.textContent = def;
+    btn.classList.remove("active");
+  } else {
+    colFilters["mf_" + col] = sel;
+    btn.textContent = sel.size === 1 ? [...sel][0] : `${sel.size} выбрано`;
+    btn.classList.add("active");
+  }
+  const hasFilters = Object.keys(colFilters).length > 0;
+  document.getElementById("filtersActiveBadge").classList.toggle("visible", hasFilters);
+  renderTable();
+}
+
+document.addEventListener("click", (e) => {
+  if (activeMfDropdown && !activeMfDropdown.contains(e.target) && e.target !== activeMfBtn) {
+    activeMfDropdown.remove();
+    activeMfDropdown = null; activeMfBtn = null;
+  }
+}, true);
+
+function initMfTriggers() {
+  document.querySelectorAll(".mf-trigger").forEach(btn => {
+    const col = btn.dataset.col;
+    const sel = mfSelections[col];
+    if (!sel || sel.size === 0) {
+      btn.textContent = MF_DEFAULTS[col] || "▼";
+      btn.classList.remove("active");
+    }
+  });
+}
+
+// ── FILTER MODE TOGGLE ────────────────────────────────────────────────────
+function toggleFilterMode(cb) {
+  const instant = cb.checked;
+  localStorage.setItem("filterInstant", instant ? "1" : "0");
+  document.querySelectorAll(".col-filter").forEach(inp => {
+    if (instant) {
+      inp.oninput = () => applyColFilters(inp);
+      inp.onkeydown = null;
+    } else {
+      inp.oninput = null;
+      inp.onkeydown = (e) => { if (e.key === "Enter") applyColFilters(inp); };
+    }
+  });
+}
+function initFilterMode() {
+  const instant = localStorage.getItem("filterInstant") === "1";
+  const cb = document.getElementById("filterInstant");
+  if (cb) { cb.checked = instant; toggleFilterMode(cb); }
+}
+
+// ── COLUMN FILTERS ────────────────────────────────────────────────────────
+let colFilters = {};
+
+function applyColFilters(inp) {
+  const col = inp.dataset.col;
+  const val = inp.value.trim();
+  const clearBtn = inp.nextElementSibling;
+  if (val) {
+    colFilters[col] = val.toLowerCase();
+    inp.classList.add("active");
+    clearBtn.classList.add("visible");
+  } else {
+    delete colFilters[col];
+    inp.classList.remove("active");
+    clearBtn.classList.remove("visible");
+  }
+  const hasFilters = Object.keys(colFilters).length > 0;
+  document.getElementById("filtersActiveBadge").classList.toggle("visible", hasFilters);
+  renderTable();
+}
+function clearColFilter(btn) { const inp = btn.previousElementSibling; inp.value = ""; applyColFilters(inp); }
+function clearAllColFilters() {
+  colFilters = {};
+  document.querySelectorAll(".col-filter").forEach(inp => {
+    inp.value = ""; inp.classList.remove("active");
+    inp.nextElementSibling.classList.remove("visible");
+  });
+  Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
+  document.querySelectorAll(".mf-trigger").forEach(btn => {
+    btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼";
+    btn.classList.remove("active");
+  });
+  if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
+  document.getElementById("filtersActiveBadge").classList.remove("visible");
+  renderTable();
+}
+
+function _resizeTextareas(container) {
+  container.querySelectorAll("textarea.cell-edit").forEach(ta => {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById("taskBody");
+  tbody.innerHTML = "";
+  const filtered = tasks.filter(t => {
+    for (const [col, val] of Object.entries(colFilters)) {
+      if (col.startsWith("mf_")) {
+        const field = col.slice(3);
+        if (val.size > 0 && !val.has(t[field] || "")) return false;
+        continue;
+      }
+      if (col === "plan_hours_total") {
+        const total = Object.values(t.plan_hours_all || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+        const threshold = parseFloat(val);
+        if (!isNaN(threshold) && total < threshold) return false;
+        continue;
+      }
+      const cellVal = (t[col] || "").toString().toLowerCase();
+      if (!cellVal.includes(val)) return false;
+    }
+    return true;
+  });
+
+  const total = tasks.length;
+  const shown = filtered.length;
+  const hasFilters = Object.keys(colFilters).length > 0;
+  document.getElementById("searchCount").textContent =
+    shown ? (hasFilters ? `${shown} из ${total} зап.` : `${shown} зап.`) : "";
+
+  const CHUNK = 50;
+  const first = filtered.slice(0, CHUNK);
+  first.forEach((t, i) => tbody.appendChild(makeRow(t, i + 1)));
+  requestAnimationFrame(() => { _resizeTextareas(tbody); updatePlanSummary(); });
+
+  if (filtered.length > CHUNK) {
+    let offset = CHUNK;
+    function renderChunk() {
+      if (offset >= filtered.length) { updatePlanSummary(); return; }
+      const chunk = filtered.slice(offset, offset + CHUNK);
+      const frag = document.createDocumentFragment();
+      chunk.forEach((t, i) => frag.appendChild(makeRow(t, offset + i + 1)));
+      tbody.appendChild(frag);
+      requestAnimationFrame(() => {
+        const rows = tbody.querySelectorAll("tr");
+        for (let r = offset; r < Math.min(offset + CHUNK, rows.length); r++) {
+          rows[r].querySelectorAll("textarea.cell-edit").forEach(ta => {
+            ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px";
+          });
+        }
+      });
+      offset += CHUNK;
+      requestAnimationFrame(renderChunk);
+    }
+    requestAnimationFrame(renderChunk);
+  }
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────
+function getTaskMonthKeys(dateStart, dateEnd, deadline) {
+  const endStr = dateEnd || deadline || null;
+  if (!dateStart || !endStr) return [];
+  const ds = new Date(dateStart);
+  const de = new Date(endStr);
+  const keys = [];
+  let cur = new Date(ds.getFullYear(), ds.getMonth(), 1);
+  const end = new Date(de.getFullYear(), de.getMonth(), 1);
+  while (cur <= end) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, "0");
+    keys.push(`${y}-${m}`);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return keys;
+}
+
+function makeRow(t, num) {
+  const tr = document.createElement("tr");
+  tr.dataset.id = t.id;
+  let _ppId = null;
+  try {
+    const _a = (typeof t.actions === 'string') ? JSON.parse(t.actions || '{}') : (t.actions || {});
+    _ppId = _a.pp_id ?? null;
+  } catch(e) {}
+  const isFromPP = !!_ppId;
+  if (isFromPP) tr.classList.add('pp-locked');
+
+  const numTd = document.createElement("td");
+  numTd.className = "num-cell"; numTd.textContent = num;
+  if (isFromPP) {
+    const lockBadge = document.createElement("span");
+    lockBadge.className = "pp-lock-badge";
+    lockBadge.title = "Перенесено из Производственного плана — редактирование заблокировано";
+    lockBadge.textContent = "🔒 ПП";
+    numTd.appendChild(lockBadge);
+  }
+  tr.appendChild(numTd);
+
+  const typeTd = document.createElement("td");
+  typeTd.style.cssText = "padding:6px 8px;vertical-align:middle";
+  if (t.task_type) {
+    const badge = document.createElement("span");
+    badge.className = `type-badge ${t.task_type.toLowerCase().split(" ")[0]}`;
+    badge.textContent = t.task_type;
+    typeTd.appendChild(badge);
+  }
+  tr.appendChild(typeTd);
+
+  const cols = [
+    {field:"dept",         type:"select", dirKey:"dept"},
+    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept"},
+    {field:"project",      type:"select", dirKey:"project"},
+    {field:"stage",        type:"select", dirKey:"stage",    parentField:"project", parentDirKey:"project"},
+    {field:"justification",type:"text"},
+    {field:"description",  type:"text"},
+    {field:"work_name",    type:"text"},
+    {field:"work_number",  type:"text"},
+    {field:"executor",     type:"select", dirKey:"executor"},
+    {field:"date_start",   type:"date"},
+    {field:"date_end",     type:"date"},
+    {field:"deadline",     type:"date"},
+  ];
+  const colKeys = ["dept","sector","project","stage","just","desc","wname","wnum","exec","ds","de","dead"];
+
+  cols.forEach((col, idx) => {
+    const td = document.createElement("td");
+    const thEl = document.getElementById(`th-${colKeys[idx]}`);
+    if (thEl && thEl.style.width) td.style.width = thEl.style.width;
+
+    if (col.field === "executor") {
+      td.style.cssText = "padding:6px 8px;vertical-align:middle;";
+      const execList = t.executors_list || [];
+      if (execList.length > 0 || isFromPP) {
+        const container = document.createElement("div");
+        container.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+        execList.forEach(ex => {
+          const execItem = document.createElement("div");
+          execItem.style.cssText = "font-size:15px;color:var(--text);background:rgba(168,85,247,0.1);padding:3px 8px;border-radius:4px;border:1px solid rgba(168,85,247,0.2);";
+          const hours = ex.hours || {};
+          let totalHours = 0;
+          if (selectedMonth) {
+            const key = `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`;
+            totalHours = hours[key] || 0;
+          } else {
+            totalHours = Object.values(hours).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+          }
+          execItem.innerHTML = `<strong>${ex.name}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
+          container.appendChild(execItem);
+        });
+        td.appendChild(container);
+      } else {
+        const sel = document.createElement("select");
+        sel.className = "cell-select";
+        sel.dataset.field = col.field;
+        sel.dataset.dirKey = col.dirKey;
+        fillSelect(sel, col.dirKey, t[col.field], null, null);
+        sel.addEventListener("change", () => saveTask(t.id, tr));
+        td.appendChild(sel);
+      }
+    }
+    else if (col.type === "select") {
+      const sel = document.createElement("select");
+      sel.className = "cell-select";
+      sel.dataset.field = col.field;
+      if (col.parentField) sel.dataset.parentField = col.parentField;
+      if (col.parentDirKey) sel.dataset.parentDirKey = col.parentDirKey;
+      if (col.dirKey) sel.dataset.dirKey = col.dirKey;
+      fillSelect(sel, col.dirKey, t[col.field], col.parentField ? t[col.parentField] : null, col.parentDirKey);
+      if (isFromPP) {
+        sel.disabled = true;
+      } else {
+        sel.addEventListener("change", () => {
+          if (col.field === "dept") { const s = tr.querySelector("select[data-field='sector']"); if(s) fillSelect(s,"sector",null,sel.value,"dept"); }
+          if (col.field === "project") { const s = tr.querySelector("select[data-field='stage']"); if(s) fillSelect(s,"stage",null,sel.value,"project"); }
+          saveTask(t.id, tr);
+        });
+      }
+      td.appendChild(sel);
+    } else {
+      const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
+      inp.className = "cell-edit" + (col.type === "date" ? " date" : "");
+      inp.dataset.field = col.field;
+      if (col.type === "date") inp.type = "date";
+      inp.value = t[col.field] || "";
+      if (inp.tagName === "TEXTAREA") {
+        inp.rows = 1;
+        inp.addEventListener("input", () => { inp.style.height="auto"; inp.style.height=inp.scrollHeight+"px"; });
+      }
+      if (isFromPP) { inp.readOnly = true; inp.tabIndex = -1; }
+      inp.addEventListener("change", async () => {
+        if (isFromPP) return;
+        if (col.field === "date_start" || col.field === "date_end") {
+          const hasExecutors = (t.executors_list && t.executors_list.length > 0) || t.executor;
+          if (hasExecutors) {
+            const dsInp = tr.querySelector("input[data-field='date_start']");
+            const deInp = tr.querySelector("input[data-field='date_end']");
+            const newStart = dsInp?.value || t.date_start;
+            const newEnd = deInp?.value || t.date_end;
+            const oldKeys = getTaskMonthKeys(t.date_start, t.date_end, t.deadline);
+            const newKeys = getTaskMonthKeys(newStart, newEnd, t.deadline);
+            const addedMonths = newKeys.filter(k => !oldKeys.includes(k));
+            if (addedMonths.length > 0) {
+              showDateChangeModal(addedMonths.length, async (confirmed) => {
+                if (confirmed) {
+                  await saveTask(t.id, tr);
+                  await loadTasks();
+                  const updatedTask = tasks.find(task => task.id === t.id);
+                  if (updatedTask) openEditTaskModal(updatedTask);
+                } else {
+                  inp.value = t[col.field] || "";
+                }
+              }, t.id, tr);
+              return;
+            }
+          }
+          updatePlanHoursCell(tr, t);
+        }
+        saveTask(t.id, tr);
+      });
+      td.appendChild(inp);
+    }
+    tr.appendChild(td);
+  });
+
+  // Actions
+  const actTd = document.createElement("td");
+  actTd.className = "actions-cell";
+  actTd.style.display = "table-cell";
+  const editBtn = document.createElement("button");
+  editBtn.className = "btn-edit-row"; editBtn.textContent = isFromPP ? "🔒 ✏️" : "✏️";
+  editBtn.title = isFromPP ? "Редактирование (частичное): задача из Производственного плана" : "Редактировать";
+  editBtn.style.display = "inline-block";
+  editBtn.onclick = () => openEditTaskModal(t);
+  const repBtn = document.createElement("button");
+  repBtn.className = "btn-report"; repBtn.textContent = "📄 Отчёт";
+  repBtn.style.display = "inline-block";
+  repBtn.onclick = () => openReportModal(t.id, t.work_name || `Задача #${t.id}`);
+  const delBtn = document.createElement("button");
+  delBtn.className = "btn-del"; delBtn.textContent = "✕";
+  delBtn.style.display = "inline-block";
+  delBtn.onclick = () => deleteTask(t.id, tr);
+  actTd.appendChild(editBtn); actTd.appendChild(repBtn); actTd.appendChild(delBtn);
+  tr.appendChild(actTd);
+  return tr;
+}
+
+function updatePlanHoursCell(tr, t) { /* placeholder — server returns updated data on next loadTasks */ }
+
+function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
+  sel.innerHTML = "<option value=''>—</option>";
+  const allItems = dirs[`_ids_${dirKey}`] || [];
+  let items = allItems;
+  if (parentVal && parentDirKey) {
+    const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
+    if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
+  }
+  items.forEach(item => {
+    const o = document.createElement("option");
+    o.value = item.value; o.textContent = item.value;
+    if (item.value === selectedVal) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function getRowData(tr) {
+  const data = {};
+  tr.querySelectorAll(".cell-edit,.cell-select").forEach(inp => {
+    if (inp.dataset.field && inp.dataset.field !== "plan_hours") {
+      data[inp.dataset.field] = inp.value || null;
+    }
+  });
+  const badge = tr.querySelector(".type-badge");
+  if (badge) data.task_type = badge.textContent;
+  const phInp = tr.querySelector("input[data-field='plan_hours']");
+  if (phInp && selectedMonth) {
+    const key = `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`;
+    data.plan_hours_update = {};
+    data.plan_hours_update[key] = parseFloat(phInp.value) || 0;
+  }
+  return data;
+}
+
+async function saveTask(id, tr) {
+  const data = getRowData(tr);
+  tr.style.outline = '1px solid rgba(59,130,246,0.4)';
+  try {
+    const res = await fetch(`/api/tasks/${id}/`, {
+      method:"PUT", headers:apiHeaders(), body:JSON.stringify(data)
+    });
+    if (res.status === 409) {
+      const err = await res.json();
+      tr.style.outline = '1px solid rgba(239,68,68,0.6)';
+      setTimeout(() => { tr.style.outline = ''; }, 3000);
+      notify("⚠ " + (err.message || "Конфликт: данные изменены другим пользователем"), "err");
+      return;
+    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    tr.style.outline = '1px solid rgba(34,197,94,0.5)';
+    setTimeout(() => { tr.style.outline = ''; }, 800);
+  } catch(e) {
+    tr.style.outline = '1px solid rgba(239,68,68,0.6)';
+    setTimeout(() => { tr.style.outline = ''; }, 3000);
+    notify("Ошибка сохранения: " + e.message, "err");
+  }
+}
+
+async function deleteTask(id, tr) {
+  if (!await confirmDialog("Удалить задачу?", "Удаление")) return;
+  await fetch(`/api/tasks/${id}/`, {method:"DELETE", headers:apiHeaders()});
+  tr.style.transition = "opacity 0.2s, transform 0.2s";
+  tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
+  setTimeout(() => {
+    tr.remove();
+    document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => td.textContent = i+1);
+  }, 200);
+  notify("Задача удалена", "ok");
+}
+
+// ── TYPE MODAL ────────────────────────────────────────────────────────────
+function openTypeModal() { document.getElementById("typeModal").classList.add("open"); }
+function closeTypeModal() { document.getElementById("typeModal").classList.remove("open"); }
+function selectTypeAndProceed(el) {
+  pendingTaskType = el.dataset.type;
+  closeTypeModal();
+  openNewTaskModal(pendingTaskType);
+}
+
+// ── INLINE NEW ROW (без модала) ───────────────────────────────────────────
+let _addingTaskRow = false;
+
+const TASK_TYPES = [
+  'Разработка',
+  'Выпуск нового документа',
+  'Корректировка документа',
+  'Сопровождение (ОКАН)',
+];
+
+function openInlineNewRow() {
+  if (_addingTaskRow) {
+    const r = document.getElementById('taskNewRow');
+    if (r) { r.scrollIntoView({behavior:'smooth', block:'center'}); r.querySelector('select,input')?.focus(); }
+    return;
+  }
+  _addingTaskRow = true;
+
+  const tbody = document.getElementById('taskBody');
+  const tr = document.createElement('tr');
+  tr.id = 'taskNewRow';
+  tr.style.cssText = 'background:rgba(59,130,246,0.07);outline:2px solid rgba(59,130,246,0.4);';
+
+  // № колонка
+  const numTd = document.createElement('td');
+  numTd.className = 'num-cell';
+  numTd.innerHTML = '<span style="color:var(--accent);font-weight:700;">+</span>';
+  tr.appendChild(numTd);
+
+  // Тип задачи
+  const typeTd = document.createElement('td');
+  typeTd.style.cssText = 'padding:6px 8px;vertical-align:middle;';
+  const typeSel = document.createElement('select');
+  typeSel.id = 'inr-task_type';
+  typeSel.className = 'cell-select';
+  typeSel.style.cssText = 'min-width:160px;';
+  TASK_TYPES.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    typeSel.appendChild(o);
+  });
+  typeTd.appendChild(typeSel);
+  tr.appendChild(typeTd);
+
+  // Колонки: dept, sector, project, stage, justification, description, work_name, work_number
+  const colDefs = [
+    {id:'inr-dept',          type:'select', dirKey:'dept'},
+    {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept'},
+    {id:'inr-project',       type:'select', dirKey:'project'},
+    {id:'inr-stage',         type:'select', dirKey:'stage',   parentId:'inr-project', parentDirKey:'project'},
+    {id:'inr-justification', type:'text',   placeholder:'Обоснование'},
+    {id:'inr-description',   type:'text',   placeholder:'Обозначение'},
+    {id:'inr-work_name',     type:'text',   placeholder:'Наименование'},
+    {id:'inr-work_number',   type:'text',   placeholder:'№ работы'},
+  ];
+
+  colDefs.forEach(def => {
+    const td = document.createElement('td');
+    if (def.type === 'select') {
+      const sel = document.createElement('select');
+      sel.id = def.id;
+      sel.className = 'cell-select';
+      fillSelect(sel, def.dirKey, null, null, null);
+      // Каскад: dept→sector, project→stage
+      if (def.id === 'inr-dept') {
+        sel.addEventListener('change', () => {
+          const secSel = document.getElementById('inr-sector');
+          if (secSel) fillSelect(secSel, 'sector', null, sel.value, 'dept');
+        });
+      }
+      if (def.id === 'inr-project') {
+        sel.addEventListener('change', () => {
+          const stageSel = document.getElementById('inr-stage');
+          if (stageSel) fillSelect(stageSel, 'stage', null, sel.value, 'project');
+        });
+      }
+      td.appendChild(sel);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.id = def.id;
+      ta.className = 'cell-edit';
+      ta.placeholder = def.placeholder || '';
+      ta.rows = 1;
+      ta.style.cssText = 'resize:none;overflow:hidden;';
+      ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; });
+      td.appendChild(ta);
+    }
+    tr.appendChild(td);
+  });
+
+  // Исполнитель (select — одиночный при создании)
+  const execTd = document.createElement('td');
+  const execSel = document.createElement('select');
+  execSel.id = 'inr-executor';
+  execSel.className = 'cell-select';
+  fillSelect(execSel, 'executor', null, null, null);
+  execTd.appendChild(execSel);
+  tr.appendChild(execTd);
+
+  // Дата начала
+  const dsTd = document.createElement('td');
+  const dsInp = document.createElement('input');
+  dsInp.id = 'inr-date_start'; dsInp.type = 'date'; dsInp.className = 'cell-edit date';
+  dsTd.appendChild(dsInp); tr.appendChild(dsTd);
+
+  // Дата окончания
+  const deTd = document.createElement('td');
+  const deInp = document.createElement('input');
+  deInp.id = 'inr-date_end'; deInp.type = 'date'; deInp.className = 'cell-edit date';
+  deTd.appendChild(deInp); tr.appendChild(deTd);
+
+  // Срок ПП/ПГ/ТР
+  const deadTd = document.createElement('td');
+  const deadInp = document.createElement('input');
+  deadInp.id = 'inr-deadline'; deadInp.type = 'date'; deadInp.className = 'cell-edit date';
+  deadTd.appendChild(deadInp); tr.appendChild(deadTd);
+
+  // Кнопки ✓ / ✕
+  const actTd = document.createElement('td');
+  actTd.style.cssText = 'white-space:nowrap;padding:6px 8px;vertical-align:middle;';
+  actTd.innerHTML = `
+    <button id="taskNewRowSave" title="Сохранить" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
+    <button id="taskNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
+  `;
+  tr.appendChild(actTd);
+
+  tbody.appendChild(tr);
+
+  // Фокус на первый элемент
+  typeSel.focus();
+  tr.scrollIntoView({behavior:'smooth', block:'center'});
+
+  // Сохранение
+  async function doSaveNewTaskRow() {
+    const saveBtn = document.getElementById('taskNewRowSave');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
+
+    const executor = document.getElementById('inr-executor')?.value || null;
+    const ds = document.getElementById('inr-date_start')?.value || null;
+    const de = document.getElementById('inr-date_end')?.value || null;
+    const keys = ds && de ? getTaskMonthKeys(ds, de) : [];
+    let planHours = {};
+    if (keys.length === 1 && executor) planHours[keys[0]] = 0;
+
+    const _v = id => document.getElementById(id)?.value || '';
+    const data = {
+      task_type:     _v('inr-task_type') || TASK_TYPES[0],
+      dept:          _v('inr-dept'),
+      sector:        _v('inr-sector'),
+      project:       _v('inr-project'),
+      stage:         _v('inr-stage'),
+      work_name:     _v('inr-work_name'),
+      work_number:   _v('inr-work_number'),
+      justification: _v('inr-justification'),
+      description:   _v('inr-description'),
+      date_start:    ds || '',
+      date_end:      de || '',
+      deadline:      _v('inr-deadline'),
+      executor:      executor || '',
+      plan_hours:    planHours,
+      executors_list: executor ? [{name: executor, hours: {}}] : [],
+    };
+
+    try {
+      const res = await fetch('/api/tasks/create/', {
+        method: 'POST', headers: apiHeaders(), body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      _addingTaskRow = false;
+      tr.remove();
+      await loadTasks();
+      renderTable();
+      notify('✓ Задача создана', 'ok');
+      // Прокрутка к последней строке
+      const allRows = document.querySelectorAll('#taskBody tr');
+      if (allRows.length) allRows[allRows.length - 1].scrollIntoView({behavior:'smooth', block:'center'});
+    } catch (e) {
+      notify('Ошибка создания задачи', 'err');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+    }
+  }
+
+  document.getElementById('taskNewRowSave').addEventListener('click', doSaveNewTaskRow);
+  document.getElementById('taskNewRowCancel').addEventListener('click', () => {
+    _addingTaskRow = false; tr.remove();
+  });
+
+  // Enter в textarea/input → сохранить (Shift+Enter — перенос строки в textarea)
+  tr.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doSaveNewTaskRow(); }
+      if (e.key === 'Escape') { _addingTaskRow = false; tr.remove(); }
+    });
+  });
+  tr.querySelectorAll('textarea').forEach(ta => {
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { _addingTaskRow = false; tr.remove(); }
+    });
+  });
+}
+
+// ── NEW TASK FORM MODAL ───────────────────────────────────────────────────
+let editingTaskId = null;
+let _editingTaskOriginal = null;
+
+function openNewTaskModal(taskType, prefill) {
+  editingTaskId = null;
+  newTaskExecutorsList = [];
+  const cls = taskType.toLowerCase().split(" ")[0];
+  document.getElementById("newTaskTypeBadgeWrap").innerHTML =
+    `<span class="type-badge ${cls}">${taskType}</span>`;
+  document.getElementById("newTaskModalTitle").textContent = "Новая задача";
+  document.getElementById("newTaskSubmitBtn").textContent = "✓ Создать задачу";
+
+  populateFormSelect(document.getElementById("nt-dept"),     "dept",     prefill?.dept     || null, null, null);
+  populateFormSelect(document.getElementById("nt-sector"),   "sector",   prefill?.sector   || null, prefill?.dept || null, "dept");
+  populateFormSelect(document.getElementById("nt-project"),  "project",  prefill?.project  || null, null, null);
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, prefill?.project || null, "project");
+  populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
+  ["work_name","work_number","justification","date_start","date_end","deadline","actions"]
+    .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = prefill?.[f] || ""; });
+
+  document.getElementById("nt-plan-months-wrap").innerHTML = "";
+  document.getElementById("nt-plan_hours_single").value = "";
+  document.getElementById("nt-plan-months-wrap").style.display = "none";
+  document.getElementById("nt-plan-single-wrap").style.display = "";
+  document.getElementById("nt-labor-row").style.display = "none";
+
+  if (prefill?.date_start || prefill?.date_end) onNewTaskDateChange(prefill?.plan_hours_all || {});
+  renderNewTaskExecutorsList();
+  document.getElementById("nt-actions-wrap").style.display = "";
+  _applyPPLock(false);
+  document.getElementById("newTaskModal").classList.add("open");
+}
+
+function openEditTaskModal(t) {
+  editingTaskId = t.id;
+  _editingTaskOriginal = t;
+  newTaskExecutorsList = t.executors_list || [];
+  pendingTaskType = t.task_type;
+  const cls = (t.task_type || "").toLowerCase().split(" ")[0];
+  document.getElementById("newTaskTypeBadgeWrap").innerHTML =
+    `<span class="type-badge ${cls}">${t.task_type || ""}</span>`;
+  document.getElementById("newTaskModalTitle").textContent = `Редактирование задачи #${t.id}`;
+  document.getElementById("newTaskSubmitBtn").textContent = "💾 Сохранить изменения";
+
+  populateFormSelect(document.getElementById("nt-dept"),     "dept",     t.dept     || null, null, null);
+  populateFormSelect(document.getElementById("nt-sector"),   "sector",   t.sector   || null, t.dept || null, "dept");
+  populateFormSelect(document.getElementById("nt-project"),  "project",  t.project  || null, null, null);
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, t.project || null, "project");
+  populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
+  ["work_name","work_number","justification","date_start","date_end","deadline"]
+    .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = t[f] || ""; });
+
+  document.getElementById("nt-actions-wrap").style.display = "none";
+  document.getElementById("nt-plan-months-wrap").innerHTML = "";
+  document.getElementById("nt-plan_hours_single").value = "";
+  document.getElementById("nt-plan-months-wrap").style.display = "none";
+  document.getElementById("nt-plan-single-wrap").style.display = "";
+  document.getElementById("nt-labor-row").style.display = "none";
+
+  if (t.date_start || t.date_end) onNewTaskDateChange(t.plan_hours_all || {});
+  renderNewTaskExecutorsList();
+
+  // Определяем from_pp: из флага API или из actions
+  let isPP = !!t.from_pp;
+  if (!isPP) {
+    try {
+      const a = typeof t.actions === 'object' ? t.actions : JSON.parse(t.actions || '{}');
+      isPP = !!(a && a.pp_id);
+    } catch(e) {}
+  }
+  _applyPPLock(isPP);
+
+  const ppLaborWrap = document.getElementById("nt-pp-labor-wrap");
+  const ppLaborEl = document.getElementById("nt-pp-labor");
+  const ppLabor = t.pp_labor || "";
+  if (isPP && ppLabor) { ppLaborWrap.style.display = ""; ppLaborEl.textContent = ppLabor + " ч"; }
+  else { ppLaborWrap.style.display = "none"; ppLaborEl.textContent = "—"; }
+
+  document.getElementById("newTaskModal").classList.add("open");
+}
+
+function _applyPPLock(isPP) {
+  document.getElementById("pp-edit-hint")?.remove();
+  const ppAllowed = new Set(["nt-date_start", "nt-date_end", "nt-plan_hours_single", "nt-executor-select"]);
+  const formEls = document.querySelectorAll(
+    "#newTaskModal .form-input, #newTaskModal .form-select, #newTaskModal .form-textarea"
+  );
+  formEls.forEach(el => {
+    const allowed = ppAllowed.has(el.id) || el.hasAttribute("data-month") || el.hasAttribute("data-exec-index");
+    el.disabled = isPP && !allowed;
+  });
+  const addExecBtn = document.querySelector("#newTaskModal button[onclick='addExecutorToNewTask()']");
+  if (addExecBtn) { addExecBtn.disabled = false; addExecBtn.style.opacity = ""; }
+  if (isPP) {
+    const hint = document.createElement("div");
+    hint.className = "pp-edit-hint"; hint.id = "pp-edit-hint";
+    hint.innerHTML = "🔒 Задача перенесена из <b>Производственного плана</b>. "
+      + "Доступно изменение: <b>Исполнители</b>, <b>Дата начала</b>, <b>Дата окончания</b>, <b>План труд (часы)</b>.";
+    const body = document.querySelector("#newTaskModal .new-task-body");
+    body.insertBefore(hint, body.firstChild);
+  }
+}
+
+function closeNewTaskModal() {
+  document.getElementById("newTaskModal").classList.remove("open");
+  editingTaskId = null; _editingTaskOriginal = null;
+  _applyPPLock(false);
+  document.getElementById("nt-actions-wrap").style.display = "";
+  document.getElementById("nt-pp-labor-wrap").style.display = "none";
+}
+
+function onNewTaskDeptChange() {
+  populateFormSelect(document.getElementById("nt-sector"), "sector", null,
+    document.getElementById("nt-dept").value, "dept");
+}
+function onNewTaskProjectChange() {
+  populateFormSelect(document.getElementById("nt-stage"), "stage", null,
+    document.getElementById("nt-project").value, "project");
+}
+
+function onNewTaskDateChange(prefillHours) {
+  const ds = document.getElementById("nt-date_start").value;
+  const de = document.getElementById("nt-date_end").value;
+  const keys = getTaskMonthKeys(ds, de);
+  const wrap = document.getElementById("nt-plan-months-wrap");
+  const singleWrap = document.getElementById("nt-plan-single-wrap");
+  const totalWrap = document.getElementById("nt-total-wrap");
+
+  if (keys.length > 1) {
+    singleWrap.style.display = "none";
+    wrap.style.display = ""; totalWrap.style.display = "";
+    const existing = prefillHours || {};
+    wrap.querySelectorAll("input[data-month]").forEach(inp => {
+      if (!prefillHours) existing[inp.dataset.month] = inp.value;
+    });
+    wrap.innerHTML = "";
+    keys.forEach(key => {
+      const [y, m] = key.split("-");
+      const label = `${MONTH_NAMES[parseInt(m)]} ${y}`;
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:10px;margin-bottom:8px";
+      row.innerHTML = `
+        <span style="font-size:16px;color:var(--muted2);width:80px;flex-shrink:0">${label}</span>
+        <input type="number" class="form-input" data-month="${key}" placeholder="0"
+               style="width:120px" value="${existing[key]||""}">
+        <span style="font-size:15px;color:var(--muted)">ч</span>`;
+      row.querySelector("input").addEventListener("input", updateTotalHours);
+      wrap.appendChild(row);
+    });
+    updateTotalHours();
+  } else if (keys.length === 1) {
+    singleWrap.style.display = ""; wrap.style.display = "none"; wrap.innerHTML = "";
+    totalWrap.style.display = "none";
+    if (prefillHours && keys[0]) {
+      document.getElementById("nt-plan_hours_single").value = prefillHours[keys[0]] || "";
+    }
+  } else {
+    singleWrap.style.display = ""; wrap.style.display = "none"; totalWrap.style.display = "none";
+  }
+  renderNewTaskExecutorsList();
+}
+
+function updateTotalHours() {
+  const execInputs = document.querySelectorAll("#nt-executors-list input[data-exec-index]");
+  const monthInputs = document.querySelectorAll("#nt-plan-months-wrap input[data-month]");
+  const hasExec = execInputs.length > 0;
+  const hasMonth = monthInputs.length > 0;
+  let total = 0;
+  if (hasExec && hasMonth) {
+    const monthSums = {};
+    execInputs.forEach(inp => {
+      const key = inp.dataset.month;
+      monthSums[key] = (monthSums[key] || 0) + (parseFloat(inp.value) || 0);
+    });
+    monthInputs.forEach(inp => {
+      const key = inp.dataset.month;
+      const sum = monthSums[key] || 0;
+      inp.value = sum > 0 ? sum : "";
+      total += sum;
+    });
+  } else if (hasMonth) {
+    monthInputs.forEach(inp => { total += parseFloat(inp.value) || 0; });
+  } else if (hasExec) {
+    execInputs.forEach(inp => { total += parseFloat(inp.value) || 0; });
+  }
+  document.getElementById("nt-total-hours").textContent = total > 0 ? total + " ч" : "0 ч";
+  if (hasExec || hasMonth) document.getElementById("nt-labor-row").style.display = "";
+}
+
+function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
+  sel.innerHTML = "<option value=''>—</option>";
+  const allItems = dirs[`_ids_${dirKey}`] || [];
+  let items = allItems;
+  if (parentVal && parentDirKey) {
+    const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
+    if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
+  }
+  let found = false;
+  items.forEach(item => {
+    const o = document.createElement("option");
+    o.value = item.value; o.textContent = item.value;
+    if (item.value === selectedVal) { o.selected = true; found = true; }
+    sel.appendChild(o);
+  });
+  if (selectedVal && !found) {
+    const o = document.createElement("option");
+    o.value = selectedVal; o.textContent = selectedVal; o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+async function submitNewTask() {
+  const ds = document.getElementById("nt-date_start").value || null;
+  const de = document.getElementById("nt-date_end").value || null;
+
+  if (ds && de && newTaskExecutorsList.length > 0) {
+    const checkRes = await fetch('/api/check_vacation_conflict/', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({
+        executors: newTaskExecutorsList.map(e => e.name),
+        date_start: ds, date_end: de
+      })
+    });
+    const {conflicts} = await checkRes.json();
+    if (conflicts.length > 0) {
+      const conflictMsg = conflicts.map(c =>
+        `${c.executor}: отпуск с ${c.vacation_start} по ${c.vacation_end}`
+      ).join('\n');
+      const action = await showVacationConflictModal(conflictMsg);
+      if (action === 'cancel') return;
+      else if (action === 'adjust') { notify('Откорректируйте даты задачи', 'err'); return; }
+    }
+  }
+
+  let planHours = {};
+  const keys = getTaskMonthKeys(ds, de);
+  if (keys.length > 1) {
+    document.querySelectorAll("#nt-plan-months-wrap input[data-month]").forEach(inp => {
+      const val = parseFloat(inp.value);
+      if (!isNaN(val) && val > 0) planHours[inp.dataset.month] = val;
+    });
+  } else {
+    const singleVal = parseFloat(document.getElementById("nt-plan_hours_single").value);
+    if (keys.length === 1 && !isNaN(singleVal) && singleVal > 0) planHours[keys[0]] = singleVal;
+  }
+
+  const data = {
+    task_type:     pendingTaskType,
+    dept:          document.getElementById("nt-dept").value || null,
+    sector:        document.getElementById("nt-sector").value || null,
+    project:       document.getElementById("nt-project").value || null,
+    stage:         document.getElementById("nt-stage").value || null,
+    executor:      null,
+    work_name:     document.getElementById("nt-work_name").value || null,
+    work_number:   document.getElementById("nt-work_number").value || null,
+    justification: document.getElementById("nt-justification").value || null,
+    description:   null,
+    date_start:    ds, date_end: de,
+    deadline:      document.getElementById("nt-deadline").value || null,
+    plan_hours:    planHours,
+    actions:       document.getElementById("nt-actions")?.value || null,
+    executors_list: newTaskExecutorsList
+  };
+
+  if (editingTaskId && _editingTaskOriginal) {
+    data.actions = _editingTaskOriginal.actions || null;
+    data.executor = _editingTaskOriginal.executor || null;
+  }
+
+  if (editingTaskId) {
+    await fetch(`/api/tasks/${editingTaskId}/`, {
+      method: "PUT", headers: apiHeaders(), body: JSON.stringify(data)
+    });
+    closeNewTaskModal(); await loadTasks(); notify("✓ Изменения сохранены", "ok");
+  } else {
+    const res = await fetch("/api/tasks/create/", {method:"POST", headers:apiHeaders(), body:JSON.stringify(data)});
+    const {id} = await res.json();
+    closeNewTaskModal(); await loadTasks(); notify("✓ Задача создана", "ok");
+  }
+}
+
+// ── DIRS ──────────────────────────────────────────────────────────────────
+async function loadDirs() {
+  const res = await fetch("/api/directories/");
+  const raw = await res.json();
+  dirs = {};
+  for (const [type, items] of Object.entries(raw)) {
+    dirs[type] = Array.isArray(items) ? items.map(i => i.value) : [];
+    dirs[`_ids_${type}`] = items;
+  }
+}
+
+// ── REPORT ────────────────────────────────────────────────────────────────
+async function openReportModal(taskId, taskName) {
+  currentTaskId = taskId;
+  document.getElementById("reportTaskRef").textContent = taskName;
+  const res = await fetch(`/api/reports/${taskId}/`);
+  reportRows = await res.json();
+  renderReportTable();
+  document.getElementById("reportModal").classList.add("open");
+}
+function closeReportModal() { document.getElementById("reportModal").classList.remove("open"); currentTaskId=null; }
+function renderReportTable() {
+  const tbody = document.getElementById("reportBody");
+  tbody.innerHTML = "";
+  reportRows.forEach((r,i) => tbody.appendChild(makeReportRow(r,i)));
+  requestAnimationFrame(() => {
+    tbody.querySelectorAll("textarea").forEach(ta => {
+      ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px";
+    });
+  });
+}
+const RFIELDS=["doc_name","doc_designation","inventory_num","date_accepted","doc_type","doc_class","sheets_a4","norm","coeff","bvd_hours","norm_control","doc_link"];
+function makeReportRow(r, idx) {
+  const tr=document.createElement("tr"); tr.dataset.rid=r.id||"";
+  RFIELDS.forEach(f=>{
+    const td=document.createElement("td");
+    const inp=document.createElement("textarea");
+    inp.className="r-cell"; inp.rows=1; inp.value=r[f]||""; inp.dataset.field=f;
+    inp.addEventListener("input",()=>{inp.style.height="auto";inp.style.height=inp.scrollHeight+"px";});
+    td.appendChild(inp); tr.appendChild(td);
+  });
+  const delTd=document.createElement("td"); delTd.style.padding="4px 6px";
+  const delBtn=document.createElement("button"); delBtn.className="r-del"; delBtn.textContent="✕";
+  delBtn.onclick=async()=>{
+    if(r.id) await fetch(`/api/reports/${r.id}/detail/`,{method:"DELETE",headers:apiHeaders()});
+    reportRows.splice(idx,1); renderReportTable();
+  };
+  delTd.appendChild(delBtn); tr.appendChild(delTd); return tr;
+}
+function addReportRow() { reportRows.push({task_id:currentTaskId}); renderReportTable(); }
+async function saveAllReports() {
+  for (const tr of document.querySelectorAll("#reportBody tr")) {
+    const rid=tr.dataset.rid; const data={task_id:currentTaskId};
+    tr.querySelectorAll(".r-cell").forEach(inp=>{data[inp.dataset.field]=inp.value||null;});
+    if(rid){
+      await fetch(`/api/reports/${rid}/detail/`,{method:"PUT",headers:apiHeaders(),body:JSON.stringify(data)});
+    } else {
+      const res=await fetch("/api/reports/",{method:"POST",headers:apiHeaders(),body:JSON.stringify(data)});
+      const {id}=await res.json(); tr.dataset.rid=id;
+    }
+  }
+  notify("✓ Отчёт сохранён","ok");
+}
+
+// ── USERS ─────────────────────────────────────────────────────────────────
+async function openUsersModal() {
+  const res=await fetch("/api/users/"); const users=await res.json();
+  const tbl=document.getElementById("usersTable");
+  tbl.innerHTML="<tr><th>Логин</th><th>Роль</th><th style='text-align:right'>Действия</th></tr>";
+  users.forEach(u=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${u.username}</td><td>${u.role}</td><td style="text-align:right">
+      <button class="btn-reset-pw" onclick="resetUserPassword(${u.id},'${u.username.replace(/'/g,'\\\'')}')" title="Сбросить пароль">🔑 Пароль</button>
+      <button class="btn-del" onclick="delUser(${u.id})" title="Удалить">✕</button>
+    </td>`;
+    tbl.appendChild(tr);
+  });
+  document.getElementById("usersModal").classList.add("open");
+}
+async function createUser() {
+  const username=document.getElementById("newUser").value.trim();
+  const password=document.getElementById("newPass").value;
+  const role=document.getElementById("newRole").value;
+  if(!username||!password) return notify("Введите логин и пароль","err");
+  const res=await fetch("/api/users/",{method:"POST",headers:apiHeaders(),body:JSON.stringify({username,password,role})});
+  const data=await res.json(); if(data.error) return notify(data.error,"err");
+  notify("✓ Пользователь создан","ok"); openUsersModal();
+}
+async function delUser(id) { if(!await confirmDialog("Удалить пользователя?","Удаление пользователя"))return; await fetch(`/api/users/${id}/`,{method:"DELETE",headers:apiHeaders()}); openUsersModal(); }
+async function deleteAllTasks() {
+  if (!await confirmDialog("Удалить ВСЕ задачи из базы данных? Это действие необратимо.", "Очистить задачи")) return;
+  try {
+    const res = await fetch('/api/tasks/all/', { method: 'DELETE', headers:apiHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    notify('Все задачи удалены', 'ok'); await loadTasks();
+  } catch (e) { notify('Ошибка удаления: ' + e.message, 'err'); }
+}
+async function resetUserPassword(uid, username) {
+  const newPw = prompt(`Новый пароль для пользователя "${username}":`, "");
+  if (newPw === null) return;
+  if (newPw.length < 4) { notify("Пароль слишком короткий (мин. 4 символа)", "err"); return; }
+  const res = await fetch(`/api/users/${uid}/password/`, {
+    method: "PUT", headers: apiHeaders(), body: JSON.stringify({password: newPw})
+  });
+  if (res.ok) { notify(`✓ Пароль пользователя "${username}" сброшен.`, "ok"); }
+  else { const err = await res.json().catch(() => ({})); notify("Ошибка: " + (err.error || res.status), "err"); }
+}
+
+// ── COL RESIZE ────────────────────────────────────────────────────────────
+function initColResize() {
+  document.querySelectorAll(".col-resize").forEach(handle => {
+    const th=handle.closest("th"); let startX,startW;
+    handle.addEventListener("mousedown",e=>{
+      e.preventDefault(); startX=e.clientX; startW=th.offsetWidth;
+      const onMove=ev=>{
+        const w=Math.max(60,startW+ev.clientX-startX); th.style.width=w+"px";
+        const idx=th.cellIndex;
+        document.querySelectorAll("#mainTable tbody tr").forEach(tr=>{if(tr.cells[idx])tr.cells[idx].style.width=w+"px";});
+        colSettings[handle.dataset.col]={width:w};
+      };
+      const onUp=()=>{document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);saveColSettings();};
+      document.addEventListener("mousemove",onMove); document.addEventListener("mouseup",onUp);
+    });
+  });
+}
+function applyColSettings() {
+  for(const[key,val]of Object.entries(colSettings)){const th=document.getElementById(`th-${key}`);if(th&&val.width)th.style.width=val.width+"px";}
+}
+async function saveColSettings() {
+  await fetch("/api/col_settings/",{method:"POST",headers:apiHeaders(),body:JSON.stringify(colSettings)});
+}
+
+function notify(msg, type="ok") {
+  const el=document.createElement("div"); el.className=`notif ${type}`; el.textContent=msg;
+  document.body.appendChild(el); setTimeout(()=>el.remove(),2500);
+}
+
+// ── DATE CHANGE MODAL ─────────────────────────────────────────────────────
+let dateChangeCallback = null;
+let dateChangeTaskId = null;
+let dateChangeRow = null;
+
+function showDateChangeModal(monthsCount, callback, taskId, row) {
+  const modal = document.getElementById('dateChangeModal');
+  const message = document.getElementById('dateChangeMessage');
+  const monthWord = monthsCount === 1 ? 'месяц' : (monthsCount < 5 ? 'месяца' : 'месяцев');
+  message.textContent = `Изменение периода добавит ${monthsCount} новый ${monthWord}. Часы для исполнителей в новых месяцах нужно заполнить вручную.`;
+  dateChangeCallback = callback; dateChangeTaskId = taskId; dateChangeRow = row;
+  modal.style.display = 'flex';
+}
+function closeDateChangeModal() {
+  document.getElementById('dateChangeModal').style.display = 'none';
+  dateChangeCallback = null; dateChangeTaskId = null; dateChangeRow = null;
+}
+function cancelDateChange() { if (dateChangeCallback) dateChangeCallback(false); closeDateChangeModal(); }
+async function fillLaterDateChange() {
+  if (dateChangeTaskId && dateChangeRow) {
+    await saveTask(dateChangeTaskId, dateChangeRow); await loadTasks();
+    notify('Даты изменены. Заполните часы позже через редактирование', 'ok');
+  }
+  closeDateChangeModal();
+}
+function confirmDateChange() { if (dateChangeCallback) dateChangeCallback(true); closeDateChangeModal(); }
+
+// ── VACATION CONFLICT MODAL ───────────────────────────────────────────────
+let vacationConflictResolve = null;
+function showVacationConflictModal(message) {
+  return new Promise((resolve) => {
+    vacationConflictResolve = resolve;
+    document.getElementById('vacationConflictMessage').textContent = message;
+    document.getElementById('vacationConflictModal').style.display = 'flex';
+  });
+}
+function closeVacationConflictModal(action) {
+  document.getElementById('vacationConflictModal').style.display = 'none';
+  if (vacationConflictResolve) { vacationConflictResolve(action); vacationConflictResolve = null; }
+}
+
+// ── NEW TASK EXECUTORS MANAGEMENT ─────────────────────────────────────────
+function addExecutorToNewTask() {
+  const select = document.getElementById('nt-executor-select');
+  const executorName = select.value;
+  if (!executorName) { notify('Выберите сотрудника', 'err'); return; }
+  if (newTaskExecutorsList.find(e => e.name === executorName)) { notify('Этот сотрудник уже добавлен', 'err'); return; }
+  newTaskExecutorsList.push({ name: executorName, hours: {} });
+  renderNewTaskExecutorsList();
+  select.value = '';
+  notify('Исполнитель добавлен', 'ok');
+}
+async function removeExecutorFromNewTask(index) {
+  if (!await confirmDialog('Удалить исполнителя?', 'Удаление')) return;
+  newTaskExecutorsList.splice(index, 1);
+  renderNewTaskExecutorsList();
+  notify('Исполнитель удалён', 'ok');
+}
+function renderNewTaskExecutorsList() {
+  const container = document.getElementById('nt-executors-list');
+  if (newTaskExecutorsList.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:10px;font-size:16px;">Исполнители не добавлены</div>';
+    return;
+  }
+  container.innerHTML = '';
+  const ds = document.getElementById("nt-date_start").value || null;
+  const de = document.getElementById("nt-date_end").value || null;
+  const monthKeys = ds && de ? getTaskMonthKeys(ds, de) : [];
+
+  newTaskExecutorsList.forEach((executor, index) => {
+    const item = document.createElement('div');
+    item.className = 'nt-executor-item';
+    item.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;';
+    let hoursHTML = '';
+    if (monthKeys.length > 0) {
+      hoursHTML = '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;">';
+      monthKeys.forEach(key => {
+        const [year, month] = key.split('-');
+        const monthName = MONTH_NAMES[parseInt(month)];
+        const value = executor.hours[key] || '';
+        hoursHTML += `
+          <div>
+            <div style="font-size:14px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">${monthName} ${year}</div>
+            <input type="number" class="form-input"
+                   style="padding:6px 8px;font-size:16px;text-align:center;"
+                   data-exec-index="${index}" data-month="${key}"
+                   value="${value}" min="0" step="0.5" placeholder="0"
+                   onchange="updateNewTaskExecutorHours(${index}, '${key}', this.value)">
+          </div>`;
+      });
+      hoursHTML += '</div>';
+    }
+    item.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="nt-executor-name">${executor.name}</div>
+        <button class="nt-executor-remove" type="button" onclick="removeExecutorFromNewTask(${index})">✕</button>
+      </div>
+      ${hoursHTML}`;
+    container.appendChild(item);
+  });
+  updateTotalHours();
+}
+function updateNewTaskExecutorHours(index, monthKey, value) {
+  if (!newTaskExecutorsList[index]) return;
+  const numValue = parseFloat(value);
+  if (!value || value === '' || isNaN(numValue) || numValue <= 0) {
+    delete newTaskExecutorsList[index].hours[monthKey];
+  } else {
+    newTaskExecutorsList[index].hours[monthKey] = numValue;
+  }
+  updateTotalHours();
+}
+
+// ── EXECUTORS MANAGEMENT (standalone modal) ───────────────────────────────
+let currentTaskForExecutors = null;
+let taskExecutorsData = [];
+
+async function openExecutorsModal(taskId, taskName) {
+  currentTaskForExecutors = taskId;
+  document.getElementById('executorsTaskRef').textContent = `Задача: ${taskName}`;
+  const res = await fetch(`/api/tasks/${taskId}/executors/`);
+  taskExecutorsData = await res.json();
+  renderExecutorsList();
+  document.getElementById('executorsModal').classList.add('open');
+}
+function closeExecutorsModal() {
+  document.getElementById('executorsModal').classList.remove('open');
+  currentTaskForExecutors = null; taskExecutorsData = [];
+}
+function renderExecutorsList() {
+  const container = document.getElementById('executorsList');
+  if (taskExecutorsData.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Исполнители не добавлены</div>';
+    return;
+  }
+  container.innerHTML = '';
+  taskExecutorsData.forEach((executor, index) => {
+    const item = document.createElement('div');
+    item.className = 'executor-item';
+    const months = getMonthsForTask();
+    let monthsHTML = '';
+    months.forEach(month => {
+      const value = executor.hours[month.key] || '';
+      monthsHTML += `
+        <div class="executor-month">
+          <div class="executor-month-label">${month.label}</div>
+          <input type="number" class="executor-month-input"
+                 data-exec-index="${index}" data-month="${month.key}"
+                 value="${value}" min="0" step="0.5" placeholder="0"
+                 onchange="updateExecutorHours(${index}, '${month.key}', this.value)">
+        </div>`;
+    });
+    item.innerHTML = `
+      <div class="executor-item-header">
+        <div class="executor-name">${executor.name}</div>
+        <button class="executor-remove" onclick="removeExecutor(${index})">✕ Удалить</button>
+      </div>
+      <div class="executor-hours">${monthsHTML}</div>`;
+    container.appendChild(item);
+  });
+}
+function getMonthsForTask() {
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
+    months.push({ key, label });
+  }
+  return months;
+}
+function addExecutorToTask() {
+  const select = document.getElementById('newExecutorSelect');
+  const executorName = select.value;
+  if (!executorName) { notify('Выберите сотрудника', 'err'); return; }
+  if (taskExecutorsData.find(e => e.name === executorName)) { notify('Этот сотрудник уже добавлен', 'err'); return; }
+  taskExecutorsData.push({ name: executorName, hours: {} });
+  renderExecutorsList(); select.value = ''; notify('Исполнитель добавлен', 'ok');
+}
+async function removeExecutor(index) {
+  if (!await confirmDialog('Удалить исполнителя из этой задачи?', 'Удаление')) return;
+  taskExecutorsData.splice(index, 1); renderExecutorsList(); notify('Исполнитель удалён', 'ok');
+}
+function updateExecutorHours(index, monthKey, value) {
+  if (!taskExecutorsData[index]) return;
+  const numValue = parseFloat(value);
+  if (isNaN(numValue) || numValue < 0) taskExecutorsData[index].hours[monthKey] = 0;
+  else taskExecutorsData[index].hours[monthKey] = numValue;
+}
+async function saveTaskExecutors() {
+  if (!currentTaskForExecutors) return;
+  try {
+    const res = await fetch(`/api/tasks/${currentTaskForExecutors}/`, {
+      method: 'PUT', headers: apiHeaders(),
+      body: JSON.stringify({ executors_list: taskExecutorsData })
+    });
+    if (res.ok) { notify('✓ Исполнители сохранены', 'ok'); closeExecutorsModal(); loadTasks(); }
+    else notify('Ошибка сохранения', 'err');
+  } catch (error) { console.error('Error saving executors:', error); notify('Ошибка сохранения', 'err'); }
+}
+
+// ── SIDEBAR TOGGLE ────────────────────────────────────────────────────────
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const topbar = document.getElementById('topbar');
+const toolbar = document.querySelector('.toolbar');
+const searchbar = document.querySelector('.searchbar');
+const tableWrap = document.querySelector('.table-wrap');
+const addRowWrap = document.querySelector('.add-row-wrap');
+
+if (sidebarToggle) {
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    topbar.classList.toggle('sidebar-collapsed');
+    if (toolbar) toolbar.classList.toggle('sidebar-collapsed');
+    if (searchbar) searchbar.classList.toggle('sidebar-collapsed');
+    if (tableWrap) tableWrap.classList.toggle('sidebar-collapsed');
+    if (addRowWrap) addRowWrap.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+  });
+  if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    sidebar.classList.add('collapsed');
+    topbar.classList.add('sidebar-collapsed');
+    if (toolbar) toolbar.classList.add('sidebar-collapsed');
+    if (searchbar) searchbar.classList.add('sidebar-collapsed');
+    if (tableWrap) tableWrap.classList.add('sidebar-collapsed');
+    if (addRowWrap) addRowWrap.classList.add('sidebar-collapsed');
+  }
+}
+</script>
+<script src="/static/js/modal.js"></script>
+
+</body>
+</html>

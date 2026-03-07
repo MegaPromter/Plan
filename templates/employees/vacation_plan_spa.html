@@ -1,0 +1,1065 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}План отпусков — Система управления{% endblock %}
+
+{% block nav_vacation_plan %}active{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">План отпусков</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-outline btn-sm" id="vacErrBtn" onclick="openVacErrModal()">
+  <i class="fas fa-exclamation-triangle"></i> Ошибки отпусков
+</button>
+{% if request.user|is_writer %}
+<button class="btn btn-primary btn-sm" onclick="openAddVacationModal()">
+  <i class="fas fa-plus"></i> Добавить отпуск
+</button>
+{% endif %}
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ── Vacation SPA styles ────────────────────────────────────────────── */
+
+/* Filter panel */
+.vac-filter-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.vac-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vac-filter-row + .vac-filter-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.vac-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 50px;
+}
+
+/* Department chips */
+.dept-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.dept-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.dept-chip:hover { border-color: var(--accent); color: var(--text); }
+.dept-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.dept-chip.chip-all.active { background: var(--surface2); border-color: var(--muted); color: var(--text); }
+.dept-chip.chip-nodept { border-style: dashed; }
+.dept-chip.chip-nodept.active { background: #2a3347; border-color: var(--text2); border-style: solid; color: var(--text); font-weight: 600; }
+.dept-count { font-size: 10px; opacity: 0.75; margin-left: 3px; }
+
+/* Filter inputs */
+.vac-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 260px;
+  padding: 6px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+}
+.vac-search:focus { border-color: var(--accent); }
+.vac-select {
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+.vac-select:focus { border-color: var(--accent); }
+.vac-filter-reset {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.vac-filter-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Vacation table */
+.vac-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.vac-table thead th {
+  background: var(--surface2);
+  border-bottom: 2px solid var(--accent);
+  border-right: 1px solid var(--border);
+  padding: 10px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  text-align: left;
+}
+.vac-table thead th.sortable { cursor: pointer; }
+.vac-table thead th.sortable:hover { color: var(--text); background: #111827; }
+.vac-table thead th.sort-asc::after  { content: ' \25B2'; color: var(--accent); font-size: 10px; }
+.vac-table thead th.sort-desc::after { content: ' \25BC'; color: var(--accent); font-size: 10px; }
+.vac-table tbody tr { border-bottom: 1px solid var(--border); }
+.vac-table tbody tr:hover { background: rgba(59,130,246,0.04); }
+.vac-table td { border-right: 1px solid var(--border); padding: 6px 8px; font-size: 13px; }
+
+/* Inline inputs */
+.vac-table input[type="text"],
+.vac-table input:not([type]) {
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+}
+.vac-table input[type="date"] {
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+}
+.vac-table input:focus { background: rgba(59,130,246,0.06); border-radius: 4px; }
+
+.row-dept-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.vac-btn-delete {
+  color: var(--danger);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.vac-btn-delete:hover { background: rgba(239,68,68,0.15); }
+
+/* Empty state */
+.vac-empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+.vac-empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.vac-empty-state-text { font-size: 15px; }
+.vac-empty-state-sub { font-size: 13px; margin-top: 6px; opacity: 0.7; }
+
+/* Error button badges */
+.err-badge {
+  display: inline-block;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  font-weight: 700;
+}
+#vacErrBtn.has-errors { border-color: var(--warning) !important; color: var(--warning) !important; }
+#vacErrBtn.no-errors { border-color: var(--success) !important; color: var(--success) !important; }
+
+/* Error modal */
+.pe-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.pe-overlay.open { opacity: 1; pointer-events: all; }
+.pe-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 780px; max-width: 96vw; max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+.pe-header {
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pe-title { font-size: 18px; font-weight: 700; color: var(--text); }
+.pe-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.pe-body { overflow-y: auto; flex: 1; }
+.pe-section { border-bottom: 1px solid var(--border); }
+.pe-section-hdr {
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none; background: var(--surface2);
+}
+.pe-section-hdr:hover { background: rgba(255,255,255,0.03); }
+.pe-section-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.pe-count-badge { background: var(--danger); color: #fff; border-radius: 8px; font-size: 12px; padding: 2px 7px; font-weight: 700; }
+.pe-count-badge.warn { background: var(--warning); }
+.pe-count-badge.ok { background: var(--success); }
+.pe-section-body { display: none; }
+.pe-section-body.open { display: block; }
+.pe-item { padding: 10px 24px; border-bottom: 1px solid var(--border); }
+.pe-item:last-child { border-bottom: none; }
+.pe-item-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.pe-item-meta { font-size: 13px; color: var(--muted); }
+.pe-item-meta span { color: #f87171; font-weight: 600; }
+.pe-footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pe-last-check { font-size: 13px; color: var(--muted); }
+
+/* Pagination */
+.vac-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: center;
+}
+.vac-page-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 34px; padding: 0 8px; border-radius: 8px;
+  font-size: 13px; text-decoration: none;
+  border: 1px solid var(--border); color: var(--text2);
+  background: transparent; cursor: pointer;
+  font-family: var(--font); transition: all 0.15s;
+}
+.vac-page-btn:hover { border-color: var(--accent); color: var(--accent); }
+.vac-page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.vac-page-btn:disabled { opacity: 0.4; cursor: default; }
+.vac-page-info { font-size: 12px; color: var(--muted); margin-left: 8px; }
+
+/* Footer row */
+.vac-table-footer td {
+  background: rgba(59,130,246,0.05);
+  border-top: 2px solid var(--border);
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Modal form */
+.modal-form-group {
+  margin-bottom: 16px;
+}
+.modal-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.modal-form-group input,
+.modal-form-group select,
+.modal-form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+}
+.modal-form-group input:focus,
+.modal-form-group select:focus,
+.modal-form-group textarea:focus { border-color: var(--accent); }
+.modal-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Autocomplete dropdown */
+.ac-dropdown {
+  position: absolute;
+  z-index: 9999;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+}
+.ac-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.ac-option:hover { background: var(--surface2); }
+.ac-option-dept { font-size: 11px; color: var(--muted); margin-left: 6px; }
+
+/* Conflict warning in modal */
+.vac-conflict-warn {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #ef4444;
+  display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Error modal overlay -->
+<div class="pe-overlay" id="vacErrOverlay">
+  <div class="pe-box">
+    <div class="pe-header">
+      <div>
+        <div class="pe-title"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> Ошибки отпусков</div>
+        <div class="pe-meta" id="vacErrMeta"></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="closeVacErrModal()"><i class="fas fa-times"></i> Закрыть</button>
+    </div>
+    <div class="pe-body" id="vacErrBody"></div>
+    <div class="pe-footer">
+      <span class="pe-last-check" id="vacErrLastCheck"></span>
+      <button class="btn btn-primary btn-sm" onclick="refreshVacErrors()"><i class="fas fa-sync-alt"></i> Обновить</button>
+    </div>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>План отпусков</h1>
+</div>
+
+<!-- Filters -->
+<div class="vac-filter-panel">
+  <!-- Row 1: department chips -->
+  <div class="vac-filter-row">
+    <span class="vac-filter-label">Отдел</span>
+    <div class="dept-chips" id="deptChips">
+      <button class="dept-chip chip-all active" onclick="selectAllDepts()">Все</button>
+    </div>
+  </div>
+  <!-- Row 2: text filters -->
+  <div class="vac-filter-row">
+    <span class="vac-filter-label">Фильтр</span>
+    <input class="vac-search" id="filterSearch" type="text" placeholder="Поиск по ФИО..." oninput="renderTable()">
+    <select class="vac-select" id="filterYear" onchange="renderTable()">
+      <option value="">Все годы</option>
+    </select>
+    <select class="vac-select" id="filterMonth" onchange="renderTable()">
+      <option value="">Все месяцы</option>
+      <option value="01">Январь</option>
+      <option value="02">Февраль</option>
+      <option value="03">Март</option>
+      <option value="04">Апрель</option>
+      <option value="05">Май</option>
+      <option value="06">Июнь</option>
+      <option value="07">Июль</option>
+      <option value="08">Август</option>
+      <option value="09">Сентябрь</option>
+      <option value="10">Октябрь</option>
+      <option value="11">Ноябрь</option>
+      <option value="12">Декабрь</option>
+    </select>
+    <select class="vac-select" id="filterErrors" onchange="renderTable()">
+      <option value="">Все записи</option>
+      <option value="overlap">Пересечения</option>
+      <option value="dateerr">Ошибки дат</option>
+    </select>
+    <button class="vac-filter-reset" onclick="resetFilters()"><i class="fas fa-times"></i> Сбросить</button>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table class="vac-table">
+    <thead>
+      <tr>
+        <th style="width:36px;">No</th>
+        <th class="sortable" data-sort="executor" onclick="setSort('executor')">ФИО</th>
+        <th class="sortable" data-sort="dept" onclick="setSort('dept')" style="min-width:60px;text-align:center;">Отдел</th>
+        <th style="min-width:140px;">Должность</th>
+        <th class="sortable" data-sort="date_start" onclick="setSort('date_start')" style="min-width:130px;">Дата начала</th>
+        <th class="sortable" data-sort="date_end" onclick="setSort('date_end')" style="min-width:130px;">Дата окончания</th>
+        <th style="min-width:120px;">Примечание</th>
+        <th style="width:48px;"></th>
+      </tr>
+    </thead>
+    <tbody id="vacationTableBody"></tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="vac-pagination" id="vacPagination"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script src="{% static 'js/inline_edit.js' %}"></script>
+<script>
+/* ========================================================================
+   Vacation Plan SPA
+   ======================================================================== */
+
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+const PAGE_SIZE = 50;
+
+/* ── State ────────────────────────────────────────────────────────────── */
+let vacations      = [];
+let empDeptMap      = {};
+let empPositionMap  = {};
+let allEmployees    = [];
+let depts           = [];
+let selectedDepts   = new Set();
+let sortField       = 'date_start';
+let sortDir         = 'asc';
+let currentPage     = 1;
+
+/* ── API ──────────────────────────────────────────────────────────────── */
+async function loadDirs() {
+  const data = await fetchJson('/api/directories/');
+  if (data._error) return;
+  const employees = data.employees || [];
+  allEmployees = employees;
+  empDeptMap = {};
+  empPositionMap = {};
+  const deptSet = new Set();
+  employees.forEach(e => {
+    if (e.value) empDeptMap[e.value] = e.dept || '';
+    if (e.value) empPositionMap[e.value] = e.position || '';
+    if (e.dept) deptSet.add(e.dept);
+  });
+  depts = Array.from(deptSet).sort();
+  buildDeptChips();
+}
+
+async function loadVacations() {
+  const data = await fetchJson('/api/vacations/');
+  if (data._error) return;
+  vacations = Array.isArray(data) ? data : (data.results || []);
+  buildDeptChips();
+  buildYearSelect();
+  updateChipStyles();
+  updateSortHeaders();
+  renderTable();
+  refreshVacErrors();
+}
+
+/* ── Dept chips ───────────────────────────────────────────────────────── */
+function buildDeptChips() {
+  const container = document.getElementById('deptChips');
+  container.innerHTML = '<button class="dept-chip chip-all active" onclick="selectAllDepts()">Все</button>';
+  depts.forEach(dept => {
+    const chip = document.createElement('button');
+    chip.className = 'dept-chip';
+    chip.dataset.dept = dept;
+    chip.onclick = () => toggleDept(dept);
+    const cnt = vacations.filter(v => (empDeptMap[v.executor] || '') === dept).length;
+    chip.innerHTML = escapeHtml(dept) + (cnt > 0 ? `<span class="dept-count">${cnt}</span>` : '');
+    container.appendChild(chip);
+  });
+  // "No dept" chip
+  const noDeptVac = vacations.filter(v => !(empDeptMap[v.executor] || '')).length;
+  if (noDeptVac > 0) {
+    const chip = document.createElement('button');
+    chip.className = 'dept-chip chip-nodept';
+    chip.dataset.dept = '';
+    chip.onclick = () => toggleDept('');
+    chip.innerHTML = 'Без отдела' + (noDeptVac > 0 ? `<span class="dept-count">${noDeptVac}</span>` : '');
+    container.appendChild(chip);
+  }
+}
+
+function toggleDept(dept) {
+  selectedDepts.has(dept) ? selectedDepts.delete(dept) : selectedDepts.add(dept);
+  currentPage = 1;
+  updateChipStyles();
+  renderTable();
+}
+
+function selectAllDepts() {
+  selectedDepts.clear();
+  currentPage = 1;
+  updateChipStyles();
+  renderTable();
+}
+
+function updateChipStyles() {
+  const allChip = document.querySelector('.chip-all');
+  if (allChip) allChip.classList.toggle('active', selectedDepts.size === 0);
+  document.querySelectorAll('.dept-chip[data-dept]').forEach(chip => {
+    chip.classList.toggle('active', selectedDepts.has(chip.dataset.dept));
+    const cnt = vacations.filter(v => (empDeptMap[v.executor] || '') === chip.dataset.dept).length;
+    const label = chip.dataset.dept === '' ? 'Без отдела' : escapeHtml(chip.dataset.dept);
+    chip.innerHTML = label + (cnt > 0 ? `<span class="dept-count">${cnt}</span>` : '');
+  });
+}
+
+/* ── Year select ──────────────────────────────────────────────────────── */
+function buildYearSelect() {
+  const sel = document.getElementById('filterYear');
+  const years = new Set();
+  vacations.forEach(v => {
+    if (v.date_start) years.add(v.date_start.slice(0, 4));
+    if (v.date_end) years.add(v.date_end.slice(0, 4));
+  });
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Все годы</option>';
+  Array.from(years).sort().forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+/* ── Sorting ──────────────────────────────────────────────────────────── */
+function setSort(field) {
+  if (sortField === field) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortField = field;
+    sortDir = 'asc';
+  }
+  updateSortHeaders();
+  renderTable();
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('.vac-table thead th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    const f = th.dataset.sort;
+    if (f === sortField) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  });
+}
+
+function sortVacations(arr) {
+  return [...arr].sort((a, b) => {
+    let va, vb;
+    if (sortField === 'dept') {
+      va = empDeptMap[a.executor] || '';
+      vb = empDeptMap[b.executor] || '';
+    } else {
+      va = (a[sortField] || '').toString().toLowerCase();
+      vb = (b[sortField] || '').toString().toLowerCase();
+    }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+/* ── Reset filters ────────────────────────────────────────────────────── */
+function resetFilters() {
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterYear').value = '';
+  document.getElementById('filterMonth').value = '';
+  document.getElementById('filterErrors').value = '';
+  selectedDepts.clear();
+  currentPage = 1;
+  updateChipStyles();
+  renderTable();
+}
+
+/* ── Overlap detection ────────────────────────────────────────────────── */
+function findOverlap(currentId, executor, dateStart, dateEnd) {
+  if (!executor || !dateStart || !dateEnd) return null;
+  return vacations.find(v =>
+    v.id !== currentId && v.executor === executor &&
+    v.date_start && v.date_end &&
+    v.date_start <= dateEnd && v.date_end >= dateStart
+  ) || null;
+}
+
+/* ── Render table ────────────────────────────────────────────────────── */
+function renderTable() {
+  const tbody = document.getElementById('vacationTableBody');
+  tbody.innerHTML = '';
+
+  const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+  const yearF = document.getElementById('filterYear').value || '';
+  const monthF = document.getElementById('filterMonth').value || '';
+  const errFilter = document.getElementById('filterErrors').value || '';
+
+  let filtered = selectedDepts.size === 0
+    ? vacations
+    : vacations.filter(v => selectedDepts.has(empDeptMap[v.executor] || ''));
+
+  if (search) filtered = filtered.filter(v => (v.executor || '').toLowerCase().includes(search));
+  if (yearF) filtered = filtered.filter(v => (v.date_start || '').startsWith(yearF) || (v.date_end || '').startsWith(yearF));
+  if (monthF) filtered = filtered.filter(v => {
+    if (!v.date_start && !v.date_end) return false;
+    const refYear = yearF || (v.date_start || v.date_end || '').slice(0, 4);
+    const mStart = `${refYear}-${monthF}-01`;
+    const mEnd = `${refYear}-${monthF}-31`;
+    const ds = v.date_start || '0000-00-00';
+    const de = v.date_end || '9999-99-99';
+    return ds <= mEnd && de >= mStart;
+  });
+  if (errFilter === 'overlap') filtered = filtered.filter(v => !!findOverlap(v.id, v.executor, v.date_start, v.date_end));
+  if (errFilter === 'dateerr') filtered = filtered.filter(v => v.date_start && v.date_end && v.date_start > v.date_end);
+
+  // Sort
+  filtered = sortVacations(filtered);
+
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+  // Empty state
+  if (totalCount === 0) {
+    const hasFilters = search || yearF || monthF || errFilter || selectedDepts.size > 0;
+    tbody.innerHTML = `<tr><td colspan="8" style="padding:0;border:none;">
+      <div class="vac-empty-state">
+        <div class="vac-empty-state-icon">${hasFilters ? '<i class="fas fa-search"></i>' : '<i class="fas fa-calendar-times"></i>'}</div>
+        <div class="vac-empty-state-text">${hasFilters ? 'Ничего не найдено' : 'Нет записей об отпусках'}</div>
+        <div class="vac-empty-state-sub">${hasFilters ? 'Попробуйте изменить фильтры' : 'Нажмите "Добавить отпуск" чтобы создать запись'}</div>
+      </div>
+    </td></tr>`;
+    renderPagination(0, 0);
+    return;
+  }
+
+  pageData.forEach((v, idx) => {
+    const overlap = findOverlap(v.id, v.executor, v.date_start, v.date_end);
+    const dateError = v.date_start && v.date_end && v.date_start > v.date_end;
+    const rowStyle = dateError ? 'background:rgba(239,68,68,0.08)' : (overlap ? 'background:rgba(245,158,11,0.08)' : '');
+    const warningHint = dateError
+      ? `<span title="Дата окончания раньше даты начала" style="color:var(--danger);margin-left:4px;"><i class="fas fa-exclamation-circle"></i></span>`
+      : (overlap ? `<span title="Пересечение с другим отпуском" style="color:var(--warning);margin-left:4px;"><i class="fas fa-exclamation-triangle"></i></span>` : '');
+
+    const dept = empDeptMap[v.executor] || '';
+    const position = empPositionMap[v.executor] || '';
+
+    const tr = document.createElement('tr');
+    tr.setAttribute('style', rowStyle);
+
+    if (IS_WRITER) {
+      tr.innerHTML = `
+        <td style="text-align:center;font-size:12px;color:var(--muted);">${startIdx + idx + 1}</td>
+        <td><input value="${escapeHtml(v.executor || '')}" data-id="${v.id}" data-field="executor"
+             onchange="updateVacation(${v.id}, 'executor', this.value)"></td>
+        <td style="color:var(--muted);font-size:12px;text-align:center;">${escapeHtml(dept)}</td>
+        <td style="color:var(--muted);font-size:12px;padding:6px 10px;">${escapeHtml(position)}</td>
+        <td><input type="date" value="${escapeHtml(v.date_start || '')}" data-id="${v.id}" data-field="date_start"
+             onchange="updateVacation(${v.id}, 'date_start', this.value)"
+             style="${dateError ? 'border-bottom:2px solid var(--danger)' : ''}"></td>
+        <td><input type="date" value="${escapeHtml(v.date_end || '')}" data-id="${v.id}" data-field="date_end"
+             onchange="updateVacation(${v.id}, 'date_end', this.value)"
+             style="${dateError ? 'border-bottom:2px solid var(--danger)' : ''}">${warningHint}</td>
+        <td><input value="${escapeHtml(v.notes || '')}" data-id="${v.id}" data-field="notes"
+             onchange="updateVacation(${v.id}, 'notes', this.value)"></td>
+        <td style="text-align:center;">
+          <button class="vac-btn-delete" onclick="deleteVacation(${v.id})" title="Удалить">
+            <i class="fas fa-times"></i>
+          </button>
+        </td>`;
+    } else {
+      tr.innerHTML = `
+        <td style="text-align:center;font-size:12px;color:var(--muted);">${startIdx + idx + 1}</td>
+        <td>${escapeHtml(v.executor || '')}</td>
+        <td style="color:var(--muted);font-size:12px;text-align:center;">${escapeHtml(dept)}</td>
+        <td style="color:var(--muted);font-size:12px;">${escapeHtml(position)}</td>
+        <td style="font-size:12px;">${escapeHtml(v.date_start || '')}</td>
+        <td style="font-size:12px;">${escapeHtml(v.date_end || '')}${warningHint}</td>
+        <td style="color:var(--muted);font-size:12px;">${escapeHtml(v.notes || '')}</td>
+        <td></td>`;
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  // Footer row with summary
+  const tfoot = document.createElement('tr');
+  tfoot.className = 'vac-table-footer';
+  const parts = [];
+  if (selectedDepts.size > 0) parts.push('Отдел: <b style="color:var(--accent)">' + Array.from(selectedDepts).map(escapeHtml).join(', ') + '</b>');
+  if (search) parts.push('Поиск: <b style="color:var(--accent)">' + escapeHtml(search) + '</b>');
+  if (yearF) parts.push('<b style="color:var(--accent)">' + escapeHtml(yearF) + '</b>');
+  if (monthF) {
+    const monthOpt = document.querySelector('#filterMonth option:checked');
+    parts.push('<b style="color:var(--accent)">' + (monthOpt ? monthOpt.text : monthF) + '</b>');
+  }
+  tfoot.innerHTML = `<td colspan="8" style="padding:7px 12px;font-size:12px;color:var(--muted);">
+    Показано: <strong style="color:var(--text)">${pageData.length}</strong> из ${totalCount}
+    (всего: ${vacations.length})
+    ${parts.length ? ' &middot; ' + parts.join(' &middot; ') : ''}
+  </td>`;
+  tbody.appendChild(tfoot);
+
+  renderPagination(totalCount, totalPages);
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────── */
+function renderPagination(totalCount, totalPages) {
+  const container = document.getElementById('vacPagination');
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  html += `<button class="vac-page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>&laquo;</button>`;
+
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
+      html += `<button class="vac-page-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+    } else if (p === currentPage - 3 || p === currentPage + 3) {
+      html += '<span style="color:var(--muted);font-size:12px;">...</span>';
+    }
+  }
+
+  html += `<button class="vac-page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>&raquo;</button>`;
+  html += `<span class="vac-page-info">${currentPage} / ${totalPages}</span>`;
+
+  container.innerHTML = html;
+}
+
+function goToPage(page) {
+  currentPage = page;
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ── CRUD ─────────────────────────────────────────────────────────────── */
+async function updateVacation(id, field, value) {
+  const row = vacations.find(v => v.id === id);
+  if (row) {
+    const upd = { ...row, [field]: value };
+    if ((field === 'date_end' || field === 'date_start') && upd.date_start && upd.date_end && upd.date_start > upd.date_end) {
+      showToast('Дата окончания не может быть раньше даты начала', 'warning');
+      return;
+    }
+    row[field] = value;
+  }
+  const resp = await fetchJson(`/api/vacations/${id}/`, {
+    method: 'PUT',
+    body: JSON.stringify({ [field]: value }),
+  });
+  if (resp._error) {
+    // Reload to revert
+    await loadVacations();
+    return;
+  }
+  renderTable();
+  refreshVacErrors();
+}
+
+async function deleteVacation(id) {
+  const ok = await confirmDialog('Удалить запись об отпуске?', 'Удаление');
+  if (!ok) return;
+  const resp = await fetchJson(`/api/vacations/${id}/`, { method: 'DELETE' });
+  if (!resp._error) {
+    vacations = vacations.filter(v => v.id !== id);
+    renderTable();
+    refreshVacErrors();
+    showToast('Запись удалена', 'success');
+  }
+}
+
+/* ── Add vacation modal ───────────────────────────────────────────────── */
+function openAddVacationModal() {
+  const modal = openModal({
+    title: 'Добавить отпуск',
+    width: '560px',
+    body: `
+      <div class="modal-form-group" style="position:relative;">
+        <label>Сотрудник (ФИО)</label>
+        <input type="text" id="vacExecutor" placeholder="Начните вводить ФИО..." autocomplete="off">
+        <div id="vacExecutorDropdown" class="ac-dropdown" style="display:none;"></div>
+      </div>
+      <div class="modal-form-row">
+        <div class="modal-form-group">
+          <label>Дата начала</label>
+          <input type="date" id="vacDateStart">
+        </div>
+        <div class="modal-form-group">
+          <label>Дата окончания</label>
+          <input type="date" id="vacDateEnd">
+        </div>
+      </div>
+      <div class="modal-form-group">
+        <label>Тип отпуска</label>
+        <select id="vacType">
+          <option value="main">Основной</option>
+          <option value="extra">Дополнительный</option>
+          <option value="unpaid">Без содержания</option>
+          <option value="study">Учебный</option>
+          <option value="other">Другой</option>
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label>Примечание</label>
+        <input type="text" id="vacNotes" placeholder="Примечание (необязательно)">
+      </div>
+      <div class="vac-conflict-warn" id="vacConflictWarn">
+        <i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>
+        <span id="vacConflictText"></span>
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="createVacBtn">Создать</button>`,
+  });
+
+  // Autocomplete for executor
+  const execInput = modal.dialog.querySelector('#vacExecutor');
+  const acDropdown = modal.dialog.querySelector('#vacExecutorDropdown');
+
+  execInput.addEventListener('input', debounce(() => {
+    const q = execInput.value.trim().toLowerCase();
+    if (q.length < 1) { acDropdown.style.display = 'none'; return; }
+    const matches = allEmployees
+      .filter(e => e.value.toLowerCase().includes(q))
+      .slice(0, 15);
+    if (matches.length === 0) { acDropdown.style.display = 'none'; return; }
+    acDropdown.innerHTML = matches.map(e =>
+      `<div class="ac-option" data-value="${escapeHtml(e.value)}">${escapeHtml(e.value)}${e.dept ? '<span class="ac-option-dept">' + escapeHtml(e.dept) + '</span>' : ''}</div>`
+    ).join('');
+    acDropdown.style.display = 'block';
+    acDropdown.querySelectorAll('.ac-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        execInput.value = opt.dataset.value;
+        acDropdown.style.display = 'none';
+      });
+    });
+  }, 150));
+
+  execInput.addEventListener('blur', () => {
+    setTimeout(() => { acDropdown.style.display = 'none'; }, 200);
+  });
+
+  // Conflict check on date change
+  const dateStartInput = modal.dialog.querySelector('#vacDateStart');
+  const dateEndInput = modal.dialog.querySelector('#vacDateEnd');
+  const conflictWarn = modal.dialog.querySelector('#vacConflictWarn');
+  const conflictText = modal.dialog.querySelector('#vacConflictText');
+
+  async function checkConflict() {
+    const executor = execInput.value.trim();
+    const ds = dateStartInput.value;
+    const de = dateEndInput.value;
+    if (!executor || !ds || !de) { conflictWarn.style.display = 'none'; return; }
+
+    const resp = await fetchJson('/api/check_vacation_conflict/', {
+      method: 'POST',
+      body: JSON.stringify({ executor, date_start: ds, date_end: de }),
+    });
+    if (!resp._error && resp.conflict) {
+      conflictText.textContent = resp.message || 'Обнаружено пересечение с существующим отпуском';
+      conflictWarn.style.display = 'block';
+    } else {
+      conflictWarn.style.display = 'none';
+    }
+  }
+
+  dateStartInput.addEventListener('change', checkConflict);
+  dateEndInput.addEventListener('change', checkConflict);
+  execInput.addEventListener('change', checkConflict);
+
+  // Create
+  const createBtn = modal.dialog.querySelector('#createVacBtn');
+
+  async function doCreate() {
+    const executor = execInput.value.trim();
+    const date_start = dateStartInput.value;
+    const date_end = dateEndInput.value;
+    const vac_type = modal.dialog.querySelector('#vacType').value;
+    const notes = modal.dialog.querySelector('#vacNotes').value.trim();
+
+    if (!executor) { execInput.style.borderColor = 'var(--danger)'; showToast('Укажите сотрудника', 'warning'); return; }
+    if (!date_start || !date_end) { showToast('Укажите даты начала и окончания', 'warning'); return; }
+    if (date_start > date_end) { showToast('Дата окончания раньше даты начала', 'error'); return; }
+
+    createBtn.disabled = true;
+    const resp = await fetchJson('/api/vacations/create/', {
+      method: 'POST',
+      body: JSON.stringify({ executor, date_start, date_end, vac_type, notes }),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadVacations();
+      showToast('Отпуск добавлен', 'success');
+    }
+    createBtn.disabled = false;
+  }
+
+  createBtn.addEventListener('click', doCreate);
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+/* ── Error modal ──────────────────────────────────────────────────────── */
+function calcVacationErrors() {
+  const overlaps = [];
+  const dateErrs = [];
+  const seen = new Set();
+  vacations.forEach(v => {
+    if (v.date_start && v.date_end && v.date_start > v.date_end) dateErrs.push(v);
+    const ov = findOverlap(v.id, v.executor, v.date_start, v.date_end);
+    if (ov) {
+      const key = [Math.min(v.id, ov.id), Math.max(v.id, ov.id)].join('-');
+      if (!seen.has(key)) { seen.add(key); overlaps.push({ a: v, b: ov }); }
+    }
+  });
+  return { overlaps, dateErrs };
+}
+
+function refreshVacErrors() {
+  const btn = document.getElementById('vacErrBtn');
+  const { overlaps, dateErrs } = calcVacationErrors();
+  const total = overlaps.length + dateErrs.length;
+  if (total === 0) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Нет ошибок';
+    btn.className = 'btn btn-outline btn-sm no-errors';
+  } else {
+    btn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Ошибки <span class="err-badge">${total}</span>`;
+    btn.className = 'btn btn-outline btn-sm has-errors';
+  }
+  btn.id = 'vacErrBtn';
+}
+
+function openVacErrModal() {
+  document.getElementById('vacErrBody').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Анализ...</div>';
+  document.getElementById('vacErrOverlay').classList.add('open');
+
+  const { overlaps, dateErrs } = calcVacationErrors();
+  document.getElementById('vacErrMeta').textContent = `Найдено ошибок: ${overlaps.length + dateErrs.length}`;
+  document.getElementById('vacErrLastCheck').textContent = 'Проверено: ' + new Date().toLocaleTimeString('ru-RU');
+
+  const body = document.getElementById('vacErrBody');
+  body.innerHTML = '';
+
+  const sec1 = buildVacErrSection('Пересечения дат', overlaps.length, overlaps.length > 0 ? '' : 'ok',
+    overlaps.map(({ a, b }) => ({
+      title: escapeHtml(a.executor),
+      meta: `${a.date_start} - ${a.date_end} / ${b.date_start} - ${b.date_end}`,
+      highlight: 'Даты пересекаются',
+    }))
+  );
+  const sec2 = buildVacErrSection('Ошибки дат', dateErrs.length, dateErrs.length > 0 ? 'warn' : 'ok',
+    dateErrs.map(v => ({
+      title: escapeHtml(v.executor || '(без имени)'),
+      meta: `Начало: ${v.date_start} / Конец: ${v.date_end}`,
+      highlight: 'Конец раньше начала',
+    }))
+  );
+
+  body.appendChild(sec1);
+  body.appendChild(sec2);
+  if (overlaps.length > 0) sec1.querySelector('.pe-section-body').classList.add('open');
+  if (dateErrs.length > 0) sec2.querySelector('.pe-section-body').classList.add('open');
+}
+
+function closeVacErrModal() {
+  document.getElementById('vacErrOverlay').classList.remove('open');
+}
+
+function buildVacErrSection(title, count, badgeClass, items) {
+  const sec = document.createElement('div');
+  sec.className = 'pe-section';
+  const arrow = document.createElement('span');
+  arrow.style.cssText = 'font-size:12px;color:var(--muted)';
+  arrow.textContent = '\u25BC';
+  const body = document.createElement('div');
+  body.className = 'pe-section-body';
+  const hdr = document.createElement('div');
+  hdr.className = 'pe-section-hdr';
+  hdr.innerHTML = `<span class="pe-section-title">${title} <span class="pe-count-badge ${badgeClass}">${count}</span></span>`;
+  hdr.appendChild(arrow);
+  hdr.onclick = () => {
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '\u25B2' : '\u25BC';
+  };
+  if (items.length === 0) {
+    body.innerHTML = '<div style="padding:14px 24px;font-size:13px;color:var(--muted)"><i class="fas fa-check" style="color:var(--success);margin-right:4px;"></i> Ошибок не найдено</div>';
+  } else {
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'pe-item';
+      row.innerHTML = `<div class="pe-item-name">${item.title}</div>
+        <div class="pe-item-meta">${item.meta}${item.highlight ? ' &middot; <span>' + item.highlight + '</span>' : ''}</div>`;
+      body.appendChild(row);
+    });
+  }
+  sec.appendChild(hdr);
+  sec.appendChild(body);
+  return sec;
+}
+
+// Close error overlay on backdrop click
+document.getElementById('vacErrOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeVacErrModal();
+});
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+(async function init() {
+  updateSortHeaders();
+  await loadDirs();
+  await loadVacations();
+})();
+</script>
+{% endblock %}

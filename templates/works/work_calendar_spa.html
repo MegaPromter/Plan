@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}Производственный календарь — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Производственный календарь</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" onclick="openAddModal()">
+  <i class="fas fa-plus"></i> Добавить запись
+</button>
+{% endblock %}
+
+{% block styles %}
+<style>
+.calendar-toolbar {
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  margin-bottom:20px; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 16px;
+}
+.calendar-toolbar select { padding:6px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text); font-size:14px; }
+
+.calendar-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap:14px;
+}
+
+.calendar-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.calendar-card .month-name { font-size:16px; font-weight:600; color:var(--text); }
+.calendar-card .hours-value { font-size:24px; font-weight:700; color:var(--accent); }
+.calendar-card .hours-label { font-size:12px; color:var(--muted); }
+.calendar-card .card-actions { display:flex; gap:8px; margin-top:4px; }
+.calendar-card .btn-edit { flex:1; padding:6px; font-size:13px; }
+
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-state i { font-size:48px; margin-bottom:16px; display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-toolbar">
+  <label style="font-size:14px;color:var(--muted);">Год:</label>
+  <select id="yearSel" onchange="loadCalendar()">
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div id="calendarGrid" class="calendar-grid">
+  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+</div>
+
+<!-- Modal -->
+<div id="calModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="calModalTitle">Добавить запись</h3>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-form-group">
+        <label>Год</label>
+        <input type="number" id="fieldYear" min="2000" max="2100" placeholder="2025" style="width:100%">
+      </div>
+      <div class="modal-form-group">
+        <label>Месяц</label>
+        <select id="fieldMonth" style="width:100%">
+          <option value="1">Январь</option><option value="2">Февраль</option>
+          <option value="3">Март</option><option value="4">Апрель</option>
+          <option value="5">Май</option><option value="6">Июнь</option>
+          <option value="7">Июль</option><option value="8">Август</option>
+          <option value="9">Сентябрь</option><option value="10">Октябрь</option>
+          <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label>Норма часов (чел.-ч)</label>
+        <input type="number" id="fieldHours" min="0" step="0.5" placeholder="168" style="width:100%">
+      </div>
+      <div id="calModalError" class="error-message" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline modal-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" id="calModalSaveBtn" onclick="saveRecord()">Сохранить</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MONTH_NAMES = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
+                     'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+let calData = [];
+let editingId = null;
+
+async function loadCalendar() {
+  const year = document.getElementById('yearSel').value;
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
+  try {
+    const resp = await fetch(`/api/work_calendar/?year=${year}`);
+    calData = await resp.json();
+    renderGrid();
+  } catch(e) {
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Ошибка загрузки</p></div>';
+  }
+}
+
+function renderGrid() {
+  const year = parseInt(document.getElementById('yearSel').value);
+  const grid = document.getElementById('calendarGrid');
+  const byMonth = {};
+  calData.forEach(c => { byMonth[c.month] = c; });
+
+  if (Object.keys(byMonth).length === 0) {
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Нет записей для выбранного года.<br>Нажмите «Добавить запись».</p></div>';
+    return;
+  }
+
+  let html = '';
+  for (let m = 1; m <= 12; m++) {
+    const rec = byMonth[m];
+    if (!rec) continue;
+    html += `
+      <div class="calendar-card">
+        <div class="month-name">${MONTH_NAMES[m]}</div>
+        <div class="hours-value">${rec.hours_norm}</div>
+        <div class="hours-label">нормо-часов / чел.</div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm btn-edit" onclick="openEditModal(${rec.id}, ${year}, ${m}, ${rec.hours_norm})">
+            <i class="fas fa-pen"></i> Изменить
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecord(${rec.id}, '${MONTH_NAMES[m]} ${year}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+  }
+  grid.innerHTML = html || '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Нет записей</p></div>';
+}
+
+function openAddModal() {
+  editingId = null;
+  const year = document.getElementById('yearSel').value;
+  document.getElementById('calModalTitle').textContent = 'Добавить запись';
+  document.getElementById('fieldYear').value = year;
+  document.getElementById('fieldMonth').value = 1;
+  document.getElementById('fieldHours').value = '';
+  document.getElementById('calModalError').style.display = 'none';
+  document.getElementById('calModal').style.display = 'flex';
+}
+
+function openEditModal(id, year, month, hours) {
+  editingId = id;
+  document.getElementById('calModalTitle').textContent = 'Изменить норму';
+  document.getElementById('fieldYear').value = year;
+  document.getElementById('fieldMonth').value = month;
+  document.getElementById('fieldHours').value = hours;
+  document.getElementById('fieldYear').disabled = true;
+  document.getElementById('fieldMonth').disabled = true;
+  document.getElementById('calModalError').style.display = 'none';
+  document.getElementById('calModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('calModal').style.display = 'none';
+  document.getElementById('fieldYear').disabled = false;
+  document.getElementById('fieldMonth').disabled = false;
+  editingId = null;
+}
+
+async function saveRecord() {
+  const year = parseInt(document.getElementById('fieldYear').value);
+  const month = parseInt(document.getElementById('fieldMonth').value);
+  const hours_norm = parseFloat(document.getElementById('fieldHours').value);
+  const errEl = document.getElementById('calModalError');
+
+  if (!year || !month || isNaN(hours_norm)) {
+    errEl.textContent = 'Все поля обязательны';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('calModalSaveBtn');
+  btn.disabled = true;
+
+  try {
+    let resp;
+    if (editingId) {
+      resp = await fetch(`/api/work_calendar/${editingId}/`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({hours_norm}),
+      });
+    } else {
+      resp = await fetch('/api/work_calendar/create/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({year, month, hours_norm}),
+      });
+    }
+    const data = await resp.json();
+    if (!resp.ok) {
+      errEl.textContent = data.error || 'Ошибка';
+      errEl.style.display = 'block';
+      return;
+    }
+    closeModal();
+    await loadCalendar();
+  } catch(e) {
+    errEl.textContent = 'Сетевая ошибка';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteRecord(id, label) {
+  if (!confirm(`Удалить запись «${label}»?`)) return;
+  try {
+    const resp = await fetch(`/api/work_calendar/${id}/`, {
+      method: 'DELETE',
+      headers: {'X-CSRFToken': getCsrf()},
+    });
+    if (resp.ok) await loadCalendar();
+    else alert('Ошибка удаления');
+  } catch(e) {
+    alert('Сетевая ошибка');
+  }
+}
+
+function getCsrf() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadCalendar();
+  const link = document.getElementById('nav-work-calendar');
+  if (link) link.classList.add('active');
+});
+</script>
+{% endblock %}

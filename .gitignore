@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+env/
+.venv/
+.env.local
+
+# Environment / secrets
+.env
+*.env
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Migration backups
+*.orig
+
+# Windows reserved names
+nul
+con
+prn
+aux
+
+# Misc dev files
+list_users.py
+test_render.py
+test_templates2.py
+planning_system_report.md
+.claude/

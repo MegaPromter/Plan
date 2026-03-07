@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Удалить отпуск — {{ employee.full_name }} — PlanApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Удалить отпуск</h1>
+</div>
+
+<div class="confirm-box">
+  <p>Вы уверены, что хотите удалить запись об отпуске сотрудника <strong>{{ employee.full_name }}</strong>?</p>
+  <ul class="confirm-details">
+    <li><strong>Тип:</strong> {{ vacation.get_vac_type_display }}</li>
+    <li><strong>Начало:</strong> {{ vacation.date_start }}</li>
+    <li><strong>Конец:</strong> {{ vacation.date_end }}</li>
+    <li><strong>Дней:</strong> {{ vacation.duration_days }}</li>
+    {% if vacation.notes %}
+      <li><strong>Примечание:</strong> {{ vacation.notes }}</li>
+    {% endif %}
+  </ul>
+  <p class="confirm-warning">Это действие необратимо.</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="btn btn-danger">Удалить</button>
+      <a href="{% url 'employees:vacation_list' employee.pk %}" class="btn btn-outline">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

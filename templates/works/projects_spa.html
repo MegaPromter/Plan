@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}Управление проектами — Система управления{% endblock %}
+
+{% block nav_projects %}active{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current" id="breadcrumbTitle">Управление проектами</span>
+{% endblock %}
+
+
+{% block styles %}
+<style>
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.project-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+}
+.project-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.project-card-short {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.project-card-meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.project-card-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.project-card:hover .project-card-actions { opacity: 1; }
+.pc-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.pc-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pc-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Product tags */
+.product-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.product-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 10px;
+  background: rgba(59,130,246,0.1); color: var(--accent);
+  font-size: 11px; font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="page-header">
+  <h1>Управление проектами</h1>
+  {% if request.user|is_writer %}
+  <button class="btn btn-primary" onclick="openCreateProjectModal()">
+    <i class="fas fa-plus"></i> Создать проект
+  </button>
+  {% endif %}
+</div>
+
+<div id="projectsGrid" class="projects-grid">
+  <!-- filled by JS -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script>
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+let projects = [];
+
+/* ── API ──────────────────────────────────────────────────────────────── */
+async function loadProjects() {
+  const data = await fetchJson('/api/projects/');
+  if (!data._error) projects = Array.isArray(data) ? data : [];
+}
+
+/* ── Render ───────────────────────────────────────────────────────────── */
+function renderProjects() {
+  const grid = document.getElementById('projectsGrid');
+  if (projects.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-state-icon"><i class="fas fa-project-diagram"></i></div>
+        <p>Проектов пока нет</p>
+        ${IS_WRITER ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button>' : ''}
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = projects.map(p => {
+    const productTags = p.products && p.products.length
+      ? `<div class="product-tags">${p.products.slice(0, 5).map(pr =>
+          `<span class="product-tag"><i class="fas fa-cube"></i>${escapeHtml(pr.code || pr.name)}</span>`
+        ).join('')}${p.products.length > 5 ? `<span class="product-tag">+${p.products.length - 5}</span>` : ''}</div>`
+      : '';
+
+    const actionBtns = IS_WRITER ? `
+      <div class="project-card-actions">
+        <button class="pc-btn" onclick="event.stopPropagation(); openEditProjectModal(${p.id})" title="Редактировать">
+          <i class="fas fa-pen"></i>
+        </button>
+        <button class="pc-btn" onclick="event.stopPropagation(); openProductsModal(${p.id})" title="Изделия">
+          <i class="fas fa-cubes"></i>
+        </button>
+        <button class="pc-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id})" title="Удалить">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>` : '';
+
+    return `
+      <div class="project-card" onclick="openEditProjectModal(${p.id})">
+        ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
+        <div class="project-card-title">${escapeHtml(p.name_full)}</div>
+        ${productTags}
+        <div class="project-card-meta">
+          <span><i class="fas fa-industry" style="margin-right:4px;"></i>${p.pp_count || 0} производственных планов</span>
+          ${p.products ? `<span><i class="fas fa-cube" style="margin-right:4px;"></i>${p.products.length} изделий</span>` : ''}
+        </div>
+        ${actionBtns}
+      </div>`;
+  }).join('');
+}
+
+/* ── Create Project ───────────────────────────────────────────────────── */
+function openCreateProjectModal() {
+  const modal = openModal({
+    title: 'Добавить проект',
+    width: '500px',
+    body: `
+      <div class="modal-form-group">
+        <label>Полное наименование *</label>
+        <input type="text" id="mProjFull" placeholder="Разработка конструкторской документации на изделие Б...">
+      </div>
+      <div class="modal-form-group">
+        <label>Краткое наименование / шифр</label>
+        <input type="text" id="mProjShort" placeholder="Проект Б">
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="mProjSaveBtn">Создать</button>`,
+  });
+
+  const inp = modal.dialog.querySelector('#mProjFull');
+  const shortInp = modal.dialog.querySelector('#mProjShort');
+  const saveBtn = modal.dialog.querySelector('#mProjSaveBtn');
+
+  async function doSave() {
+    const name_full  = inp.value.trim();
+    const name_short = shortInp.value.trim();
+    if (!name_full) { inp.style.borderColor = 'var(--danger)'; return; }
+    saveBtn.disabled = true;
+    const resp = await fetchJson('/api/projects/create/', {
+      method: 'POST',
+      body: JSON.stringify({ name_full, name_short }),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadProjects();
+      renderProjects();
+      showToast('Проект создан', 'success');
+    }
+    saveBtn.disabled = false;
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); });
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  setTimeout(() => inp.focus(), 50);
+}
+
+/* ── Edit Project ─────────────────────────────────────────────────────── */
+function openEditProjectModal(id) {
+  const proj = projects.find(p => p.id === id);
+  if (!proj) return;
+
+  if (!IS_WRITER) {
+    openProductsModal(id);
+    return;
+  }
+
+  function renderProductList(products) {
+    if (!products || products.length === 0) {
+      return `<p style="color:var(--muted);font-size:13px;padding:4px 0;">Изделий нет</p>`;
+    }
+    return products.map(pr => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);" data-prod-id="${pr.id}">
+        <div style="flex:1;">
+          <span style="font-size:13px;color:var(--text);">${escapeHtml(pr.name)}</span>
+          ${pr.code ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
+        </div>
+        <button class="pc-btn" data-edit-prod="${pr.id}" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <button class="pc-btn danger" data-del-prod="${pr.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+      </div>`).join('');
+  }
+
+  const modal = openModal({
+    title: 'Редактировать проект',
+    width: '520px',
+    body: `
+      <div class="modal-form-group">
+        <label>Полное наименование *</label>
+        <input type="text" id="mEditFull" value="${escapeHtml(proj.name_full)}">
+      </div>
+      <div class="modal-form-group">
+        <label>Краткое наименование / шифр</label>
+        <input type="text" id="mEditShort" value="${escapeHtml(proj.name_short)}">
+      </div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Изделия</div>
+        <div id="mEditProdList">${renderProductList(proj.products)}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input type="text" id="mNewProdName" placeholder="Наименование изделия" style="flex:2;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <input type="text" id="mNewProdCode" placeholder="Шифр" style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <button class="btn btn-secondary btn-sm" id="mAddProdBtn" title="Добавить изделие"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="mEditSaveBtn">Сохранить</button>`,
+  });
+
+  const fullInp  = modal.dialog.querySelector('#mEditFull');
+  const shortInp = modal.dialog.querySelector('#mEditShort');
+  const saveBtn  = modal.dialog.querySelector('#mEditSaveBtn');
+
+  // Обновить список изделий в модале
+  async function refreshProdList() {
+    await loadProjects();
+    renderProjects();
+    const updated = projects.find(p => p.id === id);
+    if (updated) {
+      modal.dialog.querySelector('#mEditProdList').innerHTML = renderProductList(updated.products);
+      bindProdActions();
+    }
+  }
+
+  // Привязать обработчики кнопок изделий
+  function bindProdActions() {
+    modal.dialog.querySelectorAll('[data-edit-prod]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prodId = parseInt(btn.getAttribute('data-edit-prod'));
+        const updated = projects.find(p => p.id === id);
+        const pr = updated && updated.products ? updated.products.find(x => x.id === prodId) : null;
+        if (pr) editProductInline(id, prodId, pr.name, pr.code, refreshProdList);
+      });
+    });
+    modal.dialog.querySelectorAll('[data-del-prod]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const prodId = parseInt(btn.getAttribute('data-del-prod'));
+        const ok = await confirmDialog('Удалить изделие?', 'Удаление');
+        if (!ok) return;
+        const resp = await fetchJson(`/api/projects/${id}/products/${prodId}/`, { method: 'DELETE' });
+        if (!resp._error) await refreshProdList();
+      });
+    });
+  }
+  bindProdActions();
+
+  // Добавить изделие
+  const addBtn = modal.dialog.querySelector('#mAddProdBtn');
+  async function doAddProduct() {
+    const nameInp = modal.dialog.querySelector('#mNewProdName');
+    const codeInp = modal.dialog.querySelector('#mNewProdCode');
+    const name = nameInp.value.trim();
+    const code = codeInp.value.trim();
+    if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
+    addBtn.disabled = true;
+    const resp = await fetchJson(`/api/projects/${id}/products/create/`, {
+      method: 'POST',
+      body: JSON.stringify({ name, code }),
+    });
+    if (!resp._error) {
+      nameInp.value = ''; codeInp.value = ''; nameInp.style.borderColor = '';
+      await refreshProdList();
+    }
+    addBtn.disabled = false;
+  }
+  addBtn.addEventListener('click', doAddProduct);
+  modal.dialog.querySelector('#mNewProdName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); doAddProduct(); }
+  });
+
+  // Сохранить поля проекта
+  async function doSave() {
+    const name_full  = fullInp.value.trim();
+    const name_short = shortInp.value.trim();
+    if (!name_full) { fullInp.style.borderColor = 'var(--danger)'; return; }
+    saveBtn.disabled = true;
+    const resp = await fetchJson(`/api/projects/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ name_full, name_short }),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadProjects();
+      renderProjects();
+      showToast('Проект обновлён', 'success');
+    }
+    saveBtn.disabled = false;
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+/* ── Products Modal ───────────────────────────────────────────────────── */
+function openProductsModal(projId) {
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+
+  function renderProductList(products) {
+    if (!products || products.length === 0) {
+      return `<p style="color:var(--muted);font-size:13px;padding:8px 0;">Изделий нет</p>`;
+    }
+    return products.map(pr => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);" data-prod-id="${pr.id}">
+        <div style="flex:1;">
+          <span style="font-size:14px;color:var(--text);">${escapeHtml(pr.name)}</span>
+          ${pr.code ? `<span style="font-size:12px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
+        </div>
+        ${IS_WRITER ? `
+        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeHtml(pr.name)}', '${escapeHtml(pr.code)}')" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <button class="pc-btn danger" onclick="deleteProduct(${projId}, ${pr.id})" title="Удалить"><i class="fas fa-trash"></i></button>
+        ` : ''}
+      </div>`).join('');
+  }
+
+  const modal = openModal({
+    title: `Изделия проекта: ${escapeHtml(proj.name_short || proj.name_full)}`,
+    width: '520px',
+    body: `
+      <div id="prodList">${renderProductList(proj.products)}</div>
+      ${IS_WRITER ? `
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Добавить изделие</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="newProdName" placeholder="Наименование" style="flex:2;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <input type="text" id="newProdCode" placeholder="Шифр" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <button class="btn btn-primary btn-sm" id="addProdBtn"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>` : ''}`,
+    footer: `<button class="btn btn-outline modal-cancel">Закрыть</button>`,
+  });
+
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+
+  const addBtn = modal.dialog.querySelector('#addProdBtn');
+  if (addBtn) {
+    async function doAddProduct() {
+      const nameInp = modal.dialog.querySelector('#newProdName');
+      const codeInp = modal.dialog.querySelector('#newProdCode');
+      const name = nameInp.value.trim();
+      const code = codeInp.value.trim();
+      if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
+      addBtn.disabled = true;
+      const resp = await fetchJson(`/api/projects/${projId}/products/create/`, {
+        method: 'POST',
+        body: JSON.stringify({ name, code }),
+      });
+      if (!resp._error) {
+        nameInp.value = '';
+        codeInp.value = '';
+        nameInp.style.borderColor = '';
+        // Refresh projects and re-render product list
+        await loadProjects();
+        renderProjects();
+        const updatedProj = projects.find(p => p.id === projId);
+        if (updatedProj) {
+          modal.dialog.querySelector('#prodList').innerHTML = renderProductList(updatedProj.products);
+        }
+      }
+      addBtn.disabled = false;
+    }
+    addBtn.addEventListener('click', doAddProduct);
+    modal.dialog.querySelector('#newProdName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doAddProduct();
+    });
+  }
+}
+
+// Редактирование изделия с callback (используется из openEditProjectModal)
+async function editProductInline(projId, prodId, currentName, currentCode, onSaved) {
+  const modal = openModal({
+    title: 'Редактировать изделие',
+    width: '400px',
+    body: `
+      <div class="modal-form-group">
+        <label>Наименование *</label>
+        <input type="text" id="eProdNameI" value="${escapeHtml(currentName)}" autofocus>
+      </div>
+      <div class="modal-form-group">
+        <label>Шифр</label>
+        <input type="text" id="eProdCodeI" value="${escapeHtml(currentCode)}">
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="eProdSaveI">Сохранить</button>`,
+  });
+
+  const nameInp = modal.dialog.querySelector('#eProdNameI');
+  const codeInp = modal.dialog.querySelector('#eProdCodeI');
+  const saveBtn = modal.dialog.querySelector('#eProdSaveI');
+
+  async function doSave() {
+    const name = nameInp.value.trim();
+    const code = codeInp.value.trim();
+    if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
+    saveBtn.disabled = true;
+    const resp = await fetchJson(`/api/projects/${projId}/products/${prodId}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ name, code }),
+    });
+    if (!resp._error) {
+      modal.close();
+      if (onSaved) await onSaved();
+    }
+    saveBtn.disabled = false;
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+async function editProduct(projId, prodId, currentName, currentCode) {
+  const modal = openModal({
+    title: 'Редактировать изделие',
+    width: '400px',
+    body: `
+      <div class="modal-form-group">
+        <label>Наименование *</label>
+        <input type="text" id="eProdName" value="${escapeHtml(currentName)}">
+      </div>
+      <div class="modal-form-group">
+        <label>Шифр</label>
+        <input type="text" id="eProdCode" value="${escapeHtml(currentCode)}">
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="eProdSave">Сохранить</button>`,
+  });
+
+  const nameInp = modal.dialog.querySelector('#eProdName');
+  const codeInp = modal.dialog.querySelector('#eProdCode');
+  const saveBtn = modal.dialog.querySelector('#eProdSave');
+
+  async function doSave() {
+    const name = nameInp.value.trim();
+    const code = codeInp.value.trim();
+    if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
+    saveBtn.disabled = true;
+    const resp = await fetchJson(`/api/projects/${projId}/products/${prodId}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ name, code }),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadProjects();
+      renderProjects();
+      showToast('Изделие обновлено', 'success');
+    }
+    saveBtn.disabled = false;
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+async function deleteProduct(projId, prodId) {
+  const ok = await confirmDialog('Удалить изделие?', 'Удаление');
+  if (!ok) return;
+  const resp = await fetchJson(`/api/projects/${projId}/products/${prodId}/`, { method: 'DELETE' });
+  if (!resp._error) {
+    await loadProjects();
+    renderProjects();
+    showToast('Изделие удалено', 'success');
+  }
+}
+
+/* ── Delete Project ───────────────────────────────────────────────────── */
+async function deleteProject(id) {
+  const proj = projects.find(p => p.id === id);
+  const name = proj ? (proj.name_short || proj.name_full) : id;
+  const ok = await confirmDialog(
+    `Удалить проект "${escapeHtml(name)}"?<br><small style="color:var(--muted);">Производственные планы, привязанные к нему, останутся.</small>`,
+    'Удаление проекта'
+  );
+  if (!ok) return;
+  const resp = await fetchJson(`/api/projects/${id}/`, { method: 'DELETE' });
+  if (!resp._error) {
+    await loadProjects();
+    renderProjects();
+    showToast('Проект удалён', 'success');
+  }
+}
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+(async function init() {
+  await loadProjects();
+  renderProjects();
+})();
+</script>
+{% endblock %}

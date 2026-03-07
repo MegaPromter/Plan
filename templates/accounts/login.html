@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<title>Вход — Система управления</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e1117;--surface:#161b27;--surface2:#1e2536;
+  --border:#2a3347;--accent:#3b82f6;--accent2:#1d4ed8;
+  --text:#e2e8f0;--muted:#64748b;--danger:#ef4444;--success:#22c55e;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+body{
+  min-height:100vh;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,0.07) 0%,transparent 60%),
+                   radial-gradient(ellipse at 80% 20%,rgba(29,78,216,0.05) 0%,transparent 50%);
+}
+.login-wrap{width:100%;max-width:420px;padding:24px;}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo-icon{width:56px;height:56px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px;}
+.login-logo h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.login-logo p{font-size:14px;color:var(--muted);}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+.form-group{margin-bottom:20px;}
+.field{margin-bottom:20px;}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+input[type=text],input[type=password],select{
+  width:100%;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-family:var(--font);font-size:14px;transition:border-color 0.2s;outline:none;
+}
+input:focus,select:focus{border-color:var(--accent);}
+select option{background:var(--bg);}
+.btn-login{width:100%;padding:13px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:8px;}
+.btn-login:hover{background:var(--accent2);}
+.btn-login:disabled{opacity:0.6;cursor:not-allowed;}
+.alert-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#ef4444;margin-bottom:16px;}
+.reg-link{
+  display:block;margin-top:20px;text-align:center;
+  color:var(--accent);font-size:13px;text-decoration:none;cursor:pointer;
+  background:none;border:none;font-family:var(--font);width:100%;
+}
+.reg-link:hover{text-decoration:underline;}
+
+/* ── Модальное окно регистрации ──────────────────────────────────────── */
+.reg-overlay{
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+.reg-overlay.open{display:flex;}
+.reg-modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:36px;width:480px;max-width:95vw;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(0,0,0,0.6);position:relative;
+}
+.reg-modal h2{font-size:18px;font-weight:600;margin-bottom:4px;}
+.reg-modal .reg-subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.reg-close{
+  position:absolute;top:16px;right:16px;
+  width:28px;height:28px;border-radius:6px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.reg-close:hover{border-color:var(--danger);color:var(--danger);}
+.reg-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.reg-section-title{
+  font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;
+}
+.reg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.reg-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.reg-modal .field{margin-bottom:16px;}
+.reg-modal input,.reg-modal select{
+  width:100%;padding:10px 14px;background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:var(--font);font-size:14px;
+  transition:border-color 0.2s;outline:none;
+}
+.reg-modal input:focus,.reg-modal select:focus{border-color:var(--accent);}
+.reg-error{
+  background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);
+  border-radius:8px;padding:9px 13px;
+  font-size:13px;color:var(--danger);margin-bottom:14px;display:none;
+}
+.success-msg{
+  background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);
+  border-radius:8px;padding:10px 14px;
+  font-size:13px;color:var(--success);margin-bottom:16px;display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- ── Карточка входа ──────────────────────────────────────────────────── -->
+<div class="login-wrap">
+  <div class="login-logo">
+    <div class="login-logo-icon">📋</div>
+    <h1>Система управления</h1>
+    <p>Планирование и отчётность</p>
+  </div>
+  <div class="login-card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.errors %}
+        <div class="alert-error">Неверный логин или пароль. Попробуйте ещё раз.</div>
+      {% endif %}
+      <div class="form-group">
+        <label for="id_username">Логин</label>
+        <input type="text" name="username" id="id_username" placeholder="Введите логин" autofocus autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="id_password">Пароль</label>
+        <input type="password" name="password" id="id_password" placeholder="Введите пароль" autocomplete="current-password">
+      </div>
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button type="submit" class="btn-login">Войти</button>
+    </form>
+    <button class="reg-link" onclick="openRegModal()">Регистрация нового пользователя</button>
+  </div>
+</div>
+
+<!-- ── Модальное окно регистрации ──────────────────────────────────────── -->
+<div class="reg-overlay" id="regOverlay">
+  <div class="reg-modal" id="regModal">
+    <button class="reg-close" onclick="closeRegModal()">✕</button>
+    <h2>Регистрация</h2>
+    <p class="reg-subtitle">Создание новой учётной записи</p>
+
+    <div class="reg-section-title">Личные данные</div>
+    <div class="reg-row-3">
+      <div class="field">
+        <label>Фамилия <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="regLastName" placeholder="Иванов">
+      </div>
+      <div class="field">
+        <label>Имя <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="regFirstName" placeholder="Иван">
+      </div>
+      <div class="field">
+        <label>Отчество <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="regPatronymic" placeholder="Иванович">
+      </div>
+    </div>
+
+    <hr class="reg-divider">
+    <div class="reg-section-title">Должность</div>
+    <div class="field">
+      <label>Должность <span style="color:var(--danger)">*</span></label>
+      <select id="regPosition"><option value="">— выберите —</option></select>
+    </div>
+
+    <hr class="reg-divider">
+    <div class="reg-section-title">Подразделение</div>
+    <div class="field" id="fieldCenter" style="display:none">
+      <label>НТЦ <span style="color:var(--danger)">*</span></label>
+      <select id="regCenter"><option value="">— выберите —</option></select>
+    </div>
+    <div class="reg-row">
+      <div class="field" id="fieldDept" style="display:none">
+        <label>Отдел <span style="color:var(--danger)">*</span></label>
+        <select id="regDept"><option value="">— выберите —</option></select>
+      </div>
+      <div class="field" id="fieldSector" style="display:none">
+        <label>Сектор <span style="color:var(--danger)">*</span></label>
+        <select id="regSector"><option value="">— выберите —</option></select>
+      </div>
+    </div>
+
+    <hr class="reg-divider">
+    <div class="reg-section-title">Учётные данные</div>
+    <div class="reg-row">
+      <div class="field">
+        <label>Логин <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="regUsername" placeholder="Логин" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Пароль <span style="color:var(--danger)">*</span></label>
+        <input type="password" id="regPassword" placeholder="Мин. 4 символа" autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="reg-error" id="regError"></div>
+    <div class="success-msg" id="regSuccess">✓ Регистрация прошла успешно!</div>
+
+    <button class="btn-login" id="regSubmitBtn" onclick="submitReg()">Зарегистрироваться</button>
+  </div>
+</div>
+
+<script>
+/* ── Регистрация ──────────────────────────────────────────────────────── */
+
+// Кэш справочника
+let _regDirs = {};
+
+// Правила отображения полей подразделения по должности:
+//   'ntc'    — только НТЦ
+//   'dept'   — только Отдел
+//   'both'   — Отдел + Сектор
+//   ''       — ничего (нет полей подразделения)
+// Ключи = значения из Employee.POSITION_CHOICES (display-имена)
+const POS_FIELDS = {
+  'Руководитель НТЦ':                          'ntc',
+  'Зам. руководителя НТЦ':                     'ntc',
+  'Начальник отдела':                           'dept',
+  'Зам. начальника отдела':                     'dept',
+  'Инженер-конструктор':                        'both',
+  'Инженер-конструктор 3 кат.':                'both',
+  'Инженер-конструктор 2 кат.':                'both',
+  'Инженер-конструктор 1 кат.':                'both',
+  'Ведущий инженер-конструктор':               'both',
+  'Начальник сектора':                          'both',
+  'Зам. начальника отдела – начальник сектора': 'both',
+  'Руководитель направления':                   'both',
+};
+
+// Получить CSRF-токен из cookie (Django)
+function getCSRF() {
+  const c = document.cookie.match(/csrftoken=([^;]+)/);
+  return c ? c[1] : '';
+}
+
+// Показать/скрыть поля подразделения в зависимости от должности
+function _applyPositionFields(position) {
+  const rule = POS_FIELDS[position] || '';
+  const showNtc    = rule === 'ntc';
+  const showDept   = rule === 'dept' || rule === 'both';
+  const showSector = rule === 'both';
+
+  document.getElementById('fieldCenter').style.display = showNtc    ? '' : 'none';
+  document.getElementById('fieldDept').style.display   = showDept   ? '' : 'none';
+  document.getElementById('fieldSector').style.display = showSector ? '' : 'none';
+
+  // Сбрасываем значения скрытых полей
+  if (!showNtc)    document.getElementById('regCenter').value = '';
+  if (!showDept)   document.getElementById('regDept').value   = '';
+  if (!showSector) { document.getElementById('regSector').value = ''; }
+}
+
+async function openRegModal() {
+  document.getElementById('regOverlay').classList.add('open');
+  // Сбросить поля
+  ['regLastName','regFirstName','regPatronymic','regUsername','regPassword'].forEach(
+    id => document.getElementById(id).value = ''
+  );
+  document.getElementById('regPosition').value = '';
+  document.getElementById('regCenter').value   = '';
+  document.getElementById('regDept').value     = '';
+  document.getElementById('regSector').value   = '';
+  _applyPositionFields('');
+  document.getElementById('regError').style.display   = 'none';
+  document.getElementById('regSuccess').style.display = 'none';
+  document.getElementById('regLastName').focus();
+
+  // Загрузить справочники
+  try {
+    const res  = await fetch('/api/dirs_public/');
+    _regDirs = await res.json();
+
+    // Заполнить должности
+    const posSel = document.getElementById('regPosition');
+    posSel.innerHTML = '<option value="">— выберите —</option>';
+    (_regDirs.position || []).forEach(v => {
+      const o = document.createElement('option');
+      o.value = o.textContent = v;
+      posSel.appendChild(o);
+    });
+
+    // Заполнить НТЦ
+    const centerSel = document.getElementById('regCenter');
+    centerSel.innerHTML = '<option value="">— выберите —</option>';
+    (_regDirs.center || []).forEach(v => {
+      const o = document.createElement('option');
+      o.value = o.textContent = v;
+      centerSel.appendChild(o);
+    });
+
+    // Заполнить отделы
+    const deptSel = document.getElementById('regDept');
+    deptSel.innerHTML = '<option value="">— выберите —</option>';
+    (_regDirs.dept || []).forEach(v => {
+      const o = document.createElement('option');
+      o.value = o.textContent = v;
+      deptSel.appendChild(o);
+    });
+
+    _fillSectors('');  // очистить список секторов
+  } catch(_) {}
+}
+
+// Заполнить список секторов по выбранному отделу
+function _fillSectors(dept) {
+  const sel = document.getElementById('regSector');
+  sel.innerHTML = '<option value="">— выберите —</option>';
+  if (!dept) return;
+  const list = (_regDirs.sectors_by_dept || {})[dept] || [];
+  list.forEach(v => {
+    const o = document.createElement('option');
+    o.value = o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
+// При смене отдела — перезаполнить секторы
+document.getElementById('regDept').addEventListener('change', function() {
+  _fillSectors(this.value);
+});
+
+// При смене должности — обновить видимость полей подразделения
+document.getElementById('regPosition').addEventListener('change', function() {
+  _applyPositionFields(this.value);
+});
+
+function closeRegModal() {
+  document.getElementById('regOverlay').classList.remove('open');
+}
+
+// Закрыть по клику на затемнение
+document.getElementById('regOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeRegModal();
+});
+
+// Закрыть по Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeRegModal();
+});
+
+async function submitReg() {
+  const lastName   = document.getElementById('regLastName').value.trim();
+  const firstName  = document.getElementById('regFirstName').value.trim();
+  const patronymic = document.getElementById('regPatronymic').value.trim();
+  const position   = document.getElementById('regPosition').value;
+  const center     = document.getElementById('regCenter').value;
+  const dept       = document.getElementById('regDept').value;
+  const sector     = document.getElementById('regSector').value;
+  const username   = document.getElementById('regUsername').value.trim();
+  const password   = document.getElementById('regPassword').value;
+
+  const errEl = document.getElementById('regError');
+  const okEl  = document.getElementById('regSuccess');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  const err = s => { errEl.textContent = s; errEl.style.display = 'block'; };
+
+  if (!lastName)   return err('Введите фамилию');
+  if (!firstName)  return err('Введите имя');
+  if (!patronymic) return err('Введите отчество');
+  if (!position)   return err('Выберите должность');
+
+  const rule = POS_FIELDS[position] || '';
+  if ((rule === 'ntc')  && !center) return err('Выберите НТЦ');
+  if ((rule === 'dept' || rule === 'both') && !dept) return err('Выберите отдел');
+  if (rule === 'both' && !sector) return err('Выберите сектор');
+
+  if (!username)           return err('Введите логин');
+  if (password.length < 4) return err('Пароль — минимум 4 символа');
+
+  const btn = document.getElementById('regSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Сохранение...';
+
+  try {
+    const res = await fetch('/api/register_public/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
+      body: JSON.stringify({last_name: lastName, first_name: firstName,
+                            patronymic, position, center, dept, sector, username, password})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      err(data.error || 'Ошибка сервера');
+    } else {
+      okEl.style.display = 'block';
+      setTimeout(closeRegModal, 1500);
+    }
+  } catch(e) {
+    err('Ошибка соединения с сервером');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Зарегистрироваться';
+  }
+}
+</script>
+</body>
+</html>

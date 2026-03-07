@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}{{ object.work_name|default:"Работа" }} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}">
+  {% if object.source_type == 'pp' %}Производственный план{% else %}План/отчёт{% endif %}
+</a>
+<span>/</span>
+<span class="breadcrumb-current">{{ object.work_name|default:"Работа"|truncatechars:40 }}</span>
+{% endblock %}
+
+{% block nav_tasks %}{% if object.source_type != 'pp' %}active{% endif %}{% endblock %}
+{% block nav_pp %}{% if object.source_type == 'pp' %}active{% endif %}{% endblock %}
+
+{% block topbar_actions %}
+  {% if request.user|is_writer %}
+    <a href="{% url 'works:edit' object.pk %}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-edit"></i> Редактировать
+    </a>
+    <a href="{% url 'works:delete' object.pk %}" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);">
+      <i class="fas fa-trash"></i> Удалить
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;flex-direction:column;gap:24px;">
+
+  <!-- Основные данные -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">
+        {% if object.source_type == 'pp' %}
+          <span class="badge badge-green" style="margin-right:8px;">ПП</span>
+        {% else %}
+          <span class="badge badge-blue" style="margin-right:8px;">ПО</span>
+        {% endif %}
+        {{ object.work_name|default:"—" }}
+      </h2>
+    </div>
+    <table class="info-table">
+      <tr><th>Номер работы</th><td>{{ object.work_number|default:"—" }}</td></tr>
+      <tr><th>Тип работы</th><td>{{ object.work_type|default:"—" }}</td></tr>
+      <tr><th>Описание</th><td>{{ object.description|default:"—" }}</td></tr>
+      <tr><th>НТЦ-центр</th><td>{% if object.ntc_center %}{{ object.ntc_center.code }} — {{ object.ntc_center.name }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Отдел</th><td>{% if object.department %}{{ object.department.code }} — {{ object.department.name }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.code }} — {{ object.sector.name }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Проект</th><td>{% if object.project %}{{ object.project.name }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Исполнитель</th><td>
+        {% if object.executor %}{{ object.executor.full_name }}
+        {% elif object.executor_name_raw %}{{ object.executor_name_raw }}
+        {% else %}—{% endif %}
+      </td></tr>
+      <tr><th>Дата начала</th><td>{{ object.date_start|default:"—" }}</td></tr>
+      <tr><th>Дата окончания</th><td>{{ object.date_end|default:"—" }}</td></tr>
+      <tr><th>Дедлайн</th><td>{{ object.deadline|default:"—" }}</td></tr>
+      <tr><th>Плановые часы</th><td>
+        {% if object.plan_hours %}<code style="background:var(--surface2);padding:4px 8px;border-radius:4px;font-size:13px;">{{ object.plan_hours }}</code>{% else %}—{% endif %}
+      </td></tr>
+      <tr><th>Создано</th><td>{{ object.created_at|date:"d.m.Y H:i" }}</td></tr>
+    </table>
+  </div>
+
+  {% if object.source_type == 'task' %}{% with td=object.task_detail %}{% if td %}
+  <div class="section">
+    <div class="section-header"><h2 class="section-title">Детали задачи (ПО)</h2></div>
+    <table class="info-table">
+      <tr><th>Этап</th><td>{{ td.stage|default:"—" }}</td></tr>
+      <tr><th>Обоснование</th><td>{{ td.justification|default:"—" }}</td></tr>
+    </table>
+  </div>
+  {% endif %}{% endwith %}{% endif %}
+
+  {% if object.source_type == 'pp' %}{% with pd=object.pp_detail %}{% if pd %}
+  <div class="section">
+    <div class="section-header"><h2 class="section-title">Детали производственного плана</h2></div>
+    <table class="info-table">
+      <tr><th>Код строки</th><td>{{ pd.row_code|default:"—" }}</td></tr>
+      <tr><th>Заказ</th><td>{{ pd.work_order|default:"—" }}</td></tr>
+      <tr><th>Этап / Веха / Работа</th><td>{{ pd.stage_num|default:"—" }} / {{ pd.milestone_num|default:"—" }} / {{ pd.work_num|default:"—" }}</td></tr>
+      <tr><th>Обозначение</th><td>{{ pd.work_designation|default:"—" }}</td></tr>
+      <tr><th>Листов A4</th><td>{{ pd.sheets_a4|default:"—" }}</td></tr>
+      <tr><th>Норма / Коэф</th><td>{{ pd.norm|default:"—" }} / {{ pd.coeff|default:"—" }}</td></tr>
+      <tr><th>Итого 2D / 3D</th><td>{{ pd.total_2d|default:"—" }} / {{ pd.total_3d|default:"—" }}</td></tr>
+      <tr><th>Трудоёмкость</th><td>{{ pd.labor|default:"—" }}</td></tr>
+      <tr><th>Начальник сектора</th><td>{{ pd.sector_head_name|default:"—" }}</td></tr>
+    </table>
+  </div>
+  {% endif %}{% endwith %}{% endif %}
+
+  <!-- Отчётные документы -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">Отчётные документы</h2>
+      {% if request.user|is_writer %}
+        <a href="{% url 'works:report_add' object.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Добавить</a>
+      {% endif %}
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Наименование</th><th>Обозначение</th><th>Инв. №</th>
+            <th>Дата приёма</th><th>Тип/Класс</th>
+            <th>Л. A4</th><th>Норма</th><th>Коэф.</th><th>Ч. БВД</th>
+            <th>Нормоконтроль</th><th>Ссылка</th>
+            {% if request.user|is_writer %}<th></th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in object.reports.all %}
+          <tr>
+            <td>{{ r.doc_name|default:"—" }}</td>
+            <td style="font-size:13px;color:var(--text2);">{{ r.doc_designation|default:"—" }}</td>
+            <td style="font-size:13px;color:var(--text2);">{{ r.inventory_num|default:"—" }}</td>
+            <td style="font-size:13px;white-space:nowrap;">{{ r.date_accepted|default:"—" }}</td>
+            <td style="font-size:13px;">{{ r.doc_type|default:"—" }}{% if r.doc_class %}/{{ r.doc_class }}{% endif %}</td>
+            <td>{{ r.sheets_a4|default:"—" }}</td>
+            <td>{{ r.norm|default:"—" }}</td>
+            <td>{{ r.coeff|default:"—" }}</td>
+            <td>{{ r.bvd_hours|default:"—" }}</td>
+            <td style="font-size:13px;">{{ r.norm_control|default:"—" }}</td>
+            <td style="font-size:13px;">
+              {% if r.doc_link %}
+                <a href="{{ r.doc_link }}" target="_blank" style="color:var(--accent);">
+                  <i class="fas fa-external-link-alt"></i>
+                </a>
+              {% else %}—{% endif %}
+            </td>
+            {% if request.user|is_writer %}
+            <td style="white-space:nowrap;">
+              <a href="{% url 'works:report_edit' r.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+              <a href="{% url 'works:report_delete' r.pk %}" class="btn btn-sm btn-outline" style="color:var(--danger);"><i class="fas fa-trash"></i></a>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr class="empty"><td colspan="{% if request.user|is_writer %}12{% else %}11{% endif %}">Документов нет</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}" class="btn btn-outline">
+      <i class="fas fa-arrow-left"></i> Назад к списку
+    </a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Редактировать сотрудника{% else %}Новый сотрудник{% endif %} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'employees:list' %}">Сотрудники</a>
+<span>/</span>
+{% if object %}
+<a href="{% url 'employees:detail' object.pk %}">{{ object.short_name }}</a>
+<span>/</span>
+<span class="breadcrumb-current">Редактировать</span>
+{% else %}
+<span class="breadcrumb-current">Новый сотрудник</span>
+{% endif %}
+{% endblock %}
+
+{% block nav_employees %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% if object %}{{ object.full_name }}{% else %}Новый сотрудник{% endif %}</h1>
+</div>
+
+<div class="form-container">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert-error">
+      {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="form-section-title">Учётная запись</div>
+    <div class="form-row">
+      <div class="form-group {% if form.user.errors %}has-error{% endif %}">
+        <label>{{ form.user.label }}</label>
+        {{ form.user }}
+        {% if form.user.errors %}<span class="form-error">{{ form.user.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.role.errors %}has-error{% endif %}">
+        <label>{{ form.role.label }}</label>
+        {{ form.role }}
+        {% if form.role.errors %}<span class="form-error">{{ form.role.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="checkbox-wrap">{{ form.must_change_password }} <span>Потребовать смену пароля при входе</span></div>
+      </div>
+      <div class="form-group">
+        <div class="checkbox-wrap">{{ form.is_active }} <span>Активен (снять — уволить)</span></div>
+      </div>
+    </div>
+
+    <div class="form-section-title">ФИО</div>
+    <div class="form-row">
+      <div class="form-group {% if form.last_name.errors %}has-error{% endif %}">
+        <label>{{ form.last_name.label }}</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}<span class="form-error">{{ form.last_name.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.first_name.errors %}has-error{% endif %}">
+        <label>{{ form.first_name.label }}</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}<span class="form-error">{{ form.first_name.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.patronymic.errors %}has-error{% endif %}">
+        <label>{{ form.patronymic.label }}</label>
+        {{ form.patronymic }}
+        {% if form.patronymic.errors %}<span class="form-error">{{ form.patronymic.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-section-title">Должность и подразделение</div>
+    <div class="form-row">
+      <div class="form-group {% if form.position.errors %}has-error{% endif %}">
+        <label>{{ form.position.label }}</label>
+        {{ form.position }}
+        {% if form.position.errors %}<span class="form-error">{{ form.position.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.ntc_center.errors %}has-error{% endif %}">
+        <label>{{ form.ntc_center.label }}</label>
+        {{ form.ntc_center }}
+        {% if form.ntc_center.errors %}<span class="form-error">{{ form.ntc_center.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group {% if form.department.errors %}has-error{% endif %}">
+        <label>{{ form.department.label }}</label>
+        {{ form.department }}
+        {% if form.department.errors %}<span class="form-error">{{ form.department.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.sector.errors %}has-error{% endif %}">
+        <label>{{ form.sector.label }}</label>
+        {{ form.sector }}
+        {% if form.sector.errors %}<span class="form-error">{{ form.sector.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-section-title">Контакты</div>
+    <div class="form-row">
+      <div class="form-group {% if form.phone.errors %}has-error{% endif %}">
+        <label>{{ form.phone.label }}</label>
+        {{ form.phone }}
+        {% if form.phone.errors %}<span class="form-error">{{ form.phone.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.email_corp.errors %}has-error{% endif %}">
+        <label>{{ form.email_corp.label }}</label>
+        {{ form.email_corp }}
+        {% if form.email_corp.errors %}<span class="form-error">{{ form.email_corp.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-section-title">Параметры работы</div>
+    <div class="form-row">
+      <div class="form-group {% if form.hire_date.errors %}has-error{% endif %}">
+        <label>{{ form.hire_date.label }}</label>
+        {{ form.hire_date }}
+        {% if form.hire_date.errors %}<span class="form-error">{{ form.hire_date.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.dismissal_date.errors %}has-error{% endif %}">
+        <label>{{ form.dismissal_date.label }}</label>
+        {{ form.dismissal_date }}
+        {% if form.dismissal_date.errors %}<span class="form-error">{{ form.dismissal_date.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group {% if form.monthly_hours_norm.errors %}has-error{% endif %}">
+        <label>{{ form.monthly_hours_norm.label }}</label>
+        {{ form.monthly_hours_norm }}
+        {% if form.monthly_hours_norm.errors %}<span class="form-error">{{ form.monthly_hours_norm.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.personal_coeff.errors %}has-error{% endif %}">
+        <label>{{ form.personal_coeff.label }}</label>
+        {{ form.personal_coeff }}
+        {% if form.personal_coeff.errors %}<span class="form-error">{{ form.personal_coeff.errors.0 }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      {% if object %}
+        <a href="{% url 'employees:detail' object.pk %}" class="btn btn-outline">Отмена</a>
+      {% else %}
+        <a href="{% url 'employees:list' %}" class="btn btn-outline">Отмена</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

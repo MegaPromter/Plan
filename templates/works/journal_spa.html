@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}Журнал извещений — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Журнал извещений</span>
+{% endblock %}
+
+{% block nav_notices %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <button class="btn btn-primary btn-sm" onclick="openCreateModal()">
+    <i class="fas fa-plus"></i> Добавить извещение
+  </button>
+{% endif %}
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ── Status badges ────────────────────────────────────────────────────── */
+.status-active  { background:rgba(34,197,94,0.15); color:var(--success); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; }
+.status-closed  { background:var(--surface2); color:var(--text2); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; }
+
+/* ── Toolbar ──────────────────────────────────────────────────────────── */
+.journal-toolbar {
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  margin-bottom:20px; background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:16px;
+}
+.journal-toolbar select { width:auto; min-width:160px; max-width:220px; }
+
+/* ── Inline editable cells ────────────────────────────────────────────── */
+td[data-editable="true"] { cursor:pointer; }
+td[data-editable="true"]:hover { background:rgba(59,130,246,0.06); }
+
+/* ── Action buttons in table ──────────────────────────────────────────── */
+.action-btn {
+  width:28px; height:28px; border-radius:6px; border:none; background:transparent;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  transition:all 0.15s; font-size:13px;
+}
+.action-btn.edit { color:var(--text2); }
+.action-btn.edit:hover { color:var(--accent); background:var(--accent-glow); }
+.action-btn.del { color:var(--danger); opacity:0.6; }
+.action-btn.del:hover { opacity:1; background:rgba(239,68,68,0.1); }
+
+/* ── Pagination ───────────────────────────────────────────────────────── */
+.spa-pagination {
+  display:flex; align-items:center; gap:8px; margin-top:20px;
+}
+.spa-pagination button {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:36px; height:36px; padding:0 10px; border-radius:8px;
+  font-size:14px; border:1px solid var(--border); color:var(--text2);
+  background:transparent; cursor:pointer; transition:all 0.15s; font-family:var(--font);
+}
+.spa-pagination button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.spa-pagination button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.spa-pagination button:disabled { opacity:.4; cursor:default; }
+.spa-pagination .page-info { font-size:13px; color:var(--muted); margin-left:8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="page-header">
+  <h1>Журнал извещений</h1>
+</div>
+
+<!-- Toolbar -->
+<div class="journal-toolbar">
+  <select id="filterStatus" onchange="loadEntries()">
+    <option value="">Все</option>
+    <option value="active">Активные</option>
+    <option value="closed">Закрытые</option>
+  </select>
+  {% if request.user|is_writer %}
+  <div style="flex:1;"></div>
+  <button class="btn btn-primary btn-sm" onclick="openCreateModal()">
+    <i class="fas fa-plus"></i> Добавить извещение
+  </button>
+  {% endif %}
+</div>
+
+<!-- Table -->
+<div class="section">
+  <div class="table-wrap">
+    <table class="data-table" id="journalTable">
+      <thead>
+        <tr>
+          <th style="width:50px;">#</th>
+          <th style="width:120px;">Тип</th>
+          <th style="width:120px;">Отдел</th>
+          <th style="width:140px;">Исполнитель</th>
+          <th style="width:110px;">Дата</th>
+          <th>Тема</th>
+          <th>Описание</th>
+          <th style="width:100px;">Статус</th>
+          {% if request.user|is_writer %}<th style="width:80px;">Действия</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody id="journalBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Empty state -->
+<div class="empty-state" id="emptyState" style="display:none;">
+  <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
+  <p>Извещений не найдено</p>
+  {% if request.user|is_writer %}
+  <button class="btn btn-primary" onclick="openCreateModal()">
+    <i class="fas fa-plus"></i> Добавить первое извещение
+  </button>
+  {% endif %}
+</div>
+
+<!-- Pagination -->
+<div class="spa-pagination" id="paginationBar" style="display:none;"></div>
+
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script src="{% static 'js/inline_edit.js' %}"></script>
+<script>
+/* ── State ──────────────────────────────────────────────────────────────── */
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+let entries = [];
+let directories = {};
+let currentPage = 1;
+let totalPages = 1;
+const PAGE_SIZE = 25;
+
+/* ── Init ───────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadDirectories();
+  await loadEntries();
+  initInlineEditor();
+});
+
+/* ── Load directories for dropdowns ─────────────────────────────────────── */
+async function loadDirectories() {
+  const data = await fetchJson('/api/directories/');
+  if (!data._error) {
+    directories = data;
+  }
+}
+
+/* ── Load entries ───────────────────────────────────────────────────────── */
+async function loadEntries() {
+  const status = document.getElementById('filterStatus').value;
+  let url = `/api/journal/?page=${currentPage}&page_size=${PAGE_SIZE}`;
+  if (status) url += `&status=${status}`;
+
+  const data = await fetchJson(url);
+  if (data._error) return;
+
+  if (data.results) {
+    entries = data.results;
+    totalPages = Math.ceil((data.count || 0) / PAGE_SIZE) || 1;
+  } else if (Array.isArray(data)) {
+    entries = data;
+    totalPages = 1;
+  } else {
+    entries = [];
+    totalPages = 1;
+  }
+
+  render();
+  renderPagination();
+}
+
+/* ── Render table ───────────────────────────────────────────────────────── */
+function render() {
+  const tbody = document.getElementById('journalBody');
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('journalTable').closest('.section');
+
+  if (entries.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    table.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.style.display = '';
+  tbody.innerHTML = '';
+
+  entries.forEach((e, idx) => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = e.id;
+    if (e.updated_at) tr.dataset.updatedAt = e.updated_at;
+
+    const statusClass = e.status === 'active' ? 'status-active' : 'status-closed';
+    const statusLabel = e.status === 'active' ? 'Активно' : 'Закрыто';
+    const rowNum = (currentPage - 1) * PAGE_SIZE + idx + 1;
+
+    let actionsHtml = '';
+    if (IS_WRITER) {
+      actionsHtml = `
+        <td style="white-space:nowrap;">
+          <button class="action-btn edit" onclick="openEditModal(${e.id})" title="Редактировать"><i class="fas fa-edit"></i></button>
+          <button class="action-btn del" onclick="deleteEntry(${e.id})" title="Удалить"><i class="fas fa-trash"></i></button>
+        </td>`;
+    }
+
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:12px;text-align:center;">${rowNum}</td>
+      <td data-editable="${IS_WRITER}" data-field="notice_type" data-id="${e.id}" data-value="${escapeHtml(e.notice_type || '')}">${escapeHtml(e.notice_type) || '—'}</td>
+      <td data-editable="${IS_WRITER}" data-field="dept" data-id="${e.id}" data-value="${escapeHtml(e.dept || '')}">${escapeHtml(e.dept) || '—'}</td>
+      <td data-editable="${IS_WRITER}" data-field="executor" data-id="${e.id}" data-value="${escapeHtml(e.executor || '')}">${escapeHtml(e.executor) || '—'}</td>
+      <td data-editable="${IS_WRITER}" data-field="date_issued" data-id="${e.id}" data-value="${e.date_issued || ''}" style="white-space:nowrap;">${formatDate(e.date_issued)}</td>
+      <td data-editable="${IS_WRITER}" data-field="subject" data-id="${e.id}" data-value="${escapeHtml(e.subject || '')}">${escapeHtml(e.subject) || '—'}</td>
+      <td data-editable="${IS_WRITER}" data-field="description" data-id="${e.id}" data-value="${escapeHtml(e.description || '')}" style="font-size:13px;color:var(--muted);">${escapeHtml(e.description) || '—'}</td>
+      <td>
+        <span class="${statusClass}">${statusLabel}</span>
+      </td>
+      ${actionsHtml}
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Init inline editor ─────────────────────────────────────────────────── */
+function initInlineEditor() {
+  if (!IS_WRITER) return;
+
+  InlineEditor.init({
+    table: '#journalTable',
+    saveUrl: (id) => `/api/journal/${id}/`,
+    method: 'PUT',
+    fieldTypes: {
+      notice_type: 'text',
+      dept: 'text',
+      executor: 'text',
+      date_issued: 'date',
+      subject: 'text',
+      description: 'text',
+    },
+    onSave: (id, field, value, resp) => {
+      showToast('Сохранено', 'success');
+      const entry = entries.find(e => e.id == id);
+      if (entry) entry[field] = value;
+    },
+    onError: (id, field, value, resp) => {
+      // toast is shown by fetchJson
+    },
+  });
+}
+
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+function renderPagination() {
+  const bar = document.getElementById('paginationBar');
+  if (totalPages <= 1) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = '';
+
+  // Prev
+  const prev = document.createElement('button');
+  prev.innerHTML = '&laquo;';
+  prev.disabled = currentPage <= 1;
+  prev.addEventListener('click', () => goToPage(currentPage - 1));
+  bar.appendChild(prev);
+
+  // Page numbers
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
+  for (let i = start; i <= end; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    if (i === currentPage) btn.className = 'active';
+    btn.addEventListener('click', () => goToPage(i));
+    bar.appendChild(btn);
+  }
+
+  // Next
+  const next = document.createElement('button');
+  next.innerHTML = '&raquo;';
+  next.disabled = currentPage >= totalPages;
+  next.addEventListener('click', () => goToPage(currentPage + 1));
+  bar.appendChild(next);
+
+  // Info
+  const info = document.createElement('span');
+  info.className = 'page-info';
+  info.textContent = `${currentPage} / ${totalPages}`;
+  bar.appendChild(info);
+}
+
+function goToPage(page) {
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  loadEntries();
+}
+
+/* ── Create modal ───────────────────────────────────────────────────────── */
+function openCreateModal() {
+  openEntryModal(null);
+}
+
+/* ── Edit modal ─────────────────────────────────────────────────────────── */
+function openEditModal(id) {
+  const entry = entries.find(e => e.id == id);
+  if (!entry) return;
+  openEntryModal(entry);
+}
+
+/* ── Unified modal ──────────────────────────────────────────────────────── */
+function openEntryModal(entry) {
+  const isEdit = !!entry;
+  const title = isEdit ? 'Редактировать извещение' : 'Новое извещение';
+
+  const noticeTypes = (directories.notice_type || directories._ids_notice_type || [])
+    .map(i => typeof i === 'string' ? i : (i.value || i.name || ''));
+  const depts = (directories.dept || directories._ids_dept || [])
+    .map(i => typeof i === 'string' ? i : (i.value || i.name || ''));
+  const executors = (directories.executor || directories._ids_executor || [])
+    .map(i => typeof i === 'string' ? i : (i.value || i.name || ''));
+
+  function buildOptions(list, selected) {
+    return '<option value="">—</option>' +
+      list.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+  }
+
+  const body = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Тип извещения</label>
+        ${noticeTypes.length > 0
+          ? `<select id="m_notice_type">${buildOptions(noticeTypes, entry ? entry.notice_type : '')}</select>`
+          : `<input type="text" id="m_notice_type" value="${escapeHtml(entry ? entry.notice_type : '')}">`
+        }
+      </div>
+      <div class="form-group">
+        <label>Отдел</label>
+        ${depts.length > 0
+          ? `<select id="m_dept">${buildOptions(depts, entry ? entry.dept : '')}</select>`
+          : `<input type="text" id="m_dept" value="${escapeHtml(entry ? entry.dept : '')}">`
+        }
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Исполнитель</label>
+        ${executors.length > 0
+          ? `<select id="m_executor">${buildOptions(executors, entry ? entry.executor : '')}</select>`
+          : `<input type="text" id="m_executor" value="${escapeHtml(entry ? entry.executor : '')}">`
+        }
+      </div>
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="date" id="m_date_issued" value="${entry ? (entry.date_issued || '') : ''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Тема</label>
+      <input type="text" id="m_subject" value="${escapeHtml(entry ? entry.subject : '')}">
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      <textarea id="m_description" rows="3">${escapeHtml(entry ? entry.description : '')}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Статус</label>
+      <select id="m_status">
+        <option value="active" ${(!entry || entry.status === 'active') ? 'selected' : ''}>Активно</option>
+        <option value="closed" ${(entry && entry.status === 'closed') ? 'selected' : ''}>Закрыто</option>
+      </select>
+    </div>
+  `;
+
+  const modal = openModal({
+    title,
+    body,
+    width: '640px',
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary modal-save">${isEdit ? 'Сохранить' : 'Создать'}</button>
+    `,
+  });
+
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
+    const payload = {
+      notice_type: document.getElementById('m_notice_type').value,
+      dept: document.getElementById('m_dept').value,
+      executor: document.getElementById('m_executor').value,
+      date_issued: document.getElementById('m_date_issued').value,
+      subject: document.getElementById('m_subject').value,
+      description: document.getElementById('m_description').value,
+      status: document.getElementById('m_status').value,
+    };
+
+    let result;
+    if (isEdit) {
+      result = await fetchJson(`/api/journal/${entry.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    } else {
+      result = await fetchJson('/api/journal/create/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (!result._error) {
+      modal.close();
+      showToast(isEdit ? 'Извещение обновлено' : 'Извещение создано', 'success');
+      await loadEntries();
+    }
+  });
+}
+
+/* ── Delete ──────────────────────────────────────────────────────────────── */
+async function deleteEntry(id) {
+  const ok = await confirmDialog('Удалить это извещение? Действие необратимо.', 'Удаление извещения');
+  if (!ok) return;
+
+  const result = await fetchJson(`/api/journal/${id}/`, { method: 'DELETE' });
+  if (!result._error) {
+    showToast('Извещение удалено', 'success');
+    await loadEntries();
+  }
+}
+</script>
+{% endblock %}

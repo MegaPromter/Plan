@@ -1,0 +1,1318 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}Администрирование{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Администрирование</span>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ── Admin layout ─────────────────────────────────────────────────────── */
+.admin-page { display:flex; flex-direction:column; gap:24px; }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.admin-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.admin-card-header {
+  padding:16px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+  user-select:none; transition:background 0.15s;
+}
+.admin-card-header:hover { background:var(--surface2); }
+.admin-card-title { font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
+.admin-card-arrow { font-size:14px; color:var(--muted); transition:transform 0.2s; }
+.admin-card-arrow.open { transform:rotate(180deg); }
+.admin-card-body { display:none; padding:24px; }
+.admin-card-body.open { display:block; }
+
+/* ── Accordion inside cards ───────────────────────────────────────────── */
+.acc-section { border-bottom:1px solid var(--border); }
+.acc-section:last-child { border-bottom:none; }
+.acc-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; cursor:pointer; transition:background 0.15s; user-select:none;
+}
+.acc-header:hover { background:var(--surface2); }
+.acc-header-label { font-size:15px; font-weight:600; }
+.acc-arrow { font-size:13px; color:var(--muted); transition:transform 0.2s; }
+.acc-arrow.open { transform:rotate(180deg); }
+.acc-body { display:none; padding:8px 16px 16px; }
+.acc-body.open { display:block; }
+
+/* ── Directory items ──────────────────────────────────────────────────── */
+.dir-item { display:flex; align-items:center; gap:8px; padding:6px 0; }
+.dir-item-val { flex:1; font-size:14px; }
+.dir-item-sub { color:var(--muted); font-size:12px; margin-left:4px; }
+.dir-item-edit-input {
+  flex:1; padding:4px 8px; background:var(--bg); border:1px solid var(--accent);
+  border-radius:4px; color:var(--text); font-family:var(--font); font-size:14px;
+  outline:none; display:none;
+}
+.dir-item-btn {
+  width:26px; height:26px; border-radius:6px; border:none; background:transparent;
+  cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.dir-item-btn.edit { color:var(--text2); }
+.dir-item-btn.edit:hover { color:var(--accent); background:var(--accent-glow); }
+.dir-item-btn.del { color:var(--danger); opacity:0.5; }
+.dir-item-btn.del:hover { opacity:1; background:rgba(239,68,68,0.1); }
+.dir-item-btn.save { color:var(--success); display:none; }
+.dir-item-btn.save:hover { background:rgba(34,197,94,0.1); }
+
+.dir-add-row { display:flex; gap:8px; margin-top:12px; }
+.dir-add-input {
+  flex:1; padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:14px; outline:none;
+}
+.dir-add-input:focus { border-color:var(--accent); }
+.dir-add-btn {
+  padding:8px 14px; border-radius:8px; border:none; background:var(--accent);
+  color:#fff; font-family:var(--font); font-size:14px; cursor:pointer; transition:all 0.15s;
+}
+.dir-add-btn:hover { background:var(--accent2); }
+
+/* ── Hierarchical tree (projects) ─────────────────────────────────────── */
+.dir-parent-block { margin-bottom:8px; }
+.dir-parent-row {
+  display:flex; align-items:center; gap:6px; padding:6px 8px;
+  border-radius:6px; background:var(--surface2); cursor:default;
+}
+.dir-parent-toggle {
+  font-size:13px; color:var(--muted); cursor:pointer;
+  transition:transform 0.2s; user-select:none; flex-shrink:0; margin-right:2px;
+}
+.dir-parent-toggle.collapsed { transform:rotate(-90deg); }
+.dir-parent-label {
+  flex:1; font-size:14px; font-weight:600; color:var(--text2);
+}
+.dir-parent-edit-input {
+  flex:1; padding:3px 6px; background:var(--bg); border:1px solid var(--accent);
+  border-radius:4px; color:var(--text); font-family:var(--font); font-size:14px;
+  outline:none; display:none;
+}
+.dir-children {
+  padding-left:12px; border-left:2px solid var(--border);
+  margin:4px 0 0 16px;
+}
+.dir-children.collapsed { display:none; }
+.dir-children .dir-children { margin-left:12px; }
+.dir-children .dir-children .dir-children { margin-left:8px; }
+
+/* ── Seed data cards ──────────────────────────────────────────────────── */
+.seed-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
+.seed-card {
+  background:var(--surface2); border:1px solid var(--border); border-radius:12px;
+  padding:20px; display:flex; flex-direction:column; gap:12px;
+}
+.seed-card-title { font-size:14px; font-weight:600; color:var(--text); }
+.seed-card-desc { font-size:13px; color:var(--muted); }
+.seed-card-actions { display:flex; gap:8px; align-items:center; }
+.seed-card-actions input {
+  width:80px; padding:6px 10px; background:var(--bg); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--font); font-size:13px; outline:none;
+}
+
+/* ── Delegation table ─────────────────────────────────────────────────── */
+.deleg-table { width:100%; border-collapse:collapse; }
+.deleg-table th {
+  text-align:left; padding:10px 14px; font-size:12px; font-weight:600;
+  color:var(--muted); text-transform:uppercase; letter-spacing:.05em;
+  background:var(--surface2); border-bottom:1px solid var(--border);
+}
+.deleg-table td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:14px; }
+.deleg-table tr:last-child td { border-bottom:none; }
+.deleg-table tr:hover td { background:rgba(59,130,246,0.03); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+{% if request.user|is_admin_role %}
+<div class="admin-page">
+  <div class="page-header">
+    <h1>Администрирование</h1>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Section 1: Users
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="admin-card">
+    <div class="admin-card-header" onclick="toggleCard('users')">
+      <div class="admin-card-title"><i class="fas fa-users"></i> Пользователи</div>
+      <span class="admin-card-arrow" id="arrow-card-users">&#9660;</span>
+    </div>
+    <div class="admin-card-body" id="card-users">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" onclick="openUserModal(null)">
+          <i class="fas fa-plus"></i> Добавить пользователя
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="usersTable">
+          <thead>
+            <tr>
+              <th>Логин</th>
+              <th>ФИО</th>
+              <th>Роль</th>
+              <th>Отдел</th>
+              <th>Сектор</th>
+              <th>НТЦ-центр</th>
+              <th>Должность</th>
+              <th style="width:140px;">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Section 2: Directories
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="admin-card">
+    <div class="admin-card-header" onclick="toggleCard('dirs')">
+      <div class="admin-card-title"><i class="fas fa-book"></i> Справочники</div>
+      <span class="admin-card-arrow" id="arrow-card-dirs">&#9660;</span>
+    </div>
+    <div class="admin-card-body" id="card-dirs">
+      <div id="directoriesContent"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Section 2b: Projects (4-level hierarchy)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="admin-card">
+    <div class="admin-card-header" onclick="toggleCard('projects')">
+      <div class="admin-card-title"><i class="fas fa-folder-open"></i> Проекты</div>
+      <span class="admin-card-arrow" id="arrow-card-projects">&#9660;</span>
+    </div>
+    <div class="admin-card-body" id="card-projects">
+      <div id="projectsContent"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Section 3: Delegations
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="admin-card">
+    <div class="admin-card-header" onclick="toggleCard('delegations')">
+      <div class="admin-card-title"><i class="fas fa-exchange-alt"></i> Делегирования</div>
+      <span class="admin-card-arrow" id="arrow-card-delegations">&#9660;</span>
+    </div>
+    <div class="admin-card-body" id="card-delegations">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" onclick="openDelegationModal()">
+          <i class="fas fa-plus"></i> Создать делегирование
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table class="deleg-table" id="delegationsTable">
+          <thead>
+            <tr>
+              <th>Делегирует</th>
+              <th>Получает</th>
+              <th>Тип</th>
+              <th>Значение</th>
+              <th>Право записи</th>
+              <th>До</th>
+              <th style="width:80px;">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="delegationsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Section 4: Seed Data
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="admin-card">
+    <div class="admin-card-header" onclick="toggleCard('seed')">
+      <div class="admin-card-title"><i class="fas fa-database"></i> Тестовые данные</div>
+      <span class="admin-card-arrow" id="arrow-card-seed">&#9660;</span>
+    </div>
+    <div class="admin-card-body" id="card-seed">
+      <div class="seed-grid">
+        <div class="seed-card">
+          <div class="seed-card-title">Заполнить справочники</div>
+          <div class="seed-card-desc">Заполнить все справочники начальными данными</div>
+          <div class="seed-card-actions">
+            <button class="btn btn-secondary btn-sm" onclick="seedAction('/api/fill_all/', 'Справочники заполнены')">
+              <i class="fas fa-play"></i> Выполнить
+            </button>
+          </div>
+        </div>
+
+        <div class="seed-card">
+          <div class="seed-card-title">Заполнить отделы</div>
+          <div class="seed-card-desc">Создать структуру отделов и секторов</div>
+          <div class="seed-card-actions">
+            <button class="btn btn-secondary btn-sm" onclick="seedAction('/api/fill_dept/', 'Отделы заполнены')">
+              <i class="fas fa-play"></i> Выполнить
+            </button>
+          </div>
+        </div>
+
+        <div class="seed-card">
+          <div class="seed-card-title">Генерировать задачи</div>
+          <div class="seed-card-desc">Создать случайные задачи для тестирования</div>
+          <div class="seed-card-actions">
+            <input type="number" id="seedCount" value="10" min="1" max="500" placeholder="Кол-во">
+            <button class="btn btn-secondary btn-sm" onclick="seedTasks()">
+              <i class="fas fa-play"></i> Выполнить
+            </button>
+          </div>
+        </div>
+
+        <div class="seed-card">
+          <div class="seed-card-title">Добавить исполнителей</div>
+          <div class="seed-card-desc">Сгенерировать список исполнителей</div>
+          <div class="seed-card-actions">
+            <button class="btn btn-secondary btn-sm" onclick="seedAction('/api/seed_executors/', 'Исполнители добавлены')">
+              <i class="fas fa-play"></i> Выполнить
+            </button>
+          </div>
+        </div>
+
+        <div class="seed-card">
+          <div class="seed-card-title">Генерировать отпуска</div>
+          <div class="seed-card-desc">Создать тестовые записи отпусков</div>
+          <div class="seed-card-actions">
+            <button class="btn btn-secondary btn-sm" onclick="seedAction('/api/seed_vacations/', 'Отпуска сгенерированы')">
+              <i class="fas fa-play"></i> Выполнить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
+  <p>Доступ запрещён. Эта страница доступна только администраторам.</p>
+  <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">На главную</a>
+</div>
+{% endif %}
+
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+{% if request.user|is_admin_role %}
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   State
+   ══════════════════════════════════════════════════════════════════════════ */
+let users = [];
+let directories = {};
+let delegations = [];
+let projectDirs = {};
+const openSections = new Set();
+const openAccordions = new Set();
+const openProjectNodes = new Set();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Init
+   ══════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([
+    loadUsers(),
+    loadDirectories(),
+    loadDelegations(),
+  ]);
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Card accordion toggle
+   ══════════════════════════════════════════════════════════════════════════ */
+function toggleCard(id) {
+  const body = document.getElementById('card-' + id);
+  const arrow = document.getElementById('arrow-card-' + id);
+  if (!body) return;
+  body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+  if (body.classList.contains('open')) openSections.add(id);
+  else openSections.delete(id);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Section 1: Users
+   ══════════════════════════════════════════════════════════════════════════ */
+async function loadUsers() {
+  const data = await fetchJson('/api/users/');
+  if (data._error) return;
+  users = Array.isArray(data) ? data : (data.results || []);
+  renderUsers();
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('usersBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:40px;">Пользователи не найдены</td></tr>`;
+    return;
+  }
+
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openUserModal(u);
+    });
+    tr.innerHTML = `
+      <td style="font-weight:500;">${escapeHtml(u.username || '')}</td>
+      <td>${escapeHtml(u.full_name || u.fio || '')}</td>
+      <td><span class="badge badge-blue">${escapeHtml(u.role_display || u.role || '')}</span></td>
+      <td>${escapeHtml(u.dept || u.department || '')}</td>
+      <td>${escapeHtml(u.sector || '')}</td>
+      <td>${escapeHtml(u.ntc_center || u.center || '')}</td>
+      <td>${escapeHtml(u.position || '')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openUserModal(findUser(${u.id}))" title="Редактировать">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-outline" style="color:var(--warning);border-color:var(--warning);" onclick="event.stopPropagation();resetPassword(${u.id})" title="Сброс пароля">
+          <i class="fas fa-key"></i>
+        </button>
+        <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);" onclick="event.stopPropagation();deleteUser(${u.id})" title="Удалить">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function findUser(id) {
+  return users.find(u => u.id == id) || null;
+}
+
+/* ── Правила полей подразделения по должности ─────────────────────────── */
+const MU_POS_FIELDS = {
+  'Руководитель НТЦ':                          'ntc',
+  'Зам. руководителя НТЦ':                     'ntc',
+  'Начальник отдела':                           'dept',
+  'Зам. начальника отдела':                     'dept',
+  'Инженер-конструктор':                        'both',
+  'Инженер-конструктор 3 кат.':                'both',
+  'Инженер-конструктор 2 кат.':                'both',
+  'Инженер-конструктор 1 кат.':                'both',
+  'Ведущий инженер-конструктор':               'both',
+  'Начальник сектора':                          'both',
+  'Зам. начальника отдела – начальник сектора': 'both',
+  'Руководитель направления':                   'both',
+};
+
+function _muApplyPosition(position) {
+  const rule = MU_POS_FIELDS[position] || '';
+  const showNtc    = rule === 'ntc';
+  const showDept   = rule === 'dept' || rule === 'both';
+  const showSector = rule === 'both';
+
+  const fNtc    = document.getElementById('mu_field_ntc');
+  const fDept   = document.getElementById('mu_field_dept');
+  const fSector = document.getElementById('mu_field_sector');
+  if (fNtc)    fNtc.style.display    = showNtc    ? '' : 'none';
+  if (fDept)   fDept.style.display   = showDept   ? '' : 'none';
+  if (fSector) fSector.style.display = showSector ? '' : 'none';
+
+  if (!showNtc    && document.getElementById('mu_ntc_center')) document.getElementById('mu_ntc_center').value = '';
+  if (!showDept   && document.getElementById('mu_dept'))       document.getElementById('mu_dept').value       = '';
+  if (!showSector && document.getElementById('mu_sector'))     document.getElementById('mu_sector').value     = '';
+}
+
+function _muBuildSectorsByDept() {
+  // Строим маппинг dept.value -> [sector.value] через parent_id
+  const deptItems   = getDirItems('dept');
+  const sectorItems = getDirItems('sector');
+  const deptById = {};
+  deptItems.forEach(d => { if (d.id) deptById[d.id] = d.value; });
+  const result = {};
+  sectorItems.forEach(s => {
+    const deptCode = deptById[s.parent_id];
+    if (deptCode) {
+      (result[deptCode] = result[deptCode] || []).push(s.value);
+    }
+  });
+  return result;
+}
+
+function _muFillSectors(dept) {
+  const sel = document.getElementById('mu_sector');
+  if (!sel) return;
+  const sbd = _muBuildSectorsByDept();
+  sel.innerHTML = '<option value="">—</option>';
+  if (!dept) return;
+  (sbd[dept] || []).forEach(v => {
+    const o = document.createElement('option');
+    o.value = o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
+/* ── User modal ───────────────────────────────────────────────────────── */
+function openUserModal(user) {
+  const isEdit = !!user;
+  const title = isEdit ? 'Редактировать пользователя' : 'Новый пользователь';
+
+  const depts     = getDirValues('dept');
+  const centers   = getDirValues('ntc_center') || getDirValues('center') || [];
+  const positions = getDirValues('position');
+  const curDept   = user ? (user.dept || user.department || '') : '';
+  const sectors   = _muBuildSectorsByDept()[curDept] || getDirValues('sector');
+
+  function selOpts(list, selected) {
+    return '<option value="">—</option>' +
+      list.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+  }
+  const curSector = user ? (user.sector || '') : '';
+  const curCenter = user ? (user.ntc_center || user.center || '') : '';
+  const curPos    = user ? (user.position || '') : '';
+  const curRule   = MU_POS_FIELDS[curPos] || '';
+
+  const body = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Логин <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="mu_username" value="${escapeHtml(user ? user.username : '')}" ${isEdit ? 'readonly style="opacity:0.6;"' : ''}>
+      </div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="form-group">
+        <label>Фамилия <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="mu_last_name" value="${escapeHtml(user ? (user.last_name || '') : '')}" placeholder="Иванов">
+      </div>
+      <div class="form-group">
+        <label>Имя <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="mu_first_name" value="${escapeHtml(user ? (user.first_name || '') : '')}" placeholder="Иван">
+      </div>
+      <div class="form-group">
+        <label>Отчество <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="mu_patronymic" value="${escapeHtml(user ? (user.patronymic || '') : '')}" placeholder="Иванович">
+      </div>
+    </div>
+    ${!isEdit ? `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Пароль <span style="color:var(--danger)">*</span></label>
+        <input type="password" id="mu_password" placeholder="Минимум 6 символов">
+      </div>
+      <div class="form-group">
+        <label>Подтверждение пароля <span style="color:var(--danger)">*</span></label>
+        <input type="password" id="mu_password2" placeholder="Повторите пароль">
+      </div>
+    </div>` : ''}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Роль</label>
+        <select id="mu_role">
+          <option value="viewer" ${(user && user.role === 'viewer') ? 'selected' : ''}>Просмотр</option>
+          <option value="writer" ${(user && user.role === 'writer') ? 'selected' : ''}>Запись</option>
+          <option value="admin" ${(user && user.role === 'admin') ? 'selected' : ''}>Администратор</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Должность <span style="color:var(--danger)">*</span></label>
+        ${positions.length > 0
+          ? `<select id="mu_position">${selOpts(positions, curPos)}</select>`
+          : `<input type="text" id="mu_position" value="${escapeHtml(curPos)}">`
+        }
+      </div>
+    </div>
+    <div id="mu_field_ntc" style="display:${curRule === 'ntc' ? '' : 'none'}">
+      <div class="form-group">
+        <label>НТЦ <span style="color:var(--danger)">*</span></label>
+        ${centers.length > 0
+          ? `<select id="mu_ntc_center">${selOpts(centers, curCenter)}</select>`
+          : `<input type="text" id="mu_ntc_center" value="${escapeHtml(curCenter)}">`
+        }
+      </div>
+    </div>
+    <div id="mu_field_dept" style="display:${(curRule === 'dept' || curRule === 'both') ? '' : 'none'}">
+      <div class="form-group">
+        <label>Отдел <span style="color:var(--danger)">*</span></label>
+        ${depts.length > 0
+          ? `<select id="mu_dept">${selOpts(depts, curDept)}</select>`
+          : `<input type="text" id="mu_dept" value="${escapeHtml(curDept)}">`
+        }
+      </div>
+    </div>
+    <div id="mu_field_sector" style="display:${curRule === 'both' ? '' : 'none'}">
+      <div class="form-group">
+        <label>Сектор <span style="color:var(--danger)">*</span></label>
+        ${sectors.length > 0
+          ? `<select id="mu_sector">${selOpts(sectors, curSector)}</select>`
+          : `<input type="text" id="mu_sector" value="${escapeHtml(curSector)}">`
+        }
+      </div>
+    </div>
+  `;
+
+  const modal = openModal({
+    title,
+    body,
+    width: '680px',
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary modal-save">${isEdit ? 'Сохранить' : 'Создать'}</button>
+    `,
+  });
+
+  // Навесить обработчики после рендера модала
+  const posSel  = document.getElementById('mu_position');
+  const deptSel = document.getElementById('mu_dept');
+  if (posSel) {
+    posSel.addEventListener('change', () => _muApplyPosition(posSel.value));
+  }
+  if (deptSel) {
+    deptSel.addEventListener('change', () => _muFillSectors(deptSel.value));
+  }
+
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
+    const lastName   = document.getElementById('mu_last_name').value.trim();
+    const firstName  = document.getElementById('mu_first_name').value.trim();
+    const patronymic = document.getElementById('mu_patronymic').value.trim();
+    const position   = document.getElementById('mu_position').value;
+    const username   = document.getElementById('mu_username').value.trim();
+
+    if (!username)   { showToast('Введите логин', 'error'); return; }
+    if (!lastName)   { showToast('Введите фамилию', 'error'); return; }
+    if (!firstName)  { showToast('Введите имя', 'error'); return; }
+    if (!patronymic) { showToast('Введите отчество', 'error'); return; }
+    if (!position)   { showToast('Выберите должность', 'error'); return; }
+
+    const rule = MU_POS_FIELDS[position] || '';
+    const deptVal   = document.getElementById('mu_dept')       ? document.getElementById('mu_dept').value       : '';
+    const sectorVal = document.getElementById('mu_sector')     ? document.getElementById('mu_sector').value     : '';
+    const centerVal = document.getElementById('mu_ntc_center') ? document.getElementById('mu_ntc_center').value : '';
+
+    if (rule === 'ntc'  && !centerVal) { showToast('Выберите НТЦ', 'error'); return; }
+    if ((rule === 'dept' || rule === 'both') && !deptVal) { showToast('Выберите отдел', 'error'); return; }
+    if (rule === 'both' && !sectorVal) { showToast('Выберите сектор', 'error'); return; }
+
+    const payload = {
+      username,
+      last_name:   lastName,
+      first_name:  firstName,
+      patronymic,
+      role:        document.getElementById('mu_role').value,
+      dept:        deptVal,
+      sector:      sectorVal,
+      ntc_center:  centerVal,
+      position,
+    };
+
+    if (!isEdit) {
+      payload.password = document.getElementById('mu_password').value;
+      const pw2 = document.getElementById('mu_password2').value;
+      if (payload.password !== pw2) {
+        showToast('Пароли не совпадают', 'error');
+        return;
+      }
+      if (!payload.password || payload.password.length < 6) {
+        showToast('Пароль должен быть не менее 6 символов', 'error');
+        return;
+      }
+    }
+
+    let result;
+    if (isEdit) {
+      result = await fetchJson(`/api/users/${user.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    } else {
+      result = await fetchJson('/api/users/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (!result._error) {
+      modal.close();
+      showToast(isEdit ? 'Пользователь обновлён' : 'Пользователь создан', 'success');
+      await loadUsers();
+    }
+  });
+}
+
+/* ── Reset password ───────────────────────────────────────────────────── */
+async function resetPassword(userId) {
+  const modal = openModal({
+    title: 'Сброс пароля',
+    body: `
+      <div class="form-group">
+        <label>Новый пароль</label>
+        <input type="password" id="rp_password" placeholder="Минимум 6 символов">
+      </div>
+      <div class="form-group">
+        <label>Подтверждение</label>
+        <input type="password" id="rp_password2" placeholder="Повторите пароль">
+      </div>
+    `,
+    width: '420px',
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary modal-save">Сбросить</button>
+    `,
+  });
+
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
+    const pw = document.getElementById('rp_password').value;
+    const pw2 = document.getElementById('rp_password2').value;
+    if (pw !== pw2) { showToast('Пароли не совпадают', 'error'); return; }
+    if (!pw || pw.length < 6) { showToast('Пароль должен быть не менее 6 символов', 'error'); return; }
+
+    const result = await fetchJson(`/api/users/${userId}/password/`, {
+      method: 'PUT',
+      body: JSON.stringify({ password: pw }),
+    });
+    if (!result._error) {
+      modal.close();
+      showToast('Пароль сброшен', 'success');
+    }
+  });
+}
+
+/* ── Delete user ──────────────────────────────────────────────────────── */
+async function deleteUser(userId) {
+  const user = findUser(userId);
+  const name = user ? (user.full_name || user.username) : `#${userId}`;
+  const ok = await confirmDialog(`Удалить пользователя "${name}"? Это действие необратимо.`, 'Удаление пользователя');
+  if (!ok) return;
+
+  const result = await fetchJson(`/api/users/${userId}/`, { method: 'DELETE' });
+  if (!result._error) {
+    showToast('Пользователь удалён', 'success');
+    await loadUsers();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Section 2: Directories
+   ══════════════════════════════════════════════════════════════════════════ */
+async function loadDirectories() {
+  const data = await fetchJson('/api/directories/');
+  if (data._error) return;
+  directories = data;
+  renderDirectories();
+  renderProjectsHierarchy();
+}
+
+function getDirValues(type) {
+  const items = directories[`_ids_${type}`] || directories[type] || [];
+  if (!Array.isArray(items)) return [];
+  return items.map(i => typeof i === 'string' ? i : (i.value || i.name || ''));
+}
+
+function getDirItems(type) {
+  return directories[`_ids_${type}`] || directories[type] || [];
+}
+
+const DIR_SECTIONS = [
+  { type: 'ntc_center',    label: 'НТЦ-центры',   icon: 'fas fa-building' },
+  { type: 'dept',           label: 'Отделы',        icon: 'fas fa-sitemap' },
+  { type: 'sector',         label: 'Секторы',       icon: 'fas fa-project-diagram', parentType: 'dept' },
+  { type: 'position',       label: 'Должности',     icon: 'fas fa-id-badge' },
+  { type: 'work_type',      label: 'Типы работ',    icon: 'fas fa-briefcase' },
+  { type: 'executor',       label: 'Исполнители',   icon: 'fas fa-user' },
+  { type: 'justification',  label: 'Обоснования',   icon: 'fas fa-file-alt' },
+];
+
+function renderDirectories() {
+  const container = document.getElementById('directoriesContent');
+  if (!container) return;
+  container.innerHTML = '';
+
+  DIR_SECTIONS.forEach(sec => {
+    const section = document.createElement('div');
+    section.className = 'acc-section';
+
+    const headerId = `dir-acc-${sec.type}`;
+    section.innerHTML = `
+      <div class="acc-header" onclick="toggleAccordion('${sec.type}')">
+        <span class="acc-header-label"><i class="${sec.icon}" style="margin-right:8px;color:var(--muted);"></i>${sec.label}</span>
+        <span class="acc-arrow" id="arrow-${headerId}">&#9660;</span>
+      </div>
+      <div class="acc-body" id="body-${headerId}"></div>
+    `;
+
+    const body = section.querySelector(`#body-${headerId}`);
+    if (sec.parentType) {
+      body.appendChild(buildHierarchyDir(sec.type, sec.parentType, sec.label));
+    } else {
+      body.appendChild(buildFlatDir(sec.type, sec.label));
+    }
+
+    container.appendChild(section);
+
+    // Restore open state
+    if (openAccordions.has(sec.type)) {
+      body.classList.add('open');
+      const arrow = section.querySelector(`#arrow-${headerId}`);
+      if (arrow) arrow.classList.add('open');
+    }
+  });
+}
+
+function toggleAccordion(type) {
+  const headerId = `dir-acc-${type}`;
+  const body = document.getElementById(`body-${headerId}`);
+  const arrow = document.getElementById(`arrow-${headerId}`);
+  if (!body) return;
+  body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+  if (body.classList.contains('open')) openAccordions.add(type);
+  else openAccordions.delete(type);
+}
+
+/* ── Flat directory list ──────────────────────────────────────────────── */
+function buildFlatDir(type, label) {
+  const wrap = document.createElement('div');
+  const items = getDirItems(type);
+
+  items.forEach(item => {
+    const id = item.id || item;
+    const val = item.value || item.name || item;
+    const row = document.createElement('div');
+    row.className = 'dir-item';
+    row.innerHTML = `
+      <span class="dir-item-val" id="dlabel-${type}-${id}">${escapeHtml(val)}</span>
+      <input class="dir-item-edit-input" id="dinp-${type}-${id}" value="${escapeHtml(val)}"
+             onkeydown="if(event.key==='Enter')saveDirItem(${id},'${type}','dinp-${type}-${id}','dlabel-${type}-${id}')">
+      <button class="dir-item-btn edit" onclick="toggleDirItemEdit('${type}',${id})" title="Редактировать">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="dir-item-btn save" id="dsave-${type}-${id}"
+              onclick="saveDirItem(${id},'${type}','dinp-${type}-${id}','dlabel-${type}-${id}')">
+        <i class="fas fa-check"></i>
+      </button>
+      <button class="dir-item-btn del" onclick="deleteDirItem(${id})" title="Удалить">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    wrap.appendChild(row);
+  });
+
+  // Add row
+  const addRow = document.createElement('div');
+  addRow.className = 'dir-add-row';
+  addRow.innerHTML = `
+    <input class="dir-add-input" id="diradd-${type}" placeholder="Добавить..."
+           onkeydown="if(event.key==='Enter')addDirItem('${type}')">
+    <button class="dir-add-btn" onclick="addDirItem('${type}')">+</button>
+  `;
+  wrap.appendChild(addRow);
+  return wrap;
+}
+
+/* ── Hierarchy directory (sectors under depts) ────────────────────────── */
+function buildHierarchyDir(childType, parentType, childLabel) {
+  const wrap = document.createElement('div');
+  const parents = getDirItems(parentType);
+  const children = getDirItems(childType);
+
+  parents.forEach(parent => {
+    const pId = parent.id || parent;
+    const pVal = parent.value || parent.name || parent;
+    const pChildren = children.filter(c => c.parent_id === pId);
+
+    const block = document.createElement('div');
+    block.style.cssText = 'margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:8px;';
+
+    let childrenHtml = '';
+    pChildren.forEach(child => {
+      const cId = child.id || child;
+      const cVal = child.value || child.name || child;
+      childrenHtml += `
+        <div class="dir-item" style="padding-left:12px;">
+          <span style="color:var(--muted);margin-right:4px;">&#8627;</span>
+          <span class="dir-item-val" id="dlabel-${childType}-${cId}">${escapeHtml(cVal)}</span>
+          <input class="dir-item-edit-input" id="dinp-${childType}-${cId}" value="${escapeHtml(cVal)}"
+                 onkeydown="if(event.key==='Enter')saveDirItem(${cId},'${childType}','dinp-${childType}-${cId}','dlabel-${childType}-${cId}')">
+          <button class="dir-item-btn edit" onclick="toggleDirItemEdit('${childType}',${cId})"><i class="fas fa-edit"></i></button>
+          <button class="dir-item-btn save" id="dsave-${childType}-${cId}"
+                  onclick="saveDirItem(${cId},'${childType}','dinp-${childType}-${cId}','dlabel-${childType}-${cId}')"><i class="fas fa-check"></i></button>
+          <button class="dir-item-btn del" onclick="deleteDirItem(${cId})"><i class="fas fa-times"></i></button>
+        </div>`;
+    });
+
+    block.innerHTML = `
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:var(--text);">
+        <i class="fas fa-folder" style="color:var(--accent);margin-right:6px;"></i>${escapeHtml(pVal)}
+      </div>
+      ${childrenHtml}
+      <div class="dir-add-row" style="margin-top:8px;">
+        <input class="dir-add-input" id="diradd-${childType}-${pId}" placeholder="Добавить ${childLabel}..."
+               onkeydown="if(event.key==='Enter')addDirChildItem('${childType}',${pId},'diradd-${childType}-${pId}')">
+        <button class="dir-add-btn" onclick="addDirChildItem('${childType}',${pId},'diradd-${childType}-${pId}')">+</button>
+      </div>
+    `;
+    wrap.appendChild(block);
+  });
+
+  return wrap;
+}
+
+/* ── Directory CRUD ───────────────────────────────────────────────────── */
+function toggleDirItemEdit(type, id) {
+  const label = document.getElementById(`dlabel-${type}-${id}`);
+  const inp = document.getElementById(`dinp-${type}-${id}`);
+  const saveBtn = document.getElementById(`dsave-${type}-${id}`);
+  if (!label || !inp) return;
+
+  const isEditing = inp.style.display === 'inline-block';
+  if (isEditing) {
+    inp.style.display = 'none';
+    label.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+  } else {
+    inp.style.display = 'inline-block';
+    inp.style.flex = '1';
+    label.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'flex';
+    inp.focus();
+    inp.select();
+  }
+}
+
+async function saveDirItem(id, type, inputId, labelId) {
+  const inp = document.getElementById(inputId);
+  const newVal = inp.value.trim();
+  if (!newVal) return;
+
+  const result = await fetchJson(`/api/directories/${id}/`, {
+    method: 'PUT',
+    body: JSON.stringify({ value: newVal }),
+  });
+
+  if (!result._error) {
+    showToast('Сохранено', 'success');
+    await loadDirectories();
+  }
+}
+
+async function addDirItem(type) {
+  const inp = document.getElementById(`diradd-${type}`);
+  const val = inp.value.trim();
+  if (!val) return;
+
+  const result = await fetchJson('/api/directories/create/', {
+    method: 'POST',
+    body: JSON.stringify({ type, value: val }),
+  });
+
+  if (!result._error) {
+    inp.value = '';
+    showToast('Добавлено', 'success');
+    await loadDirectories();
+  }
+}
+
+async function addDirChildItem(type, parentId, inputId) {
+  const inp = document.getElementById(inputId);
+  const val = inp.value.trim();
+  if (!val) return;
+
+  const result = await fetchJson('/api/directories/create/', {
+    method: 'POST',
+    body: JSON.stringify({ type, value: val, parent_id: parentId }),
+  });
+
+  if (!result._error) {
+    inp.value = '';
+    showToast('Добавлено', 'success');
+    await loadDirectories();
+  }
+}
+
+async function deleteDirItem(id) {
+  const ok = await confirmDialog('Удалить запись из справочника и все вложенные элементы?', 'Удаление');
+  if (!ok) return;
+
+  const result = await fetchJson(`/api/directories/${id}/`, { method: 'DELETE' });
+  if (!result._error) {
+    showToast('Удалено', 'success');
+    await loadDirectories();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Section 3: Delegations
+   ══════════════════════════════════════════════════════════════════════════ */
+async function loadDelegations() {
+  const data = await fetchJson('/api/delegations/');
+  if (data._error) return;
+  delegations = Array.isArray(data) ? data : (data.results || []);
+  renderDelegations();
+}
+
+function renderDelegations() {
+  const tbody = document.getElementById('delegationsBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (delegations.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px;">Делегирований не найдено</td></tr>`;
+    return;
+  }
+
+  delegations.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(d.delegator_name || d.delegator || '')}</td>
+      <td>${escapeHtml(d.delegate_name || d.delegate || '')}</td>
+      <td>${escapeHtml(d.type_display || d.type || '')}</td>
+      <td>${escapeHtml(d.value || '')}</td>
+      <td>${d.can_write ? '<span class="badge badge-green">Да</span>' : '<span class="badge badge-gray">Нет</span>'}</td>
+      <td style="white-space:nowrap;">${d.expires_at ? formatDate(d.expires_at) : '—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);"
+                onclick="revokeDelegation(${d.id})" title="Отозвать">
+          <i class="fas fa-ban"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Delegation modal ─────────────────────────────────────────────────── */
+function openDelegationModal() {
+  const userOpts = users.map(u =>
+    `<option value="${u.id}">${escapeHtml(u.full_name || u.username || '')}</option>`
+  ).join('');
+
+  const body = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Делегирует (кто)</label>
+        <select id="md_delegator">
+          <option value="">—</option>
+          ${userOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Получает (кому)</label>
+        <select id="md_delegate">
+          <option value="">—</option>
+          ${userOpts}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Тип</label>
+        <select id="md_type">
+          <option value="dept">Отдел</option>
+          <option value="sector">Сектор</option>
+          <option value="full">Полное</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Значение</label>
+        <input type="text" id="md_value" placeholder="Название отдела / сектора">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Право записи</label>
+        <select id="md_can_write">
+          <option value="true">Да</option>
+          <option value="false">Нет</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Действует до</label>
+        <input type="date" id="md_expires_at">
+      </div>
+    </div>
+  `;
+
+  const modal = openModal({
+    title: 'Новое делегирование',
+    body,
+    width: '640px',
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary modal-save">Создать</button>
+    `,
+  });
+
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
+    const payload = {
+      delegator_id: document.getElementById('md_delegator').value,
+      delegate_id: document.getElementById('md_delegate').value,
+      type: document.getElementById('md_type').value,
+      value: document.getElementById('md_value').value,
+      can_write: document.getElementById('md_can_write').value === 'true',
+      expires_at: document.getElementById('md_expires_at').value || null,
+    };
+
+    if (!payload.delegator_id || !payload.delegate_id) {
+      showToast('Выберите делегирующего и получателя', 'error');
+      return;
+    }
+
+    const result = await fetchJson('/api/delegations/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (!result._error) {
+      modal.close();
+      showToast('Делегирование создано', 'success');
+      await loadDelegations();
+    }
+  });
+}
+
+/* ── Revoke delegation ────────────────────────────────────────────────── */
+async function revokeDelegation(id) {
+  const ok = await confirmDialog('Отозвать это делегирование?', 'Отзыв делегирования');
+  if (!ok) return;
+
+  const result = await fetchJson(`/api/delegations/${id}/`, { method: 'DELETE' });
+  if (!result._error) {
+    showToast('Делегирование отозвано', 'success');
+    await loadDelegations();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Section 2b: Projects (4-level hierarchy)
+   ══════════════════════════════════════════════════════════════════════════ */
+const PROJECT_LEVELS = [
+  { type: 'project',   label: 'Проект',  icon: 'fas fa-folder' },
+  { type: 'milestone', label: 'Этап',    icon: 'fas fa-flag' },
+  { type: 'stage',     label: 'Подэтап', icon: 'fas fa-clipboard-list' },
+  { type: 'substage',  label: 'Работа',  icon: 'fas fa-file-alt' },
+];
+
+function renderProjectsHierarchy() {
+  const c = document.getElementById('projectsContent');
+  if (!c) return;
+  c.innerHTML = '';
+  c.appendChild(buildDeepLevel(0, null));
+
+  // Add top-level project input
+  const addRow = document.createElement('div');
+  addRow.className = 'dir-add-row';
+  addRow.style.marginTop = '12px';
+  addRow.innerHTML = `
+    <input class="dir-add-input" id="proj-add-top" placeholder="Добавить Проект..."
+           onkeydown="if(event.key==='Enter')addProjectItem('project',null,'proj-add-top')">
+    <button class="dir-add-btn" onclick="addProjectItem('project',null,'proj-add-top')">+</button>
+  `;
+  c.appendChild(addRow);
+}
+
+function buildDeepLevel(levelIdx, parentId) {
+  const wrap = document.createElement('div');
+  if (levelIdx >= PROJECT_LEVELS.length) return wrap;
+
+  const level = PROJECT_LEVELS[levelIdx];
+  const items = getDirItems(level.type);
+  const filtered = items.filter(i =>
+    parentId != null ? i.parent_id === parentId : !i.parent_id
+  );
+
+  filtered.forEach(item => {
+    const block = document.createElement('div');
+    block.className = 'dir-parent-block';
+
+    const hasChildren = (levelIdx + 1 < PROJECT_LEVELS.length);
+    const isCollapsed = !openProjectNodes.has(item.id);
+
+    const row = document.createElement('div');
+    row.className = 'dir-parent-row';
+    row.innerHTML = `
+      ${hasChildren ? `<span class="dir-parent-toggle ${isCollapsed ? 'collapsed' : ''}"
+            id="ptoggle-proj-${item.id}"
+            onclick="toggleParentDir(${item.id})">&#9660;</span>` : ''}
+      <i class="${level.icon}" style="color:var(--accent);margin-right:4px;font-size:13px;"></i>
+      <span class="dir-parent-label" id="plabel-proj-${item.id}">${escapeHtml(item.value || item.name || '')}</span>
+      <input class="dir-parent-edit-input" id="pinp-proj-${item.id}"
+             value="${escapeHtml(item.value || item.name || '')}"
+             onkeydown="if(event.key==='Enter')saveProjectItem(${item.id},'${level.type}','pinp-proj-${item.id}','plabel-proj-${item.id}')">
+      <button class="dir-item-btn edit"
+              onclick="toggleProjectItemEdit(${item.id})" title="Редактировать">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="dir-item-btn save" id="psave-proj-${item.id}"
+              onclick="saveProjectItem(${item.id},'${level.type}','pinp-proj-${item.id}','plabel-proj-${item.id}')">
+        <i class="fas fa-check"></i>
+      </button>
+      <button class="dir-item-btn del"
+              onclick="deleteProjectItem(${item.id})" title="Удалить">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    block.appendChild(row);
+
+    if (hasChildren) {
+      const childWrap = document.createElement('div');
+      childWrap.className = 'dir-children' + (isCollapsed ? ' collapsed' : '');
+      childWrap.id = `pchildren-proj-${item.id}`;
+
+      // Recursively build next level
+      childWrap.appendChild(buildDeepLevel(levelIdx + 1, item.id));
+
+      // Add child input
+      const nextLevel = PROJECT_LEVELS[levelIdx + 1];
+      const addRow = document.createElement('div');
+      addRow.className = 'dir-add-row';
+      addRow.innerHTML = `
+        <input class="dir-add-input" id="proj-addchild-${nextLevel.type}-${item.id}"
+               placeholder="Добавить ${nextLevel.label}..."
+               onkeydown="if(event.key==='Enter')addProjectItem('${nextLevel.type}',${item.id},'proj-addchild-${nextLevel.type}-${item.id}')">
+        <button class="dir-add-btn"
+                onclick="addProjectItem('${nextLevel.type}',${item.id},'proj-addchild-${nextLevel.type}-${item.id}')">+</button>
+      `;
+      childWrap.appendChild(addRow);
+      block.appendChild(childWrap);
+    }
+
+    wrap.appendChild(block);
+  });
+
+  return wrap;
+}
+
+function toggleParentDir(id) {
+  const toggle = document.getElementById(`ptoggle-proj-${id}`);
+  const children = document.getElementById(`pchildren-proj-${id}`);
+  if (!toggle || !children) return;
+  const collapsed = children.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed', collapsed);
+  if (collapsed) {
+    openProjectNodes.delete(id);
+  } else {
+    openProjectNodes.add(id);
+  }
+}
+
+function toggleProjectItemEdit(id) {
+  const label = document.getElementById(`plabel-proj-${id}`);
+  const inp = document.getElementById(`pinp-proj-${id}`);
+  const saveBtn = document.getElementById(`psave-proj-${id}`);
+  if (!label || !inp) return;
+
+  const isEditing = inp.style.display === 'inline-block';
+  if (isEditing) {
+    inp.style.display = 'none';
+    label.style.display = '';
+    if (saveBtn) saveBtn.style.display = 'none';
+  } else {
+    inp.style.display = 'inline-block';
+    inp.style.flex = '1';
+    label.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'flex';
+    inp.focus();
+    inp.select();
+  }
+}
+
+async function saveProjectItem(id, type, inputId, labelId) {
+  const inp = document.getElementById(inputId);
+  const newVal = inp.value.trim();
+  if (!newVal) return;
+
+  const result = await fetchJson(`/api/directories/${id}/`, {
+    method: 'PUT',
+    body: JSON.stringify({ value: newVal }),
+  });
+
+  if (!result._error) {
+    showToast('Сохранено', 'success');
+    await loadDirectories();
+  }
+}
+
+async function addProjectItem(type, parentId, inputId) {
+  const inp = document.getElementById(inputId);
+  const val = inp.value.trim();
+  if (!val) return;
+
+  const payload = { type, value: val };
+  if (parentId != null) {
+    payload.parent_id = parentId;
+  }
+
+  const result = await fetchJson('/api/directories/create/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (!result._error) {
+    inp.value = '';
+    // Auto-expand parent node if it was collapsed
+    if (parentId != null) {
+      openProjectNodes.add(parentId);
+    }
+    showToast('Добавлено', 'success');
+    await loadDirectories();
+  }
+}
+
+async function deleteProjectItem(id) {
+  const ok = await confirmDialog('Удалить запись и все вложенные элементы?', 'Удаление');
+  if (!ok) return;
+
+  const result = await fetchJson(`/api/directories/${id}/`, { method: 'DELETE' });
+  if (!result._error) {
+    showToast('Удалено', 'success');
+    await loadDirectories();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Section 4: Seed data
+   ══════════════════════════════════════════════════════════════════════════ */
+async function seedAction(url, successMsg) {
+  const btn = event.target.closest('button');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  const result = await fetchJson(url, { method: 'POST' });
+
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+  if (!result._error) {
+    showToast(successMsg, 'success');
+    // Reload directories and users since seed data may have changed them
+    await Promise.all([loadDirectories(), loadUsers()]);
+  }
+}
+
+async function seedTasks() {
+  const count = document.getElementById('seedCount').value || 10;
+  const btn = event.target.closest('button');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  const result = await fetchJson('/api/seed/', {
+    method: 'POST',
+    body: JSON.stringify({ count: parseInt(count, 10) }),
+  });
+
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+  if (!result._error) {
+    showToast(`Сгенерировано задач: ${count}`, 'success');
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

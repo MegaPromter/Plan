@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}Журнал извещений — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Журнал извещений</span>
+{% endblock %}
+
+{% block nav_notices %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <a href="{% url 'works:notice_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Журнал извещений</h1>
+</div>
+
+<form method="get" class="filter-bar">
+  <select name="status" class="filter-select">
+    <option value="">Все статусы</option>
+    <option value="active"  {% if request.GET.status == "active"  %}selected{% endif %}>Активные</option>
+    <option value="closed"  {% if request.GET.status == "closed"  %}selected{% endif %}>Закрытые</option>
+  </select>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
+  <a href="{% url 'works:notice_list' %}" class="btn btn-outline">Сброс</a>
+</form>
+
+{% if notices %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th style="width:50px;">#</th>
+      <th style="width:120px;">Тип</th>
+      <th style="width:120px;">Отдел</th>
+      <th style="width:120px;">Исполнитель</th>
+      <th style="width:100px;">Дата</th>
+      <th>Тема</th>
+      <th>Описание</th>
+      <th style="width:80px;">Статус</th>
+      {% if request.user|is_writer %}<th style="width:60px;"></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for n in notices %}
+    <tr>
+      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.pk }}</a></td>
+      <td>{{ n.notice_type|default:"—" }}</td>
+      <td>{{ n.department|default:"—" }}</td>
+      <td>{{ n.executor.short_name|default:"—" }}</td>
+      <td style="white-space:nowrap;">{{ n.date_issued|default:"—" }}</td>
+      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.subject|truncatechars:60 }}</a></td>
+      <td style="font-size:13px;color:var(--muted);">{{ n.description|truncatechars:80|default:"—" }}</td>
+      <td>
+        {% if n.status == 'active' %}
+          <span class="badge badge-green">{{ n.get_status_display }}</span>
+        {% else %}
+          <span class="badge badge-gray">{{ n.get_status_display }}</span>
+        {% endif %}
+      </td>
+      {% if request.user|is_writer %}
+      <td>
+        <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="page-link active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
+  {% endif %}
+  <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
+  <p>Извещений не найдено</p>
+  {% if request.user|is_writer %}
+    <a href="{% url 'works:notice_add' %}" class="btn btn-primary">Добавить первое извещение</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}{{ object.full_name }} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'employees:list' %}">Сотрудники</a>
+<span>/</span>
+<span class="breadcrumb-current">{{ object.short_name }}</span>
+{% endblock %}
+
+{% block nav_employees %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <a href="{% url 'employees:edit' object.pk %}" class="btn btn-outline"><i class="fas fa-edit"></i> Редактировать</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ object.full_name }}</h1>
+    <div style="margin-top:4px;">
+      {% if object.role == 'admin' %}
+        <span class="badge badge-red">{{ object.get_role_display }}</span>
+      {% elif object.role == 'ntc_head' or object.role == 'ntc_deputy' %}
+        <span class="badge badge-blue">{{ object.get_role_display }}</span>
+      {% elif object.role == 'dept_head' or object.role == 'dept_deputy' %}
+        <span class="badge badge-yellow">{{ object.get_role_display }}</span>
+      {% elif object.role == 'sector_head' %}
+        <span class="badge badge-green">{{ object.get_role_display }}</span>
+      {% else %}
+        <span class="badge badge-gray">{{ object.get_role_display }}</span>
+      {% endif %}
+      {% if object.is_active %}
+        <span class="badge badge-green">Активен</span>
+      {% else %}
+        <span class="badge badge-gray">Уволен</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <table class="info-table">
+    <tr><th>Должность</th>      <td>{{ object.get_position_display|default:"—" }}</td></tr>
+    <tr><th>НТЦ-центр</th>     <td>{{ object.ntc_center|default:"—" }}</td></tr>
+    <tr><th>Отдел</th>         <td>{{ object.department|default:"—" }}</td></tr>
+    <tr><th>Сектор</th>        <td>{{ object.sector|default:"—" }}</td></tr>
+    <tr><th>Телефон</th>       <td>{{ object.phone|default:"—" }}</td></tr>
+    <tr><th>Email</th>         <td>{{ object.email_corp|default:"—" }}</td></tr>
+    <tr><th>Принят</th>        <td>{{ object.hire_date|default:"—" }}</td></tr>
+    {% if object.dismissal_date %}
+    <tr><th>Уволен</th>        <td>{{ object.dismissal_date }}</td></tr>
+    {% endif %}
+    <tr><th>Норма часов/мес</th><td>{{ object.monthly_hours_norm }} ч.</td></tr>
+    <tr><th>Коэффициент</th>   <td>{{ object.personal_coeff }}</td></tr>
+  </table>
+</div>
+
+{# ── Отпуска ── #}
+<div class="section" style="margin-top:20px;">
+  <div class="section-header">
+    <h2>Отпуска</h2>
+    <div class="section-header-actions">
+      {% if request.user|is_writer %}
+        <a href="{% url 'employees:vacation_add' object.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+      {% endif %}
+      <a href="{% url 'employees:vacation_list' object.pk %}" class="btn btn-sm btn-outline">Все отпуска</a>
+    </div>
+  </div>
+
+  {% if vacations %}
+  <table class="data-table">
+    <thead>
+      <tr><th>Тип</th><th>Начало</th><th>Конец</th><th>Дней</th><th>Примечание</th></tr>
+    </thead>
+    <tbody>
+      {% for v in vacations %}
+      <tr>
+        <td>{{ v.get_vac_type_display }}</td>
+        <td>{{ v.date_start }}</td>
+        <td>{{ v.date_end }}</td>
+        <td>{{ v.duration_days }}</td>
+        <td>{{ v.notes|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted" style="padding:16px 24px;">Отпуска не добавлены</p>
+  {% endif %}
+</div>
+
+{# ── KPI ── #}
+<div class="section" style="margin-top:20px;">
+  <div class="section-header">
+    <h2>KPI</h2>
+    <div class="section-header-actions">
+      {% if request.user|is_writer %}
+        <a href="{% url 'employees:kpi_add' object.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+      {% endif %}
+      <a href="{% url 'employees:kpi_list' object.pk %}" class="btn btn-sm btn-outline">Все KPI</a>
+    </div>
+  </div>
+
+  {% if kpis %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Год</th><th>Месяц</th><th>План ч.</th><th>Факт ч.</th>
+        <th>Выполнение %</th><th>Замечания</th><th>Документы</th><th>Балл</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in kpis %}
+      <tr>
+        <td>{{ k.year }}</td>
+        <td>{{ k.month }}</td>
+        <td>{{ k.plan_hours }}</td>
+        <td>{{ k.fact_hours }}</td>
+        <td>
+          {% if k.completion_pct %}
+            {% if k.completion_pct >= 100 %}
+              <span class="badge badge-green">{{ k.completion_pct }}%</span>
+            {% elif k.completion_pct >= 80 %}
+              <span class="badge badge-yellow">{{ k.completion_pct }}%</span>
+            {% else %}
+              <span class="badge badge-red">{{ k.completion_pct }}%</span>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ k.norm_control_remarks }}</td>
+        <td>{{ k.docs_issued }}</td>
+        <td>{{ k.score|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted" style="padding:16px 24px;">KPI не заполнен</p>
+  {% endif %}
+</div>
+{% endblock %}

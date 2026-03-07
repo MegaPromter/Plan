@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}Отпуска — {{ employee.full_name }} — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<a href="{% url 'employees:list' %}">Сотрудники</a>
+<span>/</span>
+<a href="{% url 'employees:detail' employee.pk %}">{{ employee.short_name }}</a>
+<span>/</span>
+<span class="breadcrumb-current">Отпуска</span>
+{% endblock %}
+
+{% block nav_employees %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <a href="{% url 'employees:vacation_add' employee.pk %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить отпуск</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Отпуска</h1>
+    <p class="text-muted">{{ employee.full_name }}</p>
+  </div>
+</div>
+
+{% if vacations %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Тип</th><th>Начало</th><th>Конец</th><th>Дней</th><th>Примечание</th><th>Действия</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in vacations %}
+    <tr>
+      <td>{{ v.get_vac_type_display }}</td>
+      <td>{{ v.date_start }}</td>
+      <td>{{ v.date_end }}</td>
+      <td>{{ v.duration_days }}</td>
+      <td>{{ v.notes|default:"—" }}</td>
+      <td>
+        {% if request.user|is_writer %}
+          <a href="{% url 'employees:vacation_edit' v.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+          <a href="{% url 'employees:vacation_delete' v.pk %}" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="fas fa-calendar-times"></i></div>
+  <p>Отпуска не добавлены</p>
+  {% if request.user|is_writer %}
+    <a href="{% url 'employees:vacation_add' employee.pk %}" class="btn btn-primary">Добавить отпуск</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<div style="margin-top:20px;">
+  <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> К профилю</a>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}Стартовая страница — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Стартовая страница</span>
+{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block styles %}
+<style>
+.dashboard { display:flex; flex-direction:column; gap:24px; }
+
+.modules-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+.module-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:24px; text-decoration:none; transition:all 0.2s ease; display:block;
+}
+.module-card:hover { transform:translateY(-4px); border-color:var(--accent); box-shadow:0 8px 32px rgba(59,130,246,0.15); }
+.module-icon {
+  width:56px; height:56px; border-radius:14px;
+  display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:16px;
+}
+.module-icon.blue   { background:rgba(59,130,246,0.15); }
+.module-icon.green  { background:rgba(34,197,94,0.15); }
+.module-icon.yellow { background:rgba(245,158,11,0.15); }
+.module-title { font-size:17px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.module-arrow { margin-top:16px; color:var(--accent); font-size:18px; transition:transform 0.2s; }
+.module-card:hover .module-arrow { transform:translateX(4px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+
+  <!-- Modules grid: УП, ПП, СП -->
+  <div class="modules-grid">
+
+    <!-- 1. Управление проектами -->
+    <button onclick="window.location='{% url 'accounts:stub' 'projects-list' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+      <div class="module-icon blue"><i class="fas fa-project-diagram"></i></div>
+      <div class="module-title">Управление проектами</div>
+      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
+    </button>
+
+    <!-- 2. Производственный план -->
+    <button onclick="window.location='{% url 'works:production_plan' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+      <div class="module-icon green"><i class="fas fa-industry"></i></div>
+      <div class="module-title">Производственный план</div>
+      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
+    </button>
+
+    <!-- 3. Сводное планирование -->
+    <button onclick="window.location='{% url 'works:plan' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+      <div class="module-icon yellow"><i class="fas fa-tasks"></i></div>
+      <div class="module-title">Сводное планирование (План/отчёт)</div>
+      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
+    </button>
+
+  </div>
+
+</div>
+{% endblock %}

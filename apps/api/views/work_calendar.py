@@ -1,0 +1,132 @@
+"""
+API производственного календаря (WorkCalendar).
+
+GET    /api/work_calendar/         — список записей (все авторизованные)
+POST   /api/work_calendar/create/  — создание / обновление записи (admin)
+PUT    /api/work_calendar/<id>/    — обновление нормы часов (admin)
+DELETE /api/work_calendar/<id>/    — удаление записи (admin)
+"""
+import logging
+
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+
+from apps.api.mixins import (
+    AdminRequiredJsonMixin,
+    LoginRequiredJsonMixin,
+    parse_json_body,
+)
+from apps.works.models import WorkCalendar
+
+logger = logging.getLogger(__name__)
+
+MONTH_NAMES_RU = [
+    '', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+]
+
+
+def _serialize(cal):
+    return {
+        'id': cal.id,
+        'year': cal.year,
+        'month': cal.month,
+        'month_name': MONTH_NAMES_RU[cal.month] if 1 <= cal.month <= 12 else '',
+        'hours_norm': float(cal.hours_norm),
+        'month_key': cal.month_key,
+    }
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WorkCalendarListView(LoginRequiredJsonMixin, View):
+    """GET — список норм по году; POST create перенаправляется в WorkCalendarCreateView."""
+
+    def get(self, request):
+        try:
+            qs = WorkCalendar.objects.all()
+            year = request.GET.get('year')
+            if year:
+                try:
+                    qs = qs.filter(year=int(year))
+                except (ValueError, TypeError):
+                    pass
+            return JsonResponse([_serialize(c) for c in qs], safe=False)
+        except Exception as e:
+            logger.error('WorkCalendarListView.get error: %s', e, exc_info=True)
+            return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WorkCalendarCreateView(AdminRequiredJsonMixin, View):
+    """POST — создание или обновление нормы на месяц (upsert по year+month)."""
+
+    def post(self, request):
+        try:
+            d = parse_json_body(request)
+            year = d.get('year')
+            month = d.get('month')
+            hours_norm = d.get('hours_norm')
+
+            try:
+                year = int(year)
+                month = int(month)
+                hours_norm = float(hours_norm)
+            except (TypeError, ValueError):
+                return JsonResponse(
+                    {'error': 'year, month и hours_norm обязательны и должны быть числами'},
+                    status=400,
+                )
+
+            if not (1 <= month <= 12):
+                return JsonResponse({'error': 'month должен быть от 1 до 12'}, status=400)
+            if hours_norm < 0:
+                return JsonResponse({'error': 'hours_norm не может быть отрицательным'}, status=400)
+            if year < 2000 or year > 2100:
+                return JsonResponse({'error': 'year должен быть от 2000 до 2100'}, status=400)
+
+            cal, created = WorkCalendar.objects.update_or_create(
+                year=year, month=month,
+                defaults={'hours_norm': hours_norm},
+            )
+            return JsonResponse(_serialize(cal), status=201 if created else 200)
+        except Exception as e:
+            logger.error('WorkCalendarCreateView.post error: %s', e, exc_info=True)
+            return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
+    """PUT /DELETE /api/work_calendar/<id>/"""
+
+    def put(self, request, pk):
+        try:
+            cal = WorkCalendar.objects.filter(pk=pk).first()
+            if not cal:
+                return JsonResponse({'error': 'Запись не найдена'}, status=404)
+            d = parse_json_body(request)
+            try:
+                cal.hours_norm = float(d['hours_norm'])
+            except (KeyError, TypeError, ValueError):
+                return JsonResponse({'error': 'hours_norm обязателен'}, status=400)
+            if cal.hours_norm < 0:
+                return JsonResponse(
+                    {'error': 'hours_norm не может быть отрицательным'}, status=400
+                )
+            cal.save(update_fields=['hours_norm'])
+            return JsonResponse(_serialize(cal))
+        except Exception as e:
+            logger.error('WorkCalendarDetailView.put error: %s', e, exc_info=True)
+            return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
+
+    def delete(self, request, pk):
+        try:
+            cal = WorkCalendar.objects.filter(pk=pk).first()
+            if not cal:
+                return JsonResponse({'error': 'Запись не найдена'}, status=404)
+            cal.delete()
+            return JsonResponse({'ok': True})
+        except Exception as e:
+            logger.error('WorkCalendarDetailView.delete error: %s', e, exc_info=True)
+            return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)

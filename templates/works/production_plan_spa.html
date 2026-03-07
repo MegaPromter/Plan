@@ -1,0 +1,1496 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}Производственный план — Система управления{% endblock %}
+
+{% block nav_pp %}active{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current" id="breadcrumbTitle">Производственный план</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<!-- Landing mode buttons -->
+<div id="landingActions">
+  {% if request.user|is_writer %}
+  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
+    <i class="fas fa-plus"></i> Создать новый производственный план
+  </button>
+  {% endif %}
+</div>
+<!-- Project mode buttons (hidden initially) -->
+<div id="projectActions" style="display:none;">
+  <a href="#" class="btn btn-outline btn-sm" onclick="goToLanding(); return false;">
+    <i class="fas fa-arrow-left"></i> Все планы
+  </a>
+  {% if request.user|is_writer %}
+  <button class="btn btn-secondary btn-sm" onclick="syncToTasks()">
+    <i class="fas fa-sync-alt"></i> Синхр. с ПО
+  </button>
+  <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
+    <i class="fas fa-plus"></i> Добавить строку
+  </button>
+  {% endif %}
+  <span class="filters-active-badge" id="filtersActiveBadge" onclick="clearAllColFilters()"
+        style="display:none;font-size:13px;color:var(--accent);cursor:pointer;white-space:nowrap;">
+    <i class="fas fa-times"></i> Сбросить фильтры
+  </span>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ── PP-specific styles ─────────────────────────────────────────────── */
+
+/* Landing: project cards */
+.pp-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.pp-project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.pp-project-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+}
+.pp-project-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.pp-project-card-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+.pp-project-card-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pp-project-card:hover .pp-project-card-actions { opacity: 1; }
+.pp-card-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.pp-card-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pp-card-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Production plan table */
+.pp-table-wrap {
+  overflow-x: auto;
+  max-height: calc(100vh - 140px);
+}
+.pp-table {
+  border-collapse: collapse;
+  width: auto;
+  font-size: 13px;
+  min-width: 100%;
+  table-layout: fixed;
+}
+.pp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0d1520;
+  border-bottom: 2px solid var(--accent);
+  border-right: 1px solid var(--border);
+  padding: 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+}
+.pp-table tbody tr { border-bottom: 1px solid var(--border); }
+.pp-table tbody tr:hover { background: rgba(59,130,246,0.04); }
+.pp-table td {
+  border-right: 1px solid var(--border);
+  padding: 3px;
+  vertical-align: middle;
+  text-align: center;
+}
+.pp-table td:first-child {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Inline cell editing */
+.cell-edit {
+  width: 100%;
+  min-height: 26px;
+  padding: 3px 5px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  resize: none;
+  overflow: hidden;
+  text-align: left;
+  box-sizing: border-box;
+}
+.cell-edit:focus { background: rgba(59,130,246,0.1); }
+.cell-edit[type="date"] { text-align: center; }
+select.cell-edit {
+  background-color: var(--surface2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  width: 100%;
+}
+select.cell-edit option {
+  background-color: var(--surface2) !important;
+  color: var(--text) !important;
+}
+.cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.btn-delete {
+  background: transparent;
+  color: var(--danger);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.btn-delete:hover { background: rgba(239,68,68,0.15); }
+
+/* Column filters */
+.filter-row th {
+  padding: 3px;
+  background: #080d14;
+  border-bottom: 2px solid var(--accent);
+}
+.mf-wrap { position: relative; width: 100%; }
+.mf-trigger {
+  width: 100%;
+  padding: 2px 16px 2px 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  position: relative;
+}
+.mf-trigger.active {
+  border-color: var(--accent);
+  background: rgba(59,130,246,0.12);
+  color: var(--accent);
+}
+.mf-trigger::after {
+  content: "\25BE";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.mf-dropdown {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  max-width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  padding: 6px 0;
+  display: none;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.mf-dropdown.open { display: block; }
+.mf-search { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.mf-search input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 6px;
+  outline: none;
+  font-family: var(--font);
+  box-sizing: border-box;
+}
+.mf-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.mf-option:hover { background: var(--surface2); }
+.mf-option input[type=checkbox] { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.mf-actions {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.mf-btn {
+  flex: 1;
+  padding: 2px 0;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+}
+.mf-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Column resize */
+th { position: relative; }
+th .resize-handle {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 20;
+}
+th .resize-handle:hover,
+th .resize-handle.resizing { background: var(--accent); opacity: 0.5; }
+th.resizing { background: rgba(59,130,246,0.2) !important; }
+
+/* Validation error */
+.cell-error {
+  outline: 2px solid var(--danger) !important;
+  background: rgba(239,68,68,0.12) !important;
+  animation: pulse-error 1s ease-in-out 2;
+}
+@keyframes pulse-error {
+  0%,100% { outline-color: var(--danger); }
+  50% { outline-color: rgba(239,68,68,0.4); }
+}
+
+/* Modal form styles */
+.modal-form-group {
+  margin-bottom: 16px;
+}
+.modal-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.modal-form-group input,
+.modal-form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+}
+.modal-form-group input:focus,
+.modal-form-group select:focus { border-color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Landing: project list -->
+<div id="landingView">
+  <div class="page-header">
+    <h1>Производственный план</h1>
+  </div>
+  <div id="projectsGrid" class="pp-projects-grid">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- Project: PP table -->
+<div id="projectView" style="display:none;">
+  <div class="pp-table-wrap">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th style="width:40px;" rowspan="2">No</th>
+          <th style="width:100px;" rowspan="2">Код строки</th>
+          <th style="width:110px;" rowspan="2">Наряд-заказ</th>
+          <th style="width:90px;" rowspan="2">No этапа</th>
+          <th style="width:100px;" rowspan="2">No вехи</th>
+          <th style="width:90px;" rowspan="2">No работы</th>
+          <th style="width:300px;" rowspan="2">Обозначение</th>
+          <th style="width:350px;" rowspan="2">Наименование</th>
+          <th style="width:130px;" rowspan="2">Сроки выполнения</th>
+          <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
+          <th style="width:100px;" rowspan="2">Итого ч/ч 2D</th>
+          <th style="width:100px;" rowspan="2">Итого ч/ч 3D</th>
+          <th style="width:100px;" rowspan="2">Подразделение</th>
+          <th style="width:60px;" rowspan="2">Отдел</th>
+          <th style="width:110px;" rowspan="2">Нач. сектора</th>
+          <th style="width:140px;" rowspan="2">ФИО сотрудника</th>
+          <th style="width:120px;" rowspan="2">Тип задачи</th>
+          <th style="width:50px;" rowspan="2"></th>
+        </tr>
+        <tr>
+          <th style="width:100px;">Ф, А4</th>
+          <th style="width:100px;">Норматив</th>
+          <th style="width:100px;">Коэфф</th>
+          <th style="width:130px;">Плановая трудоёмкость</th>
+        </tr>
+        <tr class="filter-row" id="filterRow">
+          <th></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="row_code" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="milestone_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th></th><th></th><th></th><th></th>
+          <th></th><th></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="center" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector_head" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ppTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script src="{% static 'js/inline_edit.js' %}"></script>
+<script>
+/* ========================================================================
+   Production Plan SPA
+   ======================================================================== */
+
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+const USER_NTC_CODE = "{{ request.user.employee.ntc_center.code|default:'' }}";
+
+/** Формирует стандартное название ПП:
+ *  "Производственный план подразделения НТЦ-XX по проекту/изделию ..."
+ *  @param {object|null} upProj — объект проекта УП (с name_short/name_full)
+ *  @param {object|null} prod   — объект изделия (с name, code)
+ */
+function buildPPName(upProj, prod) {
+  const ntcPart = USER_NTC_CODE ? 'НТЦ-' + USER_NTC_CODE : '';
+  const prefix = ntcPart
+    ? 'Производственный план подразделения ' + ntcPart + ' '
+    : 'Производственный план ';
+  if (prod) {
+    const prodLabel = prod.name + (prod.code ? ' ' + prod.code : '');
+    return prefix + 'по изделию ' + prodLabel;
+  }
+  if (upProj) {
+    const projLabel = upProj.name_short || upProj.name_full;
+    return prefix + 'по проекту ' + projLabel;
+  }
+  return prefix.trimEnd();
+}
+
+/* ── State ────────────────────────────────────────────────────────────── */
+let currentProjectId = null;
+let currentProjectName = '';
+let projects = [];
+let rows = [];
+let dirs = {};
+
+const PP_COLUMNS = [
+  'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
+  'work_designation', 'work_name',
+  'date_end', 'sheets_a4', 'norm', 'coeff', 'labor', 'total_2d', 'total_3d',
+  'center', 'dept', 'sector_head', 'executor', 'task_type'
+];
+
+/* ── URL state ────────────────────────────────────────────────────────── */
+function readProjectFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('project_id') || null;
+}
+
+function setProjectUrl(projectId) {
+  const url = new URL(window.location);
+  if (projectId) {
+    url.searchParams.set('project_id', projectId);
+  } else {
+    url.searchParams.delete('project_id');
+  }
+  window.history.pushState({}, '', url);
+}
+
+/* ── API ──────────────────────────────────────────────────────────────── */
+async function loadDirs() {
+  const data = await fetchJson('/api/directories/?t=' + Date.now());
+  if (!data._error) dirs = data;
+}
+
+async function loadProjects() {
+  const data = await fetchJson('/api/pp_projects/');
+  if (!data._error) projects = Array.isArray(data) ? data : (data.results || []);
+}
+
+async function loadPPRows(projectId) {
+  const data = await fetchJson('/api/production_plan/?project_id=' + projectId);
+  if (!data._error) {
+    rows = Array.isArray(data) ? data : (data.results || []);
+    rows.reverse();
+  }
+}
+
+/* ── Landing mode ────────────────────────────────────────────────────── */
+function showLanding() {
+  currentProjectId = null;
+  currentProjectName = '';
+  setProjectUrl(null);
+
+  document.getElementById('landingView').style.display = '';
+  document.getElementById('projectView').style.display = 'none';
+  document.getElementById('landingActions').style.display = '';
+  document.getElementById('projectActions').style.display = 'none';
+  document.getElementById('breadcrumbTitle').textContent = 'Производственный план';
+
+  renderProjects();
+}
+
+function renderProjects() {
+  const grid = document.getElementById('projectsGrid');
+
+  if (projects.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-state-icon"><i class="fas fa-industry"></i></div>
+        <p>Проектов пока нет</p>
+        ${IS_WRITER ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать новый производственный план</button>' : ''}
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = projects.map(p => `
+    <div class="pp-project-card" onclick="openProject(${p.id}, '${escapeHtml(p.name || '')}')">
+      ${p.up_project_name ? `<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:2px;"><i class="fas fa-project-diagram" style="margin-right:3px;"></i>${escapeHtml(p.up_project_name)}</div>` : ''}
+      ${p.up_product_name ? `<div style="font-size:11px;color:var(--success,#22c55e);font-weight:500;margin-bottom:4px;"><i class="fas fa-cog" style="margin-right:3px;"></i>${escapeHtml(p.up_product_name)}</div>` : ''}
+      <div class="pp-project-card-name">${escapeHtml(p.name || 'Без названия')}</div>
+      <div class="pp-project-card-count">
+        <i class="fas fa-list" style="margin-right:4px;"></i>${p.row_count || 0} строк
+      </div>
+      ${IS_WRITER ? `
+        <div class="pp-project-card-actions">
+          <button class="pp-card-btn" onclick="event.stopPropagation(); editProjectName(${p.id}, '${escapeHtml(p.name || '')}', ${p.up_project_id || 'null'}, ${p.up_product_id || 'null'})" title="Переименовать">
+            <i class="fas fa-pen"></i>
+          </button>
+          <button class="pp-card-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id}, '${escapeHtml(p.name || '')}')" title="Удалить">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+
+/* ── УП Projects (for creation dialog) ───────────────────────────────── */
+let upProjects = [];
+
+async function loadUpProjects() {
+  if (upProjects.length) return;
+  const data = await fetchJson('/api/projects/');
+  if (!data._error) upProjects = Array.isArray(data) ? data : [];
+}
+
+/* ── Project CRUD ────────────────────────────────────────────────────── */
+async function openCreateProjectModal() {
+  await loadUpProjects();
+
+  const upOptions = upProjects.length
+    ? upProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name_short || p.name_full)}</option>`).join('')
+    : '';
+
+  const existingOptions = projects.length
+    ? projects.map(p => `<option value="${p.id}">${escapeHtml(p.name || 'Без названия')}</option>`).join('')
+    : '';
+
+  const modal = openModal({
+    title: 'Производственный план',
+    width: '480px',
+    body: `
+      ${projects.length ? `
+      <div class="modal-form-group">
+        <label>Открыть существующий план</label>
+        <select id="existingProjectSel">
+          <option value="">— выберите из списка —</option>
+          ${existingOptions}
+        </select>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:13px;margin:12px 0;">— или —</div>
+      ` : ''}
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Создать новый план</div>
+      ${upProjects.length ? `
+      <div class="modal-form-group">
+        <label>Проект (из модуля УП)</label>
+        <select id="newPlanUpProject">
+          <option value="">— не привязывать —</option>
+          ${upOptions}
+        </select>
+      </div>
+      <div class="modal-form-group" id="newPlanProductGroup" style="display:none;">
+        <label>Изделие проекта</label>
+        <select id="newPlanUpProduct">
+          <option value="">— весь проект —</option>
+        </select>
+      </div>` : ''}
+      <div class="modal-form-group">
+        <label>Название плана</label>
+        <input type="text" id="newProjectName" placeholder="Производственный план подразделения НТЦ-... по проекту ...">
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      ${projects.length ? '<button class="btn btn-secondary" id="openExistingBtn">Открыть</button>' : ''}
+      <button class="btn btn-primary" id="createProjectBtn">Создать</button>`,
+  });
+
+  const nameInput    = modal.dialog.querySelector('#newProjectName');
+  const createBtn    = modal.dialog.querySelector('#createProjectBtn');
+  const existingSel  = modal.dialog.querySelector('#existingProjectSel');
+  const openBtn      = modal.dialog.querySelector('#openExistingBtn');
+  const upSel        = modal.dialog.querySelector('#newPlanUpProject');
+  const productGroup = modal.dialog.querySelector('#newPlanProductGroup');
+  const productSel   = modal.dialog.querySelector('#newPlanUpProduct');
+
+  // При выборе проекта УП — подставить название и показать изделия если есть
+  if (upSel) {
+    upSel.addEventListener('change', () => {
+      const upId = upSel.value;
+      const upProj = upId ? upProjects.find(p => String(p.id) === String(upId)) : null;
+
+      // Авто-название по проекту
+      nameInput.value = buildPPName(upProj, null);
+
+      // Показать/скрыть выбор изделия
+      if (productGroup && productSel) {
+        const products = upProj && upProj.products ? upProj.products : [];
+        if (products.length > 0) {
+          productSel.innerHTML = '<option value="">— весь проект —</option>'
+            + products.map(pr => `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`).join('');
+          productGroup.style.display = '';
+        } else {
+          productGroup.style.display = 'none';
+          productSel.innerHTML = '<option value="">— весь проект —</option>';
+        }
+      }
+
+      // Обновить название если выбрано изделие
+      if (productSel) {
+        productSel.onchange = () => {
+          const prodId = productSel.value;
+          const prod = prodId && upProj ? (upProj.products || []).find(pr => String(pr.id) === String(prodId)) : null;
+          nameInput.value = buildPPName(upProj, prod);
+        };
+      }
+    });
+  }
+
+  // Открыть существующий
+  if (openBtn && existingSel) {
+    openBtn.addEventListener('click', () => {
+      const id = existingSel.value;
+      if (!id) { existingSel.style.borderColor = 'var(--danger)'; return; }
+      const proj = projects.find(p => String(p.id) === String(id));
+      if (proj) { modal.close(); openProject(proj.id, proj.name); }
+    });
+  }
+
+  // Создать новый
+  async function doCreate() {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
+    createBtn.disabled = true;
+    const up_project_id = upSel ? (upSel.value || null) : null;
+    const up_product_id = productSel ? (productSel.value || null) : null;
+    const resp = await fetchJson('/api/pp_projects/create/', {
+      method: 'POST',
+      body: JSON.stringify({ name, up_project_id, up_product_id }),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadProjects();
+      renderProjects();
+      showToast('Производственный план создан', 'success');
+    }
+    createBtn.disabled = false;
+  }
+
+  createBtn.addEventListener('click', doCreate);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doCreate(); });
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+async function editProjectName(id, currentName, currentUpProjectId, currentUpProductId) {
+  await loadUpProjects();
+  const upOptions = upProjects.map(p =>
+    `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`
+  ).join('');
+
+  // Получаем изделия текущего проекта УП
+  const curUpProj = currentUpProjectId ? upProjects.find(p => String(p.id) === String(currentUpProjectId)) : null;
+  const curProducts = curUpProj && curUpProj.products ? curUpProj.products : [];
+  const productOptions = curProducts.map(pr =>
+    `<option value="${pr.id}"${String(pr.id) === String(currentUpProductId) ? ' selected' : ''}>${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`
+  ).join('');
+
+  const modal = openModal({
+    title: 'Редактировать производственный план',
+    width: '440px',
+    body: `
+      <div class="modal-form-group">
+        <label>Название плана</label>
+        <input type="text" id="editProjectName" value="${escapeHtml(currentName)}" autofocus>
+      </div>
+      ${upProjects.length ? `
+      <div class="modal-form-group">
+        <label>Привязать к проекту (УП)</label>
+        <select id="editUpProject">
+          <option value="">— не привязывать —</option>
+          ${upOptions}
+        </select>
+      </div>
+      <div class="modal-form-group" id="editProductGroup" style="display:${curProducts.length ? '' : 'none'};">
+        <label>Изделие проекта</label>
+        <select id="editUpProduct">
+          <option value="">— весь проект —</option>
+          ${productOptions}
+        </select>
+      </div>` : ''}`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="saveProjectBtn">Сохранить</button>`,
+  });
+
+  const nameInput    = modal.dialog.querySelector('#editProjectName');
+  const upSel        = modal.dialog.querySelector('#editUpProject');
+  const productGroup = modal.dialog.querySelector('#editProductGroup');
+  const productSel   = modal.dialog.querySelector('#editUpProduct');
+  const saveBtn      = modal.dialog.querySelector('#saveProjectBtn');
+
+  // При смене проекта УП — обновить список изделий
+  if (upSel && productGroup && productSel) {
+    upSel.addEventListener('change', () => {
+      const upId = upSel.value;
+      const upProj = upId ? upProjects.find(p => String(p.id) === String(upId)) : null;
+      const products = upProj && upProj.products ? upProj.products : [];
+      if (products.length > 0) {
+        productSel.innerHTML = '<option value="">— весь проект —</option>'
+          + products.map(pr => `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`).join('');
+        productGroup.style.display = '';
+      } else {
+        productGroup.style.display = 'none';
+        productSel.innerHTML = '<option value="">— весь проект —</option>';
+      }
+    });
+  }
+
+  async function doSave() {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
+    saveBtn.disabled = true;
+    const up_project_id = upSel ? (upSel.value || null) : undefined;
+    const up_product_id = productSel ? (productSel.value || null) : undefined;
+    const body = { name };
+    if (up_project_id !== undefined) body.up_project_id = up_project_id;
+    if (up_product_id !== undefined) body.up_product_id = up_product_id;
+    const resp = await fetchJson(`/api/pp_projects/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    if (!resp._error) {
+      modal.close();
+      await loadProjects();
+      renderProjects();
+      showToast('Производственный план обновлён', 'success');
+    }
+    saveBtn.disabled = false;
+  }
+
+  saveBtn.addEventListener('click', doSave);
+  modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+}
+
+async function deleteProject(id, name) {
+  const ok = await confirmDialog(
+    `Удалить проект "${escapeHtml(name)}" и все его строки?`,
+    'Удаление проекта'
+  );
+  if (!ok) return;
+  const resp = await fetchJson(`/api/pp_projects/${id}/`, { method: 'DELETE' });
+  if (!resp._error) {
+    await loadProjects();
+    renderProjects();
+    showToast('Проект удалён', 'success');
+  }
+}
+
+/* ── Project mode ────────────────────────────────────────────────────── */
+async function openProject(id, name) {
+  currentProjectId = id;
+  currentProjectName = name;
+  setProjectUrl(id);
+
+  document.getElementById('landingView').style.display = 'none';
+  document.getElementById('projectView').style.display = '';
+  document.getElementById('landingActions').style.display = 'none';
+  document.getElementById('projectActions').style.display = '';
+  // Build header: show UP project name if linked
+  const projObj = projects.find(p => String(p.id) === String(id));
+  let headerTitle = 'ПП: ' + name;
+  if (projObj && projObj.up_project_name) {
+    headerTitle = name + ' (проект: ' + projObj.up_project_name + ')';
+  }
+  document.getElementById('breadcrumbTitle').textContent = headerTitle;
+
+  await loadPPRows(id);
+  renderPPTable();
+}
+
+function goToLanding() {
+  showLanding();
+}
+
+/* ── Build select HTML for a cell ────────────────────────────────────── */
+function buildSelectHtml(col, row) {
+  const val = row[col] || '';
+  let options = col === 'task_type' ? '' : '<option value="">--</option>';
+
+  if (col === 'dept') {
+    (dirs.dept || []).forEach(d => {
+      options += `<option value="${escapeHtml(d.value)}"${d.value === val ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
+    });
+  } else if (col === 'center') {
+    const userCenter = USER_NTC_CODE ? 'НТЦ-' + USER_NTC_CODE : '';
+    const centerVal = val || userCenter;
+    (dirs.center || []).forEach(d => {
+      options += `<option value="${escapeHtml(d.value)}"${d.value === centerVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
+    });
+  } else if (col === 'executor') {
+    const centerVal = row['center'] || '';
+    const allEmps = dirs.employees || [];
+    const filtered = centerVal ? allEmps.filter(e => e.dept === centerVal) : allEmps;
+    if (val && !filtered.find(e => e.value === val)) {
+      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
+    }
+    filtered.forEach(e => {
+      options += `<option value="${escapeHtml(e.value)}"${e.value === val ? ' selected' : ''}>${escapeHtml(e.value)}</option>`;
+    });
+  } else if (col === 'sector_head') {
+    const deptVal = row['dept'] || '';
+    const deptEntry = (dirs.dept || []).find(d => d.value === deptVal);
+    const allHeads = dirs.sector_head || [];
+    const filtered = deptEntry ? allHeads.filter(h => h.parent_id === deptEntry.id) : allHeads;
+    if (val && !filtered.find(h => h.value === val)) {
+      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
+    }
+    filtered.forEach(h => {
+      options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}>${escapeHtml(h.value)}</option>`;
+    });
+  } else if (col === 'task_type') {
+    const taskVal = val || 'Выпуск нового документа';
+    const taskTypes = dirs.task_type || [];
+    taskTypes.forEach(d => {
+      options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
+    });
+    if (!taskTypes.find(d => d.value === taskVal)) {
+      options += `<option value="${escapeHtml(taskVal)}" selected>${escapeHtml(taskVal)}</option>`;
+    }
+  }
+  return `<select class="cell-edit" data-col="${col}" data-id="${row.id}">${options}</select>`;
+}
+
+/* ── Render PP table ─────────────────────────────────────────────────── */
+function renderPPTable() {
+  const tbody = document.getElementById('ppTableBody');
+  tbody.innerHTML = '';
+
+  const filtered = rows.filter(row => {
+    for (const [col, val] of Object.entries(colFilters)) {
+      if (col.startsWith('mf_')) {
+        const field = col.slice(3);
+        if (val.size > 0 && !val.has(row[field] || '')) return false;
+        continue;
+      }
+      const cellVal = (row[col] || '').toString().toLowerCase();
+      if (!cellVal.includes(val)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="22" style="padding:40px;text-align:center;color:var(--muted);">
+      <i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>
+      Нет записей
+    </td></tr>`;
+    return;
+  }
+
+  filtered.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    let html = `<td>${idx + 1}</td>`;
+
+    for (const col of PP_COLUMNS) {
+      const val = row[col] || '';
+      const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
+      const isTextCol = ['work_name', 'work_order', 'work_designation'].includes(col);
+      const isDateCol = col === 'date_end';
+
+      if (!IS_WRITER) {
+        /* Read-only mode */
+        html += `<td style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
+      } else if (isSelectCol) {
+        html += `<td>${buildSelectHtml(col, row)}</td>`;
+      } else if (isTextCol) {
+        html += `<td><input class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+      } else if (isDateCol) {
+        html += `<td><input type="date" class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+      } else {
+        html += `<td><input class="cell-edit cell-num" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+      }
+    }
+
+    if (IS_WRITER) {
+      html += `<td><button class="btn-delete" data-id="${row.id}" title="Удалить"><i class="fas fa-times"></i></button></td>`;
+    } else {
+      html += '<td></td>';
+    }
+
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+
+  /* ── Event handlers on cells ──────────────────────────────────────── */
+  tbody.querySelectorAll('.cell-edit').forEach(input => {
+    input.addEventListener('change', handleCellChange);
+    input.addEventListener('blur', handleCellChange);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        handleCellChange({ target: this });
+        const inputs = Array.from(tbody.querySelectorAll('.cell-edit'));
+        const idx = inputs.indexOf(this);
+        const nextIdx = e.shiftKey ? idx - 1 : idx + 1;
+        if (nextIdx >= 0 && nextIdx < inputs.length) {
+          inputs[nextIdx].focus();
+          if (inputs[nextIdx].tagName !== 'SELECT') inputs[nextIdx].select();
+        }
+      }
+    });
+  });
+
+  /* ── Delete handlers ──────────────────────────────────────────────── */
+  tbody.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
+      if (!ok) return;
+      const id = this.getAttribute('data-id');
+      const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
+      if (!resp._error) {
+        rows = rows.filter(r => String(r.id) !== String(id));
+        renderPPTable();
+        showToast('Строка удалена', 'success');
+      }
+    });
+  });
+}
+
+/* ── Cell-outline helper ────────────────────────────────────────────── */
+function cellOutline(td, color, ms) {
+  if (!td) return;
+  td.style.outline = '1px solid ' + color;
+  setTimeout(() => { td.style.outline = ''; }, ms);
+}
+
+/* ── Handle cell change ─────────────────────────────────────────────── */
+async function handleCellChange(e) {
+  const input = e.target;
+  const id = input.getAttribute('data-id');
+  const field = input.getAttribute('data-col');
+  let value = input.value;
+  const td = input.closest('td');
+
+  // Для новой (ещё не сохранённой) строки — только авто-расчёт, без PUT
+  if (id === '_new_') {
+    if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
+      const tr = input.closest('tr');
+      let sheets = null, norm = null, coeff = null;
+      tr.querySelectorAll('input').forEach(inp => {
+        const col = inp.getAttribute('data-col');
+        const v = parseFloat(inp.value.replace(',', '.'));
+        if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
+        if (col === 'norm'      && !isNaN(v)) norm  = v;
+        if (col === 'coeff'     && !isNaN(v)) coeff = v;
+      });
+      const laborInput = tr.querySelector('input[data-col="labor"]');
+      if (laborInput) {
+        laborInput.value = (sheets !== null && norm !== null && coeff !== null)
+          ? Math.round(sheets * norm * coeff)
+          : '';
+      }
+    }
+    return;
+  }
+
+  // task_type required: reset to default if empty
+  if (field === 'task_type' && !value.trim()) {
+    const defaultType = (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : '';
+    input.value = defaultType;
+    value = defaultType;
+  }
+
+  // On center change -- rebuild executor select
+  if (field === 'center') {
+    const rowObj = rows.find(r => String(r.id) === String(id));
+    if (rowObj) {
+      rowObj.center = value;
+      const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
+      if (execSel) {
+        execSel.outerHTML = buildSelectHtml('executor', rowObj);
+        const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
+        if (newSel) {
+          newSel.addEventListener('change', handleCellChange);
+          newSel.addEventListener('blur', handleCellChange);
+        }
+      }
+    }
+  }
+
+  // On dept change -- rebuild sector_head select
+  if (field === 'dept') {
+    const rowObj = rows.find(r => String(r.id) === String(id));
+    if (rowObj) {
+      rowObj.dept = value;
+      const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
+      if (headSel) {
+        headSel.outerHTML = buildSelectHtml('sector_head', rowObj);
+        const newHead = input.closest('tr').querySelector('select[data-col="sector_head"]');
+        if (newHead) {
+          newHead.addEventListener('change', handleCellChange);
+          newHead.addEventListener('blur', handleCellChange);
+        }
+      }
+    }
+  }
+
+  // Blue outline while saving
+  if (td) td.style.outline = '1px solid rgba(59,130,246,0.5)';
+
+  const resp = await fetchJson('/api/production_plan/' + id + '/?field=' + field, {
+    method: 'PUT',
+    body: JSON.stringify({ value: value }),
+  });
+
+  if (resp._conflict) {
+    cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
+    return;
+  }
+  if (resp._error) {
+    cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
+    return;
+  }
+
+  // Success
+  cellOutline(td, 'rgba(34,197,94,0.5)', 700);
+
+  // Update local row data
+  const rowObj = rows.find(r => String(r.id) === String(id));
+  if (rowObj) rowObj[field] = value;
+
+  // Auto-calc labor
+  if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
+    setTimeout(async () => {
+      const tr = input.closest('tr');
+      let sheets = null, norm = null, coeff = null;
+      tr.querySelectorAll('input').forEach(inp => {
+        const col = inp.getAttribute('data-col');
+        const v = parseFloat(inp.value.replace(',', '.'));
+        if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
+        if (col === 'norm' && !isNaN(v)) norm = v;
+        if (col === 'coeff' && !isNaN(v)) coeff = v;
+      });
+      const laborInput = tr.querySelector('input[data-col="labor"]');
+      const laborTd = laborInput ? laborInput.closest('td') : null;
+      let laborVal = '';
+      if (sheets !== null && norm !== null && coeff !== null) {
+        laborVal = Math.round(sheets * norm * coeff);
+        if (laborInput) laborInput.value = laborVal;
+      } else {
+        if (laborInput) laborInput.value = '';
+      }
+      if (laborTd) laborTd.style.outline = '1px solid rgba(59,130,246,0.5)';
+      const r2 = await fetchJson('/api/production_plan/' + id + '/?field=labor', {
+        method: 'PUT',
+        body: JSON.stringify({ value: laborVal }),
+      });
+      if (!r2._error && !r2._conflict) {
+        cellOutline(laborTd, 'rgba(34,197,94,0.5)', 700);
+        if (rowObj) rowObj.labor = laborVal;
+      } else {
+        cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
+      }
+    }, 50);
+  }
+}
+
+/* ── Add row inline (directly in table) ─────────────────────────────── */
+let _addingRow = false;
+
+function openAddRowModal() {
+  if (_addingRow) {
+    // Scroll to existing new row and focus first cell
+    const newTr = document.getElementById('ppNewRow');
+    if (newTr) {
+      newTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const first = newTr.querySelector('input, select');
+      if (first) first.focus();
+    }
+    return;
+  }
+  _addingRow = true;
+
+  const tbody = document.getElementById('ppTableBody');
+
+  // Build a temporary row with all empty editable cells
+  const newRow = { id: '_new_', row_code: '', work_order: '', stage_num: '',
+    milestone_num: '', work_num: '', work_designation: '', work_name: '',
+    date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '', total_2d: '',
+    total_3d: '', center: '', dept: '', sector_head: '', executor: '', task_type: '' };
+
+  const tr = document.createElement('tr');
+  tr.id = 'ppNewRow';
+  tr.style.cssText = 'background:rgba(59,130,246,0.07);outline:2px solid rgba(59,130,246,0.3);';
+
+  let html = `<td style="color:var(--accent);font-weight:600;">+</td>`;
+
+  for (const col of PP_COLUMNS) {
+    const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
+    const isTextCol   = ['work_name', 'work_order', 'work_designation'].includes(col);
+    const isDateCol   = col === 'date_end';
+
+    if (isSelectCol) {
+      html += `<td>${buildSelectHtml(col, newRow)}</td>`;
+    } else if (isTextCol) {
+      html += `<td><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : col === 'row_code' ? 'Код' : ''}"></td>`;
+    } else if (isDateCol) {
+      html += `<td><input type="date" class="cell-edit" data-col="${col}" data-id="_new_" value=""></td>`;
+    } else {
+      html += `<td><input class="cell-edit cell-num" data-col="${col}" data-id="_new_" value=""></td>`;
+    }
+  }
+
+  // Save / Cancel buttons in the last cell
+  html += `<td style="white-space:nowrap;">
+    <button id="ppNewRowSave" title="Сохранить строку" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
+    <button id="ppNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
+  </td>`;
+
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
+
+  // Focus first input (row_code)
+  const firstInput = tr.querySelector('input[data-col="row_code"], input');
+  if (firstInput) {
+    firstInput.focus();
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Handle center → executor dependency in new row
+  tr.querySelector('select[data-col="center"]')?.addEventListener('change', function() {
+    newRow.center = this.value;
+    const td = tr.querySelector('select[data-col="executor"]')?.closest('td');
+    if (td) {
+      td.innerHTML = buildSelectHtml('executor', newRow);
+      td.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
+    }
+  });
+
+  // Handle dept → sector_head dependency in new row
+  tr.querySelector('select[data-col="dept"]')?.addEventListener('change', function() {
+    newRow.dept = this.value;
+    const td = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
+    if (td) {
+      td.innerHTML = buildSelectHtml('sector_head', newRow);
+      td.querySelector('select').addEventListener('change', function() { newRow.sector_head = this.value; });
+    }
+  });
+
+  // Collect values from new row and POST
+  async function doSaveNewRow() {
+    const body = { project_id: currentProjectId };
+    tr.querySelectorAll('[data-id="_new_"]').forEach(inp => {
+      body[inp.getAttribute('data-col')] = inp.value;
+    });
+
+    const saveBtn = document.getElementById('ppNewRowSave');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
+
+    const resp = await fetchJson('/api/production_plan/create/', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    if (!resp._error) {
+      _addingRow = false;
+      tr.remove();
+      await loadPPRows(currentProjectId);
+      renderPPTable();
+      showToast('Строка добавлена', 'success');
+      // Scroll to new row (last)
+      const allRows = document.querySelectorAll('#ppTableBody tr');
+      if (allRows.length) allRows[allRows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+    }
+  }
+
+  document.getElementById('ppNewRowSave').addEventListener('click', doSaveNewRow);
+
+  document.getElementById('ppNewRowCancel').addEventListener('click', () => {
+    _addingRow = false;
+    tr.remove();
+  });
+
+  // Save on Enter in any text input
+  tr.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doSaveNewRow(); }
+      if (e.key === 'Escape') { _addingRow = false; tr.remove(); }
+    });
+  });
+}
+
+/* ── Sync to Plan/Report ────────────────────────────────────────────── */
+async function syncToTasks() {
+  const ok = await confirmDialog(
+    'Синхронизировать данные с модулем "План/отчёт"?',
+    'Синхронизация'
+  );
+  if (!ok) return;
+
+  // Validate required fields
+  const optionalCols = new Set(['total_2d', 'total_3d', 'executor']);
+  const requiredCols = PP_COLUMNS.filter(c => !optionalCols.has(c));
+
+  document.querySelectorAll('.cell-error').forEach(el => el.classList.remove('cell-error'));
+
+  let hasErrors = false;
+  let errorCount = 0;
+
+  for (const row of rows) {
+    const allEmpty = PP_COLUMNS.every(c => !row[c] || String(row[c]).trim() === '');
+    if (allEmpty) continue;
+
+    const missingCols = requiredCols.filter(c => !row[c] || String(row[c]).trim() === '');
+    if (missingCols.length > 0) {
+      hasErrors = true;
+      errorCount++;
+      for (const col of missingCols) {
+        const input = document.querySelector(
+          `#ppTableBody [data-col="${col}"][data-id="${row.id}"]`
+        );
+        if (input) {
+          input.classList.add('cell-error');
+          if (errorCount === 1 && col === missingCols[0]) {
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+    }
+  }
+
+  if (hasErrors) {
+    showToast('Обнаружены строки с незаполненными ячейками (выделены красным). Все поля, кроме "Итого ч/ч 2D", "Итого ч/ч 3D" и "Исполнитель", обязательны.', 'error');
+    return;
+  }
+
+  const resp = await fetchJson('/api/production_plan/sync/', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: currentProjectId }),
+  });
+  if (!resp._error) {
+    let msg = `Перенесено новых задач: ${resp.imported || 0}`;
+    if (resp.updated > 0) msg += `, обновлено дат: ${resp.updated}`;
+    showToast(msg, 'success');
+  }
+}
+
+/* ── Multi-select column filters ─────────────────────────────────────── */
+let colFilters = {};
+let mfSelections = {};
+let activeMfBtn = null;
+let activeMfDropdown = null;
+
+const MF_DEFAULTS = {};
+PP_COLUMNS.forEach(c => { MF_DEFAULTS[c] = '\u25BC'; });
+
+function getMfValues(col) {
+  const vals = new Set();
+  rows.forEach(r => { if (r[col]) vals.add(r[col]); });
+  return [...vals].sort((a, b) => String(a).localeCompare(String(b), 'ru'));
+}
+
+function buildMfDropdown(btn, col) {
+  if (activeMfDropdown) activeMfDropdown.remove();
+  const vals = getMfValues(col);
+  const selected = mfSelections[col] || new Set();
+  const drop = document.createElement('div');
+  drop.className = 'mf-dropdown open';
+  drop.dataset.col = col;
+
+  // Search
+  const searchWrap = document.createElement('div');
+  searchWrap.className = 'mf-search';
+  const searchInp = document.createElement('input');
+  searchInp.placeholder = 'Поиск...';
+  searchInp.autocomplete = 'off';
+  searchInp.oninput = () => {
+    const q = searchInp.value.toLowerCase();
+    drop.querySelectorAll('.mf-option').forEach(opt => {
+      opt.style.display = opt.dataset.val.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+  searchWrap.appendChild(searchInp);
+  drop.appendChild(searchWrap);
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'mf-actions';
+  const selectAll = document.createElement('button');
+  selectAll.className = 'mf-btn';
+  selectAll.textContent = 'Все';
+  selectAll.onclick = (e) => {
+    e.stopPropagation();
+    mfSelections[col] = new Set(vals);
+    drop.querySelectorAll('.mf-option input').forEach(cb => cb.checked = true);
+    applyMfFilter(col, btn);
+  };
+  const clearMfBtn = document.createElement('button');
+  clearMfBtn.className = 'mf-btn';
+  clearMfBtn.textContent = 'Сброс';
+  clearMfBtn.onclick = (e) => {
+    e.stopPropagation();
+    mfSelections[col] = new Set();
+    drop.querySelectorAll('.mf-option input').forEach(cb => cb.checked = false);
+    applyMfFilter(col, btn);
+  };
+  actions.appendChild(selectAll);
+  actions.appendChild(clearMfBtn);
+  drop.appendChild(actions);
+
+  // Options
+  vals.forEach(val => {
+    const opt = document.createElement('div');
+    opt.className = 'mf-option';
+    opt.dataset.val = val;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selected.has(val);
+    const toggle = () => {
+      cb.checked = !cb.checked;
+      const sel = mfSelections[col] || new Set();
+      if (cb.checked) sel.add(val); else sel.delete(val);
+      mfSelections[col] = sel;
+      applyMfFilter(col, btn);
+    };
+    cb.onchange = () => {
+      const sel = mfSelections[col] || new Set();
+      if (cb.checked) sel.add(val); else sel.delete(val);
+      mfSelections[col] = sel;
+      applyMfFilter(col, btn);
+    };
+    opt.onclick = (e) => { if (e.target !== cb) toggle(); };
+    opt.appendChild(cb);
+    opt.appendChild(document.createTextNode(val));
+    drop.appendChild(opt);
+  });
+
+  document.body.appendChild(drop);
+  const rect = btn.getBoundingClientRect();
+  drop.style.top = (rect.bottom + 2) + 'px';
+  drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
+  activeMfDropdown = drop;
+  activeMfBtn = btn;
+  setTimeout(() => searchInp.focus(), 50);
+}
+
+function toggleMf(btn) {
+  if (activeMfDropdown && activeMfBtn === btn) {
+    activeMfDropdown.remove();
+    activeMfDropdown = null;
+    activeMfBtn = null;
+    return;
+  }
+  buildMfDropdown(btn, btn.dataset.col);
+}
+
+function applyMfFilter(col, btn) {
+  const sel = mfSelections[col] || new Set();
+  const def = MF_DEFAULTS[col] || '\u25BC';
+  if (sel.size === 0) {
+    delete colFilters['mf_' + col];
+    btn.textContent = def;
+    btn.classList.remove('active');
+  } else {
+    colFilters['mf_' + col] = sel;
+    btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
+    btn.classList.add('active');
+  }
+  const hasFilters = Object.keys(colFilters).length > 0;
+  document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
+  renderPPTable();
+}
+
+function clearAllColFilters() {
+  colFilters = {};
+  Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
+  document.querySelectorAll('.mf-trigger').forEach(btn => {
+    btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
+    btn.classList.remove('active');
+  });
+  if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
+  document.getElementById('filtersActiveBadge').style.display = 'none';
+  renderPPTable();
+}
+
+document.addEventListener('click', (e) => {
+  if (activeMfDropdown && !activeMfDropdown.contains(e.target) && e.target !== activeMfBtn) {
+    activeMfDropdown.remove();
+    activeMfDropdown = null;
+    activeMfBtn = null;
+  }
+}, true);
+
+/* ── Column resize ───────────────────────────────────────────────────── */
+function initColumnResize() {
+  document.querySelectorAll('.pp-table th').forEach(th => {
+    if (th.querySelector('.resize-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    th.appendChild(handle);
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      th.classList.add('resizing');
+      handle.classList.add('resizing');
+      const startX = e.pageX;
+      const startWidth = th.offsetWidth;
+      const colIndex = th.cellIndex;
+      const tblRows = th.closest('table').querySelectorAll('tbody tr');
+
+      const onMouseMove = (ev) => {
+        const width = startWidth + (ev.pageX - startX);
+        if (width > 30) {
+          th.style.width = width + 'px';
+          th.style.minWidth = width + 'px';
+          tblRows.forEach(row => {
+            if (row.cells[colIndex]) {
+              row.cells[colIndex].style.width = width + 'px';
+              row.cells[colIndex].style.minWidth = width + 'px';
+            }
+          });
+        }
+      };
+      const onMouseUp = () => {
+        th.classList.remove('resizing');
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
+}
+
+/* ── Browser history (back/forward) ──────────────────────────────────── */
+window.addEventListener('popstate', async () => {
+  const pid = readProjectFromUrl();
+  if (pid) {
+    const proj = projects.find(p => String(p.id) === String(pid));
+    if (proj) {
+      await openProject(proj.id, proj.name);
+    }
+  } else {
+    showLanding();
+  }
+});
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+(async function init() {
+  await loadDirs();
+  await loadProjects();
+
+  const urlProjectId = readProjectFromUrl();
+  if (urlProjectId) {
+    const proj = projects.find(p => String(p.id) === String(urlProjectId));
+    if (proj) {
+      await openProject(proj.id, proj.name);
+    } else {
+      showLanding();
+    }
+  } else {
+    showLanding();
+  }
+
+  initColumnResize();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}Профиль — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Профиль</span>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="page-header">
+  <h1>Профиль</h1>
+</div>
+
+{% if employee %}
+<div class="section">
+  <div class="section-header">
+    <h2>{{ employee.full_name }}</h2>
+    <div>
+      {% if employee.role == 'admin' %}
+        <span class="badge badge-red">{{ employee.get_role_display }}</span>
+      {% elif employee.role == 'ntc_head' or employee.role == 'ntc_deputy' %}
+        <span class="badge badge-blue">{{ employee.get_role_display }}</span>
+      {% elif employee.role == 'dept_head' or employee.role == 'dept_deputy' %}
+        <span class="badge badge-yellow">{{ employee.get_role_display }}</span>
+      {% elif employee.role == 'sector_head' %}
+        <span class="badge badge-green">{{ employee.get_role_display }}</span>
+      {% else %}
+        <span class="badge badge-gray">{{ employee.get_role_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <table class="info-table">
+    <tr><th>Логин</th>      <td>{{ request.user.username }}</td></tr>
+    <tr><th>Должность</th>  <td>{{ employee.get_position_display|default:"—" }}</td></tr>
+    <tr><th>НТЦ</th>        <td>{{ employee.ntc_center|default:"—" }}</td></tr>
+    <tr><th>Отдел</th>      <td>{{ employee.department|default:"—" }}</td></tr>
+    <tr><th>Сектор</th>     <td>{{ employee.sector|default:"—" }}</td></tr>
+    <tr><th>Телефон</th>    <td>{{ employee.phone|default:"—" }}</td></tr>
+    <tr><th>Email</th>      <td>{{ employee.email_corp|default:"—" }}</td></tr>
+  </table>
+</div>
+{% else %}
+<div class="section" style="padding:24px;">
+  <p class="text-muted">Профиль сотрудника не привязан к этому аккаунту.</p>
+  {% if request.user.is_superuser %}
+  <p class="text-muted" style="margin-top:8px;">Вы вошли как суперпользователь Django.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Моё меню -->
+<div class="section" style="margin-top:16px;">
+  <div class="section-header"><h2>Моё меню</h2></div>
+  <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Ширина колонок (план/отчёт)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Сбросить сохранённые ширины столбцов в таблице «План/отчёт»</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="resetColWidthsBtn" onclick="resetColWidths()">
+        <i class="fas fa-undo"></i> Сбросить ширины
+      </button>
+    </div>
+
+    {% if employee %}
+    {% if employee.role == 'ntc_head' or employee.role == 'ntc_deputy' or employee.role == 'admin' %}
+    <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Видимость подразделений</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Показывать задачи всех отделов НТЦ или только своего</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="showAllDeptsChk" style="width:16px;height:16px;accent-color:var(--accent);"
+          {% if employee.col_settings and employee.col_settings.show_all_depts %}checked{% endif %}
+          onchange="saveShowAllDepts(this.checked)">
+        <span style="font-size:13px;color:var(--text);">Показывать все отделы НТЦ</span>
+      </label>
+    </div>
+    {% endif %}
+    {% endif %}
+
+  </div>
+</div>
+
+<div style="margin-top:16px;">
+  <a href="{% url 'accounts:change_password' %}" class="btn btn-outline"><i class="fas fa-key"></i> Сменить пароль</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getCsrf() {
+  // Try form token first, then cookie
+  const el = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (el) return el.value;
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+async function apiPost(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify(body),
+  });
+  return r.json().catch(() => ({}));
+}
+async function resetColWidths() {
+  const btn = document.getElementById('resetColWidthsBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сброс...';
+  const data = await apiPost('/api/col_settings/', { _reset_widths: true });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-undo"></i> Сбросить ширины';
+  showToast(data.error ? ('Ошибка: ' + data.error) : 'Ширины колонок сброшены', data.error ? 'error' : 'success');
+}
+async function saveShowAllDepts(checked) {
+  const data = await apiPost('/api/col_settings/', { show_all_depts: checked });
+  showToast(data.error ? ('Ошибка: ' + data.error) : (checked ? 'Показаны все отделы НТЦ' : 'Показывается только свой отдел'), data.error ? 'error' : 'success');
+}
+</script>
+{% endblock %}

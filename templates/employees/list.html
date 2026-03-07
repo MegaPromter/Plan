@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load employee_tags %}
+{% block title %}Сотрудники — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Сотрудники</span>
+{% endblock %}
+
+{% block nav_employees %}active{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_admin_role %}
+  <a href="{% url 'employees:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Сотрудники</h1>
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." class="filter-input">
+  <input type="text" name="dept" value="{{ request.GET.dept }}" placeholder="Код отдела" class="filter-input filter-input--sm">
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Найти</button>
+  <a href="{% url 'employees:list' %}" class="btn btn-outline">Сброс</a>
+</form>
+
+{% if employees %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>ФИО</th>
+      <th>Роль</th>
+      <th>Должность</th>
+      <th>Отдел</th>
+      <th>Сектор</th>
+      <th>НТЦ</th>
+      <th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for emp in employees %}
+    <tr>
+      <td class="text-muted">{{ forloop.counter }}</td>
+      <td><a href="{% url 'employees:detail' emp.pk %}">{{ emp.full_name }}</a></td>
+      <td>
+        {% if emp.role == 'admin' %}
+          <span class="badge badge-red">{{ emp.get_role_display }}</span>
+        {% elif emp.role == 'ntc_head' or emp.role == 'ntc_deputy' %}
+          <span class="badge badge-blue">{{ emp.get_role_display }}</span>
+        {% elif emp.role == 'dept_head' or emp.role == 'dept_deputy' %}
+          <span class="badge badge-yellow">{{ emp.get_role_display }}</span>
+        {% elif emp.role == 'sector_head' %}
+          <span class="badge badge-green">{{ emp.get_role_display }}</span>
+        {% else %}
+          <span class="badge badge-gray">{{ emp.get_role_display }}</span>
+        {% endif %}
+      </td>
+      <td>{{ emp.get_position_display|default:"—" }}</td>
+      <td>{{ emp.department|default:"—" }}</td>
+      <td>{{ emp.sector|default:"—" }}</td>
+      <td>{{ emp.ntc_center|default:"—" }}</td>
+      <td>
+        {% if emp.is_active %}
+          <span class="badge badge-green">Активен</span>
+        {% else %}
+          <span class="badge badge-gray">Уволен</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="page-link active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
+  {% endif %}
+  <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (всего {{ page_obj.paginator.count }})</span>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="fas fa-users"></i></div>
+  <p>Сотрудников не найдено</p>
+  {% if request.user|is_admin_role %}
+    <a href="{% url 'employees:create' %}" class="btn btn-primary">Добавить первого сотрудника</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

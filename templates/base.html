@@ -1,0 +1,564 @@
+{% load employee_tags %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+<title>{% block title %}Система управления{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e1117;
+  --surface: #161b27;
+  --surface2: #1e2536;
+  --border: #2a3347;
+  --border2: #3a4a63;
+  --accent: #3b82f6;
+  --accent2: #1d4ed8;
+  --accent-glow: rgba(59,130,246,0.15);
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --muted: #64748b;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+body { min-height:100vh; background:var(--bg); font-family:var(--font); color:var(--text); font-size:14px; line-height:1.5; }
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar {
+  position:fixed; top:0; left:0; width:260px; height:100vh;
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:100; transition:transform 0.3s ease;
+}
+.sidebar-header { padding:20px; border-bottom:1px solid var(--border); }
+.sidebar-logo {
+  display:flex; align-items:center; gap:12px;
+  font-size:18px; font-weight:700; color:var(--text); text-decoration:none;
+}
+.sidebar-logo-icon {
+  width:36px; height:36px; background:var(--accent); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+}
+.sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; }
+.nav-section { margin-bottom:24px; }
+.nav-section-title {
+  font-size:11px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.08em; padding:0 12px; margin-bottom:8px;
+}
+.nav-item {
+  display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px;
+  color:var(--text2); text-decoration:none; font-size:14px; font-weight:500;
+  transition:all 0.15s ease; margin-bottom:4px;
+}
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:var(--accent-glow); color:var(--accent); }
+.nav-item i { width:20px; text-align:center; font-size:16px; }
+.nav-section-btn { font-size:13px; font-weight:600; color:var(--text2); }
+.nav-section-btn:hover { background:var(--surface2); color:var(--text); }
+.nav-section-btn.active { background:var(--accent-glow); color:var(--accent); }
+.nav-subitem { padding-left:28px; font-size:13px; }
+.nav-dropdown { margin-bottom:4px; }
+.nav-dropdown-toggle { width:100%; background:none; border:none; cursor:pointer; font-family:var(--font); justify-content:flex-start; }
+.nav-chevron { margin-left:auto !important; width:auto !important; font-size:11px !important; transition:transform 0.2s; }
+.nav-dropdown-toggle.open .nav-chevron { transform:rotate(180deg); }
+.nav-dropdown-menu { display:none; }
+.nav-dropdown-menu.open { display:block; }
+.sidebar-footer { padding:16px; border-top:1px solid var(--border); }
+.user-card {
+  display:flex; align-items:center; gap:12px; padding:12px;
+  background:var(--surface2); border-radius:10px;
+}
+.user-avatar {
+  width:40px; height:40px; background:var(--accent); border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:600; font-size:16px; flex-shrink:0;
+}
+.user-info { flex:1; min-width:0; }
+.user-name { font-weight:600; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-role { font-size:12px; color:var(--muted); }
+.logout-btn {
+  width:36px; height:36px; border:none; background:transparent;
+  color:var(--muted); border-radius:8px; cursor:pointer; transition:all 0.15s;
+  display:flex; align-items:center; justify-content:center; text-decoration:none;
+}
+.logout-btn:hover { background:rgba(239,68,68,0.1); color:var(--danger); }
+
+/* ── Main Layout ─────────────────────────────────────────────────────── */
+.main-content { margin-left:260px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left 0.3s ease; }
+.topbar {
+  position:sticky; top:0; height:64px;
+  background:rgba(14,17,23,0.9); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 24px; gap:16px;
+  z-index:50; backdrop-filter:blur(8px);
+}
+.breadcrumb { display:flex; align-items:center; gap:8px; font-size:14px; }
+.breadcrumb a { color:var(--muted); text-decoration:none; transition:color .15s; }
+.breadcrumb a:hover { color:var(--accent); }
+.breadcrumb span { color:var(--text2); }
+.breadcrumb-current { color:var(--text); font-weight:500; }
+.topbar-spacer { flex:1; }
+.page-content { flex:1; padding:24px; }
+
+.sidebar-toggle {
+  width:40px; height:40px; border:none; background:var(--surface);
+  color:var(--text); border-radius:8px; cursor:pointer; font-size:18px;
+  display:flex; align-items:center; justify-content:center;
+}
+.mobile-toggle {
+  display:none; width:40px; height:40px; border:none; background:var(--surface);
+  color:var(--text); border-radius:8px; cursor:pointer; font-size:18px;
+  align-items:center; justify-content:center;
+}
+.sidebar.collapsed { transform:translateX(-100%); }
+.main-content.sidebar-collapsed { margin-left:0; }
+.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99; }
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.toast-container { position:fixed; top:80px; right:24px; z-index:1000; display:flex; flex-direction:column; gap:12px; }
+.toast {
+  padding:16px 20px; background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  display:flex; align-items:center; gap:12px; animation:slideIn 0.3s ease; min-width:300px;
+}
+.toast.success { border-left:4px solid var(--success); }
+.toast.error   { border-left:4px solid var(--danger); }
+.toast.warning { border-left:4px solid var(--warning); }
+.toast-icon { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
+.toast.success .toast-icon { background:rgba(34,197,94,0.2);  color:var(--success); }
+.toast.error   .toast-icon { background:rgba(239,68,68,0.2);  color:var(--danger); }
+.toast.warning .toast-icon { background:rgba(245,158,11,0.2); color:var(--warning); }
+.toast-message { flex:1; font-size:14px; }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn {
+  display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
+  font-size:14px; font-weight:600; font-family:var(--font);
+  text-decoration:none; cursor:pointer; border:none; transition:all 0.2s ease;
+}
+.btn-primary  { background:var(--accent);   color:#fff; }
+.btn-primary:hover  { background:var(--accent2); transform:translateY(-1px); box-shadow:0 4px 12px rgba(59,130,246,0.4); }
+.btn-secondary{ background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover{ border-color:var(--accent); color:var(--accent); }
+.btn-danger   { background:var(--danger);   color:#fff; }
+.btn-danger:hover   { background:#dc2626; transform:translateY(-1px); }
+.btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
+.btn-outline:hover  { border-color:var(--border2); color:var(--text); }
+.btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
+.btn:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
+
+/* ── Page header ─────────────────────────────────────────────────────── */
+.page-header {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; margin-bottom:24px;
+}
+.page-header h1 { font-size:24px; font-weight:700; color:var(--text); }
+
+/* ── Section card ────────────────────────────────────────────────────── */
+.section { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.section-header {
+  padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.section-title { font-size:18px; font-weight:600; color:var(--text); }
+.section-link { font-size:13px; color:var(--accent); text-decoration:none; display:flex; align-items:center; gap:6px; }
+.section-link:hover { color:var(--accent2); }
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th {
+  text-align:left; padding:12px 16px;
+  font-size:12px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.05em;
+  background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.data-table td { padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px; color:var(--text); }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:rgba(59,130,246,0.03); }
+.data-table .empty td { text-align:center; color:var(--muted); padding:40px; }
+.table-wrap { overflow-x:auto; }
+
+/* ── Forms ───────────────────────────────────────────────────────────── */
+.form-container { max-width:760px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; }
+.form-group { margin-bottom:20px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-row .form-group { margin-bottom:20px; }
+label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+input[type=text],input[type=date],input[type=password],input[type=number],
+input[type=email],input[type=url],textarea,select {
+  width:100%; padding:10px 14px; background:var(--bg);
+  border:1px solid var(--border); border-radius:8px;
+  color:var(--text); font-family:var(--font); font-size:14px;
+  transition:border-color 0.2s; outline:none;
+}
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+select option { background:var(--bg); }
+textarea { resize:vertical; min-height:80px; }
+.field-error { font-size:12px; color:var(--danger); margin-top:4px; display:block; }
+.form-actions { display:flex; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+
+/* ── Alerts ──────────────────────────────────────────────────────────── */
+.alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px; }
+.alert-error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:#ef4444; }
+.alert-success { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:#22c55e; }
+.alert-warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; }
+.badge-blue   { background:rgba(59,130,246,0.15);  color:var(--accent); }
+.badge-green  { background:rgba(34,197,94,0.15);   color:var(--success); }
+.badge-red    { background:rgba(239,68,68,0.15);   color:var(--danger); }
+.badge-yellow { background:rgba(245,158,11,0.15);  color:var(--warning); }
+.badge-gray   { background:var(--surface2);        color:var(--text2); }
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.empty-state { padding:60px 24px; text-align:center; }
+.empty-icon { width:80px; height:80px; margin:0 auto 20px; background:var(--surface2); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:32px; color:var(--muted); }
+.empty-title { font-size:18px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.empty-desc  { font-size:14px; color:var(--muted); margin-bottom:24px; }
+
+/* ── Filter bar ──────────────────────────────────────────────────────── */
+.filter-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.filter-bar input,.filter-bar select { width:auto; flex:1; min-width:140px; max-width:240px; }
+
+/* ── Info table (detail page) ────────────────────────────────────────── */
+.info-table { width:100%; border-collapse:collapse; }
+.info-table tr { border-bottom:1px solid var(--border); }
+.info-table tr:last-child { border-bottom:none; }
+.info-table th { width:200px; padding:12px 16px; text-align:left; font-size:13px; font-weight:500; color:var(--muted); background:var(--surface2); white-space:nowrap; }
+.info-table td { padding:12px 16px; font-size:14px; color:var(--text); }
+
+/* ── Confirm box ─────────────────────────────────────────────────────── */
+.confirm-box { max-width:560px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; }
+.confirm-box p { color:var(--text2); margin-bottom:16px; }
+.confirm-details { padding-left:20px; margin-bottom:16px; color:var(--text2); }
+.confirm-details li { margin-bottom:6px; }
+.confirm-details strong { color:var(--text); }
+.confirm-warning { color:var(--danger) !important; font-size:13px; }
+
+/* ── Pagination ──────────────────────────────────────────────────────── */
+.pagination { display:flex; align-items:center; gap:8px; margin-top:20px; }
+.pagination a,.pagination span {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:36px; height:36px; padding:0 10px; border-radius:8px;
+  font-size:14px; text-decoration:none; border:1px solid var(--border); color:var(--text2); transition:all 0.15s;
+}
+.pagination a:hover { border-color:var(--accent); color:var(--accent); }
+.pagination .current { background:var(--accent); color:#fff; border-color:var(--accent); }
+.pagination .disabled { opacity:.4; cursor:default; }
+
+/* ── Extra form helpers ──────────────────────────────────────────────── */
+.form-section-title {
+  font-size:13px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em;
+  margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border);
+}
+.form-section-title:first-child { margin-top:0; }
+.form-error  { font-size:12px; color:var(--danger);  margin-top:4px; display:block; }
+.form-help   { font-size:12px; color:var(--muted);   margin-top:4px; display:block; }
+.has-error input,.has-error select,.has-error textarea { border-color:var(--danger); }
+.checkbox-wrap { display:flex; align-items:center; gap:10px; padding:10px 0; }
+.checkbox-wrap input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); }
+.checkbox-wrap span { font-size:14px; color:var(--text2); }
+
+/* ── Filter extras ───────────────────────────────────────────────────── */
+.filter-input  { flex:1; min-width:140px; max-width:240px; }
+.filter-input--sm { max-width:140px; }
+.filter-select { flex:1; min-width:140px; max-width:200px; }
+
+/* ── Section header actions ──────────────────────────────────────────── */
+.section-header h2 { font-size:17px; font-weight:600; color:var(--text); }
+.section-header-actions { display:flex; gap:8px; align-items:center; }
+
+/* ── Text helpers ────────────────────────────────────────────────────── */
+.text-muted { color:var(--muted); font-size:13px; }
+
+/* ── Page header actions ─────────────────────────────────────────────── */
+.page-header-actions { display:flex; gap:8px; align-items:center; }
+
+/* ── Empty state icon ────────────────────────────────────────────────── */
+.empty-state { text-align:center; padding:60px 24px; }
+.empty-state-icon {
+  width:72px; height:72px; margin:0 auto 20px;
+  background:var(--surface2); border-radius:20px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; color:var(--muted);
+}
+.empty-state p { color:var(--text2); margin-bottom:20px; font-size:15px; }
+
+/* ── Pagination page-link ────────────────────────────────────────────── */
+.page-link {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:36px; height:36px; padding:0 10px; border-radius:8px;
+  font-size:14px; text-decoration:none; border:1px solid var(--border);
+  color:var(--text2); transition:all 0.15s;
+}
+.page-link:hover { border-color:var(--accent); color:var(--accent); }
+.page-link.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.page-info { font-size:13px; color:var(--muted); margin-left:8px; }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width:768px) {
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); }
+  .main-content { margin-left:0; }
+  .mobile-toggle { display:flex !important; }
+  .sidebar-toggle { display:none; }
+  .sidebar-overlay.open { display:block; }
+  .page-content { padding:16px; }
+  .form-row { grid-template-columns:1fr; }
+}
+</style>
+{% block styles %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="{% url 'accounts:dashboard' %}" class="sidebar-logo">
+      <div class="sidebar-logo-icon">📋</div>
+      <span>Планирование</span>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Обзор</div>
+      <a href="{% url 'accounts:dashboard' %}" class="nav-item {% block nav_dashboard %}{% endblock %}">
+        <i class="fas fa-th-large"></i>
+        <span>Стартовая страница</span>
+      </a>
+    </div>
+
+    <!-- 1.1 Управление проектами -->
+    <div class="nav-section">
+      <a href="{% url 'works:projects' %}" class="nav-item nav-section-btn {% block nav_projects %}{% endblock %}">
+        <i class="fas fa-project-diagram"></i>
+        <span>1. Управление проектами</span>
+      </a>
+    </div>
+
+    <!-- 1.2 Производственный план -->
+    <div class="nav-section">
+      <a href="{% url 'works:production_plan' %}" class="nav-item nav-section-btn {% block nav_pp %}{% endblock %}">
+        <i class="fas fa-industry"></i>
+        <span>2. Производственный план</span>
+      </a>
+    </div>
+
+    <!-- 1.3 Сводное планирование -->
+    <div class="nav-section">
+      <a href="{% url 'works:plan' %}" class="nav-item nav-section-btn {% block nav_tasks %}{% endblock %}">
+        <i class="fas fa-tasks"></i>
+        <span>3. Сводное планирование (План/отчёт)</span>
+      </a>
+      <a href="{% url 'works:notice_list' %}" class="nav-item nav-subitem {% block nav_notices %}{% endblock %}">
+        <i class="fas fa-envelope"></i>
+        <span>Журнал извещений</span>
+      </a>
+    </div>
+
+    <!-- 1.4 Аналитика -->
+    <div class="nav-section">
+      <div class="nav-section-title">4. Аналитика</div>
+      <a href="{% url 'accounts:stub' 'analytics-workload' %}" class="nav-item {% block nav_analytics_workload %}{% endblock %}">
+        <i class="fas fa-chart-bar"></i>
+        <span>Загрузка сотрудников</span>
+      </a>
+      <a href="{% url 'accounts:stub' 'analytics-deadlines' %}" class="nav-item {% block nav_analytics_deadlines %}{% endblock %}">
+        <i class="fas fa-chart-line"></i>
+        <span>Исполнение сроков</span>
+      </a>
+      <a href="{% url 'accounts:stub' 'analytics-reports' %}" class="nav-item {% block nav_analytics_reports %}{% endblock %}">
+        <i class="fas fa-file-alt"></i>
+        <span>Отчёты</span>
+      </a>
+    </div>
+
+    <!-- 1.5 Администрирование -->
+    <div class="nav-section">
+      <div class="nav-section-title">5. Администрирование</div>
+      <div class="nav-dropdown">
+        <button class="nav-item nav-dropdown-toggle {% block nav_employees %}{% endblock %}" onclick="toggleNavDropdown(this)">
+          <i class="fas fa-users"></i>
+          <span>Сотрудники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="{% url 'employees:list' %}" class="nav-item nav-subitem">
+            <i class="fas fa-list"></i>
+            <span>Список сотрудников</span>
+          </a>
+          <a href="{% url 'employees:vacation_plan' %}" class="nav-item nav-subitem {% block nav_vacation_plan %}{% endblock %}">
+            <i class="fas fa-calendar-alt"></i>
+            <span>План отпусков</span>
+          </a>
+        </div>
+      </div>
+      <a href="{% url 'accounts:stub' 'subdivisions' %}" class="nav-item {% block nav_subdivisions %}{% endblock %}">
+        <i class="fas fa-sitemap"></i>
+        <span>Подразделения</span>
+      </a>
+      {% if request.user|is_admin_role %}
+      <a href="{% url 'accounts:admin_spa' %}" class="nav-item {% block nav_admin_spa %}{% endblock %}">
+        <i class="fas fa-sliders-h"></i>
+        <span>Справочники</span>
+      </a>
+      <a href="{% url 'works:work_calendar' %}" class="nav-item" id="nav-work-calendar">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Производственный календарь</span>
+      </a>
+      <a href="/admin/" class="nav-item">
+        <i class="fas fa-cogs"></i>
+        <span>Настройки системы</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    {% if request.user.is_authenticated %}
+    <div class="user-card">
+      <div class="user-avatar">{% employee_name %}</div>
+      <div class="user-info">
+        <div class="user-name">{% employee_name %}</div>
+        <div class="user-role">{% employee_role %}</div>
+      </div>
+      <a href="{% url 'accounts:logout' %}" class="logout-btn" title="Выйти">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</aside>
+
+<!-- Mobile Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Main Content -->
+<main class="main-content" id="mainContent">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle" title="Скрыть/показать меню">
+      <i class="fas fa-bars"></i>
+    </button>
+    <button class="mobile-toggle" id="mobileToggle">
+      <i class="fas fa-bars"></i>
+    </button>
+    <nav class="breadcrumb">
+      <a href="{% url 'accounts:dashboard' %}">Главная</a>
+      {% block breadcrumb %}{% endblock %}
+    </nav>
+    <div class="topbar-spacer"></div>
+    {% block topbar_actions %}{% endblock %}
+    {% if request.user.is_authenticated %}
+    <a href="{% url 'accounts:logout' %}" class="btn btn-outline btn-sm" title="Выйти из системы">
+      <i class="fas fa-sign-out-alt"></i> Выйти
+    </a>
+    {% endif %}
+  </header>
+
+  <div class="page-content">
+    {% if messages %}
+      {% for message in messages %}
+        <div style="display:none" class="django-message"
+             data-type="{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const mobileToggle = document.getElementById('mobileToggle');
+
+if (sidebarToggle) {
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+  });
+  if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    sidebar.classList.add('collapsed');
+    mainContent.classList.add('sidebar-collapsed');
+  }
+}
+if (mobileToggle) {
+  mobileToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    sidebarOverlay.classList.toggle('open');
+  });
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('open');
+  });
+}
+
+function showToast(message, type) {
+  type = type || 'success';
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  const icons = {success:'✓', error:'✕', warning:'!'};
+  toast.innerHTML = '<div class="toast-icon">' + (icons[type]||'!') + '</div><div class="toast-message">' + message + '</div>';
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.animation = 'slideIn 0.3s ease reverse';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 4000);
+}
+
+function toggleNavDropdown(btn) {
+  btn.classList.toggle('open');
+  var menu = btn.nextElementSibling;
+  if (menu) menu.classList.toggle('open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.django-message').forEach(function(el) {
+    var t = el.dataset.type;
+    var type = t && t.indexOf('error') >= 0 ? 'error'
+             : t && t.indexOf('warning') >= 0 ? 'warning' : 'success';
+    showToast(el.textContent.trim(), type);
+  });
+  // Авто-раскрытие дропдауна если активный подраздел
+  document.querySelectorAll('.nav-dropdown-menu .nav-item.active').forEach(function(el) {
+    var menu = el.closest('.nav-dropdown-menu');
+    var toggle = menu && menu.previousElementSibling;
+    if (menu) { menu.classList.add('open'); toggle.classList.add('open'); }
+  });
+});
+
+// ESC закрывает любое открытое модальное окно (.modal-overlay.open или .modal-backdrop)
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  // Сначала .modal-backdrop (от modal.js) — последний добавленный
+  var backdrops = document.querySelectorAll('.modal-backdrop');
+  if (backdrops.length) {
+    // modal.js сам обрабатывает ESC через свой listener — не дублируем
+    return;
+  }
+  // Legacy: .modal-overlay.open
+  var open = document.querySelectorAll('.modal-overlay.open');
+  if (open.length === 0) return;
+  open[open.length - 1].classList.remove('open');
+  e.preventDefault();
+});
+</script>
+{% block scripts %}{% endblock %}
+<script src="{% static 'js/tour.js' %}"></script>
+</body>
+</html>
