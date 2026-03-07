@@ -19,14 +19,18 @@ User = get_user_model()
 
 class Department(models.Model):
     """Отдел (подразделение)."""
-    code  = models.CharField('Код отдела',  max_length=20,  unique=True)
-    name  = models.CharField('Название',    max_length=200, blank=True)
+    code       = models.CharField('Код отдела', max_length=20, unique=True)
+    name       = models.CharField('Название',   max_length=200, blank=True)
+    ntc_center = models.ForeignKey(
+        'NTCCenter', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='departments', verbose_name='НТЦ-центр',
+    )
 
     class Meta:
         db_table     = 'emp_department'
         verbose_name = 'Отдел'
         verbose_name_plural = 'Отделы'
-        ordering = ['code']
+        ordering = ['ntc_center', 'code']
 
     def __str__(self):
         return self.code if not self.name else f'{self.code} — {self.name}'

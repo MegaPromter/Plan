@@ -7,7 +7,8 @@ from .models import (
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name')
+    list_display  = ('code', 'name', 'ntc_center')
+    list_filter   = ('ntc_center',)
     search_fields = ('code', 'name')
 
 

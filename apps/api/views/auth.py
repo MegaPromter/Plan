@@ -56,10 +56,20 @@ class DirsPublicView(View):
     """
 
     def get(self, request):
-        # Отделы из реальной таблицы
-        dept_values = list(
-            Department.objects.order_by('code').values_list('code', flat=True)
+        # НТЦ-центры
+        center_values = list(
+            NTCCenter.objects.order_by('code').values_list('code', flat=True)
         )
+
+        # Отделы, сгруппированные по НТЦ
+        depts_by_center = {}
+        dept_values = []
+        for d in Department.objects.select_related('ntc_center').order_by('code'):
+            dept_values.append(d.code)
+            if d.ntc_center:
+                depts_by_center.setdefault(d.ntc_center.code, []).append(d.code)
+            else:
+                depts_by_center.setdefault('', []).append(d.code)
 
         # Секторы, сгруппированные по отделу
         sectors_by_dept = {}
@@ -70,13 +80,9 @@ class DirsPublicView(View):
         # Должности из POSITION_CHOICES модели Employee
         position_values = [label for _, label in Employee.POSITION_CHOICES]
 
-        # НТЦ-центры из реальной таблицы
-        center_values = list(
-            NTCCenter.objects.order_by('code').values_list('code', flat=True)
-        )
-
         return JsonResponse({
             'dept': dept_values,
+            'depts_by_center': depts_by_center,
             'sectors_by_dept': sectors_by_dept,
             'position': position_values,
             'center': center_values,

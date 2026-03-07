@@ -290,8 +290,22 @@ async function openRegModal() {
       deptSel.appendChild(o);
     });
 
-    _fillSectors('');  // очистить список секторов
+    _fillDepts('');    // очистить список отделов и секторов
   } catch(_) {}
+}
+
+// Заполнить список отделов по выбранному НТЦ
+function _fillDepts(center) {
+  const sel = document.getElementById('regDept');
+  sel.innerHTML = '<option value="">— выберите —</option>';
+  document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
+  if (!center) return;
+  const list = (_regDirs.depts_by_center || {})[center] || [];
+  list.forEach(v => {
+    const o = document.createElement('option');
+    o.value = o.textContent = v;
+    sel.appendChild(o);
+  });
 }
 
 // Заполнить список секторов по выбранному отделу
@@ -306,6 +320,11 @@ function _fillSectors(dept) {
     sel.appendChild(o);
   });
 }
+
+// При смене НТЦ — перезаполнить отделы (и сбросить секторы)
+document.getElementById('regCenter').addEventListener('change', function() {
+  _fillDepts(this.value);
+});
 
 // При смене отдела — перезаполнить секторы
 document.getElementById('regDept').addEventListener('change', function() {
