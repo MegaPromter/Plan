@@ -235,10 +235,26 @@ function getCSRF() {
   return c ? c[1] : '';
 }
 
+// Заполнить список отделов по выбранному НТЦ (или все, если НТЦ не передан)
+function _fillDepts(center) {
+  const sel = document.getElementById('regDept');
+  sel.innerHTML = '<option value="">— выберите —</option>';
+  document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
+  document.getElementById('regDept').value = '';
+  document.getElementById('regSector').value = '';
+  if (!center) return;
+  const list = (_regDirs.depts_by_center || {})[center] || [];
+  list.forEach(v => {
+    const o = document.createElement('option');
+    o.value = o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
 // Показать/скрыть поля подразделения в зависимости от должности
 function _applyPositionFields(position) {
   const rule = POS_FIELDS[position] || '';
-  const showNtc    = rule === 'ntc';
+  const showNtc    = rule === 'ntc' || rule === 'dept' || rule === 'both';
   const showDept   = rule === 'dept' || rule === 'both';
   const showSector = rule === 'both';
 
@@ -246,10 +262,10 @@ function _applyPositionFields(position) {
   document.getElementById('fieldDept').style.display   = showDept   ? '' : 'none';
   document.getElementById('fieldSector').style.display = showSector ? '' : 'none';
 
-  // Сбрасываем значения скрытых полей
-  if (!showNtc)    document.getElementById('regCenter').value = '';
-  if (!showDept)   document.getElementById('regDept').value   = '';
-  if (!showSector) { document.getElementById('regSector').value = ''; }
+  // Сбрасываем при смене должности
+  document.getElementById('regCenter').value = '';
+  document.getElementById('regDept').innerHTML = '<option value="">— выберите —</option>';
+  document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
 }
 
 async function openRegModal() {
@@ -291,30 +307,8 @@ async function openRegModal() {
     });
 
     // Заполнить отделы
-    const deptSel = document.getElementById('regDept');
-    deptSel.innerHTML = '<option value="">— выберите —</option>';
-    (_regDirs.dept || []).forEach(v => {
-      const o = document.createElement('option');
-      o.value = o.textContent = v;
-      deptSel.appendChild(o);
-    });
-
-    _fillDepts('');    // очистить список отделов и секторов
+    // отделы заполняются динамически при выборе должности
   } catch(_) {}
-}
-
-// Заполнить список отделов по выбранному НТЦ
-function _fillDepts(center) {
-  const sel = document.getElementById('regDept');
-  sel.innerHTML = '<option value="">— выберите —</option>';
-  document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
-  if (!center) return;
-  const list = (_regDirs.depts_by_center || {})[center] || [];
-  list.forEach(v => {
-    const o = document.createElement('option');
-    o.value = o.textContent = v;
-    sel.appendChild(o);
-  });
 }
 
 // Заполнить список секторов по выбранному отделу
@@ -330,7 +324,7 @@ function _fillSectors(dept) {
   });
 }
 
-// При смене НТЦ — перезаполнить отделы (и сбросить секторы)
+// При смене НТЦ — перезаполнить отделы
 document.getElementById('regCenter').addEventListener('change', function() {
   _fillDepts(this.value);
 });
