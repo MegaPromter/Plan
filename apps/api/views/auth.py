@@ -5,6 +5,7 @@ POST    /api/register_public  -- самостоятельная регистра
 GET     /api/dirs_public      -- справочники для формы регистрации (без авторизации)
 """
 import logging
+import os
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -180,7 +181,7 @@ class RegisterPublicView(View):
             )
             Employee.objects.create(
                 user=user,
-                role='user',
+                role=os.environ.get('DEFAULT_ROLE', 'user'),
                 last_name=last_name,
                 first_name=first_name,
                 patronymic=patronymic,
