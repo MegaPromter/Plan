@@ -64,7 +64,8 @@
     }
 
     modal.addEventListener('click', function(e) {
-      if (!document.getElementById('tourModalCard').contains(e.target)) closeModal();
+      const card = document.getElementById('tourModalCard');
+      if (!card || !card.contains(e.target)) closeModal();
     });
 
     function escHandler(e) {
