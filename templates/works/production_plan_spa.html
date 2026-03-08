@@ -115,20 +115,22 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #0d1520;
-  border-bottom: 2px solid var(--accent);
+  background: var(--surface2);
+  border-bottom: 2px solid var(--border);
   border-right: 1px solid var(--border);
   padding: 8px 6px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 0.03em;
+  font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   text-align: center;
 }
 .pp-table tbody tr { border-bottom: 1px solid var(--border); }
-.pp-table tbody tr:hover { background: rgba(59,130,246,0.04); }
+.pp-table tbody tr:nth-child(even) { background: var(--surface2); }
+.pp-table tbody tr:nth-child(odd)  { background: var(--surface); }
+.pp-table tbody tr:hover { background: var(--accent-light) !important; }
 .pp-table td {
   border-right: 1px solid var(--border);
   padding: 3px;
@@ -157,7 +159,7 @@
   text-align: left;
   box-sizing: border-box;
 }
-.cell-edit:focus { background: rgba(59,130,246,0.1); }
+.cell-edit:focus { background: var(--accent-light); }
 .cell-edit[type="date"] { text-align: center; }
 select.cell-edit {
   background-color: var(--surface2) !important;
@@ -188,8 +190,8 @@ select.cell-edit option {
 /* Column filters */
 .filter-row th {
   padding: 3px;
-  background: #080d14;
-  border-bottom: 2px solid var(--accent);
+  background: #e8ecf2;
+  border-bottom: 1px solid var(--border);
 }
 .mf-wrap { position: relative; width: 100%; }
 .mf-trigger {
@@ -213,7 +215,7 @@ select.cell-edit option {
 }
 .mf-trigger.active {
   border-color: var(--accent);
-  background: rgba(59,130,246,0.12);
+  background: var(--accent-light);
   color: var(--accent);
 }
 .mf-trigger::after {
@@ -234,7 +236,7 @@ select.cell-edit option {
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
   padding: 6px 0;
   display: none;
   max-height: 260px;
