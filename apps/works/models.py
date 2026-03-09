@@ -218,23 +218,23 @@ class Work(models.Model):
     work_num         = models.CharField('Номер работы', max_length=50,  blank=True)
     work_designation = models.CharField('Обозначение',  max_length=200, blank=True)
     sheets_a4 = models.DecimalField(
-        'Листы А4', max_digits=8, decimal_places=2, null=True, blank=True,
+        'Листы А4', max_digits=12, decimal_places=2, null=True, blank=True,
     )
     norm = models.DecimalField(
-        'Норма (чел.-ч)', max_digits=8, decimal_places=2, null=True, blank=True,
+        'Норма (чел.-ч)', max_digits=12, decimal_places=2, null=True, blank=True,
     )
     coeff = models.DecimalField(
-        'Коэффициент', max_digits=8, decimal_places=3, null=True, blank=True,
+        'Коэффициент', max_digits=12, decimal_places=3, null=True, blank=True,
         validators=[MinValueValidator(0)],
     )
     total_2d = models.DecimalField(
-        'Трудоёмкость 2D', max_digits=8, decimal_places=2, null=True, blank=True,
+        'Трудоёмкость 2D', max_digits=12, decimal_places=2, null=True, blank=True,
     )
     total_3d = models.DecimalField(
-        'Трудоёмкость 3D', max_digits=8, decimal_places=2, null=True, blank=True,
+        'Трудоёмкость 3D', max_digits=12, decimal_places=2, null=True, blank=True,
     )
     labor = models.DecimalField(
-        'Трудозатраты итого', max_digits=8, decimal_places=2, null=True, blank=True,
+        'Трудозатраты итого', max_digits=12, decimal_places=2, null=True, blank=True,
     )
     sector_head_name = models.CharField(
         'Начальник сектора', max_length=200, blank=True,
