@@ -41,7 +41,7 @@ from apps.api.audit import log_action
 
 logger = logging.getLogger(__name__)
 
-TASKS_MAX = 500
+TASKS_MAX = 100000
 
 
 # ---------------------------------------------------------------------------
