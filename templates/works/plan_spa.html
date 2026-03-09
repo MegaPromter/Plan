@@ -1003,10 +1003,11 @@ tr.pp-locked .pp-lock-badge {
   <div class="modal-body" style="padding:16px 12px;">
     <div class="report-table-wrap">
     <table class="report-table">
-      <thead>
+      <thead id="reportThead">
         <tr>
+          <th id="rh_ii_pi" rowspan="2" style="display:none;">ИИ/ПИ</th>
           <th colspan="2" style="text-align:center;">Отчётный документ</th>
-          <th rowspan="2">Инвентарный №</th>
+          <th rowspan="2" id="rh_inventory">Инвентарный №</th>
           <th rowspan="2">Дата принятия</th>
           <th rowspan="2">Вид doc</th>
           <th rowspan="2">Класс doc</th>
@@ -1020,7 +1021,7 @@ tr.pp-locked .pp-lock-badge {
         </tr>
         <tr>
           <th>Наименование</th>
-          <th id="rh_designation">Обозначение</th>
+          <th>Обозначение</th>
         </tr>
       </thead>
       <tbody id="reportBody"></tbody>
@@ -3113,49 +3114,41 @@ async function loadDirs() {
 // ── REPORT ────────────────────────────────────────────────────────────────
 // Варианты нормоконтроля
 const NORM_CONTROL_OPTIONS = ["штатный", "029"];
-// Варианты наименования для корректировки
-const CORRECTION_NAME_OPTIONS = ["ИИ", "ПИ"];
+// Варианты ИИ/ПИ для корректировки
+const II_PI_OPTIONS = ["ИИ", "ПИ"];
 
 // Определяет конфигурацию полей по типу задачи
-// Возвращает { disabled: Set<field>, required: Set<field>, bvd_required: bool,
-//              show_doc_number: bool, show_designation: bool }
+// Возвращает { disabled: Set<field>, required: Set<field>, bvd_required: bool, is_correction: bool }
 function _reportConfig(taskType) {
   const tt = (taskType || 'Выпуск нового документа').trim();
-  // Поля, которые неактивны по умолчанию (для каждого типа)
   let disabled = new Set();
-  let required = new Set(['doc_name', 'bvd_hours']);
+  let required = new Set();
   let bvd_required = false;
-  let show_doc_number = false;   // показывать «Номер» вместо «Обозначение»
-  let show_designation = true;   // показывать «Обозначение»
+  let is_correction = false;
 
   if (tt === 'Выпуск нового документа') {
     required = new Set(['doc_name', 'doc_designation', 'inventory_num', 'date_accepted',
                         'doc_type', 'doc_class', 'sheets_a4', 'norm', 'norm_control', 'doc_link']);
-    bvd_required = false;
   } else if (tt === 'Корректировка документа') {
-    // doc_name — дропдаун ИИ/ПИ; обозначение → «Номер»
-    // inventory_num, doc_type, doc_class, coeff — неактивны
-    disabled = new Set(['inventory_num', 'doc_type', 'doc_class', 'coeff']);
-    show_doc_number = true;
-    show_designation = false;
-    required = new Set(['doc_name', 'doc_number', 'date_accepted', 'sheets_a4', 'norm', 'norm_control']);
-    bvd_required = false;
+    // Отдельная колонка ИИ/ПИ; наим. и обознач. из ЕТБД (редактируемые)
+    // «Инвентарный №» → «Номер изв.» (редактируемое, через doc_number)
+    // Вид, Класс, Коэфф, БВД — неактивны
+    is_correction = true;
+    disabled = new Set(['doc_type', 'doc_class', 'coeff', 'bvd_hours']);
+    required = new Set(['ii_pi', 'doc_name', 'doc_designation', 'doc_number',
+                        'date_accepted', 'sheets_a4', 'norm', 'norm_control']);
   } else if (tt === 'Разработка') {
-    // наименование и обозначение из ЕТБД (редактируемые)
-    // инвентарный, дата, вид, класс, листов, норматив, коэфф, нормоконтроль — неактивны
     disabled = new Set(['inventory_num', 'date_accepted', 'doc_type', 'doc_class',
                         'sheets_a4', 'norm', 'coeff', 'norm_control']);
     bvd_required = true;
     required = new Set(['doc_name', 'doc_designation', 'bvd_hours']);
   } else if (tt === 'Сопровождение (ОКАН)') {
-    // наименование и обозначение из ЕТБД (редактируемые)
-    // инвентарный, дата, вид, класс, листов, норматив, коэфф, ссылка — неактивны
     disabled = new Set(['inventory_num', 'date_accepted', 'doc_type', 'doc_class',
                         'sheets_a4', 'norm', 'coeff', 'doc_link']);
     bvd_required = true;
     required = new Set(['doc_name', 'doc_designation', 'bvd_hours']);
   }
-  return { disabled, required, bvd_required, show_doc_number, show_designation };
+  return { disabled, required, bvd_required, is_correction };
 }
 
 async function openReportModal(taskOrId) {
@@ -3179,16 +3172,13 @@ async function openReportModal(taskOrId) {
 
 function _makeNewReportRow() {
   const row = {task_id: currentTaskId};
-  const tt = (currentTask && currentTask.task_type) || 'Выпуск нового документа';
-  // Норматив всегда из ЕТБД
+  // Норматив из ЕТБД
   if (currentTask && currentTask.norm != null && currentTask.norm !== '') {
     row.norm = currentTask.norm;
   }
-  // Наименование и обозначение из ЕТБД для всех типов кроме корректировки
-  if (tt !== 'Корректировка документа') {
-    if (currentTask && currentTask.work_name) row.doc_name = currentTask.work_name;
-    if (currentTask && currentTask.description) row.doc_designation = currentTask.description;
-  }
+  // Наименование и обозначение из ЕТБД для всех типов
+  if (currentTask && currentTask.work_name) row.doc_name = currentTask.work_name;
+  if (currentTask && currentTask.description) row.doc_designation = currentTask.description;
   return row;
 }
 
@@ -3205,10 +3195,14 @@ document.addEventListener("click", e => {
   }
 });
 
-// Обновляет заголовок второй колонки «Обозначение» / «Номер»
+// Обновляет заголовки таблицы в зависимости от типа задачи
 function _updateReportHeader(cfg) {
-  const th = document.getElementById('rh_designation');
-  if (th) th.textContent = cfg.show_doc_number ? 'Номер' : 'Обозначение';
+  // Колонка ИИ/ПИ — только для корректировки
+  const thIiPi = document.getElementById('rh_ii_pi');
+  if (thIiPi) thIiPi.style.display = cfg.is_correction ? '' : 'none';
+  // «Инвентарный №» → «Номер изв.» для корректировки
+  const thInv = document.getElementById('rh_inventory');
+  if (thInv) thInv.textContent = cfg.is_correction ? 'Номер изв.' : 'Инвентарный №';
 }
 
 function renderReportTable() {
@@ -3219,74 +3213,96 @@ function renderReportTable() {
   reportRows.forEach((r,i) => tbody.appendChild(makeReportRow(r, i, cfg)));
 }
 
-function _makeCell(f, r, cfg) {
+function _makeSelectCell(field, options, currentVal, isDisabled) {
   const td = document.createElement("td");
-  const isDisabled = cfg.disabled.has(f);
+  const sel = document.createElement("select");
+  sel.className = "r-cell r-cell-select"; sel.dataset.field = field;
+  const emptyOpt = document.createElement("option"); emptyOpt.value = ""; emptyOpt.textContent = "—";
+  sel.appendChild(emptyOpt);
+  options.forEach(opt => {
+    const o = document.createElement("option"); o.value = opt; o.textContent = opt;
+    if (currentVal === opt) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (isDisabled) { sel.disabled = true; sel.classList.add('r-cell-disabled'); }
+  td.appendChild(sel);
+  return td;
+}
 
-  if (f === 'date_accepted') {
-    const inp = document.createElement("input");
-    inp.type = "date"; inp.className = "r-cell r-cell-date"; inp.dataset.field = f;
-    inp.value = r[f] || "";
-    if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
-    td.appendChild(inp);
+function _makeTextCell(field, value, isDisabled) {
+  const td = document.createElement("td");
+  const inp = document.createElement("textarea");
+  inp.className = "r-cell"; inp.rows = 1;
+  inp.value = value != null ? String(value) : "";
+  inp.dataset.field = field;
+  inp.addEventListener("input", () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
+  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
+  td.appendChild(inp);
+  return td;
+}
 
-  } else if (f === 'norm_control') {
-    const sel = document.createElement("select");
-    sel.className = "r-cell r-cell-select"; sel.dataset.field = f;
-    const emptyOpt = document.createElement("option"); emptyOpt.value = ""; emptyOpt.textContent = "—";
-    sel.appendChild(emptyOpt);
-    NORM_CONTROL_OPTIONS.forEach(opt => {
-      const o = document.createElement("option"); o.value = opt; o.textContent = opt;
-      if (r[f] === opt) o.selected = true;
-      sel.appendChild(o);
-    });
-    if (isDisabled) { sel.disabled = true; sel.classList.add('r-cell-disabled'); }
-    td.appendChild(sel);
-
-  } else if (f === 'doc_name' && cfg.show_doc_number) {
-    // Для корректировки — дропдаун ИИ/ПИ
-    const sel = document.createElement("select");
-    sel.className = "r-cell r-cell-select"; sel.dataset.field = f;
-    const emptyOpt = document.createElement("option"); emptyOpt.value = ""; emptyOpt.textContent = "—";
-    sel.appendChild(emptyOpt);
-    CORRECTION_NAME_OPTIONS.forEach(opt => {
-      const o = document.createElement("option"); o.value = opt; o.textContent = opt;
-      if (r[f] === opt) o.selected = true;
-      sel.appendChild(o);
-    });
-    td.appendChild(sel);
-
-  } else if (f === 'doc_designation') {
-    // При корректировке «Обозначение» заменяется на «Номер» (doc_number)
-    const realField = cfg.show_doc_number ? 'doc_number' : 'doc_designation';
-    const inp = document.createElement("textarea");
-    inp.className = "r-cell"; inp.rows = 1;
-    inp.value = r[realField] != null ? String(r[realField]) : "";
-    inp.dataset.field = realField;
-    inp.addEventListener("input", () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
-    if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
-    td.appendChild(inp);
-
-  } else {
-    const inp = document.createElement("textarea");
-    inp.className = "r-cell"; inp.rows = 1;
-    inp.value = r[f] != null ? String(r[f]) : "";
-    inp.dataset.field = f;
-    inp.addEventListener("input", () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
-    if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
-    td.appendChild(inp);
-  }
+function _makeDateCell(field, value, isDisabled) {
+  const td = document.createElement("td");
+  const inp = document.createElement("input");
+  inp.type = "date"; inp.className = "r-cell r-cell-date"; inp.dataset.field = field;
+  inp.value = value || "";
+  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
+  td.appendChild(inp);
   return td;
 }
 
 function makeReportRow(r, idx, cfg) {
   const tr = document.createElement("tr"); tr.dataset.rid = r.id || "";
-  // Поля в порядке колонок таблицы
-  const fields = ["doc_name", "doc_designation", "inventory_num", "date_accepted",
-                  "doc_type", "doc_class", "sheets_a4", "norm", "coeff",
-                  "bvd_hours", "norm_control", "doc_link"];
-  fields.forEach(f => tr.appendChild(_makeCell(f, r, cfg)));
 
+  // Колонка ИИ/ПИ — только для корректировки, первая
+  if (cfg.is_correction) {
+    const td = _makeSelectCell('ii_pi', II_PI_OPTIONS, r.ii_pi || '', false);
+    td.style.display = '';
+    tr.appendChild(td);
+  } else {
+    // Пустая ячейка-заглушка чтобы colspan в thead работал правильно
+    const td = document.createElement("td"); td.style.display = 'none'; tr.appendChild(td);
+  }
+
+  // Наименование и Обозначение — всегда текст (из ЕТБД, редактируемые)
+  tr.appendChild(_makeTextCell('doc_name', r.doc_name, false));
+  tr.appendChild(_makeTextCell('doc_designation', r.doc_designation, false));
+
+  // Инвентарный № / Номер изв. (для корректировки — поле doc_number)
+  if (cfg.is_correction) {
+    tr.appendChild(_makeTextCell('doc_number', r.doc_number, false));
+  } else {
+    tr.appendChild(_makeTextCell('inventory_num', r.inventory_num, cfg.disabled.has('inventory_num')));
+  }
+
+  // Дата принятия
+  tr.appendChild(_makeDateCell('date_accepted', r.date_accepted, cfg.disabled.has('date_accepted')));
+
+  // Вид doc
+  tr.appendChild(_makeTextCell('doc_type', r.doc_type, cfg.disabled.has('doc_type')));
+
+  // Класс doc
+  tr.appendChild(_makeTextCell('doc_class', r.doc_class, cfg.disabled.has('doc_class')));
+
+  // Листов А4
+  tr.appendChild(_makeTextCell('sheets_a4', r.sheets_a4, cfg.disabled.has('sheets_a4')));
+
+  // Норматив
+  tr.appendChild(_makeTextCell('norm', r.norm, cfg.disabled.has('norm')));
+
+  // Коэфф
+  tr.appendChild(_makeTextCell('coeff', r.coeff, cfg.disabled.has('coeff')));
+
+  // БВД
+  tr.appendChild(_makeTextCell('bvd_hours', r.bvd_hours, cfg.disabled.has('bvd_hours')));
+
+  // Нормоконтроль
+  tr.appendChild(_makeSelectCell('norm_control', NORM_CONTROL_OPTIONS, r.norm_control || '', cfg.disabled.has('norm_control')));
+
+  // Ссылка
+  tr.appendChild(_makeTextCell('doc_link', r.doc_link, cfg.disabled.has('doc_link')));
+
+  // Кнопка удаления
   const delTd = document.createElement("td"); delTd.style.padding = "4px 6px";
   const delBtn = document.createElement("button"); delBtn.className = "r-del"; delBtn.textContent = "✕";
   delBtn.onclick = async () => {
