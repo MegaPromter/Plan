@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница списка KPI (ключевых показателей эффективности) конкретного сотрудника -->
 {% block title %}KPI — {{ employee.full_name }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
@@ -11,8 +12,10 @@
 <span class="breadcrumb-current">KPI</span>
 {% endblock %}
 
+<!-- Помечаем пункт «Сотрудники» в сайдбаре как активный -->
 {% block nav_employees %}active{% endblock %}
 
+<!-- Кнопка добавления KPI в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
   <a href="{% url 'employees:kpi_add' employee.pk %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить KPI</a>
@@ -20,6 +23,7 @@
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок: «KPI» и ФИО сотрудника -->
 <div class="page-header">
   <div>
     <h1>KPI</h1>
@@ -27,23 +31,28 @@
   </div>
 </div>
 
+<!-- Таблица KPI -->
 {% if kpis %}
 <table class="data-table">
   <thead>
     <tr>
       <th>Год</th><th>Месяц</th><th>План ч.</th><th>Факт ч.</th>
       <th>Выполнение %</th><th>Замечания</th><th>Документы</th><th>Балл</th><th>Примечания</th>
+      <!-- Колонка действий — только для редакторов -->
       {% if request.user|is_writer %}<th></th>{% endif %}
     </tr>
   </thead>
   <tbody>
+    <!-- Цикл по записям KPI -->
     {% for k in kpis %}
     <tr>
-      <td>{{ k.year }}</td>
-      <td>{{ k.month }}</td>
-      <td>{{ k.plan_hours }}</td>
-      <td>{{ k.fact_hours }}</td>
+      <td>{{ k.year }}</td>    <!-- год отчётного периода -->
+      <td>{{ k.month }}</td>   <!-- месяц отчётного периода -->
+      <td>{{ k.plan_hours }}</td>   <!-- плановые часы -->
+      <td>{{ k.fact_hours }}</td>   <!-- фактические часы -->
       <td>
+        <!-- Цветовой бейдж процента выполнения:
+             зелёный ≥100%, жёлтый ≥80%, красный <80% -->
         {% if k.completion_pct %}
           {% if k.completion_pct >= 100 %}
             <span class="badge badge-green">{{ k.completion_pct }}%</span>
@@ -54,10 +63,12 @@
           {% endif %}
         {% else %}—{% endif %}
       </td>
-      <td>{{ k.norm_control_remarks }}</td>
-      <td>{{ k.docs_issued }}</td>
-      <td>{{ k.score|default:"—" }}</td>
+      <td>{{ k.norm_control_remarks }}</td>  <!-- замечания нормоконтроля -->
+      <td>{{ k.docs_issued }}</td>           <!-- выданные документы -->
+      <td>{{ k.score|default:"—" }}</td>     <!-- итоговый балл -->
+      <!-- Примечание (обрезано до 40 символов) -->
       <td>{{ k.notes|truncatechars:40|default:"—" }}</td>
+      <!-- Кнопка редактирования записи KPI (только для редакторов) -->
       {% if request.user|is_writer %}
       <td>
         <a href="{% url 'employees:kpi_edit' k.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
@@ -68,15 +79,18 @@
   </tbody>
 </table>
 {% else %}
+<!-- Пустое состояние: KPI не заполнен -->
 <div class="empty-state">
   <div class="empty-state-icon"><i class="fas fa-chart-bar"></i></div>
   <p>KPI не заполнен</p>
   {% if request.user|is_writer %}
+    <!-- Кнопка добавления первой записи KPI -->
     <a href="{% url 'employees:kpi_add' employee.pk %}" class="btn btn-primary">Добавить запись KPI</a>
   {% endif %}
 </div>
 {% endif %}
 
+<!-- Кнопка возврата на профиль сотрудника -->
 <div style="margin-top:20px;">
   <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> К профилю</a>
 </div>

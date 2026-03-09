@@ -1,22 +1,28 @@
 {% extends "base.html" %}
+<!-- Форма создания или редактирования извещения (Notice) -->
 {% block title %}{% if object %}Редактировать извещение{% else %}Новое извещение{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Ссылка назад на журнал извещений -->
 <a href="{% url 'works:notice_list' %}">Журнал извещений</a>
 <span>/</span>
+<!-- При редактировании показываем ссылку на детальную страницу извещения -->
 {% if object %}
 <a href="{% url 'works:notice_detail' object.pk %}">#{{ object.pk }}</a>
 <span>/</span>
 <span class="breadcrumb-current">Редактировать</span>
 {% else %}
+<!-- При создании — просто текст -->
 <span class="breadcrumb-current">Новое извещение</span>
 {% endif %}
 {% endblock %}
 
+<!-- Помечаем пункт «Журнал извещений» в сайдбаре как активный -->
 {% block nav_notices %}active{% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы с режимом (редактирование / создание) и PK -->
 <div class="page-header">
   <h1>{% if object %}Редактировать извещение #{{ object.pk }}{% else %}Новое извещение{% endif %}</h1>
 </div>
@@ -25,12 +31,14 @@
   <form method="post" novalidate>
     {% csrf_token %}
 
+    <!-- Общие ошибки формы (non_field_errors) -->
     {% if form.non_field_errors %}
     <div class="alert-error">
       {% for e in form.non_field_errors %}{{ e }}{% endfor %}
     </div>
     {% endif %}
 
+    <!-- Тип извещения и статус (активное / закрытое) — двухколоночный ряд -->
     <div class="form-row">
       <div class="form-group {% if form.notice_type.errors %}has-error{% endif %}">
         <label>{{ form.notice_type.label }}</label>
@@ -44,17 +52,21 @@
       </div>
     </div>
 
+    <!-- Отдел, исполнитель и дата выдачи извещения — трёхколоночный ряд -->
     <div class="form-row">
+      <!-- Отдел (FK → Department) -->
       <div class="form-group {% if form.department.errors %}has-error{% endif %}">
         <label>{{ form.department.label }}</label>
         {{ form.department }}
         {% if form.department.errors %}<span class="form-error">{{ form.department.errors.0 }}</span>{% endif %}
       </div>
+      <!-- Исполнитель (FK → Employee) -->
       <div class="form-group {% if form.executor.errors %}has-error{% endif %}">
         <label>{{ form.executor.label }}</label>
         {{ form.executor }}
         {% if form.executor.errors %}<span class="form-error">{{ form.executor.errors.0 }}</span>{% endif %}
       </div>
+      <!-- Дата выдачи извещения -->
       <div class="form-group {% if form.date_issued.errors %}has-error{% endif %}">
         <label>{{ form.date_issued.label }}</label>
         {{ form.date_issued }}
@@ -62,20 +74,24 @@
       </div>
     </div>
 
+    <!-- Тема извещения (краткое наименование) -->
     <div class="form-group {% if form.subject.errors %}has-error{% endif %}">
       <label>{{ form.subject.label }}</label>
       {{ form.subject }}
       {% if form.subject.errors %}<span class="form-error">{{ form.subject.errors.0 }}</span>{% endif %}
     </div>
 
+    <!-- Описание / текст извещения (textarea) -->
     <div class="form-group {% if form.description.errors %}has-error{% endif %}">
       <label>{{ form.description.label }}</label>
       {{ form.description }}
       {% if form.description.errors %}<span class="form-error">{{ form.description.errors.0 }}</span>{% endif %}
     </div>
 
+    <!-- Кнопки действий -->
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      <!-- Отмена: при редактировании — на детальную страницу; при создании — на список -->
       {% if object %}
         <a href="{% url 'works:notice_detail' object.pk %}" class="btn btn-outline">Отмена</a>
       {% else %}

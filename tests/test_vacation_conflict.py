@@ -22,10 +22,11 @@ class TestVacationConflict:
         )
         client = Client()
         client.force_login(dept_head_user)
+        # API принимает {executors: [full_name], date_start, date_end}
         resp = client.post(
             '/api/check_vacation_conflict/',
             data=json.dumps({
-                'employee_id': emp.pk,
+                'executors': [emp.full_name],
                 'date_start': '2025-02-01',
                 'date_end': '2025-02-10',
             }),
@@ -33,7 +34,8 @@ class TestVacationConflict:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data.get('conflict') is False
+        assert 'conflicts' in data
+        assert len(data['conflicts']) == 0
 
     def test_conflict_exists(self, dept_head_user):
         """Пересекающийся отпуск — конфликт есть."""
@@ -45,10 +47,11 @@ class TestVacationConflict:
         )
         client = Client()
         client.force_login(dept_head_user)
+        # API принимает {executors: [full_name], date_start, date_end}
         resp = client.post(
             '/api/check_vacation_conflict/',
             data=json.dumps({
-                'employee_id': emp.pk,
+                'executors': [emp.full_name],
                 'date_start': '2025-03-15',
                 'date_end': '2025-04-05',
             }),
@@ -56,4 +59,5 @@ class TestVacationConflict:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data.get('conflict') is True
+        assert 'conflicts' in data
+        assert len(data['conflicts']) > 0

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+<!-- Форма создания или редактирования записи KPI сотрудника -->
 {% block title %}{% if form.instance.pk %}Редактировать KPI{% else %}Добавить KPI{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
@@ -9,6 +10,7 @@
 <span>/</span>
 <a href="{% url 'employees:kpi_list' employee.pk %}">KPI</a>
 <span>/</span>
+<!-- Режим зависит от наличия существующего pk -->
 {% if form.instance.pk %}
 <span class="breadcrumb-current">Редактировать</span>
 {% else %}
@@ -16,9 +18,11 @@
 {% endif %}
 {% endblock %}
 
+<!-- Помечаем пункт «Сотрудники» в сайдбаре как активный -->
 {% block nav_employees %}active{% endblock %}
 
 {% block content %}
+<!-- Заголовок: режим и ФИО сотрудника -->
 <div class="page-header">
   <div>
     <h1>{% if form.instance.pk %}Редактировать KPI{% else %}Добавить KPI{% endif %}</h1>
@@ -30,12 +34,14 @@
   <form method="post" novalidate>
     {% csrf_token %}
 
+    <!-- Общие ошибки формы -->
     {% if form.non_field_errors %}
     <div class="alert-error">
       {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
     </div>
     {% endif %}
 
+    <!-- Год и месяц отчётного периода — двухколоночный ряд -->
     <div class="form-row">
       <div class="form-group {% if form.year.errors %}has-error{% endif %}">
         <label>{{ form.year.label }}</label>
@@ -49,6 +55,7 @@
       </div>
     </div>
 
+    <!-- Плановые и фактические часы -->
     <div class="form-row">
       <div class="form-group {% if form.plan_hours.errors %}has-error{% endif %}">
         <label>{{ form.plan_hours.label }}</label>
@@ -62,6 +69,7 @@
       </div>
     </div>
 
+    <!-- Замечания нормоконтроля и выданные документы -->
     <div class="form-row">
       <div class="form-group {% if form.norm_control_remarks.errors %}has-error{% endif %}">
         <label>{{ form.norm_control_remarks.label }}</label>
@@ -75,23 +83,27 @@
       </div>
     </div>
 
+    <!-- Итоговый балл KPI (второй столбец пустой — для выравнивания) -->
     <div class="form-row">
       <div class="form-group {% if form.score.errors %}has-error{% endif %}">
         <label>{{ form.score.label }}</label>
         {{ form.score }}
         {% if form.score.errors %}<span class="form-error">{{ form.score.errors.0 }}</span>{% endif %}
       </div>
-      <div class="form-group"></div>
+      <div class="form-group"></div>  <!-- пустая ячейка для выравнивания сетки -->
     </div>
 
+    <!-- Произвольные примечания к записи KPI -->
     <div class="form-group {% if form.notes.errors %}has-error{% endif %}">
       <label>{{ form.notes.label }}</label>
       {{ form.notes }}
       {% if form.notes.errors %}<span class="form-error">{{ form.notes.errors.0 }}</span>{% endif %}
     </div>
 
+    <!-- Кнопки действий -->
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      <!-- Отмена возвращает к списку KPI -->
       <a href="{% url 'employees:kpi_list' employee.pk %}" class="btn btn-outline">Отмена</a>
     </div>
   </form>

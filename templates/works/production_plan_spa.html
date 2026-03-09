@@ -1,37 +1,46 @@
 {% extends "base.html" %}
 {% load static employee_tags %}
+<!-- SPA производственного плана: лендинг с карточками ПП-проектов и таблица строк с инлайн-редактированием -->
 
 {% block title %}Производственный план — Система управления{% endblock %}
 
+<!-- Активный пункт меню «Производственный план» в сайдбаре -->
 {% block nav_pp %}active{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Динамический заголовок хлебной крошки: меняется при открытии конкретного плана -->
 <span class="breadcrumb-current" id="breadcrumbTitle">Производственный план</span>
 {% endblock %}
 
 {% block topbar_actions %}
-<!-- Landing mode buttons -->
+<!-- Кнопки верхней панели для режима лендинга (список планов) -->
 <div id="landingActions">
-  {% if request.user|is_writer %}
+  <!-- Кнопка создания плана доступна только администраторам -->
+  {% if request.user|is_admin_role %}
   <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
     <i class="fas fa-plus"></i> Создать новый производственный план
   </button>
   {% endif %}
 </div>
-<!-- Project mode buttons (hidden initially) -->
+<!-- Кнопки верхней панели для режима просмотра плана (скрыты по умолчанию) -->
 <div id="projectActions" style="display:none;">
+  <!-- Кнопка возврата на лендинг -->
   <a href="#" class="btn btn-outline btn-sm" onclick="goToLanding(); return false;">
     <i class="fas fa-arrow-left"></i> Все планы
   </a>
+  <!-- Кнопки записи/синхронизации доступны writer-ролям и выше -->
   {% if request.user|is_writer %}
+  <!-- Синхронизация данных ПП → модуль план/отчёт -->
   <button class="btn btn-secondary btn-sm" onclick="syncToTasks()">
-    <i class="fas fa-sync-alt"></i> Синхр. с ПО
+    <i class="fas fa-sync-alt"></i> Синхронизировать с СП
   </button>
+  <!-- Добавить новую строку непосредственно в таблицу -->
   <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
     <i class="fas fa-plus"></i> Добавить строку
   </button>
   {% endif %}
+  <!-- Бейдж активных фильтров: клик — сбросить все колоночные фильтры -->
   <span class="filters-active-badge" id="filtersActiveBadge" onclick="clearAllColFilters()"
         style="display:none;font-size:13px;color:var(--accent);cursor:pointer;white-space:nowrap;">
     <i class="fas fa-times"></i> Сбросить фильтры
@@ -41,14 +50,15 @@
 
 {% block styles %}
 <style>
-/* ── PP-specific styles ─────────────────────────────────────────────── */
+/* ── Стили, специфичные для страницы производственного плана ─────────── */
 
-/* Landing: project cards */
+/* Сетка карточек ПП-проектов на лендинге (адаптивная) */
 .pp-projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+/* Карточка одного ПП-проекта */
 .pp-project-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -58,21 +68,25 @@
   transition: all 0.2s ease;
   position: relative;
 }
+/* Карточка при наведении: приподнять и добавить синюю тень */
 .pp-project-card:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(59,130,246,0.15);
 }
+/* Название ПП-плана в карточке */
 .pp-project-card-name {
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
   margin-bottom: 8px;
 }
+/* Счётчик строк в карточке */
 .pp-project-card-count {
   font-size: 13px;
   color: var(--muted);
 }
+/* Кнопки действий карточки: скрыты, появляются при наведении */
 .pp-project-card-actions {
   position: absolute;
   top: 12px;
@@ -82,7 +96,9 @@
   opacity: 0;
   transition: opacity 0.15s;
 }
+/* Показать кнопки действий при hover на карточку */
 .pp-project-card:hover .pp-project-card-actions { opacity: 1; }
+/* Кнопка-иконка в карточке (редактировать / удалить) */
 .pp-card-btn {
   width: 28px; height: 28px;
   border: 1px solid var(--border);
@@ -96,14 +112,20 @@
   font-size: 12px;
   transition: all 0.15s;
 }
+/* Кнопка при наведении — синяя акцентная рамка */
 .pp-card-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* Кнопка удаления — красный hover */
 .pp-card-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
-/* Production plan table */
+/* Обёртка таблицы с горизонтальной прокруткой и фиксированной высотой */
 .pp-table-wrap {
   overflow-x: auto;
   max-height: calc(100vh - 140px);
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  border: 1px solid var(--border2);
 }
+/* Основная таблица производственного плана */
 .pp-table {
   border-collapse: collapse;
   width: auto;
@@ -111,43 +133,53 @@
   min-width: 100%;
   table-layout: fixed;
 }
+/* Заголовки столбцов: прилипающие при прокрутке (sticky) */
 .pp-table thead th {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--surface2);
-  border-bottom: 2px solid var(--border);
-  border-right: 1px solid var(--border);
-  padding: 8px 6px;
+  background: #eef1f7;
+  border-bottom: 2px solid var(--border2);
+  border-right: 1px solid var(--border2);
+  padding: 9px 6px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text2);
-  letter-spacing: 0.04em;
+  color: #4a5568;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
   text-align: center;
+  box-shadow: 0 1px 0 var(--border2);
 }
-.pp-table tbody tr { border-bottom: 1px solid var(--border); }
-.pp-table tbody tr:nth-child(even) { background: var(--surface2); }
-.pp-table tbody tr:nth-child(odd)  { background: var(--surface); }
-.pp-table tbody tr:hover { background: var(--accent-light) !important; }
+/* Строки тела таблицы */
+.pp-table tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.12s; }
+/* Чередование фонов: чётные строки чуть темнее */
+.pp-table tbody tr:nth-child(even) { background: #f6f8fb; }
+.pp-table tbody tr:nth-child(odd)  { background: #ffffff; }
+/* Строка при наведении — акцентный фон */
+.pp-table tbody tr:hover { background: #edf2ff !important; }
+/* Ячейки таблицы */
 .pp-table td {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border2);
   padding: 3px;
   vertical-align: middle;
   text-align: center;
 }
+/* Первый столбец (номер строки) — серый мелкий текст, чуть выделен фоном */
 .pp-table td:first-child {
   text-align: center;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  background: #f0f3f8;
+  font-variant-numeric: tabular-nums;
+  border-right: 2px solid var(--border2);
 }
 
-/* Inline cell editing */
+/* Инлайн-поле редактирования ячейки: прозрачный фон, без рамки */
 .cell-edit {
   width: 100%;
-  min-height: 26px;
-  padding: 3px 5px;
+  min-height: 28px;
+  padding: 4px 6px;
   background: transparent;
   border: none;
   outline: none;
@@ -156,25 +188,31 @@
   font-size: 13px;
   resize: none;
   overflow: hidden;
-  text-align: left;
+  text-align: center;
   box-sizing: border-box;
 }
-.cell-edit:focus { background: var(--accent-light); }
-.cell-edit[type="date"] { text-align: center; }
+/* Ячейка в фокусе — лёгкий синеватый фон */
+.cell-edit:focus { background: rgba(59,130,246,0.06); border-radius: 3px; }
+/* Ячейка-селект: явный фон и рамка */
 select.cell-edit {
-  background-color: var(--surface2) !important;
+  background-color: transparent !important;
   color: var(--text) !important;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 4px;
+  border: none;
+  border-radius: 0;
+  padding: 4px 6px;
   width: 100%;
+  cursor: pointer;
 }
+select.cell-edit:focus { background: rgba(59,130,246,0.06) !important; }
+/* Опции селекта */
 select.cell-edit option {
   background-color: var(--surface2) !important;
   color: var(--text) !important;
 }
+/* Числовые ячейки: выравнивание по правому краю, табличные цифры */
 .cell-num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* Кнопка удаления строки (крестик) */
 .btn-delete {
   background: transparent;
   color: var(--danger);
@@ -184,16 +222,21 @@ select.cell-edit option {
   cursor: pointer;
   font-size: 14px;
   transition: all 0.15s;
+  opacity: 0.55;
 }
-.btn-delete:hover { background: rgba(239,68,68,0.15); }
+.pp-table tbody tr:hover .btn-delete { opacity: 1; }
+/* Hover кнопки удаления: полупрозрачный красный фон */
+.btn-delete:hover { background: rgba(239,68,68,0.12); opacity: 1; }
 
-/* Column filters */
+/* Строка фильтров под заголовком таблицы */
 .filter-row th {
   padding: 3px;
-  background: #e8ecf2;
-  border-bottom: 1px solid var(--border);
+  background: #e4e9f2;
+  border-bottom: 2px solid var(--border2);
 }
+/* Обёртка мультифильтра (относительное позиционирование для dropdown) */
 .mf-wrap { position: relative; width: 100%; }
+/* Кнопка-триггер открытия мультифильтра */
 .mf-trigger {
   width: 100%;
   padding: 2px 16px 2px 4px;
@@ -213,11 +256,13 @@ select.cell-edit option {
   box-sizing: border-box;
   position: relative;
 }
+/* Активный фильтр: синяя рамка и акцентный фон */
 .mf-trigger.active {
   border-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
 }
+/* Стрелка вниз через pseudo-element */
 .mf-trigger::after {
   content: "\25BE";
   position: absolute;
@@ -228,6 +273,7 @@ select.cell-edit option {
   color: var(--muted);
   pointer-events: none;
 }
+/* Выпадающий список мультифильтра: фиксированное позиционирование */
 .mf-dropdown {
   position: fixed;
   z-index: 9999;
@@ -242,8 +288,11 @@ select.cell-edit option {
   max-height: 260px;
   overflow-y: auto;
 }
+/* Открытый дропдаун */
 .mf-dropdown.open { display: block; }
+/* Зона поиска в дропдауне */
 .mf-search { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+/* Поле ввода поиска в дропдауне */
 .mf-search input {
   width: 100%;
   background: var(--bg);
@@ -256,6 +305,7 @@ select.cell-edit option {
   font-family: var(--font);
   box-sizing: border-box;
 }
+/* Одна опция в мультифильтре (чекбокс + текст) */
 .mf-option {
   display: flex;
   align-items: center;
@@ -266,14 +316,18 @@ select.cell-edit option {
   color: var(--text);
   transition: background 0.1s;
 }
+/* Опция при наведении */
 .mf-option:hover { background: var(--surface2); }
+/* Чекбокс в опции — акцентный цвет */
 .mf-option input[type=checkbox] { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+/* Панель кнопок «Все» / «Сброс» в дропдауне */
 .mf-actions {
   display: flex;
   gap: 4px;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
 }
+/* Кнопка «Все» / «Сброс» */
 .mf-btn {
   flex: 1;
   padding: 2px 0;
@@ -285,9 +339,10 @@ select.cell-edit option {
   cursor: pointer;
   font-family: var(--font);
 }
+/* Hover кнопки фильтра */
 .mf-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Column resize */
+/* Ручка для изменения ширины столбца (drag-resize) */
 th { position: relative; }
 th .resize-handle {
   position: absolute;
@@ -297,25 +352,29 @@ th .resize-handle {
   background: transparent;
   z-index: 20;
 }
+/* Ручка при наведении или активном перетаскивании */
 th .resize-handle:hover,
 th .resize-handle.resizing { background: var(--accent); opacity: 0.5; }
+/* Заголовок в процессе изменения ширины */
 th.resizing { background: rgba(59,130,246,0.2) !important; }
 
-/* Validation error */
+/* Ячейка с ошибкой валидации (при синхронизации) */
 .cell-error {
   outline: 2px solid var(--danger) !important;
   background: rgba(239,68,68,0.12) !important;
   animation: pulse-error 1s ease-in-out 2;
 }
+/* Пульсирующая анимация ошибки */
 @keyframes pulse-error {
   0%,100% { outline-color: var(--danger); }
   50% { outline-color: rgba(239,68,68,0.4); }
 }
 
-/* Modal form styles */
+/* Группа полей в модальном окне */
 .modal-form-group {
   margin-bottom: 16px;
 }
+/* Метка поля в модальном окне */
 .modal-form-group label {
   display: block;
   font-size: 12px;
@@ -325,6 +384,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   letter-spacing: 0.06em;
   margin-bottom: 6px;
 }
+/* Поля ввода и select в модальном окне */
 .modal-form-group input,
 .modal-form-group select {
   width: 100%;
@@ -337,75 +397,116 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   font-size: 14px;
   outline: none;
 }
+/* Фокус — синяя рамка */
 .modal-form-group input:focus,
 .modal-form-group select:focus { border-color: var(--accent); }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен Django: используется js-функцией getCsrf() для PUT/POST/DELETE запросов -->
 {% csrf_token %}
 
-<!-- Landing: project list -->
+<!-- Режим лендинга: список карточек ПП-проектов -->
 <div id="landingView">
   <div class="page-header">
     <h1>Производственный план</h1>
   </div>
+  <!-- Сетка карточек, заполняется функцией renderProjects() -->
   <div id="projectsGrid" class="pp-projects-grid">
-    <!-- filled by JS -->
+    <!-- заполняется JavaScript -->
   </div>
 </div>
 
-<!-- Project: PP table -->
+<!-- Режим просмотра плана: таблица строк ПП (скрыта по умолчанию) -->
 <div id="projectView" style="display:none;">
   <div class="pp-table-wrap">
+    <!-- Таблица производственного плана с инлайн-редактированием -->
     <table class="pp-table">
       <thead>
+        <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
+          <!-- Порядковый номер строки -->
           <th style="width:40px;" rowspan="2">No</th>
+          <!-- Код строки -->
           <th style="width:100px;" rowspan="2">Код строки</th>
+          <!-- Наряд-заказ -->
           <th style="width:110px;" rowspan="2">Наряд-заказ</th>
+          <!-- Номер этапа -->
           <th style="width:90px;" rowspan="2">No этапа</th>
+          <!-- Номер вехи -->
           <th style="width:100px;" rowspan="2">No вехи</th>
+          <!-- Номер работы -->
           <th style="width:90px;" rowspan="2">No работы</th>
+          <!-- Обозначение документа -->
           <th style="width:300px;" rowspan="2">Обозначение</th>
+          <!-- Наименование работы -->
           <th style="width:350px;" rowspan="2">Наименование</th>
+          <!-- Срок выполнения -->
           <th style="width:130px;" rowspan="2">Сроки выполнения</th>
+          <!-- Группа столбцов «Расчёт трудозатрат» (colspan=4) -->
           <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
-          <th style="width:100px;" rowspan="2">Итого ч/ч 2D</th>
-          <th style="width:100px;" rowspan="2">Итого ч/ч 3D</th>
+          <!-- Подразделение (НТЦ) -->
           <th style="width:100px;" rowspan="2">Подразделение</th>
+          <!-- Отдел -->
           <th style="width:60px;" rowspan="2">Отдел</th>
-          <th style="width:110px;" rowspan="2">Нач. сектора</th>
+          <!-- Сектор -->
+          <th style="width:110px;" rowspan="2">Сектор</th>
+          <!-- ФИО исполнителя -->
           <th style="width:140px;" rowspan="2">ФИО сотрудника</th>
+          <!-- Тип задачи (выпуск нового/корректировка и т.д.) -->
           <th style="width:120px;" rowspan="2">Тип задачи</th>
+          <!-- Столбец для кнопки удаления строки -->
           <th style="width:50px;" rowspan="2"></th>
         </tr>
+        <!-- Вторая строка заголовков: детализация трудозатрат -->
         <tr>
+          <!-- Форматы А4 -->
           <th style="width:100px;">Ф, А4</th>
+          <!-- Норматив трудоёмкости -->
           <th style="width:100px;">Норматив</th>
+          <!-- Коэффициент -->
           <th style="width:100px;">Коэфф</th>
+          <!-- Плановая трудоёмкость = Ф × Норматив × Коэффициент -->
           <th style="width:130px;">Плановая трудоёмкость</th>
         </tr>
+        <!-- Строка мультифильтров по каждому столбцу -->
         <tr class="filter-row" id="filterRow">
+          <!-- Номер строки — без фильтра -->
           <th></th>
+          <!-- Мультифильтр по коду строки -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="row_code" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по наряд-заказу -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру этапа -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру вехи -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="milestone_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру работы -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по обозначению -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по наименованию работы -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по дате выполнения -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Столбцы расчёта — без фильтров (листы, норматив, коэфф, трудоёмкость) -->
           <th></th><th></th><th></th><th></th>
-          <th></th><th></th>
+          <!-- Мультифильтр по подразделению (НТЦ) -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="center" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по отделу -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по начальнику сектора -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector_head" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по исполнителю -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по типу задачи -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Столбец удаления — без фильтра -->
           <th></th>
         </tr>
       </thead>
+      <!-- Тело таблицы: заполняется функцией renderPPTable() -->
       <tbody id="ppTableBody"></tbody>
     </table>
   </div>
@@ -414,16 +515,34 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 {% endblock %}
 
 {% block scripts %}
+<!-- Утилиты: fetchJson, escapeHtml, showToast, confirmDialog, getCsrf -->
 <script src="{% static 'js/utils.js' %}"></script>
+<!-- Модальные окна: openModal, modalStack -->
 <script src="{% static 'js/modal.js' %}"></script>
+<!-- Инлайн-редактирование ячеек (не используется напрямую, но подключён для совместимости) -->
 <script src="{% static 'js/inline_edit.js' %}"></script>
 <script>
 /* ========================================================================
-   Production Plan SPA
+   Производственный план — SPA
+   Логика: лендинг со списком ПП-проектов + таблица строк с инлайн-редактированием
    ======================================================================== */
 
+// Экранирование строки для безопасной вставки в JS-строки внутри onclick-атрибутов
+function escapeJs(s) {
+  if (!s) return '';
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// Флаги прав текущего пользователя (подставляются Django-шаблоном)
 const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
-const USER_NTC_CODE = "{{ request.user.employee.ntc_center.code|default:'' }}";
+const IS_ADMIN  = {% if request.user|is_admin_role %}true{% else %}false{% endif %};
+// Роль и организационные коды пользователя для фильтрации выпадающих списков
+const USER_ROLE     = "{{ request.user.employee.role|default:'' }}";
+const USER_DEPT     = "{{ request.user.employee.department.code|default:'' }}";
+const USER_SECTOR   = "{{ request.user.employee.sector.code|default:'' }}";
+const USER_SECTOR_NAME = "{{ request.user.employee.sector.name|default:'' }}";
+// Полный код НТЦ пользователя (например «НТЦ-2Ц»), используется в колонке center
+const USER_CENTER = "{{ request.user.employee.effective_ntc_center.code|default:'' }}";
 
 /** Формирует стандартное название ПП:
  *  "Производственный план подразделения НТЦ-XX по проекту/изделию ..."
@@ -431,41 +550,51 @@ const USER_NTC_CODE = "{{ request.user.employee.ntc_center.code|default:'' }}";
  *  @param {object|null} prod   — объект изделия (с name, code)
  */
 function buildPPName(upProj, prod) {
-  const ntcPart = USER_NTC_CODE ? 'НТЦ-' + USER_NTC_CODE : '';
-  const prefix = ntcPart
-    ? 'Производственный план подразделения ' + ntcPart + ' '
+  // Формируем префикс с кодом НТЦ (если задан в профиле)
+  const prefix = USER_CENTER
+    ? 'Производственный план подразделения ' + USER_CENTER + ' '
     : 'Производственный план ';
+  // Если выбрано изделие — добавляем его название и код
   if (prod) {
     const prodLabel = prod.name + (prod.code ? ' ' + prod.code : '');
     return prefix + 'по изделию ' + prodLabel;
   }
+  // Если выбран проект УП — добавляем его краткое название
   if (upProj) {
     const projLabel = upProj.name_short || upProj.name_full;
     return prefix + 'по проекту ' + projLabel;
   }
+  // Без привязки — только префикс
   return prefix.trimEnd();
 }
 
-/* ── State ────────────────────────────────────────────────────────────── */
+/* ── Состояние модуля ─────────────────────────────────────────────────── */
+// ID и название текущего открытого ПП-плана
 let currentProjectId = null;
 let currentProjectName = '';
+// Список ПП-проектов (массив объектов)
 let projects = [];
+// Строки текущего ПП-плана (массив объектов)
 let rows = [];
+// Справочные данные (отделы, НТЦ, сотрудники, типы задач и т.д.)
 let dirs = {};
 
+// Список полей колонок ПП-таблицы (в порядке отображения)
 const PP_COLUMNS = [
   'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
   'work_designation', 'work_name',
-  'date_end', 'sheets_a4', 'norm', 'coeff', 'labor', 'total_2d', 'total_3d',
+  'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
   'center', 'dept', 'sector_head', 'executor', 'task_type'
 ];
 
-/* ── URL state ────────────────────────────────────────────────────────── */
+/* ── Работа с URL (project_id в query string) ─────────────────────────── */
+// Читает project_id из query string для поддержки прямых ссылок и навигации браузера
 function readProjectFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get('project_id') || null;
 }
 
+// Обновляет URL без перезагрузки страницы (pushState)
 function setProjectUrl(projectId) {
   const url = new URL(window.location);
   if (projectId) {
@@ -476,67 +605,92 @@ function setProjectUrl(projectId) {
   window.history.pushState({}, '', url);
 }
 
-/* ── API ──────────────────────────────────────────────────────────────── */
+/* ── API-запросы ──────────────────────────────────────────────────────── */
+// Загружает справочники (отделы, НТЦ, сотрудники, типы задач и т.д.)
 async function loadDirs() {
+  // Cache-bust через timestamp чтобы не получать устаревшие данные
   const data = await fetchJson('/api/directories/?t=' + Date.now());
-  if (!data._error) dirs = data;
+  if (!data._error) {
+    // API возвращает секторы под ключом 'sector'; для колонки 'sector_head'
+    // создаём алиас, чтобы buildSelectHtml мог читать dirs.sector_head
+    if (data.sector && !data.sector_head) data.sector_head = data.sector;
+    dirs = data;
+  }
 }
 
+// Загружает список ПП-проектов текущего пользователя
 async function loadProjects() {
   const data = await fetchJson('/api/pp_projects/');
   if (!data._error) projects = Array.isArray(data) ? data : (data.results || []);
 }
 
+// Загружает строки производственного плана для конкретного проекта
 async function loadPPRows(projectId) {
   const data = await fetchJson('/api/production_plan/?project_id=' + projectId);
   if (!data._error) {
     rows = Array.isArray(data) ? data : (data.results || []);
+    // Обратный порядок: новые строки отображаются вверху
     rows.reverse();
   }
 }
 
-/* ── Landing mode ────────────────────────────────────────────────────── */
+/* ── Режим лендинга (список ПП-проектов) ────────────────────────────── */
+// Переключает интерфейс на лендинг: скрывает таблицу, показывает сетку карточек
 function showLanding() {
   currentProjectId = null;
   currentProjectName = '';
+  // Убираем project_id из URL
   setProjectUrl(null);
 
+  // Показываем лендинг, скрываем таблицу
   document.getElementById('landingView').style.display = '';
   document.getElementById('projectView').style.display = 'none';
+  // Показываем кнопки лендинга, скрываем кнопки просмотра плана
   document.getElementById('landingActions').style.display = '';
   document.getElementById('projectActions').style.display = 'none';
+  // Восстанавливаем заголовок хлебной крошки
   document.getElementById('breadcrumbTitle').textContent = 'Производственный план';
 
   renderProjects();
 }
 
+// Отрисовывает сетку карточек ПП-проектов
 function renderProjects() {
   const grid = document.getElementById('projectsGrid');
 
+  // Пустое состояние: нет проектов
   if (projects.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon"><i class="fas fa-industry"></i></div>
         <p>Проектов пока нет</p>
-        ${IS_WRITER ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать новый производственный план</button>' : ''}
+        ${IS_ADMIN ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать новый производственный план</button>' : ''}
       </div>`;
     return;
   }
 
+  // Генерируем карточки для каждого ПП-проекта
   grid.innerHTML = projects.map(p => `
-    <div class="pp-project-card" onclick="openProject(${p.id}, '${escapeHtml(p.name || '')}')">
+    <div class="pp-project-card" onclick="openProject(${p.id}, '${escapeJs(p.name || '')}')">
+      <!-- Привязанный проект УП (если есть) — синяя метка -->
       ${p.up_project_name ? `<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:2px;"><i class="fas fa-project-diagram" style="margin-right:3px;"></i>${escapeHtml(p.up_project_name)}</div>` : ''}
+      <!-- Привязанное изделие УП (если есть) — зелёная метка -->
       ${p.up_product_name ? `<div style="font-size:11px;color:var(--success,#22c55e);font-weight:500;margin-bottom:4px;"><i class="fas fa-cog" style="margin-right:3px;"></i>${escapeHtml(p.up_product_name)}</div>` : ''}
+      <!-- Название плана -->
       <div class="pp-project-card-name">${escapeHtml(p.name || 'Без названия')}</div>
+      <!-- Количество строк в плане -->
       <div class="pp-project-card-count">
         <i class="fas fa-list" style="margin-right:4px;"></i>${p.row_count || 0} строк
       </div>
-      ${IS_WRITER ? `
+      <!-- Кнопки редактирования/удаления (только для администраторов) -->
+      ${IS_ADMIN ? `
         <div class="pp-project-card-actions">
-          <button class="pp-card-btn" onclick="event.stopPropagation(); editProjectName(${p.id}, '${escapeHtml(p.name || '')}', ${p.up_project_id || 'null'}, ${p.up_product_id || 'null'})" title="Переименовать">
+          <!-- Редактировать название и привязку к УП -->
+          <button class="pp-card-btn" onclick="event.stopPropagation(); editProjectName(${p.id}, '${escapeJs(p.name || '')}', ${p.up_project_id || 'null'}, ${p.up_product_id || 'null'})" title="Переименовать">
             <i class="fas fa-pen"></i>
           </button>
-          <button class="pp-card-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id}, '${escapeHtml(p.name || '')}')" title="Удалить">
+          <!-- Удалить план со всеми его строками -->
+          <button class="pp-card-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id}, '${escapeJs(p.name || '')}')" title="Удалить">
             <i class="fas fa-trash"></i>
           </button>
         </div>` : ''}
@@ -544,32 +698,40 @@ function renderProjects() {
   `).join('');
 }
 
-/* ── УП Projects (for creation dialog) ───────────────────────────────── */
+/* ── Проекты УП (для диалога создания ПП-плана) ─────────────────────── */
+// Кэш проектов из модуля УП (загружается один раз)
 let upProjects = [];
 
+// Загружает проекты УП (с изделиями) — только если кэш пуст
 async function loadUpProjects() {
   if (upProjects.length) return;
   const data = await fetchJson('/api/projects/');
   if (!data._error) upProjects = Array.isArray(data) ? data : [];
 }
 
-/* ── Project CRUD ────────────────────────────────────────────────────── */
+/* ── CRUD ПП-проектов ────────────────────────────────────────────────── */
+// Открывает модальное окно создания нового ПП-плана
 async function openCreateProjectModal() {
+  // Загружаем проекты УП для привязки
   await loadUpProjects();
 
+  // Опции для привязки к проекту УП
   const upOptions = upProjects.length
     ? upProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name_short || p.name_full)}</option>`).join('')
     : '';
 
+  // Опции для открытия существующего ПП-плана из списка
   const existingOptions = projects.length
     ? projects.map(p => `<option value="${p.id}">${escapeHtml(p.name || 'Без названия')}</option>`).join('')
     : '';
 
+  // Открываем модальное окно через modal.js
   const modal = openModal({
     title: 'Производственный план',
     width: '480px',
     body: `
       ${projects.length ? `
+      <!-- Секция открытия существующего плана (если список не пуст) -->
       <div class="modal-form-group">
         <label>Открыть существующий план</label>
         <select id="existingProjectSel">
@@ -581,6 +743,7 @@ async function openCreateProjectModal() {
       ` : ''}
       <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Создать новый план</div>
       ${upProjects.length ? `
+      <!-- Привязка к проекту УП -->
       <div class="modal-form-group">
         <label>Проект (из модуля УП)</label>
         <select id="newPlanUpProject">
@@ -588,12 +751,14 @@ async function openCreateProjectModal() {
           ${upOptions}
         </select>
       </div>
+      <!-- Выбор конкретного изделия проекта (появляется, если у проекта есть изделия) -->
       <div class="modal-form-group" id="newPlanProductGroup" style="display:none;">
         <label>Изделие проекта</label>
         <select id="newPlanUpProduct">
           <option value="">— весь проект —</option>
         </select>
       </div>` : ''}
+      <!-- Поле названия плана (авто-заполняется при выборе УП-проекта) -->
       <div class="modal-form-group">
         <label>Название плана</label>
         <input type="text" id="newProjectName" placeholder="Производственный план подразделения НТЦ-... по проекту ...">
@@ -604,6 +769,7 @@ async function openCreateProjectModal() {
       <button class="btn btn-primary" id="createProjectBtn">Создать</button>`,
   });
 
+  // Ссылки на элементы модального окна
   const nameInput    = modal.dialog.querySelector('#newProjectName');
   const createBtn    = modal.dialog.querySelector('#createProjectBtn');
   const existingSel  = modal.dialog.querySelector('#existingProjectSel');
@@ -612,29 +778,31 @@ async function openCreateProjectModal() {
   const productGroup = modal.dialog.querySelector('#newPlanProductGroup');
   const productSel   = modal.dialog.querySelector('#newPlanUpProduct');
 
-  // При выборе проекта УП — подставить название и показать изделия если есть
+  // При выборе проекта УП: автозаполнить название и показать изделия (если есть)
   if (upSel) {
     upSel.addEventListener('change', () => {
       const upId = upSel.value;
       const upProj = upId ? upProjects.find(p => String(p.id) === String(upId)) : null;
 
-      // Авто-название по проекту
+      // Авто-название по проекту (без изделия)
       nameInput.value = buildPPName(upProj, null);
 
-      // Показать/скрыть выбор изделия
+      // Показать/скрыть список изделий в зависимости от наличия у проекта
       if (productGroup && productSel) {
         const products = upProj && upProj.products ? upProj.products : [];
         if (products.length > 0) {
+          // Заполнить список изделий
           productSel.innerHTML = '<option value="">— весь проект —</option>'
             + products.map(pr => `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`).join('');
           productGroup.style.display = '';
         } else {
+          // Скрыть список изделий если у проекта нет изделий
           productGroup.style.display = 'none';
           productSel.innerHTML = '<option value="">— весь проект —</option>';
         }
       }
 
-      // Обновить название если выбрано изделие
+      // При выборе конкретного изделия — обновить название плана
       if (productSel) {
         productSel.onchange = () => {
           const prodId = productSel.value;
@@ -645,29 +813,34 @@ async function openCreateProjectModal() {
     });
   }
 
-  // Открыть существующий
+  // Открыть выбранный существующий план
   if (openBtn && existingSel) {
     openBtn.addEventListener('click', () => {
       const id = existingSel.value;
+      // Обязательно выбрать из списка
       if (!id) { existingSel.style.borderColor = 'var(--danger)'; return; }
       const proj = projects.find(p => String(p.id) === String(id));
       if (proj) { modal.close(); openProject(proj.id, proj.name); }
     });
   }
 
-  // Создать новый
+  // Создать новый ПП-план
   async function doCreate() {
     const name = nameInput.value.trim();
+    // Название обязательно
     if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
     createBtn.disabled = true;
+    // Опциональная привязка к УП-проекту и изделию
     const up_project_id = upSel ? (upSel.value || null) : null;
     const up_product_id = productSel ? (productSel.value || null) : null;
+    // POST /api/pp_projects/create/
     const resp = await fetchJson('/api/pp_projects/create/', {
       method: 'POST',
       body: JSON.stringify({ name, up_project_id, up_product_id }),
     });
     if (!resp._error) {
       modal.close();
+      // Перезагружаем список и перерисовываем карточки
       await loadProjects();
       renderProjects();
       showToast('Производственный план создан', 'success');
@@ -675,18 +848,22 @@ async function openCreateProjectModal() {
     createBtn.disabled = false;
   }
 
+  // Кнопка «Создать» и Enter в поле имени
   createBtn.addEventListener('click', doCreate);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doCreate(); });
+  // Кнопка «Отмена»
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
+// Открывает модальное окно редактирования названия и привязки ПП-плана
 async function editProjectName(id, currentName, currentUpProjectId, currentUpProductId) {
   await loadUpProjects();
+  // Строим список опций с предвыбором текущего УП-проекта
   const upOptions = upProjects.map(p =>
     `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`
   ).join('');
 
-  // Получаем изделия текущего проекта УП
+  // Получаем изделия текущего проекта УП для предзаполнения
   const curUpProj = currentUpProjectId ? upProjects.find(p => String(p.id) === String(currentUpProjectId)) : null;
   const curProducts = curUpProj && curUpProj.products ? curUpProj.products : [];
   const productOptions = curProducts.map(pr =>
@@ -697,11 +874,13 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
     title: 'Редактировать производственный план',
     width: '440px',
     body: `
+      <!-- Поле названия плана (предзаполнено текущим именем) -->
       <div class="modal-form-group">
         <label>Название плана</label>
         <input type="text" id="editProjectName" value="${escapeHtml(currentName)}" autofocus>
       </div>
       ${upProjects.length ? `
+      <!-- Привязка к проекту УП -->
       <div class="modal-form-group">
         <label>Привязать к проекту (УП)</label>
         <select id="editUpProject">
@@ -709,6 +888,7 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
           ${upOptions}
         </select>
       </div>
+      <!-- Список изделий (показывается если у выбранного УП-проекта есть изделия) -->
       <div class="modal-form-group" id="editProductGroup" style="display:${curProducts.length ? '' : 'none'};">
         <label>Изделие проекта</label>
         <select id="editUpProduct">
@@ -727,7 +907,7 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
   const productSel   = modal.dialog.querySelector('#editUpProduct');
   const saveBtn      = modal.dialog.querySelector('#saveProjectBtn');
 
-  // При смене проекта УП — обновить список изделий
+  // При смене УП-проекта: обновить список изделий
   if (upSel && productGroup && productSel) {
     upSel.addEventListener('change', () => {
       const upId = upSel.value;
@@ -744,10 +924,12 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
     });
   }
 
+  // Сохранить изменения через PUT /api/pp_projects/<id>/
   async function doSave() {
     const name = nameInput.value.trim();
     if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
     saveBtn.disabled = true;
+    // undefined означает «не изменять» (если поля нет в форме)
     const up_project_id = upSel ? (upSel.value || null) : undefined;
     const up_product_id = productSel ? (productSel.value || null) : undefined;
     const body = { name };
@@ -770,12 +952,14 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
+// Удаляет ПП-план со всеми его строками после подтверждения
 async function deleteProject(id, name) {
   const ok = await confirmDialog(
-    `Удалить проект "${escapeHtml(name)}" и все его строки?`,
+    `Удалить проект "${name}" и все его строки?`,
     'Удаление проекта'
   );
   if (!ok) return;
+  // DELETE /api/pp_projects/<id>/
   const resp = await fetchJson(`/api/pp_projects/${id}/`, { method: 'DELETE' });
   if (!resp._error) {
     await loadProjects();
@@ -784,17 +968,20 @@ async function deleteProject(id, name) {
   }
 }
 
-/* ── Project mode ────────────────────────────────────────────────────── */
+/* ── Режим просмотра плана (таблица строк) ───────────────────────────── */
+// Переключает интерфейс на таблицу конкретного ПП-плана
 async function openProject(id, name) {
   currentProjectId = id;
   currentProjectName = name;
+  // Обновляем URL для прямой ссылки и поддержки истории браузера
   setProjectUrl(id);
 
+  // Переключаем видимость блоков
   document.getElementById('landingView').style.display = 'none';
   document.getElementById('projectView').style.display = '';
   document.getElementById('landingActions').style.display = 'none';
   document.getElementById('projectActions').style.display = '';
-  // Build header: show UP project name if linked
+  // Обновляем хлебную крошку: если привязан УП-проект — показываем его название
   const projObj = projects.find(p => String(p.id) === String(id));
   let headerTitle = 'ПП: ' + name;
   if (projObj && projObj.up_project_name) {
@@ -802,33 +989,75 @@ async function openProject(id, name) {
   }
   document.getElementById('breadcrumbTitle').textContent = headerTitle;
 
+  // Загружаем строки плана и рендерим таблицу
   await loadPPRows(id);
+
+  // Устанавливаем дефолтный фильтр по отделу при первом открытии проекта
+  // (не-admin с привязанным отделом видит по умолчанию только свой отдел)
+  // Если пользователь уже сбрасывал фильтр вручную — не восстанавливаем
+  const filterKey = 'pp_dept_filter_cleared_' + id;
+  const wasCleared = sessionStorage.getItem(filterKey);
+  if (!IS_ADMIN && USER_DEPT && !wasCleared && !colFilters['mf_dept']) {
+    // Устанавливаем фильтр по своему отделу
+    mfSelections['dept'] = new Set([USER_DEPT]);
+    colFilters['mf_dept'] = new Set([USER_DEPT]);
+    // Обновляем кнопку фильтра
+    const deptBtn = document.querySelector('.mf-trigger[data-col="dept"]');
+    if (deptBtn) { deptBtn.textContent = USER_DEPT; deptBtn.classList.add('active'); }
+    document.getElementById('filtersActiveBadge').style.display = 'inline';
+  }
+
   renderPPTable();
 }
 
+// Возврат на лендинг
 function goToLanding() {
   showLanding();
 }
 
-/* ── Build select HTML for a cell ────────────────────────────────────── */
+/* ── Построение HTML-селекта для ячейки-выпадашки ────────────────────── */
+// Строит <select> для столбцов dept, center, executor, sector_head, task_type
+// с учётом роли пользователя (отдельные опции могут быть disabled)
 function buildSelectHtml(col, row) {
   const val = row[col] || '';
+  // Для task_type нет пустой опции (значение обязательно); для остальных — есть «--»
   let options = col === 'task_type' ? '' : '<option value="">--</option>';
 
   if (col === 'dept') {
+    // Отдел: чужие отделы недоступны для нач. отдела/сектора/нтц-ролей с привязкой к отделу
+    // admin видит все; ntc_head/ntc_deputy без отдела — тоже все
     (dirs.dept || []).forEach(d => {
-      options += `<option value="${escapeHtml(d.value)}"${d.value === val ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
+      const isOwnDept = IS_ADMIN || !USER_DEPT || d.value === USER_DEPT;
+      const disabledAttr = isOwnDept ? '' : ' disabled style="color:var(--muted)"';
+      options += `<option value="${escapeHtml(d.value)}"${d.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(d.value)}</option>`;
     });
   } else if (col === 'center') {
-    const userCenter = USER_NTC_CODE ? 'НТЦ-' + USER_NTC_CODE : '';
-    const centerVal = val || userCenter;
+    // НТЦ: admin видит все без ограничений; dept_head/dept_deputy/sector_head
+    // могут выбрать только свой НТЦ (чужие — disabled)
+    const centerVal = val || USER_CENTER;
+    const restrictCenter = !IS_ADMIN && USER_CENTER &&
+      ['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE);
     (dirs.center || []).forEach(d => {
-      options += `<option value="${escapeHtml(d.value)}"${d.value === centerVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
+      const isOwn = !restrictCenter || d.value === USER_CENTER;
+      const disabledAttr = isOwn ? '' : ' disabled style="color:var(--muted)"';
+      options += `<option value="${escapeHtml(d.value)}"${d.value === centerVal ? ' selected' : ''}${disabledAttr}>${escapeHtml(d.value)}</option>`;
     });
   } else if (col === 'executor') {
-    const centerVal = row['center'] || '';
+    // Исполнитель: фильтрация по сектору (если выбран), иначе по отделу
+    const deptFilter   = row['dept'] || '';
+    const sectorFilter = row['sector_head'] || '';
     const allEmps = dirs.employees || [];
-    const filtered = centerVal ? allEmps.filter(e => e.dept === centerVal) : allEmps;
+    let filtered;
+    if (sectorFilter) {
+      // Если выбран сектор — показываем только сотрудников этого сектора
+      filtered = allEmps.filter(e => e.sector === sectorFilter);
+    } else if (deptFilter) {
+      // Иначе — все сотрудники отдела
+      filtered = allEmps.filter(e => e.dept === deptFilter);
+    } else {
+      filtered = allEmps;
+    }
+    // Если текущее значение не в отфильтрованном списке — добавляем его как фантомную опцию
     if (val && !filtered.find(e => e.value === val)) {
       options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
     }
@@ -836,22 +1065,36 @@ function buildSelectHtml(col, row) {
       options += `<option value="${escapeHtml(e.value)}"${e.value === val ? ' selected' : ''}>${escapeHtml(e.value)}</option>`;
     });
   } else if (col === 'sector_head') {
+    // Сектор: фильтрация по выбранному отделу
     const deptVal = row['dept'] || '';
     const deptEntry = (dirs.dept || []).find(d => d.value === deptVal);
     const allHeads = dirs.sector_head || [];
     const filtered = deptEntry ? allHeads.filter(h => h.parent_id === deptEntry.id) : allHeads;
+    // Фантомная опция если текущее значение не найдено в отфильтрованном списке
     if (val && !filtered.find(h => h.value === val)) {
-      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
+      // Ищем ФИО нач. сектора среди всех секторов
+      const anyMatch = allHeads.find(h => h.value === val);
+      const phantomLabel = anyMatch && anyMatch.head_name ? `${val} — ${anyMatch.head_name}` : val;
+      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(phantomLabel)}</option>`;
     }
     filtered.forEach(h => {
-      options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}>${escapeHtml(h.value)}</option>`;
+      // Начальник сектора видит все сектора своего отдела,
+      // но чужой сектор — disabled (только для просмотра)
+      const isOwnSector = IS_ADMIN || USER_ROLE === 'dept_head' || USER_ROLE === 'dept_deputy'
+                          || !USER_SECTOR || h.value === USER_SECTOR;
+      const disabledAttr = isOwnSector ? '' : ' disabled style="color:var(--muted)"';
+      // Текст опции: «код — ФИО нач. сектора» (если есть ФИО) или просто код
+      const label = h.head_name ? `${h.value} — ${h.head_name}` : h.value;
+      options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(label)}</option>`;
     });
   } else if (col === 'task_type') {
+    // Тип задачи: значение по умолчанию «Выпуск нового документа»
     const taskVal = val || 'Выпуск нового документа';
     const taskTypes = dirs.task_type || [];
     taskTypes.forEach(d => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
+    // Если текущего значения нет в справочнике — добавляем фантомную опцию
     if (!taskTypes.find(d => d.value === taskVal)) {
       options += `<option value="${escapeHtml(taskVal)}" selected>${escapeHtml(taskVal)}</option>`;
     }
@@ -859,56 +1102,75 @@ function buildSelectHtml(col, row) {
   return `<select class="cell-edit" data-col="${col}" data-id="${row.id}">${options}</select>`;
 }
 
-/* ── Render PP table ─────────────────────────────────────────────────── */
+/* ── Отрисовка таблицы ПП ────────────────────────────────────────────── */
 function renderPPTable() {
   const tbody = document.getElementById('ppTableBody');
   tbody.innerHTML = '';
 
+  // Применяем активные колоночные фильтры к массиву строк
   const filtered = rows.filter(row => {
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
+        // Мультифильтр: проверяем входит ли значение в выбранное множество
         const field = col.slice(3);
-        if (val.size > 0 && !val.has(row[field] || '')) return false;
+        if (val.size > 0) {
+          // Для date_end сравниваем по году-месяцу (первые 7 символов)
+          const cellVal = (field === 'date_end')
+            ? (row[field] || '').slice(0, 7)
+            : (row[field] || '');
+          if (!val.has(cellVal)) return false;
+        }
         continue;
       }
+      // Текстовый фильтр (подстрока, нижний регистр)
       const cellVal = (row[col] || '').toString().toLowerCase();
       if (!cellVal.includes(val)) return false;
     }
     return true;
   });
 
+  // Пустое состояние: нет строк после фильтрации
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="22" style="padding:40px;text-align:center;color:var(--muted);">
+    tbody.innerHTML = `<tr><td colspan="19" style="padding:40px;text-align:center;color:var(--muted);">
       <i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>
       Нет записей
     </td></tr>`;
     return;
   }
 
+  // Строим строки таблицы
   filtered.forEach((row, idx) => {
     const tr = document.createElement('tr');
+    // Первый столбец — порядковый номер (1-based)
     let html = `<td>${idx + 1}</td>`;
 
+    // Для каждого поля колонки — определяем тип ячейки и строим HTML
     for (const col of PP_COLUMNS) {
       const val = row[col] || '';
+      // Классификация типа ячейки
       const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
       const isTextCol = ['work_name', 'work_order', 'work_designation'].includes(col);
       const isDateCol = col === 'date_end';
 
       if (!IS_WRITER) {
-        /* Read-only mode */
+        // Режим только для чтения: статичный текст
         html += `<td style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
       } else if (isSelectCol) {
+        // Выпадающий список с учётом роли пользователя
         html += `<td>${buildSelectHtml(col, row)}</td>`;
       } else if (isTextCol) {
+        // Текстовое поле ввода
         html += `<td><input class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       } else if (isDateCol) {
+        // Поле выбора даты
         html += `<td><input type="date" class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       } else {
+        // Числовое поле (трудоёмкость, листы, коэффициент и т.д.)
         html += `<td><input class="cell-edit cell-num" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       }
     }
 
+    // Последний столбец: кнопка удаления (только для writer) или пустая ячейка
     if (IS_WRITER) {
       html += `<td><button class="btn-delete" data-id="${row.id}" title="Удалить"><i class="fas fa-times"></i></button></td>`;
     } else {
@@ -919,33 +1181,41 @@ function renderPPTable() {
     tbody.appendChild(tr);
   });
 
-  /* ── Event handlers on cells ──────────────────────────────────────── */
+  /* ── Навешиваем обработчики на ячейки ─────────────────────────────── */
   tbody.querySelectorAll('.cell-edit').forEach(input => {
+    // Запоминаем начальное значение для защиты от повторных PUT
+    input._ppLastSaved = input.value;
+    // change — сохранение при фактическом изменении значения
     input.addEventListener('change', handleCellChange);
-    input.addEventListener('blur', handleCellChange);
+    // Tab/Shift+Tab: переход между редактируемыми ячейками
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Tab') {
         e.preventDefault();
+        // Сохранить текущую ячейку перед переходом
         handleCellChange({ target: this });
         const inputs = Array.from(tbody.querySelectorAll('.cell-edit'));
         const idx = inputs.indexOf(this);
         const nextIdx = e.shiftKey ? idx - 1 : idx + 1;
         if (nextIdx >= 0 && nextIdx < inputs.length) {
           inputs[nextIdx].focus();
+          // Для input (не select) — выделить всё содержимое
           if (inputs[nextIdx].tagName !== 'SELECT') inputs[nextIdx].select();
         }
       }
     });
   });
 
-  /* ── Delete handlers ──────────────────────────────────────────────── */
+  /* ── Обработчики кнопок удаления строк ────────────────────────────── */
   tbody.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', async function() {
+      // Подтверждение через диалог (не нативный confirm)
       const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
       if (!ok) return;
       const id = this.getAttribute('data-id');
+      // DELETE /api/production_plan/<id>/
       const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
       if (!resp._error) {
+        // Обновляем локальный массив и перерисовываем таблицу
         rows = rows.filter(r => String(r.id) !== String(id));
         renderPPTable();
         showToast('Строка удалена', 'success');
@@ -954,14 +1224,15 @@ function renderPPTable() {
   });
 }
 
-/* ── Cell-outline helper ────────────────────────────────────────────── */
+/* ── Визуальная подсветка ячейки (успех/ошибка) ─────────────────────── */
+// Устанавливает outline цвета color на td на ms миллисекунд
 function cellOutline(td, color, ms) {
   if (!td) return;
   td.style.outline = '1px solid ' + color;
   setTimeout(() => { td.style.outline = ''; }, ms);
 }
 
-/* ── Handle cell change ─────────────────────────────────────────────── */
+/* ── Обработчик изменения ячейки (отправка PUT на сервер) ────────────── */
 async function handleCellChange(e) {
   const input = e.target;
   const id = input.getAttribute('data-id');
@@ -969,7 +1240,11 @@ async function handleCellChange(e) {
   let value = input.value;
   const td = input.closest('td');
 
-  // Для новой (ещё не сохранённой) строки — только авто-расчёт, без PUT
+  // Защита от повторного PUT (change+Tab могут вызвать дважды)
+  if (id !== '_new_' && input._ppLastSaved === value) return;
+  input._ppLastSaved = value;
+
+  // Для новой (ещё не сохранённой) строки — только авто-расчёт трудоёмкости, без PUT
   if (id === '_new_') {
     if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
       const tr = input.closest('tr');
@@ -983,6 +1258,7 @@ async function handleCellChange(e) {
       });
       const laborInput = tr.querySelector('input[data-col="labor"]');
       if (laborInput) {
+        // Рассчитываем трудоёмкость: листы × норматив × коэффициент (округлить до целого)
         laborInput.value = (sheets !== null && norm !== null && coeff !== null)
           ? Math.round(sheets * norm * coeff)
           : '';
@@ -991,76 +1267,91 @@ async function handleCellChange(e) {
     return;
   }
 
-  // task_type required: reset to default if empty
+  // task_type обязателен: если очищен — сбросить к значению по умолчанию
   if (field === 'task_type' && !value.trim()) {
     const defaultType = (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : '';
     input.value = defaultType;
     value = defaultType;
   }
 
-  // On center change -- rebuild executor select
-  if (field === 'center') {
-    const rowObj = rows.find(r => String(r.id) === String(id));
-    if (rowObj) {
-      rowObj.center = value;
-      const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
-      if (execSel) {
-        execSel.outerHTML = buildSelectHtml('executor', rowObj);
-        const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
-        if (newSel) {
-          newSel.addEventListener('change', handleCellChange);
-          newSel.addEventListener('blur', handleCellChange);
-        }
-      }
-    }
-  }
-
-  // On dept change -- rebuild sector_head select
+  // При смене отдела: пересобираем список нач. секторов И исполнителей
   if (field === 'dept') {
     const rowObj = rows.find(r => String(r.id) === String(id));
     if (rowObj) {
       rowObj.dept = value;
+      // Обновляем нач. секторов
       const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
       if (headSel) {
         headSel.outerHTML = buildSelectHtml('sector_head', rowObj);
         const newHead = input.closest('tr').querySelector('select[data-col="sector_head"]');
         if (newHead) {
           newHead.addEventListener('change', handleCellChange);
-          newHead.addEventListener('blur', handleCellChange);
+          newHead._ppLastSaved = newHead.value;
+        }
+      }
+      // Обновляем исполнителей по новому отделу (сектор сброшен — показываем весь отдел)
+      const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
+      if (execSel) {
+        execSel.outerHTML = buildSelectHtml('executor', rowObj);
+        const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
+        if (newSel) {
+          newSel.addEventListener('change', handleCellChange);
+          newSel._ppLastSaved = newSel.value;
         }
       }
     }
   }
 
-  // Blue outline while saving
+  // При смене сектора: пересобираем список исполнителей
+  if (field === 'sector_head') {
+    const rowObj = rows.find(r => String(r.id) === String(id));
+    if (rowObj) {
+      rowObj.sector_head = value;
+      const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
+      if (execSel) {
+        execSel.outerHTML = buildSelectHtml('executor', rowObj);
+        const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
+        if (newSel) {
+          newSel.addEventListener('change', handleCellChange);
+          newSel._ppLastSaved = newSel.value;
+        }
+      }
+    }
+  }
+
+  // Синяя подсветка ячейки пока идёт запрос
   if (td) td.style.outline = '1px solid rgba(59,130,246,0.5)';
 
+  // PUT /api/production_plan/<id>/?field=<field> — сохранить одно поле
   const resp = await fetchJson('/api/production_plan/' + id + '/?field=' + field, {
     method: 'PUT',
     body: JSON.stringify({ value: value }),
   });
 
+  // Ошибка конфликта (например, попытка изменить заблокированное поле from_pp)
   if (resp._conflict) {
     cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
     return;
   }
+  // Другая ошибка сервера
   if (resp._error) {
     cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
     return;
   }
 
-  // Success
+  // Успех: зелёная подсветка на 700мс
   cellOutline(td, 'rgba(34,197,94,0.5)', 700);
 
-  // Update local row data
+  // Обновляем данные в локальном массиве
   const rowObj = rows.find(r => String(r.id) === String(id));
   if (rowObj) rowObj[field] = value;
 
-  // Auto-calc labor
+  // Автоматический пересчёт трудоёмкости при изменении листов/норматива/коэффициента
   if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
     setTimeout(async () => {
       const tr = input.closest('tr');
       let sheets = null, norm = null, coeff = null;
+      // Читаем актуальные значения из DOM
       tr.querySelectorAll('input').forEach(inp => {
         const col = inp.getAttribute('data-col');
         const v = parseFloat(inp.value.replace(',', '.'));
@@ -1072,12 +1363,15 @@ async function handleCellChange(e) {
       const laborTd = laborInput ? laborInput.closest('td') : null;
       let laborVal = '';
       if (sheets !== null && norm !== null && coeff !== null) {
+        // Трудоёмкость = Ф × Норматив × Коэффициент (округлить до целого)
         laborVal = Math.round(sheets * norm * coeff);
         if (laborInput) laborInput.value = laborVal;
       } else {
         if (laborInput) laborInput.value = '';
       }
+      // Синяя подсветка ячейки трудоёмкости
       if (laborTd) laborTd.style.outline = '1px solid rgba(59,130,246,0.5)';
+      // Сохраняем вычисленную трудоёмкость на сервере
       const r2 = await fetchJson('/api/production_plan/' + id + '/?field=labor', {
         method: 'PUT',
         body: JSON.stringify({ value: laborVal }),
@@ -1092,12 +1386,19 @@ async function handleCellChange(e) {
   }
 }
 
-/* ── Add row inline (directly in table) ─────────────────────────────── */
+/* ── Добавление строки прямо в таблицу ──────────────────────────────── */
+// Флаг: предотвращает двойное добавление строки
 let _addingRow = false;
 
+// Добавляет временную редактируемую строку в конец таблицы
 function openAddRowModal() {
+  // Нельзя добавить строку без открытого проекта
+  if (!currentProjectId) {
+    showToast('Откройте проект для добавления строк', 'error');
+    return;
+  }
   if (_addingRow) {
-    // Scroll to existing new row and focus first cell
+    // Если строка уже добавлена — прокрутить к ней и поставить фокус
     const newTr = document.getElementById('ppNewRow');
     if (newTr) {
       newTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1110,18 +1411,38 @@ function openAddRowModal() {
 
   const tbody = document.getElementById('ppTableBody');
 
-  // Build a temporary row with all empty editable cells
+  // Определяем значение нач. сектора по умолчанию (для роли sector_head)
+  let _defaultSectorHead = '';
+  if (USER_ROLE === 'sector_head' && USER_SECTOR) {
+    const _heads = dirs.sector_head || [];
+    // Ищем совпадение по коду или имени сектора
+    const _match = _heads.find(h => h.value === USER_SECTOR || h.value === USER_SECTOR_NAME);
+    if (_match) _defaultSectorHead = _match.value;
+    else if (USER_SECTOR_NAME) _defaultSectorHead = USER_SECTOR_NAME;
+    else _defaultSectorHead = USER_SECTOR;
+  }
+
+  // Авто-заполнение НТЦ: для dept_head / dept_deputy / sector_head подставляем свой НТЦ
+  // ntc_head / ntc_deputy / admin оставляем пустым (выбирают сами)
+  const _defaultCenter = (['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER)
+    ? USER_CENTER : '';
+
+  // Объект новой строки с дефолтными значениями из профиля пользователя
   const newRow = { id: '_new_', row_code: '', work_order: '', stage_num: '',
     milestone_num: '', work_num: '', work_designation: '', work_name: '',
-    date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '', total_2d: '',
-    total_3d: '', center: '', dept: '', sector_head: '', executor: '', task_type: '' };
+    date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '',
+    center: _defaultCenter, dept: USER_DEPT || '', sector_head: _defaultSectorHead,
+    executor: '', task_type: '' };
 
   const tr = document.createElement('tr');
   tr.id = 'ppNewRow';
+  // Синяя подсветка новой строки
   tr.style.cssText = 'background:rgba(59,130,246,0.07);outline:2px solid rgba(59,130,246,0.3);';
 
+  // Первый столбец — знак «+» вместо номера
   let html = `<td style="color:var(--accent);font-weight:600;">+</td>`;
 
+  // Строим ячейки для каждого поля (те же типы, что и в renderPPTable)
   for (const col of PP_COLUMNS) {
     const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
     const isTextCol   = ['work_name', 'work_order', 'work_designation'].includes(col);
@@ -1130,6 +1451,7 @@ function openAddRowModal() {
     if (isSelectCol) {
       html += `<td>${buildSelectHtml(col, newRow)}</td>`;
     } else if (isTextCol) {
+      // Плейсхолдер для наименования и кода строки
       html += `<td><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : col === 'row_code' ? 'Код' : ''}"></td>`;
     } else if (isDateCol) {
       html += `<td><input type="date" class="cell-edit" data-col="${col}" data-id="_new_" value=""></td>`;
@@ -1138,7 +1460,7 @@ function openAddRowModal() {
     }
   }
 
-  // Save / Cancel buttons in the last cell
+  // Последний столбец: кнопки «Сохранить» (✓) и «Отмена» (✕)
   html += `<td style="white-space:nowrap;">
     <button id="ppNewRowSave" title="Сохранить строку" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
     <button id="ppNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
@@ -1147,36 +1469,49 @@ function openAddRowModal() {
   tr.innerHTML = html;
   tbody.appendChild(tr);
 
-  // Focus first input (row_code)
+  // Автофокус на первое поле (код строки)
   const firstInput = tr.querySelector('input[data-col="row_code"], input');
   if (firstInput) {
     firstInput.focus();
     tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // Handle center → executor dependency in new row
-  tr.querySelector('select[data-col="center"]')?.addEventListener('change', function() {
-    newRow.center = this.value;
-    const td = tr.querySelector('select[data-col="executor"]')?.closest('td');
-    if (td) {
-      td.innerHTML = buildSelectHtml('executor', newRow);
-      td.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
-    }
-  });
-
-  // Handle dept → sector_head dependency in new row
+  // Зависимость: при смене отдела — обновить список нач. секторов И исполнителей
   tr.querySelector('select[data-col="dept"]')?.addEventListener('change', function() {
     newRow.dept = this.value;
-    const td = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
-    if (td) {
-      td.innerHTML = buildSelectHtml('sector_head', newRow);
-      td.querySelector('select').addEventListener('change', function() { newRow.sector_head = this.value; });
+    // Обновляем нач. секторов
+    const tdSector = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
+    if (tdSector) {
+      tdSector.innerHTML = buildSelectHtml('sector_head', newRow);
+      tdSector.querySelector('select').addEventListener('change', function() { newRow.sector_head = this.value; });
+    }
+    // Обновляем список исполнителей по новому отделу
+    const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
+    if (tdExec) {
+      tdExec.innerHTML = buildSelectHtml('executor', newRow);
+      tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
     }
   });
 
-  // Collect values from new row and POST
+  // Зависимость: при смене сектора — обновить список исполнителей
+  tr.querySelector('select[data-col="sector_head"]')?.addEventListener('change', function() {
+    newRow.sector_head = this.value;
+    const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
+    if (tdExec) {
+      tdExec.innerHTML = buildSelectHtml('executor', newRow);
+      tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
+    }
+  });
+
+  // Зависимость: при смене НТЦ — ничего дополнительно (исполнители фильтруются по отделу/сектору)
+  tr.querySelector('select[data-col="center"]')?.addEventListener('change', function() {
+    newRow.center = this.value;
+  });
+
+  // Собирает данные из новой строки и отправляет POST /api/production_plan/create/
   async function doSaveNewRow() {
     const body = { project_id: currentProjectId };
+    // Читаем значения всех полей новой строки
     tr.querySelectorAll('[data-id="_new_"]').forEach(inp => {
       body[inp.getAttribute('data-col')] = inp.value;
     });
@@ -1184,6 +1519,7 @@ function openAddRowModal() {
     const saveBtn = document.getElementById('ppNewRowSave');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
 
+    // POST /api/production_plan/create/
     const resp = await fetchJson('/api/production_plan/create/', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -1192,10 +1528,11 @@ function openAddRowModal() {
     if (!resp._error) {
       _addingRow = false;
       tr.remove();
+      // Перезагружаем и перерисовываем таблицу
       await loadPPRows(currentProjectId);
       renderPPTable();
       showToast('Строка добавлена', 'success');
-      // Scroll to new row (last)
+      // Прокрутить к последней добавленной строке
       const allRows = document.querySelectorAll('#ppTableBody tr');
       if (allRows.length) allRows[allRows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
@@ -1203,53 +1540,96 @@ function openAddRowModal() {
     }
   }
 
+  // Кнопка «Сохранить» (✓)
   document.getElementById('ppNewRowSave').addEventListener('click', doSaveNewRow);
 
+  // Кнопка «Отмена» (✕): убрать строку без сохранения
   document.getElementById('ppNewRowCancel').addEventListener('click', () => {
     _addingRow = false;
     tr.remove();
   });
 
-  // Save on Enter in any text input
+  // Enter в любом поле — сохранить; Escape — отменить
   tr.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); doSaveNewRow(); }
       if (e.key === 'Escape') { _addingRow = false; tr.remove(); }
     });
   });
+
+  // Авто-расчёт трудоёмкости при вводе sheets_a4 / norm / coeff в новой строке
+  tr.querySelectorAll('input[data-col="sheets_a4"], input[data-col="norm"], input[data-col="coeff"]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      let sheets = null, norm = null, coeff = null;
+      tr.querySelectorAll('input').forEach(i => {
+        const col = i.getAttribute('data-col');
+        const v = parseFloat(i.value.replace(',', '.'));
+        if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
+        if (col === 'norm'      && !isNaN(v)) norm   = v;
+        if (col === 'coeff'     && !isNaN(v)) coeff  = v;
+      });
+      const laborInput = tr.querySelector('input[data-col="labor"]');
+      if (laborInput) {
+        laborInput.value = (sheets !== null && norm !== null && coeff !== null)
+          ? Math.round(sheets * norm * coeff)
+          : '';
+      }
+    });
+  });
 }
 
-/* ── Sync to Plan/Report ────────────────────────────────────────────── */
+/* ── Синхронизация ПП → модуль «План/отчёт» ────────────────────────── */
+// Переносит строки ПП в задачи модуля ПО (если заполнены все обязательные поля)
 async function syncToTasks() {
+  // Синхронизация возможна только когда открыт конкретный проект
+  if (!currentProjectId) {
+    showToast('Откройте проект для синхронизации', 'error');
+    return;
+  }
   const ok = await confirmDialog(
     'Синхронизировать данные с модулем "План/отчёт"?',
     'Синхронизация'
   );
   if (!ok) return;
 
-  // Validate required fields
-  const optionalCols = new Set(['total_2d', 'total_3d', 'executor']);
+  // Необязательные поля (не требуются для синхронизации)
+  // executor — исполнитель назначается позже
+  // center, sector_head — не у всех записей есть подразделение/сектор
+  // task_type — сервер ставит дефолт «Выпуск нового документа»
+  const optionalCols = new Set(['executor', 'center', 'sector_head', 'task_type']);
   const requiredCols = PP_COLUMNS.filter(c => !optionalCols.has(c));
 
+  // Проверка «значение заполнено»: 0 — допустимое значение, пустая строка — нет
+  function isFilled(v) {
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'number') return true;
+    return String(v).trim() !== '';
+  }
+
+  // Сбрасываем предыдущие ошибки валидации
   document.querySelectorAll('.cell-error').forEach(el => el.classList.remove('cell-error'));
 
   let hasErrors = false;
   let errorCount = 0;
 
+  // Проверяем каждую строку на наличие обязательных полей
   for (const row of rows) {
-    const allEmpty = PP_COLUMNS.every(c => !row[c] || String(row[c]).trim() === '');
+    // Пропускаем полностью пустые строки
+    const allEmpty = PP_COLUMNS.every(c => !isFilled(row[c]));
     if (allEmpty) continue;
 
-    const missingCols = requiredCols.filter(c => !row[c] || String(row[c]).trim() === '');
+    const missingCols = requiredCols.filter(c => !isFilled(row[c]));
     if (missingCols.length > 0) {
       hasErrors = true;
       errorCount++;
+      // Подсвечиваем незаполненные обязательные ячейки красным
       for (const col of missingCols) {
         const input = document.querySelector(
           `#ppTableBody [data-col="${col}"][data-id="${row.id}"]`
         );
         if (input) {
           input.classList.add('cell-error');
+          // Первую ошибочную ячейку прокрутить в видимую область
           if (errorCount === 1 && col === missingCols[0]) {
             input.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
@@ -1258,38 +1638,71 @@ async function syncToTasks() {
     }
   }
 
+  // Если есть незаполненные обязательные поля — прерываем синхронизацию
   if (hasErrors) {
-    showToast('Обнаружены строки с незаполненными ячейками (выделены красным). Все поля, кроме "Итого ч/ч 2D", "Итого ч/ч 3D" и "Исполнитель", обязательны.', 'error');
+    showToast('Обнаружены строки с незаполненными ячейками (выделены красным). Обязательны все поля, кроме: Исполнитель, Подразделение, Сектор, Тип задачи.', 'error');
     return;
   }
 
+  // POST /api/production_plan/sync/ — запускаем перенос данных на сервере
   const resp = await fetchJson('/api/production_plan/sync/', {
     method: 'POST',
     body: JSON.stringify({ project_id: currentProjectId }),
   });
   if (!resp._error) {
-    let msg = `Перенесено новых задач: ${resp.imported || 0}`;
-    if (resp.updated > 0) msg += `, обновлено дат: ${resp.updated}`;
+    // Показываем сколько задач перенесено/обновлено
+    const n = resp.synced || 0;
+    let msg = n > 0
+      ? `Синхронизировано записей: ${n}`
+      : 'Все записи уже синхронизированы';
     showToast(msg, 'success');
   }
 }
 
-/* ── Multi-select column filters ─────────────────────────────────────── */
+/* ── Мультифильтры по столбцам ───────────────────────────────────────── */
+// Активные фильтры: { 'mf_<col>': Set<значений> }
 let colFilters = {};
+// Текущие выборки в дропдаунах фильтров
 let mfSelections = {};
+// Ссылки на активный дропдаун и его кнопку-триггер
 let activeMfBtn = null;
 let activeMfDropdown = null;
 
+// Дефолтный текст кнопок-триггеров (треугольник ▼)
 const MF_DEFAULTS = {};
 PP_COLUMNS.forEach(c => { MF_DEFAULTS[c] = '\u25BC'; });
 
+// Названия месяцев для читабельного отображения дат в фильтре
+const MONTH_NAMES_RU = [
+  'Январь','Февраль','Март','Апрель','Май','Июнь',
+  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
+];
+
+// Возвращает отсортированный массив уникальных значений столбца col из rows.
+// Для date_end — группирует по году-месяцу (YYYY-MM), остальные — как есть.
 function getMfValues(col) {
   const vals = new Set();
-  rows.forEach(r => { if (r[col]) vals.add(r[col]); });
+  if (col === 'date_end') {
+    // Срок выполнения: берём только год-месяц (первые 7 символов «YYYY-MM»)
+    rows.forEach(r => {
+      if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
+    });
+  } else {
+    rows.forEach(r => { if (r[col]) vals.add(r[col]); });
+  }
   return [...vals].sort((a, b) => String(a).localeCompare(String(b), 'ru'));
 }
 
+// Форматирует значение «YYYY-MM» в читабельный вид «Март 2026»
+function formatYearMonth(ym) {
+  const [y, m] = ym.split('-');
+  const mi = parseInt(m, 10) - 1;
+  return (MONTH_NAMES_RU[mi] || m) + ' ' + y;
+}
+
+// Строит и отображает дропдаун мультифильтра для кнопки btn и столбца col
 function buildMfDropdown(btn, col) {
+  // Убираем предыдущий дропдаун
   if (activeMfDropdown) activeMfDropdown.remove();
   const vals = getMfValues(col);
   const selected = mfSelections[col] || new Set();
@@ -1297,27 +1710,31 @@ function buildMfDropdown(btn, col) {
   drop.className = 'mf-dropdown open';
   drop.dataset.col = col;
 
-  // Search
+  // Поле поиска внутри дропдауна
   const searchWrap = document.createElement('div');
   searchWrap.className = 'mf-search';
   const searchInp = document.createElement('input');
   searchInp.placeholder = 'Поиск...';
   searchInp.autocomplete = 'off';
+  // Фильтрация опций при наборе текста (для date_end ищем и по «YYYY-MM», и по «Март 2026»)
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll('.mf-option').forEach(opt => {
-      opt.style.display = opt.dataset.val.toLowerCase().includes(q) ? '' : 'none';
+      const rawVal = opt.dataset.val.toLowerCase();
+      const displayVal = (col === 'date_end') ? formatYearMonth(opt.dataset.val).toLowerCase() : rawVal;
+      opt.style.display = (rawVal.includes(q) || displayVal.includes(q)) ? '' : 'none';
     });
   };
   searchWrap.appendChild(searchInp);
   drop.appendChild(searchWrap);
 
-  // Actions
+  // Кнопки «Все» и «Сброс»
   const actions = document.createElement('div');
   actions.className = 'mf-actions';
   const selectAll = document.createElement('button');
   selectAll.className = 'mf-btn';
   selectAll.textContent = 'Все';
+  // «Все»: выбрать все значения
   selectAll.onclick = (e) => {
     e.stopPropagation();
     mfSelections[col] = new Set(vals);
@@ -1327,6 +1744,7 @@ function buildMfDropdown(btn, col) {
   const clearMfBtn = document.createElement('button');
   clearMfBtn.className = 'mf-btn';
   clearMfBtn.textContent = 'Сброс';
+  // «Сброс»: снять все галочки
   clearMfBtn.onclick = (e) => {
     e.stopPropagation();
     mfSelections[col] = new Set();
@@ -1337,7 +1755,7 @@ function buildMfDropdown(btn, col) {
   actions.appendChild(clearMfBtn);
   drop.appendChild(actions);
 
-  // Options
+  // Список опций с чекбоксами
   vals.forEach(val => {
     const opt = document.createElement('div');
     opt.className = 'mf-option';
@@ -1345,6 +1763,7 @@ function buildMfDropdown(btn, col) {
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = selected.has(val);
+    // Переключение чекбокса при клике на строку
     const toggle = () => {
       cb.checked = !cb.checked;
       const sel = mfSelections[col] || new Set();
@@ -1360,20 +1779,26 @@ function buildMfDropdown(btn, col) {
     };
     opt.onclick = (e) => { if (e.target !== cb) toggle(); };
     opt.appendChild(cb);
-    opt.appendChild(document.createTextNode(val));
+    // Для date_end отображаем «Март 2026» вместо «2026-03»
+    const displayText = (col === 'date_end') ? formatYearMonth(val) : val;
+    opt.appendChild(document.createTextNode(displayText));
     drop.appendChild(opt);
   });
 
+  // Позиционируем дропдаун под кнопкой-триггером
   document.body.appendChild(drop);
   const rect = btn.getBoundingClientRect();
   drop.style.top = (rect.bottom + 2) + 'px';
   drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
   activeMfDropdown = drop;
   activeMfBtn = btn;
+  // Автофокус на поле поиска
   setTimeout(() => searchInp.focus(), 50);
 }
 
+// Открывает/закрывает дропдаун мультифильтра при клике на триггер
 function toggleMf(btn) {
+  // Если этот же дропдаун уже открыт — закрыть
   if (activeMfDropdown && activeMfBtn === btn) {
     activeMfDropdown.remove();
     activeMfDropdown = null;
@@ -1383,35 +1808,50 @@ function toggleMf(btn) {
   buildMfDropdown(btn, btn.dataset.col);
 }
 
+// Обновляет colFilters и перерисовывает таблицу при изменении выборки фильтра
 function applyMfFilter(col, btn) {
   const sel = mfSelections[col] || new Set();
   const def = MF_DEFAULTS[col] || '\u25BC';
   if (sel.size === 0) {
+    // Нет выбранных значений — убираем фильтр
     delete colFilters['mf_' + col];
     btn.textContent = def;
     btn.classList.remove('active');
   } else {
+    // Обновляем активный фильтр
     colFilters['mf_' + col] = sel;
-    btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
+    // Текст кнопки: одно значение (для date_end — «Март 2026») или «N выбрано»
+    if (sel.size === 1) {
+      const singleVal = [...sel][0];
+      btn.textContent = (col === 'date_end') ? formatYearMonth(singleVal) : singleVal;
+    } else {
+      btn.textContent = sel.size + ' выбрано';
+    }
     btn.classList.add('active');
   }
+  // Показываем/скрываем бейдж сброса всех фильтров
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
   renderPPTable();
 }
 
+// Сбрасывает все активные фильтры и перерисовывает таблицу
 function clearAllColFilters() {
   colFilters = {};
   Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
+  // Возвращаем все кнопки к дефолтному тексту и убираем active-класс
   document.querySelectorAll('.mf-trigger').forEach(btn => {
     btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
     btn.classList.remove('active');
   });
   if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
   document.getElementById('filtersActiveBadge').style.display = 'none';
+  // Запоминаем что пользователь сбросил дефолтный фильтр вручную
+  if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
   renderPPTable();
 }
 
+// Закрываем дропдаун при клике вне его (capture-фаза чтобы перехватить раньше других)
 document.addEventListener('click', (e) => {
   if (activeMfDropdown && !activeMfDropdown.contains(e.target) && e.target !== activeMfBtn) {
     activeMfDropdown.remove();
@@ -1420,9 +1860,11 @@ document.addEventListener('click', (e) => {
   }
 }, true);
 
-/* ── Column resize ───────────────────────────────────────────────────── */
+/* ── Изменение ширины столбцов drag-handle ───────────────────────────── */
+// Инициализирует drag-resize хэндлы на всех th таблицы
 function initColumnResize() {
   document.querySelectorAll('.pp-table th').forEach(th => {
+    // Не добавляем повторно если хэндл уже есть
     if (th.querySelector('.resize-handle')) return;
     const handle = document.createElement('div');
     handle.className = 'resize-handle';
@@ -1430,6 +1872,7 @@ function initColumnResize() {
 
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      // Добавляем визуальный класс при начале перетаскивания
       th.classList.add('resizing');
       handle.classList.add('resizing');
       const startX = e.pageX;
@@ -1437,11 +1880,13 @@ function initColumnResize() {
       const colIndex = th.cellIndex;
       const tblRows = th.closest('table').querySelectorAll('tbody tr');
 
+      // Перемещение мыши: меняем ширину колонки
       const onMouseMove = (ev) => {
         const width = startWidth + (ev.pageX - startX);
         if (width > 30) {
           th.style.width = width + 'px';
           th.style.minWidth = width + 'px';
+          // Синхронизируем ширину ячеек в body
           tblRows.forEach(row => {
             if (row.cells[colIndex]) {
               row.cells[colIndex].style.width = width + 'px';
@@ -1450,6 +1895,7 @@ function initColumnResize() {
           });
         }
       };
+      // Отпустили кнопку мыши: снимаем визуальные классы
       const onMouseUp = () => {
         th.classList.remove('resizing');
         handle.classList.remove('resizing');
@@ -1462,7 +1908,8 @@ function initColumnResize() {
   });
 }
 
-/* ── Browser history (back/forward) ──────────────────────────────────── */
+/* ── Поддержка навигации браузера (кнопки назад/вперёд) ──────────────── */
+// При popstate (кнопки Назад/Вперёд): открываем нужный план или возвращаемся на лендинг
 window.addEventListener('popstate', async () => {
   const pid = readProjectFromUrl();
   if (pid) {
@@ -1475,23 +1922,28 @@ window.addEventListener('popstate', async () => {
   }
 });
 
-/* ── Init ─────────────────────────────────────────────────────────────── */
+/* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
+  // Параллельно загружаем справочники и список ПП-проектов
   await loadDirs();
   await loadProjects();
 
+  // Если в URL есть project_id — открываем план напрямую (прямая ссылка)
   const urlProjectId = readProjectFromUrl();
   if (urlProjectId) {
     const proj = projects.find(p => String(p.id) === String(urlProjectId));
     if (proj) {
       await openProject(proj.id, proj.name);
     } else {
+      // ID не найден — переходим на лендинг
       showLanding();
     }
   } else {
+    // Нет project_id в URL — показываем лендинг
     showLanding();
   }
 
+  // Инициализируем drag-resize хэндлы для колонок
   initColumnResize();
 })();
 </script>

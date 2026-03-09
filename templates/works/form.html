@@ -1,14 +1,17 @@
 {% extends "base.html" %}
+<!-- Форма создания или редактирования записи о работе (Work) -->
 {% block title %}{% if object %}Редактировать работу{% else %}Новая работа{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
 <a href="{% url 'works:list' %}">Работы</a>
 <span>/</span>
+<!-- Текущий режим в хлебных крошках -->
 <span class="breadcrumb-current">{% if object %}Редактировать{% else %}Добавить{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>{% if object %}Редактировать работу{% else %}Новая работа{% endif %}</h1>
 </div>
@@ -17,10 +20,12 @@
   <form method="post" novalidate>
     {% csrf_token %}
 
+    <!-- Общие ошибки формы -->
     {% if form.non_field_errors %}
       <div class="alert alert-error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
     {% endif %}
 
+    <!-- Тип источника (task — план/отчёт, pp — производственный план) и вид работы -->
     <div class="form-row">
       <div class="form-group">
         <label>{{ form.source_type.label }}</label>
@@ -34,57 +39,65 @@
       </div>
     </div>
 
+    <!-- Наименование работы (обязательное поле) -->
     <div class="form-group">
       <label>{{ form.work_name.label }} <span style="color:var(--danger)">*</span></label>
       {{ form.work_name }}
       {% if form.work_name.errors %}<span class="field-error">{{ form.work_name.errors|join:", " }}</span>{% endif %}
     </div>
 
+    <!-- Номер работы и привязка к проекту -->
     <div class="form-row">
       <div class="form-group">
-        <label>{{ form.work_number.label }}</label>
-        {{ form.work_number }}
-        {% if form.work_number.errors %}<span class="field-error">{{ form.work_number.errors|join:", " }}</span>{% endif %}
+        <label>{{ form.work_num.label }}</label>
+        {{ form.work_num }}
+        {% if form.work_num.errors %}<span class="field-error">{{ form.work_num.errors|join:", " }}</span>{% endif %}
       </div>
       <div class="form-group">
         <label>{{ form.project.label }}</label>
-        {{ form.project }}
+        {{ form.project }}  <!-- FK → Project -->
       </div>
     </div>
 
+    <!-- Описание работы -->
     <div class="form-group">
-      <label>{{ form.description.label }}</label>
-      {{ form.description }}
+      <label>{{ form.work_designation.label }}</label>
+      {{ form.work_designation }}
     </div>
 
+    <!-- НТЦ-центр и отдел -->
     <div class="form-row">
       <div class="form-group">
         <label>{{ form.ntc_center.label }}</label>
-        {{ form.ntc_center }}
+        {{ form.ntc_center }}  <!-- FK → NTCCenter -->
       </div>
       <div class="form-group">
         <label>{{ form.department.label }}</label>
-        {{ form.department }}
+        {{ form.department }}  <!-- FK → Department -->
       </div>
     </div>
 
+    <!-- Сектор и исполнитель -->
     <div class="form-row">
       <div class="form-group">
         <label>{{ form.sector.label }}</label>
-        {{ form.sector }}
+        {{ form.sector }}  <!-- FK → Sector -->
       </div>
       <div class="form-group">
         <label>{{ form.executor.label }}</label>
-        {{ form.executor }}
+        {{ form.executor }}  <!-- FK → Employee -->
       </div>
     </div>
 
+    <!-- Имя исполнителя вручную (если не зарегистрирован в системе) -->
     <div class="form-group">
       <label>{{ form.executor_name_raw.label }}</label>
       {{ form.executor_name_raw }}
+      <!-- Подсказка: используется когда исполнитель не в базе сотрудников -->
       <small style="color:var(--muted);font-size:12px;">Если исполнитель не зарегистрирован в системе</small>
     </div>
 
+    <!-- Дата начала и дата окончания работы -->
     <div class="form-row">
       <div class="form-group">
         <label>{{ form.date_start.label }}</label>
@@ -97,6 +110,7 @@
       </div>
     </div>
 
+    <!-- Дедлайн (срок по ПП/ПГ/ТР) и плановые часы (JSON по месяцам) -->
     <div class="form-row">
       <div class="form-group">
         <label>{{ form.deadline.label }}</label>
@@ -105,13 +119,16 @@
       <div class="form-group">
         <label>{{ form.plan_hours.label }}</label>
         {{ form.plan_hours }}
+        <!-- Подсказка о формате JSONField с часами по месяцам -->
         <small style="color:var(--muted);font-size:12px;">Формат: {"2026-01": 40, "2026-02": 80}</small>
         {% if form.plan_hours.errors %}<span class="field-error">{{ form.plan_hours.errors|join:", " }}</span>{% endif %}
       </div>
     </div>
 
+    <!-- Кнопки действий -->
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
+      <!-- Отмена: при редактировании — на детальную страницу, при создании — на список -->
       <a href="{% if object %}{% url 'works:detail' object.pk %}{% else %}{% url 'works:list' %}{% endif %}" class="btn btn-outline">Отмена</a>
     </div>
   </form>

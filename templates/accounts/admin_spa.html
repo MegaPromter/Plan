@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static employee_tags %}
+<!-- SPA-страница администрирования: управление пользователями, справочниками, делегированиями, тестовыми данными -->
 
 {% block title %}Администрирование{% endblock %}
 
@@ -10,11 +11,12 @@
 
 {% block styles %}
 <style>
-/* ── Admin layout ─────────────────────────────────────────────────────── */
+/* ── Основной layout страницы: вертикальный стек секций ─────────────────── */
 .admin-page { display:flex; flex-direction:column; gap:24px; }
 
-/* ── Cards ────────────────────────────────────────────────────────────── */
+/* ── Карточки-аккордеоны (разворачиваемые секции) ──────────────────────── */
 .admin-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+/* Заголовок карточки: кликабельный, с переходом фона при наведении */
 .admin-card-header {
   padding:16px 24px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between; cursor:pointer;
@@ -22,12 +24,14 @@
 }
 .admin-card-header:hover { background:var(--surface2); }
 .admin-card-title { font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
+/* Стрелка-индикатор раскрытия карточки */
 .admin-card-arrow { font-size:14px; color:var(--muted); transition:transform 0.2s; }
-.admin-card-arrow.open { transform:rotate(180deg); }
+.admin-card-arrow.open { transform:rotate(180deg); }  /* ▲ при раскрытом состоянии */
+/* Тело карточки: скрыто по умолчанию, показывается при открытии */
 .admin-card-body { display:none; padding:24px; }
 .admin-card-body.open { display:block; }
 
-/* ── Accordion inside cards ───────────────────────────────────────────── */
+/* ── Вложенный аккордеон (секции справочников) ──────────────────────────── */
 .acc-section { border-bottom:1px solid var(--border); }
 .acc-section:last-child { border-bottom:none; }
 .acc-header {
@@ -38,18 +42,23 @@
 .acc-header-label { font-size:15px; font-weight:600; }
 .acc-arrow { font-size:13px; color:var(--muted); transition:transform 0.2s; }
 .acc-arrow.open { transform:rotate(180deg); }
+/* Тело вложенного аккордеона */
 .acc-body { display:none; padding:8px 16px 16px; }
 .acc-body.open { display:block; }
 
-/* ── Directory items ──────────────────────────────────────────────────── */
+/* ── Элемент справочника (строка с кнопками) ────────────────────────────── */
 .dir-item { display:flex; align-items:center; gap:8px; padding:6px 0; }
+/* Текстовое значение элемента (видно в режиме просмотра) */
 .dir-item-val { flex:1; font-size:14px; }
+/* Подпись (например, код отдела) */
 .dir-item-sub { color:var(--muted); font-size:12px; margin-left:4px; }
+/* Поле редактирования (скрыто по умолчанию, показывается при toggleDirItemEdit) */
 .dir-item-edit-input {
   flex:1; padding:4px 8px; background:var(--bg); border:1px solid var(--accent);
   border-radius:4px; color:var(--text); font-family:var(--font); font-size:14px;
   outline:none; display:none;
 }
+/* Мини-кнопки действий (редактировать / сохранить / удалить) */
 .dir-item-btn {
   width:26px; height:26px; border-radius:6px; border:none; background:transparent;
   cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;
@@ -57,11 +66,14 @@
 }
 .dir-item-btn.edit { color:var(--text2); }
 .dir-item-btn.edit:hover { color:var(--accent); background:var(--accent-glow); }
+/* Кнопка удаления — красная, полупрозрачная */
 .dir-item-btn.del { color:var(--danger); opacity:0.5; }
 .dir-item-btn.del:hover { opacity:1; background:rgba(239,68,68,0.1); }
+/* Кнопка «сохранить» — скрыта до начала редактирования */
 .dir-item-btn.save { color:var(--success); display:none; }
 .dir-item-btn.save:hover { background:rgba(34,197,94,0.1); }
 
+/* Строка добавления нового элемента в справочник */
 .dir-add-row { display:flex; gap:8px; margin-top:12px; }
 .dir-add-input {
   flex:1; padding:8px 12px; background:var(--bg); border:1px solid var(--border);
@@ -74,34 +86,41 @@
 }
 .dir-add-btn:hover { background:var(--accent2); }
 
-/* ── Hierarchical tree (projects) ─────────────────────────────────────── */
+/* ── Иерархическое дерево (проекты / секторы в отделах) ─────────────────── */
 .dir-parent-block { margin-bottom:8px; }
+/* Строка родительского узла */
 .dir-parent-row {
   display:flex; align-items:center; gap:6px; padding:6px 8px;
   border-radius:6px; background:var(--surface2); cursor:default;
 }
+/* Стрелка разворачивания узла дерева */
 .dir-parent-toggle {
   font-size:13px; color:var(--muted); cursor:pointer;
   transition:transform 0.2s; user-select:none; flex-shrink:0; margin-right:2px;
 }
+/* Свёрнутый узел: стрелка повёрнута на -90° */
 .dir-parent-toggle.collapsed { transform:rotate(-90deg); }
+/* Метка родительского узла */
 .dir-parent-label {
   flex:1; font-size:14px; font-weight:600; color:var(--text2);
 }
+/* Поле редактирования названия родительского узла (скрыто по умолчанию) */
 .dir-parent-edit-input {
   flex:1; padding:3px 6px; background:var(--bg); border:1px solid var(--accent);
   border-radius:4px; color:var(--text); font-family:var(--font); font-size:14px;
   outline:none; display:none;
 }
+/* Контейнер дочерних узлов с отступом и вертикальной линией */
 .dir-children {
   padding-left:12px; border-left:2px solid var(--border);
   margin:4px 0 0 16px;
 }
 .dir-children.collapsed { display:none; }
+/* Вложенные уровни дерева с убывающим отступом */
 .dir-children .dir-children { margin-left:12px; }
 .dir-children .dir-children .dir-children { margin-left:8px; }
 
-/* ── Seed data cards ──────────────────────────────────────────────────── */
+/* ── Карточки тестовых данных (Seed) ────────────────────────────────────── */
 .seed-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
 .seed-card {
   background:var(--surface2); border:1px solid var(--border); border-radius:12px;
@@ -110,12 +129,13 @@
 .seed-card-title { font-size:14px; font-weight:600; color:var(--text); }
 .seed-card-desc { font-size:13px; color:var(--muted); }
 .seed-card-actions { display:flex; gap:8px; align-items:center; }
+/* Поле ввода количества (например, количество задач для генерации) */
 .seed-card-actions input {
   width:80px; padding:6px 10px; background:var(--bg); border:1px solid var(--border);
   border-radius:6px; color:var(--text); font-family:var(--font); font-size:13px; outline:none;
 }
 
-/* ── Delegation table ─────────────────────────────────────────────────── */
+/* ── Таблица делегирований ───────────────────────────────────────────────── */
 .deleg-table { width:100%; border-collapse:collapse; }
 .deleg-table th {
   text-align:left; padding:10px 14px; font-size:12px; font-weight:600;
@@ -129,8 +149,10 @@
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен для fetch-запросов (POST/PUT/DELETE) -->
 {% csrf_token %}
 
+<!-- Страница администрирования доступна только пользователям с ролью admin -->
 {% if request.user|is_admin_role %}
 <div class="admin-page">
   <div class="page-header">
@@ -138,19 +160,23 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       Section 1: Users
+       Секция 1: Управление пользователями системы
        ═══════════════════════════════════════════════════════════════════════ -->
   <div class="admin-card">
+    <!-- Заголовок-кнопка раскрытия секции пользователей -->
     <div class="admin-card-header" onclick="toggleCard('users')">
       <div class="admin-card-title"><i class="fas fa-users"></i> Пользователи</div>
       <span class="admin-card-arrow" id="arrow-card-users">&#9660;</span>
     </div>
+    <!-- Тело секции: скрыто по умолчанию -->
     <div class="admin-card-body" id="card-users">
+      <!-- Кнопка добавления нового пользователя -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm" onclick="openUserModal(null)">
           <i class="fas fa-plus"></i> Добавить пользователя
         </button>
       </div>
+      <!-- Таблица пользователей: тело заполняется из renderUsers() -->
       <div class="table-wrap">
         <table class="data-table" id="usersTable">
           <thead>
@@ -172,33 +198,35 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       Section 2: Directories
+       Секция 2: Справочники (НТЦ, отделы, секторы, должности и пр.)
        ═══════════════════════════════════════════════════════════════════════ -->
   <div class="admin-card">
     <div class="admin-card-header" onclick="toggleCard('dirs')">
       <div class="admin-card-title"><i class="fas fa-book"></i> Справочники</div>
       <span class="admin-card-arrow" id="arrow-card-dirs">&#9660;</span>
     </div>
+    <!-- Содержимое справочников строится из renderDirectories() -->
     <div class="admin-card-body" id="card-dirs">
       <div id="directoriesContent"></div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       Section 2b: Projects (4-level hierarchy)
+       Секция 2b: Иерархия проектов (4 уровня: проект → этап → веха → работа)
        ═══════════════════════════════════════════════════════════════════════ -->
   <div class="admin-card">
     <div class="admin-card-header" onclick="toggleCard('projects')">
       <div class="admin-card-title"><i class="fas fa-folder-open"></i> Проекты</div>
       <span class="admin-card-arrow" id="arrow-card-projects">&#9660;</span>
     </div>
+    <!-- Содержимое строится из renderProjectsHierarchy() -->
     <div class="admin-card-body" id="card-projects">
       <div id="projectsContent"></div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       Section 3: Delegations
+       Секция 3: Делегирования прав (кто кому делегирует видимость/запись)
        ═══════════════════════════════════════════════════════════════════════ -->
   <div class="admin-card">
     <div class="admin-card-header" onclick="toggleCard('delegations')">
@@ -206,21 +234,23 @@
       <span class="admin-card-arrow" id="arrow-card-delegations">&#9660;</span>
     </div>
     <div class="admin-card-body" id="card-delegations">
+      <!-- Кнопка создания нового делегирования -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm" onclick="openDelegationModal()">
           <i class="fas fa-plus"></i> Создать делегирование
         </button>
       </div>
+      <!-- Таблица делегирований: тело заполняется из renderDelegations() -->
       <div class="table-wrap">
         <table class="deleg-table" id="delegationsTable">
           <thead>
             <tr>
-              <th>Делегирует</th>
-              <th>Получает</th>
-              <th>Тип</th>
-              <th>Значение</th>
-              <th>Право записи</th>
-              <th>До</th>
+              <th>Делегирует</th>      <!-- Кто передаёт права -->
+              <th>Получает</th>        <!-- Кому передаются права -->
+              <th>Тип</th>             <!-- dept / sector / full -->
+              <th>Значение</th>        <!-- Конкретный отдел/сектор -->
+              <th>Право записи</th>    <!-- can_write: Да / Нет -->
+              <th>До</th>              <!-- expires_at: дата истечения -->
               <th style="width:80px;">Действия</th>
             </tr>
           </thead>
@@ -231,7 +261,7 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
-       Section 4: Seed Data
+       Секция 4: Тестовые данные (Seed) — доступна только в DEBUG режиме на сервере
        ═══════════════════════════════════════════════════════════════════════ -->
   <div class="admin-card">
     <div class="admin-card-header" onclick="toggleCard('seed')">
@@ -239,7 +269,9 @@
       <span class="admin-card-arrow" id="arrow-card-seed">&#9660;</span>
     </div>
     <div class="admin-card-body" id="card-seed">
+      <!-- Сетка карточек seed-операций -->
       <div class="seed-grid">
+        <!-- Карточка: заполнить все справочники начальными данными -->
         <div class="seed-card">
           <div class="seed-card-title">Заполнить справочники</div>
           <div class="seed-card-desc">Заполнить все справочники начальными данными</div>
@@ -250,6 +282,7 @@
           </div>
         </div>
 
+        <!-- Карточка: создать структуру отделов и секторов -->
         <div class="seed-card">
           <div class="seed-card-title">Заполнить отделы</div>
           <div class="seed-card-desc">Создать структуру отделов и секторов</div>
@@ -260,10 +293,12 @@
           </div>
         </div>
 
+        <!-- Карточка: генерация N случайных задач -->
         <div class="seed-card">
           <div class="seed-card-title">Генерировать задачи</div>
           <div class="seed-card-desc">Создать случайные задачи для тестирования</div>
           <div class="seed-card-actions">
+            <!-- Поле количества задач -->
             <input type="number" id="seedCount" value="10" min="1" max="500" placeholder="Кол-во">
             <button class="btn btn-secondary btn-sm" onclick="seedTasks()">
               <i class="fas fa-play"></i> Выполнить
@@ -271,6 +306,7 @@
           </div>
         </div>
 
+        <!-- Карточка: добавить список исполнителей -->
         <div class="seed-card">
           <div class="seed-card-title">Добавить исполнителей</div>
           <div class="seed-card-desc">Сгенерировать список исполнителей</div>
@@ -281,6 +317,7 @@
           </div>
         </div>
 
+        <!-- Карточка: сгенерировать тестовые записи об отпусках -->
         <div class="seed-card">
           <div class="seed-card-title">Генерировать отпуска</div>
           <div class="seed-card-desc">Создать тестовые записи отпусков</div>
@@ -296,6 +333,7 @@
 </div>
 
 {% else %}
+<!-- Пустое состояние: доступ запрещён для неадминистраторов -->
 <div class="empty-state">
   <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
   <p>Доступ запрещён. Эта страница доступна только администраторам.</p>
@@ -303,48 +341,55 @@
 </div>
 {% endif %}
 
-<script src="{% static 'js/utils.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
+<!-- Вспомогательные JS-модули -->
+<script src="{% static 'js/utils.js' %}"></script>  <!-- fetchJson, escapeHtml, showToast, formatDate -->
+<script src="{% static 'js/modal.js' %}"></script>  <!-- openModal, confirmDialog -->
+
+<!-- Скрипт администрирования — только для администраторов -->
 {% if request.user|is_admin_role %}
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
-   State
+   Состояние SPA администрирования
    ══════════════════════════════════════════════════════════════════════════ */
-let users = [];
-let directories = {};
-let delegations = [];
-let projectDirs = {};
-const openSections = new Set();
-const openAccordions = new Set();
-const openProjectNodes = new Set();
+let users = [];            // Список пользователей системы
+let directories = {};      // Справочники: type → массив записей
+let delegations = [];      // Список делегирований
+let projectDirs = {};      // Иерархия проектов (не используется напрямую)
+// Множества для хранения состояния раскрытия элементов UI
+const openSections = new Set();       // Открытые admin-карточки
+const openAccordions = new Set();     // Открытые вложенные аккордеоны справочников
+const openProjectNodes = new Set();   // Раскрытые узлы дерева проектов
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Init
+   Инициализация: загружаем все данные параллельно
    ══════════════════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([
-    loadUsers(),
-    loadDirectories(),
-    loadDelegations(),
+    loadUsers(),        // Раздел «Пользователи»
+    loadDirectories(),  // Разделы «Справочники» и «Проекты»
+    loadDelegations(),  // Раздел «Делегирования»
   ]);
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Card accordion toggle
+   Переключение раскрытия admin-карточки
    ══════════════════════════════════════════════════════════════════════════ */
 function toggleCard(id) {
   const body = document.getElementById('card-' + id);
   const arrow = document.getElementById('arrow-card-' + id);
   if (!body) return;
+  // Переключаем класс open на теле и стрелке
   body.classList.toggle('open');
   if (arrow) arrow.classList.toggle('open');
+  // Сохраняем состояние в Set для восстановления после перерисовки
   if (body.classList.contains('open')) openSections.add(id);
   else openSections.delete(id);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Section 1: Users
+   Секция 1: Пользователи
    ══════════════════════════════════════════════════════════════════════════ */
+// Загружает список пользователей: GET /api/users/
 async function loadUsers() {
   const data = await fetchJson('/api/users/');
   if (data._error) return;
@@ -352,6 +397,7 @@ async function loadUsers() {
   renderUsers();
 }
 
+// Отрисовывает таблицу пользователей
 function renderUsers() {
   const tbody = document.getElementById('usersBody');
   if (!tbody) return;
@@ -365,6 +411,7 @@ function renderUsers() {
   users.forEach(u => {
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
+    // Клик по строке (не по кнопке) открывает модал редактирования
     tr.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;
       openUserModal(u);
@@ -372,18 +419,22 @@ function renderUsers() {
     tr.innerHTML = `
       <td style="font-weight:500;">${escapeHtml(u.username || '')}</td>
       <td>${escapeHtml(u.full_name || u.fio || '')}</td>
+      <!-- Бейдж роли пользователя -->
       <td><span class="badge badge-blue">${escapeHtml(u.role_display || u.role || '')}</span></td>
       <td>${escapeHtml(u.dept || u.department || '')}</td>
       <td>${escapeHtml(u.sector || '')}</td>
       <td>${escapeHtml(u.ntc_center || u.center || '')}</td>
       <td>${escapeHtml(u.position || '')}</td>
       <td style="white-space:nowrap;">
+        <!-- Кнопка редактирования пользователя -->
         <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openUserModal(findUser(${u.id}))" title="Редактировать">
           <i class="fas fa-edit"></i>
         </button>
+        <!-- Кнопка сброса пароля (оранжевая) -->
         <button class="btn btn-sm btn-outline" style="color:var(--warning);border-color:var(--warning);" onclick="event.stopPropagation();resetPassword(${u.id})" title="Сброс пароля">
           <i class="fas fa-key"></i>
         </button>
+        <!-- Кнопка удаления пользователя (красная) -->
         <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);" onclick="event.stopPropagation();deleteUser(${u.id})" title="Удалить">
           <i class="fas fa-trash"></i>
         </button>
@@ -393,11 +444,13 @@ function renderUsers() {
   });
 }
 
+// Вспомогательная функция: поиск пользователя по ID в локальном массиве
 function findUser(id) {
   return users.find(u => u.id == id) || null;
 }
 
-/* ── Правила полей подразделения по должности ─────────────────────────── */
+/* ── Правила видимости полей подразделения в зависимости от должности ────── */
+// Каждой должности соответствует правило: ntc / dept / both (отдел + сектор)
 const MU_POS_FIELDS = {
   'Руководитель НТЦ':                          'ntc',
   'Зам. руководителя НТЦ':                     'ntc',
@@ -413,6 +466,7 @@ const MU_POS_FIELDS = {
   'Руководитель направления':                   'both',
 };
 
+// Показывает/скрывает поля НТЦ/отдела/сектора в зависимости от выбранной должности
 function _muApplyPosition(position) {
   const rule = MU_POS_FIELDS[position] || '';
   const showNtc    = rule === 'ntc';
@@ -422,21 +476,25 @@ function _muApplyPosition(position) {
   const fNtc    = document.getElementById('mu_field_ntc');
   const fDept   = document.getElementById('mu_field_dept');
   const fSector = document.getElementById('mu_field_sector');
+  // Показываем/скрываем обёртки полей
   if (fNtc)    fNtc.style.display    = showNtc    ? '' : 'none';
   if (fDept)   fDept.style.display   = showDept   ? '' : 'none';
   if (fSector) fSector.style.display = showSector ? '' : 'none';
 
+  // Сбрасываем значения скрытых полей во избежание отправки лишних данных
   if (!showNtc    && document.getElementById('mu_ntc_center')) document.getElementById('mu_ntc_center').value = '';
   if (!showDept   && document.getElementById('mu_dept'))       document.getElementById('mu_dept').value       = '';
   if (!showSector && document.getElementById('mu_sector'))     document.getElementById('mu_sector').value     = '';
 }
 
+// Строит маппинг dept.value → [sector.value] через поле parent_id сектора
 function _muBuildSectorsByDept() {
-  // Строим маппинг dept.value -> [sector.value] через parent_id
   const deptItems   = getDirItems('dept');
   const sectorItems = getDirItems('sector');
+  // Словарь id отдела → код отдела
   const deptById = {};
   deptItems.forEach(d => { if (d.id) deptById[d.id] = d.value; });
+  // Группируем секторы по коду отдела
   const result = {};
   sectorItems.forEach(s => {
     const deptCode = deptById[s.parent_id];
@@ -447,12 +505,14 @@ function _muBuildSectorsByDept() {
   return result;
 }
 
+// Наполняет select секторов вариантами для выбранного отдела
 function _muFillSectors(dept) {
   const sel = document.getElementById('mu_sector');
   if (!sel) return;
   const sbd = _muBuildSectorsByDept();
   sel.innerHTML = '<option value="">—</option>';
   if (!dept) return;
+  // Добавляем только секторы выбранного отдела
   (sbd[dept] || []).forEach(v => {
     const o = document.createElement('option');
     o.value = o.textContent = v;
@@ -460,17 +520,20 @@ function _muFillSectors(dept) {
   });
 }
 
-/* ── User modal ───────────────────────────────────────────────────────── */
+/* ── Модал создания / редактирования пользователя ────────────────────────── */
 function openUserModal(user) {
   const isEdit = !!user;
   const title = isEdit ? 'Редактировать пользователя' : 'Новый пользователь';
 
+  // Получаем списки значений из справочников
   const depts     = getDirValues('dept');
   const centers   = getDirValues('ntc_center') || getDirValues('center') || [];
   const positions = getDirValues('position');
   const curDept   = user ? (user.dept || user.department || '') : '';
+  // Секторы фильтруем по текущему отделу пользователя
   const sectors   = _muBuildSectorsByDept()[curDept] || getDirValues('sector');
 
+  // Строит <option>-теги с предвыбором
   function selOpts(list, selected) {
     return '<option value="">—</option>' +
       list.map(v => `<option value="${escapeHtml(v)}" ${v === selected ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
@@ -480,13 +543,16 @@ function openUserModal(user) {
   const curPos    = user ? (user.position || '') : '';
   const curRule   = MU_POS_FIELDS[curPos] || '';
 
+  // HTML тела модала
   const body = `
     <div class="form-row">
       <div class="form-group">
         <label>Логин <span style="color:var(--danger)">*</span></label>
+        <!-- При редактировании логин нельзя изменить -->
         <input type="text" id="mu_username" value="${escapeHtml(user ? user.username : '')}" ${isEdit ? 'readonly style="opacity:0.6;"' : ''}>
       </div>
     </div>
+    <!-- ФИО в трёх отдельных полях -->
     <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
       <div class="form-group">
         <label>Фамилия <span style="color:var(--danger)">*</span></label>
@@ -501,6 +567,7 @@ function openUserModal(user) {
         <input type="text" id="mu_patronymic" value="${escapeHtml(user ? (user.patronymic || '') : '')}" placeholder="Иванович">
       </div>
     </div>
+    <!-- Поля пароля — только при создании нового пользователя -->
     ${!isEdit ? `
     <div class="form-row">
       <div class="form-group">
@@ -512,6 +579,7 @@ function openUserModal(user) {
         <input type="password" id="mu_password2" placeholder="Повторите пароль">
       </div>
     </div>` : ''}
+    <!-- Роль пользователя и должность -->
     <div class="form-row">
       <div class="form-group">
         <label>Роль</label>
@@ -523,12 +591,14 @@ function openUserModal(user) {
       </div>
       <div class="form-group">
         <label>Должность <span style="color:var(--danger)">*</span></label>
+        <!-- Если справочник должностей загружен — select, иначе свободный ввод -->
         ${positions.length > 0
           ? `<select id="mu_position">${selOpts(positions, curPos)}</select>`
           : `<input type="text" id="mu_position" value="${escapeHtml(curPos)}">`
         }
       </div>
     </div>
+    <!-- Поле НТЦ: видно только для должностей с rule='ntc' -->
     <div id="mu_field_ntc" style="display:${curRule === 'ntc' ? '' : 'none'}">
       <div class="form-group">
         <label>НТЦ <span style="color:var(--danger)">*</span></label>
@@ -538,6 +608,7 @@ function openUserModal(user) {
         }
       </div>
     </div>
+    <!-- Поле отдела: видно для rule='dept' и rule='both' -->
     <div id="mu_field_dept" style="display:${(curRule === 'dept' || curRule === 'both') ? '' : 'none'}">
       <div class="form-group">
         <label>Отдел <span style="color:var(--danger)">*</span></label>
@@ -547,6 +618,7 @@ function openUserModal(user) {
         }
       </div>
     </div>
+    <!-- Поле сектора: видно только для rule='both' -->
     <div id="mu_field_sector" style="display:${curRule === 'both' ? '' : 'none'}">
       <div class="form-group">
         <label>Сектор <span style="color:var(--danger)">*</span></label>
@@ -568,17 +640,21 @@ function openUserModal(user) {
     `,
   });
 
-  // Навесить обработчики после рендера модала
+  // После рендера навешиваем обработчики на select-поля
   const posSel  = document.getElementById('mu_position');
   const deptSel = document.getElementById('mu_dept');
   if (posSel) {
+    // При смене должности обновляем видимость полей подразделения
     posSel.addEventListener('change', () => _muApplyPosition(posSel.value));
   }
   if (deptSel) {
+    // При смене отдела перестраиваем список секторов
     deptSel.addEventListener('change', () => _muFillSectors(deptSel.value));
   }
 
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+
+  // Обработчик сохранения пользователя
   modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
     const lastName   = document.getElementById('mu_last_name').value.trim();
     const firstName  = document.getElementById('mu_first_name').value.trim();
@@ -586,12 +662,14 @@ function openUserModal(user) {
     const position   = document.getElementById('mu_position').value;
     const username   = document.getElementById('mu_username').value.trim();
 
+    // Валидация обязательных полей
     if (!username)   { showToast('Введите логин', 'error'); return; }
     if (!lastName)   { showToast('Введите фамилию', 'error'); return; }
     if (!firstName)  { showToast('Введите имя', 'error'); return; }
     if (!patronymic) { showToast('Введите отчество', 'error'); return; }
     if (!position)   { showToast('Выберите должность', 'error'); return; }
 
+    // Валидация полей подразделения в зависимости от должности
     const rule = MU_POS_FIELDS[position] || '';
     const deptVal   = document.getElementById('mu_dept')       ? document.getElementById('mu_dept').value       : '';
     const sectorVal = document.getElementById('mu_sector')     ? document.getElementById('mu_sector').value     : '';
@@ -601,6 +679,7 @@ function openUserModal(user) {
     if ((rule === 'dept' || rule === 'both') && !deptVal) { showToast('Выберите отдел', 'error'); return; }
     if (rule === 'both' && !sectorVal) { showToast('Выберите сектор', 'error'); return; }
 
+    // Формируем payload
     const payload = {
       username,
       last_name:   lastName,
@@ -614,6 +693,7 @@ function openUserModal(user) {
     };
 
     if (!isEdit) {
+      // При создании добавляем пароль и проверяем совпадение
       payload.password = document.getElementById('mu_password').value;
       const pw2 = document.getElementById('mu_password2').value;
       if (payload.password !== pw2) {
@@ -628,11 +708,13 @@ function openUserModal(user) {
 
     let result;
     if (isEdit) {
+      // PUT /api/users/<id>/ — обновление существующего пользователя
       result = await fetchJson(`/api/users/${user.id}/`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
     } else {
+      // POST /api/users/ — создание нового пользователя
       result = await fetchJson('/api/users/', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -647,7 +729,7 @@ function openUserModal(user) {
   });
 }
 
-/* ── Reset password ───────────────────────────────────────────────────── */
+/* ── Модал сброса пароля пользователя ────────────────────────────────────── */
 async function resetPassword(userId) {
   const modal = openModal({
     title: 'Сброс пароля',
@@ -672,9 +754,11 @@ async function resetPassword(userId) {
   modal.dialog.querySelector('.modal-save').addEventListener('click', async () => {
     const pw = document.getElementById('rp_password').value;
     const pw2 = document.getElementById('rp_password2').value;
+    // Проверка совпадения и длины пароля
     if (pw !== pw2) { showToast('Пароли не совпадают', 'error'); return; }
     if (!pw || pw.length < 6) { showToast('Пароль должен быть не менее 6 символов', 'error'); return; }
 
+    // PUT /api/users/<id>/password/
     const result = await fetchJson(`/api/users/${userId}/password/`, {
       method: 'PUT',
       body: JSON.stringify({ password: pw }),
@@ -686,13 +770,14 @@ async function resetPassword(userId) {
   });
 }
 
-/* ── Delete user ──────────────────────────────────────────────────────── */
+/* ── Удаление пользователя ───────────────────────────────────────────────── */
 async function deleteUser(userId) {
   const user = findUser(userId);
   const name = user ? (user.full_name || user.username) : `#${userId}`;
   const ok = await confirmDialog(`Удалить пользователя "${name}"? Это действие необратимо.`, 'Удаление пользователя');
   if (!ok) return;
 
+  // DELETE /api/users/<id>/
   const result = await fetchJson(`/api/users/${userId}/`, { method: 'DELETE' });
   if (!result._error) {
     showToast('Пользователь удалён', 'success');
@@ -701,29 +786,35 @@ async function deleteUser(userId) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Section 2: Directories
+   Секция 2: Справочники
    ══════════════════════════════════════════════════════════════════════════ */
+// Загружает все справочники: GET /api/directories/
 async function loadDirectories() {
   const data = await fetchJson('/api/directories/');
   if (data._error) return;
   directories = data;
+  // Рендерим обе секции: справочники и иерархию проектов
   renderDirectories();
   renderProjectsHierarchy();
 }
 
+// Возвращает массив значений (строк) для данного типа справочника
 function getDirValues(type) {
   const items = directories[`_ids_${type}`] || directories[type] || [];
   if (!Array.isArray(items)) return [];
   return items.map(i => typeof i === 'string' ? i : (i.value || i.name || ''));
 }
 
+// Возвращает массив объектов {id, value, parent_id} для данного типа
 function getDirItems(type) {
   return directories[`_ids_${type}`] || directories[type] || [];
 }
 
+// Конфигурация секций справочников
 const DIR_SECTIONS = [
   { type: 'ntc_center',    label: 'НТЦ-центры',   icon: 'fas fa-building' },
   { type: 'dept',           label: 'Отделы',        icon: 'fas fa-sitemap' },
+  // Секторы: иерархический вид (parent = отдел)
   { type: 'sector',         label: 'Секторы',       icon: 'fas fa-project-diagram', parentType: 'dept' },
   { type: 'position',       label: 'Должности',     icon: 'fas fa-id-badge' },
   { type: 'work_type',      label: 'Типы работ',    icon: 'fas fa-briefcase' },
@@ -731,6 +822,7 @@ const DIR_SECTIONS = [
   { type: 'justification',  label: 'Обоснования',   icon: 'fas fa-file-alt' },
 ];
 
+// Строит вложенные аккордеоны для всех секций справочников
 function renderDirectories() {
   const container = document.getElementById('directoriesContent');
   if (!container) return;
@@ -750,15 +842,17 @@ function renderDirectories() {
     `;
 
     const body = section.querySelector(`#body-${headerId}`);
+    // Секторы строятся иерархически (сгруппированы по отделу)
     if (sec.parentType) {
       body.appendChild(buildHierarchyDir(sec.type, sec.parentType, sec.label));
     } else {
+      // Остальные справочники — плоский список
       body.appendChild(buildFlatDir(sec.type, sec.label));
     }
 
     container.appendChild(section);
 
-    // Restore open state
+    // Восстанавливаем состояние раскрытия из Set
     if (openAccordions.has(sec.type)) {
       body.classList.add('open');
       const arrow = section.querySelector(`#arrow-${headerId}`);
@@ -767,6 +861,7 @@ function renderDirectories() {
   });
 }
 
+// Переключает раскрытие вложенного аккордеона справочника
 function toggleAccordion(type) {
   const headerId = `dir-acc-${type}`;
   const body = document.getElementById(`body-${headerId}`);
@@ -778,27 +873,33 @@ function toggleAccordion(type) {
   else openAccordions.delete(type);
 }
 
-/* ── Flat directory list ──────────────────────────────────────────────── */
+/* ── Плоский список справочника ──────────────────────────────────────────── */
 function buildFlatDir(type, label) {
   const wrap = document.createElement('div');
   const items = getDirItems(type);
 
+  // Строим строку для каждого элемента
   items.forEach(item => {
     const id = item.id || item;
     const val = item.value || item.name || item;
     const row = document.createElement('div');
     row.className = 'dir-item';
     row.innerHTML = `
+      <!-- Текстовое значение (режим просмотра) -->
       <span class="dir-item-val" id="dlabel-${type}-${id}">${escapeHtml(val)}</span>
+      <!-- Поле редактирования (скрыто по умолчанию; Enter сохраняет) -->
       <input class="dir-item-edit-input" id="dinp-${type}-${id}" value="${escapeHtml(val)}"
              onkeydown="if(event.key==='Enter')saveDirItem(${id},'${type}','dinp-${type}-${id}','dlabel-${type}-${id}')">
+      <!-- Кнопка переключения в режим редактирования -->
       <button class="dir-item-btn edit" onclick="toggleDirItemEdit('${type}',${id})" title="Редактировать">
         <i class="fas fa-edit"></i>
       </button>
+      <!-- Кнопка сохранения (видна только в режиме редактирования) -->
       <button class="dir-item-btn save" id="dsave-${type}-${id}"
               onclick="saveDirItem(${id},'${type}','dinp-${type}-${id}','dlabel-${type}-${id}')">
         <i class="fas fa-check"></i>
       </button>
+      <!-- Кнопка удаления элемента -->
       <button class="dir-item-btn del" onclick="deleteDirItem(${id})" title="Удалить">
         <i class="fas fa-times"></i>
       </button>
@@ -806,7 +907,7 @@ function buildFlatDir(type, label) {
     wrap.appendChild(row);
   });
 
-  // Add row
+  // Строка добавления нового элемента в конце списка
   const addRow = document.createElement('div');
   addRow.className = 'dir-add-row';
   addRow.innerHTML = `
@@ -818,12 +919,13 @@ function buildFlatDir(type, label) {
   return wrap;
 }
 
-/* ── Hierarchy directory (sectors under depts) ────────────────────────── */
+/* ── Иерархический список справочника (секторы в отделах) ───────────────── */
 function buildHierarchyDir(childType, parentType, childLabel) {
   const wrap = document.createElement('div');
   const parents = getDirItems(parentType);
   const children = getDirItems(childType);
 
+  // Для каждого родителя (отдела) строим блок с дочерними элементами (секторами)
   parents.forEach(parent => {
     const pId = parent.id || parent;
     const pVal = parent.value || parent.name || parent;
@@ -832,12 +934,14 @@ function buildHierarchyDir(childType, parentType, childLabel) {
     const block = document.createElement('div');
     block.style.cssText = 'margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:8px;';
 
+    // Строки дочерних элементов (секторов)
     let childrenHtml = '';
     pChildren.forEach(child => {
       const cId = child.id || child;
       const cVal = child.value || child.name || child;
       childrenHtml += `
         <div class="dir-item" style="padding-left:12px;">
+          <!-- Стрелка вложенности -->
           <span style="color:var(--muted);margin-right:4px;">&#8627;</span>
           <span class="dir-item-val" id="dlabel-${childType}-${cId}">${escapeHtml(cVal)}</span>
           <input class="dir-item-edit-input" id="dinp-${childType}-${cId}" value="${escapeHtml(cVal)}"
@@ -850,10 +954,12 @@ function buildHierarchyDir(childType, parentType, childLabel) {
     });
 
     block.innerHTML = `
+      <!-- Заголовок родительского блока (название отдела) -->
       <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:var(--text);">
         <i class="fas fa-folder" style="color:var(--accent);margin-right:6px;"></i>${escapeHtml(pVal)}
       </div>
       ${childrenHtml}
+      <!-- Поле добавления нового сектора в данный отдел -->
       <div class="dir-add-row" style="margin-top:8px;">
         <input class="dir-add-input" id="diradd-${childType}-${pId}" placeholder="Добавить ${childLabel}..."
                onkeydown="if(event.key==='Enter')addDirChildItem('${childType}',${pId},'diradd-${childType}-${pId}')">
@@ -866,7 +972,8 @@ function buildHierarchyDir(childType, parentType, childLabel) {
   return wrap;
 }
 
-/* ── Directory CRUD ───────────────────────────────────────────────────── */
+/* ── CRUD для элементов справочника ──────────────────────────────────────── */
+// Переключает режим редактирования строки справочника (label ↔ input)
 function toggleDirItemEdit(type, id) {
   const label = document.getElementById(`dlabel-${type}-${id}`);
   const inp = document.getElementById(`dinp-${type}-${id}`);
@@ -875,10 +982,12 @@ function toggleDirItemEdit(type, id) {
 
   const isEditing = inp.style.display === 'inline-block';
   if (isEditing) {
+    // Выключаем режим редактирования
     inp.style.display = 'none';
     label.style.display = '';
     if (saveBtn) saveBtn.style.display = 'none';
   } else {
+    // Включаем режим редактирования
     inp.style.display = 'inline-block';
     inp.style.flex = '1';
     label.style.display = 'none';
@@ -888,6 +997,7 @@ function toggleDirItemEdit(type, id) {
   }
 }
 
+// Сохраняет новое значение элемента: PUT /api/directories/<id>/
 async function saveDirItem(id, type, inputId, labelId) {
   const inp = document.getElementById(inputId);
   const newVal = inp.value.trim();
@@ -904,6 +1014,7 @@ async function saveDirItem(id, type, inputId, labelId) {
   }
 }
 
+// Добавляет новый элемент в плоский справочник: POST /api/directories/create/
 async function addDirItem(type) {
   const inp = document.getElementById(`diradd-${type}`);
   const val = inp.value.trim();
@@ -921,6 +1032,7 @@ async function addDirItem(type) {
   }
 }
 
+// Добавляет дочерний элемент справочника (с parent_id): POST /api/directories/create/
 async function addDirChildItem(type, parentId, inputId) {
   const inp = document.getElementById(inputId);
   const val = inp.value.trim();
@@ -938,6 +1050,7 @@ async function addDirChildItem(type, parentId, inputId) {
   }
 }
 
+// Удаляет элемент справочника (и все вложенные): DELETE /api/directories/<id>/
 async function deleteDirItem(id) {
   const ok = await confirmDialog('Удалить запись из справочника и все вложенные элементы?', 'Удаление');
   if (!ok) return;
@@ -950,8 +1063,9 @@ async function deleteDirItem(id) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Section 3: Delegations
+   Секция 3: Делегирования
    ══════════════════════════════════════════════════════════════════════════ */
+// Загружает список делегирований: GET /api/delegations/
 async function loadDelegations() {
   const data = await fetchJson('/api/delegations/');
   if (data._error) return;
@@ -959,6 +1073,7 @@ async function loadDelegations() {
   renderDelegations();
 }
 
+// Отрисовывает таблицу делегирований
 function renderDelegations() {
   const tbody = document.getElementById('delegationsBody');
   if (!tbody) return;
@@ -974,11 +1089,16 @@ function renderDelegations() {
     tr.innerHTML = `
       <td>${escapeHtml(d.delegator_name || d.delegator || '')}</td>
       <td>${escapeHtml(d.delegate_name || d.delegate || '')}</td>
+      <!-- Тип: dept (отдел) / sector (сектор) / full (полное) -->
       <td>${escapeHtml(d.type_display || d.type || '')}</td>
+      <!-- Конкретное значение: код отдела или сектора -->
       <td>${escapeHtml(d.value || '')}</td>
+      <!-- Право записи: зелёный бейдж если can_write, серый — иначе -->
       <td>${d.can_write ? '<span class="badge badge-green">Да</span>' : '<span class="badge badge-gray">Нет</span>'}</td>
+      <!-- Срок истечения делегирования -->
       <td style="white-space:nowrap;">${d.expires_at ? formatDate(d.expires_at) : '—'}</td>
       <td>
+        <!-- Кнопка отзыва делегирования -->
         <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);"
                 onclick="revokeDelegation(${d.id})" title="Отозвать">
           <i class="fas fa-ban"></i>
@@ -989,8 +1109,9 @@ function renderDelegations() {
   });
 }
 
-/* ── Delegation modal ─────────────────────────────────────────────────── */
+/* ── Модал создания нового делегирования ─────────────────────────────────── */
 function openDelegationModal() {
+  // Строим опции из списка пользователей
   const userOpts = users.map(u =>
     `<option value="${u.id}">${escapeHtml(u.full_name || u.username || '')}</option>`
   ).join('');
@@ -999,6 +1120,7 @@ function openDelegationModal() {
     <div class="form-row">
       <div class="form-group">
         <label>Делегирует (кто)</label>
+        <!-- Кто передаёт свои права видимости/записи -->
         <select id="md_delegator">
           <option value="">—</option>
           ${userOpts}
@@ -1006,6 +1128,7 @@ function openDelegationModal() {
       </div>
       <div class="form-group">
         <label>Получает (кому)</label>
+        <!-- Кто получает делегированные права -->
         <select id="md_delegate">
           <option value="">—</option>
           ${userOpts}
@@ -1015,6 +1138,7 @@ function openDelegationModal() {
     <div class="form-row">
       <div class="form-group">
         <label>Тип</label>
+        <!-- Тип ограничения: по отделу, сектору или полное -->
         <select id="md_type">
           <option value="dept">Отдел</option>
           <option value="sector">Сектор</option>
@@ -1023,12 +1147,14 @@ function openDelegationModal() {
       </div>
       <div class="form-group">
         <label>Значение</label>
+        <!-- Конкретный код отдела или сектора (пусто при типе full) -->
         <input type="text" id="md_value" placeholder="Название отдела / сектора">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Право записи</label>
+        <!-- Получает ли делегат право на создание/редактирование -->
         <select id="md_can_write">
           <option value="true">Да</option>
           <option value="false">Нет</option>
@@ -1036,6 +1162,7 @@ function openDelegationModal() {
       </div>
       <div class="form-group">
         <label>Действует до</label>
+        <!-- Опциональная дата истечения делегирования -->
         <input type="date" id="md_expires_at">
       </div>
     </div>
@@ -1062,11 +1189,13 @@ function openDelegationModal() {
       expires_at: document.getElementById('md_expires_at').value || null,
     };
 
+    // Оба участника делегирования обязательны
     if (!payload.delegator_id || !payload.delegate_id) {
       showToast('Выберите делегирующего и получателя', 'error');
       return;
     }
 
+    // POST /api/delegations/
     const result = await fetchJson('/api/delegations/', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -1080,11 +1209,12 @@ function openDelegationModal() {
   });
 }
 
-/* ── Revoke delegation ────────────────────────────────────────────────── */
+/* ── Отзыв делегирования ─────────────────────────────────────────────────── */
 async function revokeDelegation(id) {
   const ok = await confirmDialog('Отозвать это делегирование?', 'Отзыв делегирования');
   if (!ok) return;
 
+  // DELETE /api/delegations/<id>/
   const result = await fetchJson(`/api/delegations/${id}/`, { method: 'DELETE' });
   if (!result._error) {
     showToast('Делегирование отозвано', 'success');
@@ -1093,22 +1223,25 @@ async function revokeDelegation(id) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Section 2b: Projects (4-level hierarchy)
+   Секция 2b: Иерархия проектов (4 уровня)
    ══════════════════════════════════════════════════════════════════════════ */
+// Описание 4 уровней иерархии проектов
 const PROJECT_LEVELS = [
   { type: 'project',   label: 'Проект',  icon: 'fas fa-folder' },
   { type: 'milestone', label: 'Этап',    icon: 'fas fa-flag' },
-  { type: 'stage',     label: 'Подэтап', icon: 'fas fa-clipboard-list' },
+  { type: 'stage',     label: 'Веха',    icon: 'fas fa-clipboard-list' },
   { type: 'substage',  label: 'Работа',  icon: 'fas fa-file-alt' },
 ];
 
+// Строит и рендерит дерево иерархии проектов
 function renderProjectsHierarchy() {
   const c = document.getElementById('projectsContent');
   if (!c) return;
   c.innerHTML = '';
+  // Рекурсивно строим от уровня 0 (Проекты) без родителя
   c.appendChild(buildDeepLevel(0, null));
 
-  // Add top-level project input
+  // Строка добавления нового проекта верхнего уровня
   const addRow = document.createElement('div');
   addRow.className = 'dir-add-row';
   addRow.style.marginTop = '12px';
@@ -1120,12 +1253,14 @@ function renderProjectsHierarchy() {
   c.appendChild(addRow);
 }
 
+// Рекурсивно строит уровень дерева проектов
 function buildDeepLevel(levelIdx, parentId) {
   const wrap = document.createElement('div');
   if (levelIdx >= PROJECT_LEVELS.length) return wrap;
 
   const level = PROJECT_LEVELS[levelIdx];
   const items = getDirItems(level.type);
+  // Фильтруем: корневые узлы (parentId=null) или дочерние данного родителя
   const filtered = items.filter(i =>
     parentId != null ? i.parent_id === parentId : !i.parent_id
   );
@@ -1135,16 +1270,21 @@ function buildDeepLevel(levelIdx, parentId) {
     block.className = 'dir-parent-block';
 
     const hasChildren = (levelIdx + 1 < PROJECT_LEVELS.length);
+    // Узел свёрнут по умолчанию, если не в openProjectNodes
     const isCollapsed = !openProjectNodes.has(item.id);
 
+    // Строка узла дерева
     const row = document.createElement('div');
     row.className = 'dir-parent-row';
     row.innerHTML = `
+      <!-- Стрелка разворачивания (только если есть дочерний уровень) -->
       ${hasChildren ? `<span class="dir-parent-toggle ${isCollapsed ? 'collapsed' : ''}"
             id="ptoggle-proj-${item.id}"
             onclick="toggleParentDir(${item.id})">&#9660;</span>` : ''}
       <i class="${level.icon}" style="color:var(--accent);margin-right:4px;font-size:13px;"></i>
+      <!-- Название узла (режим просмотра) -->
       <span class="dir-parent-label" id="plabel-proj-${item.id}">${escapeHtml(item.value || item.name || '')}</span>
+      <!-- Поле редактирования (скрыто по умолчанию) -->
       <input class="dir-parent-edit-input" id="pinp-proj-${item.id}"
              value="${escapeHtml(item.value || item.name || '')}"
              onkeydown="if(event.key==='Enter')saveProjectItem(${item.id},'${level.type}','pinp-proj-${item.id}','plabel-proj-${item.id}')">
@@ -1164,14 +1304,15 @@ function buildDeepLevel(levelIdx, parentId) {
     block.appendChild(row);
 
     if (hasChildren) {
+      // Контейнер дочерних узлов
       const childWrap = document.createElement('div');
       childWrap.className = 'dir-children' + (isCollapsed ? ' collapsed' : '');
       childWrap.id = `pchildren-proj-${item.id}`;
 
-      // Recursively build next level
+      // Рекурсивно строим следующий уровень
       childWrap.appendChild(buildDeepLevel(levelIdx + 1, item.id));
 
-      // Add child input
+      // Поле добавления дочернего элемента
       const nextLevel = PROJECT_LEVELS[levelIdx + 1];
       const addRow = document.createElement('div');
       addRow.className = 'dir-add-row';
@@ -1192,12 +1333,14 @@ function buildDeepLevel(levelIdx, parentId) {
   return wrap;
 }
 
+// Переключает раскрытие/свёртку узла дерева проектов
 function toggleParentDir(id) {
   const toggle = document.getElementById(`ptoggle-proj-${id}`);
   const children = document.getElementById(`pchildren-proj-${id}`);
   if (!toggle || !children) return;
   const collapsed = children.classList.toggle('collapsed');
   toggle.classList.toggle('collapsed', collapsed);
+  // Сохраняем состояние в Set
   if (collapsed) {
     openProjectNodes.delete(id);
   } else {
@@ -1205,6 +1348,7 @@ function toggleParentDir(id) {
   }
 }
 
+// Переключает режим редактирования узла проекта (label ↔ input)
 function toggleProjectItemEdit(id) {
   const label = document.getElementById(`plabel-proj-${id}`);
   const inp = document.getElementById(`pinp-proj-${id}`);
@@ -1226,6 +1370,7 @@ function toggleProjectItemEdit(id) {
   }
 }
 
+// Сохраняет отредактированное название узла проекта: PUT /api/directories/<id>/
 async function saveProjectItem(id, type, inputId, labelId) {
   const inp = document.getElementById(inputId);
   const newVal = inp.value.trim();
@@ -1242,12 +1387,14 @@ async function saveProjectItem(id, type, inputId, labelId) {
   }
 }
 
+// Добавляет новый узел в иерархию проектов: POST /api/directories/create/
 async function addProjectItem(type, parentId, inputId) {
   const inp = document.getElementById(inputId);
   const val = inp.value.trim();
   if (!val) return;
 
   const payload = { type, value: val };
+  // Если не корневой узел — добавляем parent_id
   if (parentId != null) {
     payload.parent_id = parentId;
   }
@@ -1259,7 +1406,7 @@ async function addProjectItem(type, parentId, inputId) {
 
   if (!result._error) {
     inp.value = '';
-    // Auto-expand parent node if it was collapsed
+    // Автоматически раскрываем родительский узел при добавлении дочернего
     if (parentId != null) {
       openProjectNodes.add(parentId);
     }
@@ -1268,6 +1415,7 @@ async function addProjectItem(type, parentId, inputId) {
   }
 }
 
+// Удаляет узел и все вложенные: DELETE /api/directories/<id>/
 async function deleteProjectItem(id) {
   const ok = await confirmDialog('Удалить запись и все вложенные элементы?', 'Удаление');
   if (!ok) return;
@@ -1280,8 +1428,9 @@ async function deleteProjectItem(id) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Section 4: Seed data
+   Секция 4: Тестовые данные (Seed)
    ══════════════════════════════════════════════════════════════════════════ */
+// Универсальный обработчик seed-операции: блокирует кнопку, выполняет POST, показывает тост
 async function seedAction(url, successMsg) {
   const btn = event.target.closest('button');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
@@ -1292,11 +1441,12 @@ async function seedAction(url, successMsg) {
 
   if (!result._error) {
     showToast(successMsg, 'success');
-    // Reload directories and users since seed data may have changed them
+    // Перезагружаем справочники и пользователей, т.к. seed мог их изменить
     await Promise.all([loadDirectories(), loadUsers()]);
   }
 }
 
+// Генерирует N случайных задач: POST /api/seed/ с телом { count }
 async function seedTasks() {
   const count = document.getElementById('seedCount').value || 10;
   const btn = event.target.closest('button');

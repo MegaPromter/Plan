@@ -13,9 +13,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import (
     LoginRequiredJsonMixin,
@@ -25,6 +23,23 @@ from apps.api.mixins import (
 from apps.works.models import Work, WorkReport
 
 logger = logging.getLogger(__name__)
+
+
+def _check_report_access(user, report):
+    """Проверка: writer может менять отчёт только для задачи своего отдела.
+    admin / ntc_head / ntc_deputy — без ограничений.
+    Возвращает строку ошибки или None (доступ разрешён)."""
+    employee = getattr(user, 'employee', None)
+    if not employee:
+        return 'Нет профиля сотрудника'
+    if employee.role in ('admin', 'ntc_head', 'ntc_deputy'):
+        return None
+    if not employee.department:
+        return 'Вашему профилю не назначен отдел'
+    work = report.work
+    if work and work.department_id and employee.department_id != work.department_id:
+        return 'Вы можете редактировать только отчёты своего отдела'
+    return None
 
 
 def _serialize_report(r):
@@ -82,7 +97,6 @@ def _safe_date(val):
 #  GET /api/reports/<task_id>
 # ---------------------------------------------------------------------------
 
-@method_decorator(csrf_exempt, name='dispatch')
 class ReportListView(LoginRequiredJsonMixin, View):
     """GET /api/reports/<task_id> — список отчётов по задаче."""
 
@@ -102,7 +116,6 @@ class ReportListView(LoginRequiredJsonMixin, View):
 #  POST /api/reports
 # ---------------------------------------------------------------------------
 
-@method_decorator(csrf_exempt, name='dispatch')
 class ReportCreateView(WriterRequiredJsonMixin, View):
     """POST /api/reports — создание отчёта."""
 
@@ -152,7 +165,6 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
 #  PUT / DELETE  /api/reports/<id>
 # ---------------------------------------------------------------------------
 
-@method_decorator(csrf_exempt, name='dispatch')
 class ReportDetailView(WriterRequiredJsonMixin, View):
     """PUT /api/reports/<id>; DELETE /api/reports/<id>."""
 
@@ -167,11 +179,15 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            report = WorkReport.objects.filter(pk=pk).first()
+            report = WorkReport.objects.select_related('work').filter(pk=pk).first()
             if not report:
                 return JsonResponse(
                     {'error': 'Отчёт не найден'}, status=404,
                 )
+            # Проверка доступа по отделу задачи
+            err = _check_report_access(request.user, report)
+            if err:
+                return JsonResponse({'error': err}, status=403)
             report.delete()
             return JsonResponse({'ok': True})
         except Exception as e:
@@ -185,9 +201,14 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
-        report = WorkReport.objects.filter(pk=pk).first()
+        report = WorkReport.objects.select_related('work').filter(pk=pk).first()
         if not report:
             return JsonResponse({'error': 'Отчёт не найден'}, status=404)
+
+        # Проверка доступа по отделу задачи
+        err = _check_report_access(request.user, report)
+        if err:
+            return JsonResponse({'error': err}, status=403)
 
         report.doc_name = d.get('doc_name', report.doc_name)
         report.doc_designation = d.get('doc_designation',

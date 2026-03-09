@@ -11,11 +11,9 @@ PUT     /api/users/<id>/password  -- сброс пароля
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
 from apps.api.utils import VALID_ROLES
@@ -43,7 +41,6 @@ def _resolve_position_key(display_name):
 
 # ── GET / POST /api/users ────────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class UserListView(AdminRequiredJsonMixin, View):
     """
     GET  -- список всех пользователей (admin).
@@ -90,43 +87,45 @@ class UserListView(AdminRequiredJsonMixin, View):
             )
 
         try:
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-            )
+            # Атомарная транзакция: User + Employee + подразделения
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    password=password,
+                )
+
+                # Создаём профиль Employee
+                emp = Employee.objects.create(
+                    user=user,
+                    role=role,
+                    last_name=data.get('last_name', ''),
+                    first_name=data.get('first_name', ''),
+                    patronymic=data.get('patronymic', ''),
+                    position=_resolve_position_key(data.get('position', '')),
+                )
+
+                # Устанавливаем подразделение
+                from apps.employees.models import Department, Sector, NTCCenter
+                dept_code   = data.get('dept', '').strip()
+                sector_code = data.get('sector', '').strip()
+                center_code = (data.get('ntc_center') or data.get('center') or '').strip()
+                if dept_code:
+                    dept_obj, _ = Department.objects.get_or_create(code=dept_code, defaults={'name': ''})
+                    emp.department = dept_obj
+                if sector_code and emp.department:
+                    sector_obj, _ = Sector.objects.get_or_create(
+                        department=emp.department, code=sector_code, defaults={'name': ''}
+                    )
+                    emp.sector = sector_obj
+                if center_code:
+                    center_obj, _ = NTCCenter.objects.get_or_create(code=center_code, defaults={'name': ''})
+                    emp.ntc_center = center_obj
+                if dept_code or sector_code or center_code:
+                    emp.save()
         except IntegrityError:
             return JsonResponse(
                 {'error': 'Пользователь уже существует'}, status=400
             )
-
-        # Создаём профиль Employee
-        emp = Employee.objects.create(
-            user=user,
-            role=role,
-            last_name=data.get('last_name', ''),
-            first_name=data.get('first_name', ''),
-            patronymic=data.get('patronymic', ''),
-            position=_resolve_position_key(data.get('position', '')),
-        )
-
-        # Устанавливаем подразделение
-        from apps.employees.models import Department, Sector, NTCCenter
-        dept_code   = data.get('dept', '').strip()
-        sector_code = data.get('sector', '').strip()
-        center_code = (data.get('ntc_center') or data.get('center') or '').strip()
-        if dept_code:
-            dept_obj, _ = Department.objects.get_or_create(code=dept_code, defaults={'name': ''})
-            emp.department = dept_obj
-        if sector_code and emp.department:
-            sector_obj, _ = Sector.objects.get_or_create(
-                department=emp.department, code=sector_code, defaults={'name': ''}
-            )
-            emp.sector = sector_obj
-        if center_code:
-            center_obj, _ = NTCCenter.objects.get_or_create(code=center_code, defaults={'name': ''})
-            emp.ntc_center = center_obj
-        if dept_code or sector_code or center_code:
-            emp.save()
 
         log_action(request, AuditLog.ACTION_USER_CREATE,
                    object_id=user.pk, object_repr=emp.full_name)
@@ -135,7 +134,6 @@ class UserListView(AdminRequiredJsonMixin, View):
 
 # ── PUT / DELETE /api/users/<id> ─────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class UserDetailView(AdminRequiredJsonMixin, View):
     """
     PUT    -- обновление профиля пользователя.
@@ -270,7 +268,6 @@ class UserDetailView(AdminRequiredJsonMixin, View):
 
 # ── PUT /api/users/<id>/password ─────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class UserPasswordResetView(AdminRequiredJsonMixin, View):
     """PUT -- сброс пароля пользователя (admin)."""
 
@@ -278,10 +275,14 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
         data = parse_json_body(request)
         new_pw = data.get('password', '')
 
-        if len(new_pw) < 8:
+        # Валидация пароля через Django password validators
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjValidationError
+        try:
+            validate_password(new_pw)
+        except DjValidationError as e:
             return JsonResponse(
-                {'error': 'Пароль слишком короткий (мин. 8 символов)'},
-                status=400,
+                {'error': '; '.join(e.messages)}, status=400,
             )
 
         try:

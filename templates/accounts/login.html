@@ -1,64 +1,84 @@
 <!DOCTYPE html>
+<!-- Страница входа в систему (не расширяет base.html — автономная страница) -->
 <html lang="ru">
 <head>
+<!-- Кодировка и мета для мобильных устройств -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Иконка вкладки -->
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <title>Вход — Система управления</title>
+<!-- Шрифт Inter из Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Сброс отступов и box-sizing */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* CSS-переменные: цвета, шрифты */
 :root{
   --bg:#f0f2f5;--surface:#ffffff;--surface2:#f8f9fb;
   --border:#e2e6ed;--border2:#c8d0dc;
-  --nav-bg:#1a2744;
+  --nav-bg:#1a2744;                          /* тёмно-синий фон декоративной панели */
   --accent:#2563eb;--accent2:#1d4ed8;--accent-light:#eff6ff;
   --text:#1e293b;--text2:#475569;--muted:#94a3b8;
   --danger:#dc2626;--success:#16a34a;
   --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
 }
+/* Тело страницы: центрирование содержимого вертикально и горизонтально */
 body{
   min-height:100vh;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px;
   display:flex;align-items:center;justify-content:center;
 }
+/* Внешняя обёртка страницы: левая панель + форма справа */
 .login-page-wrap{
   display:flex;min-height:100vh;width:100%;
 }
 /* Левая декоративная панель (только десктоп) */
 .login-aside{
-  display:none;
+  display:none;                   /* скрыта по умолчанию */
   width:420px;flex-shrink:0;
-  background:var(--nav-bg);
+  background:var(--nav-bg);       /* тёмно-синий фон */
   flex-direction:column;align-items:center;justify-content:center;
   padding:48px;text-align:center;
 }
+/* Показываем левую панель только на широких экранах (>860px) */
 @media(min-width:860px){.login-aside{display:flex;}}
+/* Большая иконка на декоративной панели */
 .login-aside-icon{font-size:72px;margin-bottom:24px;}
 .login-aside h2{color:#fff;font-size:22px;font-weight:700;margin-bottom:12px;}
 .login-aside p{color:rgba(255,255,255,0.55);font-size:14px;line-height:1.6;}
-/* Правая часть (форма) */
+/* Правая часть (форма): занимает оставшееся место, центрирует форму */
 .login-main{
   flex:1;display:flex;align-items:center;justify-content:center;padding:24px;
 }
+/* Ширина формы ограничена 400px */
 .login-wrap{width:100%;max-width:400px;}
+/* Блок логотипа над формой */
 .login-logo{text-align:center;margin-bottom:28px;}
 .login-logo-icon{width:52px;height:52px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;}
 .login-logo h1{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
 .login-logo p{font-size:13px;color:var(--muted);}
+/* Карточка с формой входа */
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+/* Группа полей формы */
 .form-group{margin-bottom:18px;}
 .field{margin-bottom:18px;}
+/* Метки полей */
 label{display:block;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;}
+/* Поля ввода: логин и пароль */
 input[type=text],input[type=password],select{
   width:100%;padding:11px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;
   color:var(--text);font-family:var(--font);font-size:14px;transition:border-color 0.2s,box-shadow 0.2s;outline:none;
 }
+/* Подсветка фокуса на полях */
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light);}
 select option{background:var(--surface);}
+/* Кнопка отправки формы входа */
 .btn-login{width:100%;padding:12px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s,transform 0.1s;margin-top:6px;}
 .btn-login:hover{background:var(--accent2);transform:translateY(-1px);}
 .btn-login:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+/* Блок ошибки при неверном входе */
 .alert-error{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:16px;}
+/* Ссылка/кнопка «Регистрация нового пользователя» */
 .reg-link{
   display:block;margin-top:18px;text-align:center;
   color:var(--accent);font-size:13px;text-decoration:none;cursor:pointer;
@@ -67,20 +87,24 @@ select option{background:var(--surface);}
 .reg-link:hover{text-decoration:underline;}
 
 /* ── Модальное окно регистрации ──────────────────────────────────────── */
+/* Затемнение за модальным окном (скрыто по умолчанию) */
 .reg-overlay{
   display:none;position:fixed;inset:0;z-index:999;
   background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);
   align-items:center;justify-content:center;
 }
+/* Класс .open показывает оверлей */
 .reg-overlay.open{display:flex;}
+/* Само модальное окно регистрации */
 .reg-modal{
   background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:32px;width:480px;max-width:95vw;
-  max-height:90vh;overflow-y:auto;
+  max-height:90vh;overflow-y:auto;                    /* прокрутка при переполнении */
   box-shadow:0 16px 48px rgba(0,0,0,0.15);position:relative;
 }
 .reg-modal h2{font-size:18px;font-weight:700;margin-bottom:4px;color:var(--text);}
 .reg-modal .reg-subtitle{font-size:13px;color:var(--muted);margin-bottom:20px;}
+/* Кнопка закрытия модального окна (крестик в правом верхнем углу) */
 .reg-close{
   position:absolute;top:16px;right:16px;
   width:28px;height:28px;border-radius:6px;
@@ -89,14 +113,19 @@ select option{background:var(--surface);}
   display:flex;align-items:center;justify-content:center;transition:all 0.15s;
 }
 .reg-close:hover{border-color:var(--danger);color:var(--danger);}
+/* Горизонтальный разделитель внутри формы регистрации */
 .reg-divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+/* Заголовки секций формы регистрации */
 .reg-section-title{
   font-size:11px;font-weight:700;color:var(--text2);
   text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;
 }
+/* Двухколоночный ряд в форме регистрации */
 .reg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+/* Трёхколоночный ряд (ФИО: Фамилия, Имя, Отчество) */
 .reg-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 .reg-modal .field{margin-bottom:14px;}
+/* Поля ввода внутри модального окна регистрации */
 .reg-modal input,.reg-modal select{
   width:100%;padding:10px 13px;background:var(--surface2);
   border:1.5px solid var(--border);border-radius:8px;
@@ -104,11 +133,13 @@ select option{background:var(--surface);}
   transition:border-color 0.2s,box-shadow 0.2s;outline:none;
 }
 .reg-modal input:focus,.reg-modal select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light);}
+/* Блок ошибки в форме регистрации (скрыт по умолчанию) */
 .reg-error{
   background:#fef2f2;border:1px solid #fecaca;
   border-radius:8px;padding:9px 13px;
   font-size:13px;color:var(--danger);margin-bottom:14px;display:none;
 }
+/* Блок успешной регистрации (скрыт по умолчанию) */
 .success-msg{
   background:#f0fdf4;border:1px solid #bbf7d0;
   border-radius:8px;padding:10px 14px;
@@ -118,51 +149,67 @@ select option{background:var(--surface);}
 </head>
 <body>
 
+<!-- Внешняя обёртка: левая декоративная панель + правая форма -->
 <div class="login-page-wrap">
 <!-- ── Левая декоративная панель (десктоп) ─────────────────────────────── -->
 <aside class="login-aside">
+  <!-- Большая иконка приложения -->
   <div class="login-aside-icon">📋</div>
   <h2>Система управления</h2>
+  <!-- Описание системы -->
   <p>Планирование производственных задач, управление проектами и отпусками в едином интерфейсе.</p>
 </aside>
 
 <!-- ── Правая часть: форма входа ──────────────────────────────────────── -->
 <div class="login-main">
 <div class="login-wrap">
+  <!-- Логотип и заголовок над карточкой формы -->
   <div class="login-logo">
     <div class="login-logo-icon">📋</div>
     <h1>Система управления</h1>
     <p>Планирование и отчётность</p>
   </div>
+  <!-- Карточка с формой входа -->
   <div class="login-card">
+    <!-- Форма входа: метод POST, novalidate отключает браузерную валидацию -->
     <form method="post" novalidate>
+      <!-- Django CSRF-токен для защиты от межсайтовых запросов -->
       {% csrf_token %}
+      <!-- Блок ошибки: показывается если форма вернула ошибки (неверный логин/пароль) -->
       {% if form.errors %}
         <div class="alert-error">Неверный логин или пароль. Попробуйте ещё раз.</div>
       {% endif %}
+      <!-- Поле «Логин» -->
       <div class="form-group">
         <label for="id_username">Логин</label>
         <input type="text" name="username" id="id_username" placeholder="Введите логин" autofocus autocomplete="username">
       </div>
+      <!-- Поле «Пароль» -->
       <div class="form-group">
         <label for="id_password">Пароль</label>
         <input type="password" name="password" id="id_password" placeholder="Введите пароль" autocomplete="current-password">
       </div>
+      <!-- Скрытое поле next: куда перенаправить после успешного входа (если задано) -->
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <button type="submit" class="btn-login">Войти</button>
     </form>
+    <!-- Кнопка открытия модального окна регистрации нового пользователя -->
     <button class="reg-link" onclick="openRegModal()">Регистрация нового пользователя</button>
   </div>
 </div>
 
 <!-- ── Модальное окно регистрации ──────────────────────────────────────── -->
+<!-- Оверлей (затемнение); клик вне окна или Escape закрывает модал -->
 <div class="reg-overlay" id="regOverlay">
   <div class="reg-modal" id="regModal">
+    <!-- Кнопка закрытия модального окна -->
     <button class="reg-close" onclick="closeRegModal()">✕</button>
     <h2>Регистрация</h2>
     <p class="reg-subtitle">Создание новой учётной записи</p>
 
+    <!-- Секция: Личные данные (ФИО) -->
     <div class="reg-section-title">Личные данные</div>
+    <!-- Три поля в ряд: Фамилия, Имя, Отчество -->
     <div class="reg-row-3">
       <div class="field">
         <label>Фамилия <span style="color:var(--danger)">*</span></label>
@@ -179,30 +226,38 @@ select option{background:var(--surface);}
     </div>
 
     <hr class="reg-divider">
+    <!-- Секция: Должность -->
     <div class="reg-section-title">Должность</div>
     <div class="field">
       <label>Должность <span style="color:var(--danger)">*</span></label>
+      <!-- Список должностей заполняется динамически через API /api/dirs_public/ -->
       <select id="regPosition"><option value="">— выберите —</option></select>
     </div>
 
     <hr class="reg-divider">
+    <!-- Секция: Подразделение (НТЦ / Отдел / Сектор) -->
     <div class="reg-section-title">Подразделение</div>
+    <!-- Поле НТЦ — скрыто по умолчанию; показывается при должностях с правилом 'ntc' или 'both' -->
     <div class="field" id="fieldCenter" style="display:none">
       <label>НТЦ <span style="color:var(--danger)">*</span></label>
       <select id="regCenter"><option value="">— выберите —</option></select>
     </div>
+    <!-- Поля Отдел и Сектор в одном ряду; отображаются по правилу POS_FIELDS -->
     <div class="reg-row">
       <div class="field" id="fieldDept" style="display:none">
         <label>Отдел <span style="color:var(--danger)">*</span></label>
+        <!-- Отделы загружаются динамически при выборе НТЦ -->
         <select id="regDept"><option value="">— выберите —</option></select>
       </div>
       <div class="field" id="fieldSector" style="display:none">
         <label>Сектор <span style="color:var(--danger)">*</span></label>
+        <!-- Секторы загружаются динамически при выборе отдела -->
         <select id="regSector"><option value="">— выберите —</option></select>
       </div>
     </div>
 
     <hr class="reg-divider">
+    <!-- Секция: Учётные данные (логин и пароль) -->
     <div class="reg-section-title">Учётные данные</div>
     <div class="reg-row">
       <div class="field">
@@ -211,13 +266,16 @@ select option{background:var(--surface);}
       </div>
       <div class="field">
         <label>Пароль <span style="color:var(--danger)">*</span></label>
-        <input type="password" id="regPassword" placeholder="Мин. 4 символа" autocomplete="new-password">
+        <input type="password" id="regPassword" placeholder="Мин. 8 символов" autocomplete="new-password">
       </div>
     </div>
 
+    <!-- Блок ошибок регистрации (скрыт по умолчанию, показывается через JS) -->
     <div class="reg-error" id="regError"></div>
+    <!-- Блок успешной регистрации (скрыт по умолчанию) -->
     <div class="success-msg" id="regSuccess">✓ Регистрация прошла успешно!</div>
 
+    <!-- Кнопка отправки формы регистрации -->
     <button class="btn-login" id="regSubmitBtn" onclick="submitReg()">Зарегистрироваться</button>
   </div>
 </div>
@@ -225,7 +283,7 @@ select option{background:var(--surface);}
 <script>
 /* ── Регистрация ──────────────────────────────────────────────────────── */
 
-// Кэш справочника
+// Кэш справочника (список должностей, НТЦ, отделов, секторов)
 let _regDirs = {};
 
 // Правила отображения полей подразделения по должности:
@@ -268,10 +326,12 @@ function getCSRF() {
 function _fillDepts(center) {
   const sel = document.getElementById('regDept');
   sel.innerHTML = '<option value="">— выберите —</option>';
+  // Сбрасываем сектора при смене НТЦ
   document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
   document.getElementById('regDept').value = '';
   document.getElementById('regSector').value = '';
   if (!center) return;
+  // Берём отделы из кэша справочника по коду НТЦ
   const list = (_regDirs.depts_by_center || {})[center] || [];
   list.forEach(v => {
     const o = document.createElement('option');
@@ -283,23 +343,26 @@ function _fillDepts(center) {
 // Показать/скрыть поля подразделения в зависимости от должности
 function _applyPositionFields(position) {
   const rule = POS_FIELDS[position] || '';
+  // Определяем какие поля показывать согласно правилу
   const showNtc    = rule === 'ntc' || rule === 'dept' || rule === 'both';
   const showDept   = rule === 'dept' || rule === 'both';
   const showSector = rule === 'both';
 
+  // Показываем/скрываем соответствующие поля
   document.getElementById('fieldCenter').style.display = showNtc    ? '' : 'none';
   document.getElementById('fieldDept').style.display   = showDept   ? '' : 'none';
   document.getElementById('fieldSector').style.display = showSector ? '' : 'none';
 
-  // Сбрасываем при смене должности
+  // Сбрасываем значения при смене должности
   document.getElementById('regCenter').value = '';
   document.getElementById('regDept').innerHTML = '<option value="">— выберите —</option>';
   document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
 }
 
+// Открыть модальное окно регистрации
 async function openRegModal() {
   document.getElementById('regOverlay').classList.add('open');
-  // Сбросить поля
+  // Сбросить поля до пустых значений
   ['regLastName','regFirstName','regPatronymic','regUsername','regPassword'].forEach(
     id => document.getElementById(id).value = ''
   );
@@ -307,17 +370,17 @@ async function openRegModal() {
   document.getElementById('regCenter').value   = '';
   document.getElementById('regDept').value     = '';
   document.getElementById('regSector').value   = '';
-  _applyPositionFields('');
+  _applyPositionFields(''); // скрываем все поля подразделения
   document.getElementById('regError').style.display   = 'none';
   document.getElementById('regSuccess').style.display = 'none';
-  document.getElementById('regLastName').focus();
+  document.getElementById('regLastName').focus(); // фокус на первом поле
 
-  // Загрузить справочники
+  // Загрузить справочники с сервера (публичный API — не требует авторизации)
   try {
     const res  = await fetch('/api/dirs_public/');
     _regDirs = await res.json();
 
-    // Заполнить должности
+    // Заполнить список должностей
     const posSel = document.getElementById('regPosition');
     posSel.innerHTML = '<option value="">— выберите —</option>';
     (_regDirs.position || []).forEach(v => {
@@ -326,7 +389,7 @@ async function openRegModal() {
       posSel.appendChild(o);
     });
 
-    // Заполнить НТЦ
+    // Заполнить список НТЦ
     const centerSel = document.getElementById('regCenter');
     centerSel.innerHTML = '<option value="">— выберите —</option>';
     (_regDirs.center || []).forEach(v => {
@@ -335,9 +398,8 @@ async function openRegModal() {
       centerSel.appendChild(o);
     });
 
-    // Заполнить отделы
-    // отделы заполняются динамически при выборе должности
-  } catch(_) {}
+    // Отделы заполняются динамически при выборе должности и НТЦ
+  } catch(_) {} // тихо игнорируем ошибки загрузки справочника
 }
 
 // Заполнить список секторов по выбранному отделу
@@ -345,6 +407,7 @@ function _fillSectors(dept) {
   const sel = document.getElementById('regSector');
   sel.innerHTML = '<option value="">— выберите —</option>';
   if (!dept) return;
+  // Берём сектора из кэша справочника по названию отдела
   const list = (_regDirs.sectors_by_dept || {})[dept] || [];
   list.forEach(v => {
     const o = document.createElement('option');
@@ -353,12 +416,12 @@ function _fillSectors(dept) {
   });
 }
 
-// При смене НТЦ — перезаполнить отделы
+// При смене НТЦ — перезаполнить список отделов
 document.getElementById('regCenter').addEventListener('change', function() {
   _fillDepts(this.value);
 });
 
-// При смене отдела — перезаполнить секторы
+// При смене отдела — перезаполнить список секторов
 document.getElementById('regDept').addEventListener('change', function() {
   _fillSectors(this.value);
 });
@@ -368,21 +431,24 @@ document.getElementById('regPosition').addEventListener('change', function() {
   _applyPositionFields(this.value);
 });
 
+// Закрыть модальное окно регистрации
 function closeRegModal() {
   document.getElementById('regOverlay').classList.remove('open');
 }
 
-// Закрыть по клику на затемнение
+// Закрыть по клику на затемнение (но не на само модальное окно)
 document.getElementById('regOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeRegModal();
 });
 
-// Закрыть по Escape
+// Закрыть по нажатию Escape
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeRegModal();
 });
 
+// Отправить форму регистрации через API
 async function submitReg() {
+  // Считываем значения всех полей
   const lastName   = document.getElementById('regLastName').value.trim();
   const firstName  = document.getElementById('regFirstName').value.trim();
   const patronymic = document.getElementById('regPatronymic').value.trim();
@@ -395,28 +461,34 @@ async function submitReg() {
 
   const errEl = document.getElementById('regError');
   const okEl  = document.getElementById('regSuccess');
+  // Скрываем блоки ошибок и успеха перед валидацией
   errEl.style.display = 'none';
   okEl.style.display  = 'none';
 
+  // Вспомогательная функция показа ошибки
   const err = s => { errEl.textContent = s; errEl.style.display = 'block'; };
 
+  // Клиентская валидация обязательных полей
   if (!lastName)   return err('Введите фамилию');
   if (!firstName)  return err('Введите имя');
   if (!patronymic) return err('Введите отчество');
   if (!position)   return err('Выберите должность');
 
+  // Проверка полей подразделения согласно правилу для выбранной должности
   const rule = POS_FIELDS[position] || '';
   if ((rule === 'ntc')  && !center) return err('Выберите НТЦ');
   if ((rule === 'dept' || rule === 'both') && !dept) return err('Выберите отдел');
   if (rule === 'both' && !sector) return err('Выберите сектор');
 
   if (!username)           return err('Введите логин');
-  if (password.length < 4) return err('Пароль — минимум 4 символа');
+  if (password.length < 8) return err('Пароль — минимум 8 символов');
 
+  // Блокируем кнопку на время отправки
   const btn = document.getElementById('regSubmitBtn');
   btn.disabled = true; btn.textContent = 'Сохранение...';
 
   try {
+    // Отправляем данные на сервер (публичный API регистрации)
     const res = await fetch('/api/register_public/', {
       method: 'POST',
       headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
@@ -425,14 +497,17 @@ async function submitReg() {
     });
     const data = await res.json();
     if (!res.ok) {
+      // Сервер вернул ошибку — показываем сообщение
       err(data.error || 'Ошибка сервера');
     } else {
+      // Успешная регистрация — показываем сообщение и закрываем модал
       okEl.style.display = 'block';
       setTimeout(closeRegModal, 1500);
     }
   } catch(e) {
     err('Ошибка соединения с сервером');
   } finally {
+    // Разблокируем кнопку в любом случае
     btn.disabled = false; btn.textContent = 'Зарегистрироваться';
   }
 }

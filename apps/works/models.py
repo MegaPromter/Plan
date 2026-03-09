@@ -1,18 +1,14 @@
 """
 Модели приложения works.
 
-Архитектура таблиц работ:
-                    ┌─────────┐
-                    │  Work   │  ← общая таблица работ
-                    └────┬────┘
-           ┌─────────────┴─────────────┐
-           ▼                           ▼
-      ┌──────────┐               ┌──────────┐
-      │ TaskWork │  (план задач) │  PPWork  │  (производственный план)
-      └──────────┘               └──────────┘
+Архитектура таблицы работ:
+  Work — единая таблица для всех записей.
+  show_in_pp   = True  → строка производственного плана
+  show_in_plan = True  → задача сводного плана
+  Одна запись может быть видна в обоих модулях одновременно.
 
-Запись в TaskWork или PPWork создаётся/обновляется при записи
-в соответствующий модуль; Work хранит общие поля.
+TaskExecutor — дополнительные исполнители задачи (FK → Work).
+WorkReport   — отчётные документы (FK → Work).
 """
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -24,12 +20,11 @@ from apps.employees.models import Employee, Department, Sector, NTCCenter
 User = get_user_model()
 
 
-# ── Универсальный справочник (аналог Flask directories) ───────────────────────
+# ── Универсальный справочник ───────────────────────────────────────────────────
 
 class Directory(models.Model):
     """
     Универсальная таблица справочников.
-    Аналог Flask-таблицы directories с полями type, value, parent_id.
     Типы: center, position, dept, sector, executor, task_type, work_type, justification.
     """
     TYPE_CHOICES = [
@@ -43,7 +38,7 @@ class Directory(models.Model):
         ('justification', 'Обоснование'),
         ('project',       'Проект'),
         ('milestone',     'Этап'),
-        ('stage',         'Подэтап'),
+        ('stage',         'Веха'),
         ('substage',      'Работа'),
     ]
 
@@ -73,21 +68,16 @@ class Directory(models.Model):
 # ── Проекты производственного плана ───────────────────────────────────────────
 
 class PPProject(models.Model):
-    """
-    Производственный план (аналог Flask pp_projects).
-    Каждый план группирует строки ПП и может быть привязан к проекту УП.
-    """
+    """Производственный план — группирует строки ПП."""
     name       = models.CharField('Название плана', max_length=255)
     directory  = models.ForeignKey(
         Directory, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='pp_projects', verbose_name='Связь со справочником',
     )
-    # Привязка к проекту УП (модуль 1)
     up_project = models.ForeignKey(
         'Project', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='pp_plans', verbose_name='Проект УП',
     )
-    # Привязка к конкретному изделию проекта УП (опционально)
     up_product = models.ForeignKey(
         'ProjectProduct', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='pp_plans', verbose_name='Изделие УП',
@@ -104,13 +94,12 @@ class PPProject(models.Model):
         return self.name
 
 
-# ── Справочники работ ─────────────────────────────────────────────────────────
+# ── Справочники проектов УП ────────────────────────────────────────────────────
 
 class Project(models.Model):
     """Проект (модуль Управления проектами)."""
     name_full  = models.CharField('Полное наименование', max_length=500)
     name_short = models.CharField('Краткое наименование', max_length=100, blank=True)
-    # code сохраняем для совместимости, фактически = name_short
     code       = models.CharField('Шифр / код', max_length=100, blank=True)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлён', auto_now=True)
@@ -137,7 +126,7 @@ class ProjectProduct(models.Model):
         related_name='products', verbose_name='Проект',
     )
     name       = models.CharField('Наименование изделия', max_length=255)
-    code       = models.CharField('Шифр',                 max_length=100, blank=True)
+    code       = models.CharField('Шифр', max_length=100, blank=True)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 
     class Meta:
@@ -150,43 +139,19 @@ class ProjectProduct(models.Model):
         return f'{self.code} — {self.name}' if self.code else self.name
 
 
-class WorkType(models.Model):
-    """Тип работы (из справочника: Разработка, Выпуск документа…)."""
-    name = models.CharField('Название', max_length=100, unique=True)
-
-    class Meta:
-        db_table     = 'work_type'
-        verbose_name = 'Тип работы'
-        verbose_name_plural = 'Типы работ'
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
-
-
 # ── Основная таблица работ ────────────────────────────────────────────────────
 
 class Work(models.Model):
     """
-    Универсальная запись о работе.
-    Данные считываются из модулей ПО (план задач) и ПП (производственный план)
-    и записываются обратно в них же.
-
-    source_type указывает, из какого модуля пришла запись.
+    Единая запись о работе.
+    show_in_pp=True   — отображается в производственном плане.
+    show_in_plan=True — отображается в сводном плане задач.
+    Запись может быть видна в обоих модулях одновременно.
     """
 
-    SOURCE_TASK = 'task'   # из плана задач (apps.works.TaskWork)
-    SOURCE_PP   = 'pp'     # из производственного плана (apps.works.PPWork)
-
-    SOURCE_CHOICES = [
-        (SOURCE_TASK, 'План задач (ПО)'),
-        (SOURCE_PP,   'Производственный план (ПП)'),
-    ]
-
-    # ── Источник ──────────────────────────────────────────────────────────
-    source_type = models.CharField(
-        'Источник', max_length=10, choices=SOURCE_CHOICES,
-    )
+    # ── Флаги видимости ────────────────────────────────────────────────────
+    show_in_pp   = models.BooleanField('Показывать в ПП',  default=False)
+    show_in_plan = models.BooleanField('Показывать в СП',  default=False)
 
     # ── Принадлежность ────────────────────────────────────────────────────
     ntc_center = models.ForeignKey(
@@ -206,21 +171,20 @@ class Work(models.Model):
         related_name='works', verbose_name='Проект',
     )
 
+    # ── Тип работы (текстом) ──────────────────────────────────────────────
+    # Заменяет бывший FK work_type → WorkType и бывший PPWork.task_type
+    task_type = models.CharField('Тип работы', max_length=100, blank=True, default='')
+
     # ── Основные поля ─────────────────────────────────────────────────────
-    work_type    = models.ForeignKey(
-        WorkType, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='works', verbose_name='Тип работы',
-    )
     work_name    = models.CharField('Наименование работы', max_length=500)
-    work_number  = models.CharField('Номер работы / документа', max_length=100, blank=True)
-    description  = models.TextField('Описание / обоснование', blank=True)
+    # work_num и work_designation — единые поля (и для ПП, и для СП)
+    # определены ниже в блоке «Поля производственного плана»
 
     # ── Исполнитель ───────────────────────────────────────────────────────
     executor = models.ForeignKey(
         Employee, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='works', verbose_name='Исполнитель',
     )
-    # Имя текстом — если исполнитель не зарегистрирован в системе
     executor_name_raw = models.CharField(
         'Исполнитель (текст)', max_length=200, blank=True,
     )
@@ -233,6 +197,47 @@ class Work(models.Model):
     # ── Плановые часы по месяцам {«YYYY-MM»: hours} ───────────────────────
     plan_hours = models.JSONField(
         'Плановые часы (по месяцам)', default=dict, blank=True,
+    )
+
+    # ── Поля сводного плана (бывший TaskWork) ─────────────────────────────
+    # stage_num — единое поле этапа (и для ПП, и для СП), определено ниже
+    justification  = models.CharField('Основание', max_length=500, blank=True)
+    executors_list = models.JSONField('Список исполнителей', default=list, blank=True)
+    actions        = models.JSONField('Связи / доп. данные', default=dict, blank=True)
+
+    # ── Поля ПП (+ единые поля stage_num, work_num, work_designation) ────
+    pp_project = models.ForeignKey(
+        PPProject, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pp_works', verbose_name='Проект ПП',
+    )
+    row_code         = models.CharField('Код строки',   max_length=50,  blank=True)
+    work_order       = models.CharField('Заказ-наряд',  max_length=100, blank=True)
+    # Единые поля для ПП и СП (заполняются и отображаются в обоих модулях)
+    stage_num        = models.CharField('Этап',         max_length=50,  blank=True)
+    milestone_num    = models.CharField('Веха',          max_length=50,  blank=True)
+    work_num         = models.CharField('Номер работы', max_length=50,  blank=True)
+    work_designation = models.CharField('Обозначение',  max_length=200, blank=True)
+    sheets_a4 = models.DecimalField(
+        'Листы А4', max_digits=8, decimal_places=2, null=True, blank=True,
+    )
+    norm = models.DecimalField(
+        'Норма (чел.-ч)', max_digits=8, decimal_places=2, null=True, blank=True,
+    )
+    coeff = models.DecimalField(
+        'Коэффициент', max_digits=8, decimal_places=3, null=True, blank=True,
+        validators=[MinValueValidator(0)],
+    )
+    total_2d = models.DecimalField(
+        'Трудоёмкость 2D', max_digits=8, decimal_places=2, null=True, blank=True,
+    )
+    total_3d = models.DecimalField(
+        'Трудоёмкость 3D', max_digits=8, decimal_places=2, null=True, blank=True,
+    )
+    labor = models.DecimalField(
+        'Трудозатраты итого', max_digits=8, decimal_places=2, null=True, blank=True,
+    )
+    sector_head_name = models.CharField(
+        'Начальник сектора', max_length=200, blank=True,
     )
 
     # ── Аудит ─────────────────────────────────────────────────────────────
@@ -249,62 +254,45 @@ class Work(models.Model):
         verbose_name_plural = 'Работы'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['source_type']),
+            models.Index(fields=['show_in_pp']),
+            models.Index(fields=['show_in_plan']),
             models.Index(fields=['department']),
             models.Index(fields=['executor']),
             models.Index(fields=['date_start', 'date_end']),
-            models.Index(fields=['source_type', 'deadline']),
+            models.Index(fields=['show_in_plan', 'deadline']),
             models.Index(fields=['deadline']),
+            models.Index(fields=['pp_project']),
         ]
 
     def __str__(self):
-        return f'[{self.get_source_type_display()}] {self.work_name}'
+        flags = []
+        if self.show_in_pp:
+            flags.append('ПП')
+        if self.show_in_plan:
+            flags.append('СП')
+        prefix = '/'.join(flags) if flags else '?'
+        return f'[{prefix}] {self.work_name}'
 
     @property
     def total_plan_hours(self) -> float:
         """Сумма плановых часов по всем месяцам."""
         return sum(float(v) for v in self.plan_hours.values())
 
-
-# ── Детали плана задач (ПО) ───────────────────────────────────────────────────
-
-class TaskWork(models.Model):
-    """
-    Запись плана задач (аналог tasks из Flask-приложения).
-    Связана с Work один-к-одному.
-    """
-
-    work  = models.OneToOneField(
-        Work, on_delete=models.CASCADE,
-        related_name='task_detail', verbose_name='Работа',
-    )
-
-    # ── Поля, специфичные для плана задач ─────────────────────────────────
-    stage         = models.CharField('Стадия',         max_length=100, blank=True)
-    justification = models.CharField('Основание',      max_length=500, blank=True)
-    # Дополнительные исполнители с часами по месяцам [{name, hours:{...}}]
-    executors_list = models.JSONField(
-        'Список исполнителей', default=list, blank=True,
-    )
-    # Связанные строки производственного плана (JSON: список pp_id)
-    actions = models.JSONField('Связи с ПП', default=dict, blank=True)
-
-    # Отчётные документы хранятся в WorkReport
-
-    class Meta:
-        db_table     = 'work_task_work'
-        verbose_name = 'Запись плана задач'
-        verbose_name_plural = 'Записи плана задач'
-
-    def __str__(self):
-        return f'ПО: {self.work.work_name}'
+    @property
+    def computed_labor(self):
+        """Расчётная трудоёмкость: norm * coeff (если labor не задан явно)."""
+        if self.labor is not None:
+            return self.labor
+        if self.norm is not None and self.coeff is not None:
+            return self.norm * self.coeff
+        return None
 
 
 # ── Множественные исполнители задачи ─────────────────────────────────────────
 
 class TaskExecutor(models.Model):
     """
-    Дополнительные исполнители задачи (аналог Flask task_executors).
+    Дополнительные исполнители задачи.
     Каждый имеет своё распределение часов по месяцам.
     """
     work          = models.ForeignKey(
@@ -328,108 +316,10 @@ class TaskExecutor(models.Model):
         return f'{self.executor_name} → {self.work.work_name}'
 
 
-# ── Детали производственного плана (ПП) ──────────────────────────────────────
-
-class PPWork(models.Model):
-    """
-    Запись производственного плана (аналог production_plan из Flask).
-    Связана с Work один-к-одному.
-    """
-
-    work = models.OneToOneField(
-        Work, on_delete=models.CASCADE,
-        related_name='pp_detail', verbose_name='Работа',
-    )
-
-    # ── Коды и номера ─────────────────────────────────────────────────────
-    row_code       = models.CharField('Код строки',   max_length=50,  blank=True)
-    work_order     = models.CharField('Заказ-наряд',  max_length=100, blank=True)
-    stage_num      = models.CharField('Этап',         max_length=50,  blank=True)
-    milestone_num  = models.CharField('Подэтап',      max_length=50,  blank=True)
-    work_num       = models.CharField('Номер работы', max_length=50,  blank=True)
-    work_designation = models.CharField('Обозначение', max_length=200, blank=True)
-
-    # ── Нормирование ─────────────────────────────────────────────────────
-    # Количество листов А4
-    sheets_a4 = models.DecimalField(
-        'Листы А4', max_digits=8, decimal_places=2,
-        null=True, blank=True,
-    )
-    norm = models.DecimalField(
-        'Норма (чел.-ч)', max_digits=8, decimal_places=2,
-        null=True, blank=True,
-    )
-    coeff = models.DecimalField(
-        'Коэффициент', max_digits=5, decimal_places=3,
-        null=True, blank=True,
-        validators=[MinValueValidator(0)],
-    )
-    # Итоговая трудоёмкость 2D и 3D
-    total_2d = models.DecimalField(
-        'Трудоёмкость 2D', max_digits=8, decimal_places=2,
-        null=True, blank=True,
-    )
-    total_3d = models.DecimalField(
-        'Трудоёмкость 3D', max_digits=8, decimal_places=2,
-        null=True, blank=True,
-    )
-    labor = models.DecimalField(
-        'Трудозатраты итого', max_digits=8, decimal_places=2,
-        null=True, blank=True,
-    )
-
-    # ── Начальник сектора (текстом, т.к. может не совпадать с Employee) ──
-    sector_head_name = models.CharField(
-        'Начальник сектора', max_length=200, blank=True,
-    )
-
-    # ── Тип работы (текстом, как во Flask) ──────────────────────────────
-    task_type = models.CharField(
-        'Тип работы', max_length=100, blank=True,
-        default='выпуск документа',
-    )
-
-    # ── Проект ПП ───────────────────────────────────────────────────────
-    pp_project = models.ForeignKey(
-        PPProject, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='pp_works', verbose_name='Проект ПП',
-    )
-
-    # ── Аудит ───────────────────────────────────────────────────────────
-    created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='created_pp_works', verbose_name='Создал',
-    )
-
-    class Meta:
-        db_table     = 'work_pp_work'
-        verbose_name = 'Запись производственного плана'
-        verbose_name_plural = 'Записи производственного плана'
-        indexes = [
-            models.Index(fields=['work_order']),
-            models.Index(fields=['row_code']),
-        ]
-
-    def __str__(self):
-        return f'ПП: {self.work.work_name}'
-
-    @property
-    def computed_labor(self):
-        """Расчётная трудоёмкость: norm * coeff (если не задана вручную)."""
-        if self.labor is not None:
-            return self.labor
-        if self.norm is not None and self.coeff is not None:
-            return self.norm * self.coeff
-        return None
-
-
 # ── Отчётные документы к работе ──────────────────────────────────────────────
 
 class WorkReport(models.Model):
-    """
-    Выпущенный документ / акт по работе.
-    Аналог таблицы reports из Flask-приложения.
-    """
+    """Выпущенный документ / акт по работе."""
 
     DOC_TYPE_CHOICES = [
         ('design',    'Конструкторский'),
@@ -523,10 +413,7 @@ class Notice(models.Model):
 # ── Производственный календарь ───────────────────────────────────────────────
 
 class WorkCalendar(models.Model):
-    """
-    Норма рабочих часов для одного человека в календарном месяце.
-    Используется в расчётах недозагрузки / перегрузки.
-    """
+    """Норма рабочих часов для одного человека в календарном месяце."""
     year  = models.PositiveSmallIntegerField('Год')
     month = models.PositiveSmallIntegerField(
         'Месяц',
@@ -549,18 +436,13 @@ class WorkCalendar(models.Model):
 
     @property
     def month_key(self) -> str:
-        """Ключ формата YYYY-MM для plan_hours."""
         return f'{self.year}-{self.month:02d}'
 
 
 # ── Журнал действий пользователей ────────────────────────────────────────────
 
 class AuditLog(models.Model):
-    """
-    Журнал действий пользователей для аудита.
-    Фиксирует создание, изменение и удаление задач, синхронизацию ПП,
-    смену ролей и другие важные события.
-    """
+    """Журнал действий пользователей для аудита."""
 
     ACTION_TASK_CREATE   = 'task_create'
     ACTION_TASK_UPDATE   = 'task_update'

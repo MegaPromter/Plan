@@ -1,16 +1,20 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница детального просмотра профиля сотрудника -->
 {% block title %}{{ object.full_name }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
 <span>/</span>
+<!-- Краткое имя сотрудника (Фамилия И.О.) в хлебных крошках -->
 <span class="breadcrumb-current">{{ object.short_name }}</span>
 {% endblock %}
 
+<!-- Помечаем пункт «Сотрудники» в сайдбаре как активный -->
 {% block nav_employees %}active{% endblock %}
 
+<!-- Кнопка редактирования в topbar (только для пользователей с правом записи) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
   <a href="{% url 'employees:edit' object.pk %}" class="btn btn-outline"><i class="fas fa-edit"></i> Редактировать</a>
@@ -18,10 +22,12 @@
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы: полное ФИО и бейдж роли -->
 <div class="page-header">
   <div>
     <h1>{{ object.full_name }}</h1>
     <div style="margin-top:4px;">
+      <!-- Бейдж роли с цветом по роли сотрудника -->
       {% if object.role == 'admin' %}
         <span class="badge badge-red">{{ object.get_role_display }}</span>
       {% elif object.role == 'ntc_head' or object.role == 'ntc_deputy' %}
@@ -33,6 +39,7 @@
       {% else %}
         <span class="badge badge-gray">{{ object.get_role_display }}</span>
       {% endif %}
+      <!-- Бейдж статуса: активен или уволен -->
       {% if object.is_active %}
         <span class="badge badge-green">Активен</span>
       {% else %}
@@ -42,6 +49,7 @@
   </div>
 </div>
 
+<!-- Основные данные сотрудника -->
 <div class="section">
   <table class="info-table">
     <tr><th>Должность</th>      <td>{{ object.get_position_display|default:"—" }}</td></tr>
@@ -51,60 +59,72 @@
     <tr><th>Телефон</th>       <td>{{ object.phone|default:"—" }}</td></tr>
     <tr><th>Email</th>         <td>{{ object.email_corp|default:"—" }}</td></tr>
     <tr><th>Принят</th>        <td>{{ object.hire_date|default:"—" }}</td></tr>
+    <!-- Дата увольнения показывается только если есть -->
     {% if object.dismissal_date %}
     <tr><th>Уволен</th>        <td>{{ object.dismissal_date }}</td></tr>
     {% endif %}
     <tr><th>Норма часов/мес</th><td>{{ object.monthly_hours_norm }} ч.</td></tr>
+    <!-- Коэффициент эффективности сотрудника -->
     <tr><th>Коэффициент</th>   <td>{{ object.personal_coeff }}</td></tr>
   </table>
 </div>
 
 {# ── Отпуска ── #}
+<!-- Секция отпусков сотрудника -->
 <div class="section" style="margin-top:20px;">
   <div class="section-header">
     <h2>Отпуска</h2>
     <div class="section-header-actions">
+      <!-- Кнопка добавления отпуска (только для авторизованных редакторов) -->
       {% if request.user|is_writer %}
         <a href="{% url 'employees:vacation_add' object.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Добавить</a>
       {% endif %}
+      <!-- Ссылка на полный список отпусков сотрудника -->
       <a href="{% url 'employees:vacation_list' object.pk %}" class="btn btn-sm btn-outline">Все отпуска</a>
     </div>
   </div>
 
+  <!-- Таблица ближайших/последних отпусков -->
   {% if vacations %}
   <table class="data-table">
     <thead>
       <tr><th>Тип</th><th>Начало</th><th>Конец</th><th>Дней</th><th>Примечание</th></tr>
     </thead>
     <tbody>
+      <!-- Цикл по отпускам (список формируется в view, обычно несколько последних) -->
       {% for v in vacations %}
       <tr>
-        <td>{{ v.get_vac_type_display }}</td>
-        <td>{{ v.date_start }}</td>
-        <td>{{ v.date_end }}</td>
-        <td>{{ v.duration_days }}</td>
-        <td>{{ v.notes|default:"—" }}</td>
+        <td>{{ v.get_vac_type_display }}</td>    <!-- тип: ежегодный, учебный и т.д. -->
+        <td>{{ v.date_start }}</td>               <!-- дата начала -->
+        <td>{{ v.date_end }}</td>                 <!-- дата окончания -->
+        <td>{{ v.duration_days }}</td>            <!-- количество дней (property) -->
+        <td>{{ v.notes|default:"—" }}</td>        <!-- примечание -->
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
+  <!-- Сообщение если отпуска не добавлены -->
   <p class="text-muted" style="padding:16px 24px;">Отпуска не добавлены</p>
   {% endif %}
 </div>
 
 {# ── KPI ── #}
+<!-- Секция KPI сотрудника (ключевые показатели эффективности) -->
 <div class="section" style="margin-top:20px;">
   <div class="section-header">
     <h2>KPI</h2>
     <div class="section-header-actions">
+      <!-- Кнопка добавления KPI (только для редакторов) -->
       {% if request.user|is_writer %}
         <a href="{% url 'employees:kpi_add' object.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Добавить</a>
       {% endif %}
+      <!-- Ссылка на полный список KPI -->
       <a href="{% url 'employees:kpi_list' object.pk %}" class="btn btn-sm btn-outline">Все KPI</a>
     </div>
   </div>
 
+  <!-- Таблица KPI -->
   {% if kpis %}
   <table class="data-table">
     <thead>
@@ -118,9 +138,10 @@
       <tr>
         <td>{{ k.year }}</td>
         <td>{{ k.month }}</td>
-        <td>{{ k.plan_hours }}</td>
-        <td>{{ k.fact_hours }}</td>
+        <td>{{ k.plan_hours }}</td>      <!-- плановые часы -->
+        <td>{{ k.fact_hours }}</td>      <!-- фактические часы -->
         <td>
+          <!-- Бейдж процента выполнения: зелёный ≥100%, жёлтый ≥80%, красный <80% -->
           {% if k.completion_pct %}
             {% if k.completion_pct >= 100 %}
               <span class="badge badge-green">{{ k.completion_pct }}%</span>
@@ -131,14 +152,15 @@
             {% endif %}
           {% else %}—{% endif %}
         </td>
-        <td>{{ k.norm_control_remarks }}</td>
-        <td>{{ k.docs_issued }}</td>
-        <td>{{ k.score|default:"—" }}</td>
+        <td>{{ k.norm_control_remarks }}</td>  <!-- замечания нормоконтроля -->
+        <td>{{ k.docs_issued }}</td>           <!-- выданные документы -->
+        <td>{{ k.score|default:"—" }}</td>     <!-- итоговый балл -->
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
+  <!-- Сообщение если KPI не заполнен -->
   <p class="text-muted" style="padding:16px 24px;">KPI не заполнен</p>
   {% endif %}
 </div>

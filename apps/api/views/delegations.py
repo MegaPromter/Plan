@@ -11,9 +11,7 @@ from datetime import datetime
 
 from django.http import JsonResponse
 from django.utils import timezone
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
 from apps.employees.models import Employee, RoleDelegation
@@ -26,7 +24,6 @@ _VALID_SCOPE_TYPES = {'center', 'dept', 'sector', 'executor'}
 
 # ── GET / POST /api/delegations ──────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class DelegationListView(LoginRequiredJsonMixin, View):
     """
     GET  -- список делегирований текущего пользователя
@@ -225,7 +222,6 @@ class DelegationListView(LoginRequiredJsonMixin, View):
 
 # ── DELETE /api/delegations/<id> ─────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class DelegationDetailView(LoginRequiredJsonMixin, View):
     """DELETE -- отзыв делегирования. Только delegator или admin."""
 

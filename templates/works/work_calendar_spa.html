@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static employee_tags %}
+<!-- SPA-страница производственного календаря: сетка карточек по месяцам с CRUD -->
 
 {% block title %}Производственный календарь — Система управления{% endblock %}
 
@@ -8,6 +9,7 @@
 <span class="breadcrumb-current">Производственный календарь</span>
 {% endblock %}
 
+<!-- Кнопка добавления записи в topbar (доступна только администраторам) -->
 {% block topbar_actions %}
 <button class="btn btn-primary btn-sm" onclick="openAddModal()">
   <i class="fas fa-plus"></i> Добавить запись
@@ -16,38 +18,50 @@
 
 {% block styles %}
 <style>
+/* ── Панель инструментов фильтрации по году ─────────────────────────────── */
 .calendar-toolbar {
   display:flex; flex-wrap:wrap; gap:12px; align-items:center;
   margin-bottom:20px; background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius); padding:14px 16px;
 }
+/* Стили select внутри тулбара */
 .calendar-toolbar select { padding:6px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text); font-size:14px; }
 
+/* ── Сетка карточек месяцев (адаптивная, от 1 до N колонок) ────────────── */
 .calendar-grid {
   display:grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap:14px;
 }
 
+/* ── Карточка одного месяца ─────────────────────────────────────────────── */
 .calendar-card {
   background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius); padding:16px;
   display:flex; flex-direction:column; gap:8px;
 }
+/* Название месяца */
 .calendar-card .month-name { font-size:16px; font-weight:600; color:var(--text); }
+/* Значение нормы часов — крупный акцентный текст */
 .calendar-card .hours-value { font-size:24px; font-weight:700; color:var(--accent); }
+/* Подпись под числом */
 .calendar-card .hours-label { font-size:12px; color:var(--muted); }
+/* Ряд кнопок действий в карточке */
 .calendar-card .card-actions { display:flex; gap:8px; margin-top:4px; }
+/* Кнопка «Изменить» занимает всю доступную ширину */
 .calendar-card .btn-edit { flex:1; padding:6px; font-size:13px; }
 
+/* ── Пустое состояние ───────────────────────────────────────────────────── */
 .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
 .empty-state i { font-size:48px; margin-bottom:16px; display:block; }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Панель выбора года: при изменении перезагружает данные -->
 <div class="calendar-toolbar">
   <label style="font-size:14px;color:var(--muted);">Год:</label>
+  <!-- Список лет из контекста Django (years); current_year предвыбран -->
   <select id="yearSel" onchange="loadCalendar()">
     {% for y in years %}
     <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
@@ -55,11 +69,13 @@
   </select>
 </div>
 
+<!-- Сетка карточек (заполняется JavaScript-функцией renderGrid()) -->
 <div id="calendarGrid" class="calendar-grid">
+  <!-- Спиннер загрузки при первоначальном рендере -->
   <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
 </div>
 
-<!-- Modal -->
+<!-- Модальное окно добавления / редактирования записи календаря -->
 <div id="calModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal-box" style="max-width:380px">
     <div class="modal-header">
@@ -67,10 +83,12 @@
       <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
+      <!-- Поле года (disabled при редактировании — нельзя менять ключ) -->
       <div class="modal-form-group">
         <label>Год</label>
         <input type="number" id="fieldYear" min="2000" max="2100" placeholder="2025" style="width:100%">
       </div>
+      <!-- Поле месяца (disabled при редактировании) -->
       <div class="modal-form-group">
         <label>Месяц</label>
         <select id="fieldMonth" style="width:100%">
@@ -82,10 +100,12 @@
           <option value="11">Ноябрь</option><option value="12">Декабрь</option>
         </select>
       </div>
+      <!-- Норма часов: шаг 0.5, например 168 или 136.5 -->
       <div class="modal-form-group">
         <label>Норма часов (чел.-ч)</label>
         <input type="number" id="fieldHours" min="0" step="0.5" placeholder="168" style="width:100%">
       </div>
+      <!-- Блок ошибки валидации (отображается при неверном вводе) -->
       <div id="calModalError" class="error-message" style="display:none"></div>
     </div>
     <div class="modal-footer">
@@ -98,60 +118,77 @@
 
 {% block scripts %}
 <script>
+// Массив названий месяцев (индекс 0 пустой, чтобы mes[1] = «Январь»)
 const MONTH_NAMES = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
+// Данные календаря (массив объектов {id, year, month, hours_norm})
 let calData = [];
+// ID редактируемой записи (null при создании)
 let editingId = null;
 
+/* ── Загрузка данных за выбранный год ───────────────────────────────────── */
 async function loadCalendar() {
   const year = document.getElementById('yearSel').value;
   const grid = document.getElementById('calendarGrid');
+  // Показываем спиннер пока данные грузятся
   grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
   try {
+    // GET /api/work_calendar/?year=<year>
     const resp = await fetch(`/api/work_calendar/?year=${year}`);
     calData = await resp.json();
     renderGrid();
   } catch(e) {
+    // Ошибка сети или парсинга JSON
     grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Ошибка загрузки</p></div>';
   }
 }
 
+/* ── Отрисовка сетки карточек ───────────────────────────────────────────── */
 function renderGrid() {
   const year = parseInt(document.getElementById('yearSel').value);
   const grid = document.getElementById('calendarGrid');
+  // Преобразуем массив в словарь month → запись для быстрого доступа
   const byMonth = {};
   calData.forEach(c => { byMonth[c.month] = c; });
 
+  // Если нет записей за год — пустое состояние
   if (Object.keys(byMonth).length === 0) {
     grid.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Нет записей для выбранного года.<br>Нажмите «Добавить запись».</p></div>';
     return;
   }
 
+  // Генерируем карточки для каждого месяца, у которого есть запись
   let html = '';
   for (let m = 1; m <= 12; m++) {
     const rec = byMonth[m];
-    if (!rec) continue;
+    if (!rec) continue;  // Пропускаем месяцы без записи
     html += `
       <div class="calendar-card">
+        <!-- Название месяца из массива MONTH_NAMES -->
         <div class="month-name">${MONTH_NAMES[m]}</div>
+        <!-- Норма часов — главное значение карточки -->
         <div class="hours-value">${rec.hours_norm}</div>
         <div class="hours-label">нормо-часов / чел.</div>
         <div class="card-actions">
+          <!-- Кнопка редактирования нормы часов -->
           <button class="btn btn-outline btn-sm btn-edit" onclick="openEditModal(${rec.id}, ${year}, ${m}, ${rec.hours_norm})">
             <i class="fas fa-pen"></i> Изменить
           </button>
+          <!-- Кнопка удаления записи за месяц -->
           <button class="btn btn-danger btn-sm" onclick="deleteRecord(${rec.id}, '${MONTH_NAMES[m]} ${year}')">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>`;
   }
+  // Если html пустой (все месяцы без записей) — показываем пустое состояние
   grid.innerHTML = html || '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Нет записей</p></div>';
 }
 
+/* ── Открытие модала добавления новой записи ────────────────────────────── */
 function openAddModal() {
-  editingId = null;
+  editingId = null;  // Режим создания
   const year = document.getElementById('yearSel').value;
   document.getElementById('calModalTitle').textContent = 'Добавить запись';
   document.getElementById('fieldYear').value = year;
@@ -161,49 +198,58 @@ function openAddModal() {
   document.getElementById('calModal').style.display = 'flex';
 }
 
+/* ── Открытие модала редактирования существующей записи ─────────────────── */
 function openEditModal(id, year, month, hours) {
-  editingId = id;
+  editingId = id;  // Режим редактирования: сохраняем ID
   document.getElementById('calModalTitle').textContent = 'Изменить норму';
   document.getElementById('fieldYear').value = year;
   document.getElementById('fieldMonth').value = month;
   document.getElementById('fieldHours').value = hours;
+  // Блокируем год и месяц при редактировании (ключевые поля нельзя менять)
   document.getElementById('fieldYear').disabled = true;
   document.getElementById('fieldMonth').disabled = true;
   document.getElementById('calModalError').style.display = 'none';
   document.getElementById('calModal').style.display = 'flex';
 }
 
+/* ── Закрытие модала ────────────────────────────────────────────────────── */
 function closeModal() {
   document.getElementById('calModal').style.display = 'none';
+  // Разблокируем поля на случай следующего открытия в режиме создания
   document.getElementById('fieldYear').disabled = false;
   document.getElementById('fieldMonth').disabled = false;
   editingId = null;
 }
 
+/* ── Сохранение записи (создание или обновление) ────────────────────────── */
 async function saveRecord() {
   const year = parseInt(document.getElementById('fieldYear').value);
   const month = parseInt(document.getElementById('fieldMonth').value);
   const hours_norm = parseFloat(document.getElementById('fieldHours').value);
   const errEl = document.getElementById('calModalError');
 
+  // Простая валидация: все поля обязательны
   if (!year || !month || isNaN(hours_norm)) {
     errEl.textContent = 'Все поля обязательны';
     errEl.style.display = 'block';
     return;
   }
 
+  // Блокируем кнопку сохранения на время запроса
   const btn = document.getElementById('calModalSaveBtn');
   btn.disabled = true;
 
   try {
     let resp;
     if (editingId) {
+      // PUT /api/work_calendar/<id>/ — обновляем только норму часов
       resp = await fetch(`/api/work_calendar/${editingId}/`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
         body: JSON.stringify({hours_norm}),
       });
     } else {
+      // POST /api/work_calendar/create/ — создаём новую запись (год + месяц + норма)
       resp = await fetch('/api/work_calendar/create/', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
@@ -211,42 +257,52 @@ async function saveRecord() {
       });
     }
     const data = await resp.json();
+    // Показываем ошибку сервера (например, дублирующая запись)
     if (!resp.ok) {
       errEl.textContent = data.error || 'Ошибка';
       errEl.style.display = 'block';
       return;
     }
+    // Успех: закрываем модал и перезагружаем сетку
     closeModal();
     await loadCalendar();
   } catch(e) {
+    // Сетевая ошибка
     errEl.textContent = 'Сетевая ошибка';
     errEl.style.display = 'block';
   } finally {
+    // Всегда разблокируем кнопку
     btn.disabled = false;
   }
 }
 
+/* ── Удаление записи за месяц ───────────────────────────────────────────── */
 async function deleteRecord(id, label) {
+  // Стандартный confirm перед удалением (используем нативный, а не modal.js)
   if (!confirm(`Удалить запись «${label}»?`)) return;
   try {
+    // DELETE /api/work_calendar/<id>/
     const resp = await fetch(`/api/work_calendar/${id}/`, {
       method: 'DELETE',
       headers: {'X-CSRFToken': getCsrf()},
     });
-    if (resp.ok) await loadCalendar();
+    if (resp.ok) await loadCalendar();  // Перезагружаем сетку при успехе
     else alert('Ошибка удаления');
   } catch(e) {
     alert('Сетевая ошибка');
   }
 }
 
+/* ── Получение CSRF-токена из cookie ────────────────────────────────────── */
 function getCsrf() {
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';
 }
 
+// Инициализация: загружаем данные при первом рендере и отмечаем пункт навигации
 document.addEventListener('DOMContentLoaded', () => {
   loadCalendar();
+  // Подсвечиваем пункт «Производственный календарь» в сайдбаре (если есть)
   const link = document.getElementById('nav-work-calendar');
   if (link) link.classList.add('active');
 });

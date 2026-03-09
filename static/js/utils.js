@@ -75,7 +75,7 @@ function showToast(message, type = 'info', duration = 4000) {
         info:    { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)', text: '#93c5fd' },
         success: { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  text: '#86efac' },
         warning: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: '#fcd34d' },
-        error:   { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.4)',  text: '#fca5a5' },
+        error:   { bg: 'rgba(220,38,38,0.92)',   border: 'rgba(255,100,100,0.9)', text: '#ffffff' },
     };
     const c = colors[type] || colors.info;
 

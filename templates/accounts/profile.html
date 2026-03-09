@@ -1,36 +1,48 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница профиля текущего пользователя -->
 {% block title %}Профиль — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Текущий раздел в хлебных крошках -->
 <span class="breadcrumb-current">Профиль</span>
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен для AJAX-запросов из JS (col_settings) -->
 {% csrf_token %}
+<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>Профиль</h1>
 </div>
 
+<!-- Информация о сотруднике (если профиль привязан к аккаунту) -->
 {% if employee %}
 <div class="section">
+  <!-- Шапка секции: ФИО и бейдж роли -->
   <div class="section-header">
     <h2>{{ employee.full_name }}</h2>
     <div>
+      <!-- Цвет бейджа зависит от роли сотрудника -->
       {% if employee.role == 'admin' %}
         <span class="badge badge-red">{{ employee.get_role_display }}</span>
       {% elif employee.role == 'ntc_head' or employee.role == 'ntc_deputy' %}
+        <!-- Руководители и замы НТЦ — синий бейдж -->
         <span class="badge badge-blue">{{ employee.get_role_display }}</span>
       {% elif employee.role == 'dept_head' or employee.role == 'dept_deputy' %}
+        <!-- Руководители и замы отдела — жёлтый бейдж -->
         <span class="badge badge-yellow">{{ employee.get_role_display }}</span>
       {% elif employee.role == 'sector_head' %}
+        <!-- Начальник сектора — зелёный бейдж -->
         <span class="badge badge-green">{{ employee.get_role_display }}</span>
       {% else %}
+        <!-- Обычный пользователь — серый бейдж -->
         <span class="badge badge-gray">{{ employee.get_role_display }}</span>
       {% endif %}
     </div>
   </div>
+  <!-- Таблица с основными данными профиля -->
   <table class="info-table">
     <tr><th>Логин</th>      <td>{{ request.user.username }}</td></tr>
     <tr><th>Должность</th>  <td>{{ employee.get_position_display|default:"—" }}</td></tr>
@@ -42,29 +54,34 @@
   </table>
 </div>
 {% else %}
+<!-- Если профиль сотрудника не привязан к этому аккаунту -->
 <div class="section" style="padding:24px;">
   <p class="text-muted">Профиль сотрудника не привязан к этому аккаунту.</p>
   {% if request.user.is_superuser %}
+  <!-- Дополнительное сообщение для суперпользователя Django -->
   <p class="text-muted" style="margin-top:8px;">Вы вошли как суперпользователь Django.</p>
   {% endif %}
 </div>
 {% endif %}
 
-<!-- Моё меню -->
+<!-- Моё меню — пользовательские настройки -->
 <div class="section" style="margin-top:16px;">
   <div class="section-header"><h2>Моё меню</h2></div>
   <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
 
+    <!-- Строка: сброс ширин столбцов таблицы план/отчёт -->
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:14px;font-weight:500;color:var(--text);">Ширина колонок (план/отчёт)</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Сбросить сохранённые ширины столбцов в таблице «План/отчёт»</div>
       </div>
+      <!-- Кнопка сброса ширин — вызывает resetColWidths() через AJAX -->
       <button class="btn btn-outline btn-sm" id="resetColWidthsBtn" onclick="resetColWidths()">
         <i class="fas fa-undo"></i> Сбросить ширины
       </button>
     </div>
 
+    <!-- Настройка видимости подразделений — только для руководителей НТЦ и admin -->
     {% if employee %}
     {% if employee.role == 'ntc_head' or employee.role == 'ntc_deputy' or employee.role == 'admin' %}
     <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -72,6 +89,9 @@
         <div style="font-size:14px;font-weight:500;color:var(--text);">Видимость подразделений</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Показывать задачи всех отделов НТЦ или только своего</div>
       </div>
+      <!-- Чекбокс «Показывать все отделы НТЦ»
+           Текущее состояние берётся из col_settings.show_all_depts;
+           при изменении вызывается saveShowAllDepts() -->
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
         <input type="checkbox" id="showAllDeptsChk" style="width:16px;height:16px;accent-color:var(--accent);"
           {% if employee.col_settings and employee.col_settings.show_all_depts %}checked{% endif %}
@@ -85,6 +105,7 @@
   </div>
 </div>
 
+<!-- Ссылка на страницу смены пароля -->
 <div style="margin-top:16px;">
   <a href="{% url 'accounts:change_password' %}" class="btn btn-outline"><i class="fas fa-key"></i> Сменить пароль</a>
 </div>
@@ -92,32 +113,44 @@
 
 {% block scripts %}
 <script>
+// Получить CSRF-токен из формы или cookie
 function getCsrf() {
-  // Try form token first, then cookie
+  // Сначала пробуем взять из скрытого поля формы Django
   const el = document.querySelector('[name=csrfmiddlewaretoken]');
   if (el) return el.value;
+  // Если поля нет — берём из cookie
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';
 }
+
+// Универсальная функция AJAX POST-запроса к API
 async function apiPost(url, body) {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
     body: JSON.stringify(body),
   });
-  return r.json().catch(() => ({}));
+  return r.json().catch(() => ({})); // возвращаем пустой объект при ошибке парсинга
 }
+
+// Сброс сохранённых ширин столбцов таблицы план/отчёт
 async function resetColWidths() {
   const btn = document.getElementById('resetColWidthsBtn');
-  btn.disabled = true;
+  btn.disabled = true; // блокируем кнопку во время запроса
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сброс...';
+  // Отправляем POST с флагом _reset_widths на API настроек столбцов
   const data = await apiPost('/api/col_settings/', { _reset_widths: true });
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-undo"></i> Сбросить ширины';
+  // Показываем toast-уведомление с результатом
   showToast(data.error ? ('Ошибка: ' + data.error) : 'Ширины колонок сброшены', data.error ? 'error' : 'success');
 }
+
+// Сохранить настройку «Показывать все отделы НТЦ»
 async function saveShowAllDepts(checked) {
+  // Отправляем POST с новым значением флага show_all_depts
   const data = await apiPost('/api/col_settings/', { show_all_depts: checked });
+  // Показываем toast-уведомление с результатом
   showToast(data.error ? ('Ошибка: ' + data.error) : (checked ? 'Показаны все отделы НТЦ' : 'Показывается только свой отдел'), data.error ? 'error' : 'success');
 }
 </script>

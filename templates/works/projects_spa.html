@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% load static employee_tags %}
+<!-- SPA-страница управления проектами (УП): сетка карточек проектов с CRUD и управлением изделиями -->
 
 {% block title %}Управление проектами — Система управления{% endblock %}
 
+<!-- Активируем пункт «Проекты» в сайдбаре -->
 {% block nav_projects %}active{% endblock %}
 
 {% block breadcrumb %}
@@ -13,11 +15,14 @@
 
 {% block styles %}
 <style>
+/* ── Сетка карточек проектов (адаптивная) ───────────────────────────────── */
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
 }
+
+/* ── Карточка одного проекта ────────────────────────────────────────────── */
 .project-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -30,21 +35,25 @@
   flex-direction: column;
   gap: 8px;
 }
+/* Hover-эффект: поднимаем карточку и добавляем тень */
 .project-card:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(59,130,246,0.15);
 }
+/* Полное наименование проекта */
 .project-card-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
 }
+/* Краткое наименование / шифр — акцентный цвет */
 .project-card-short {
   font-size: 13px;
   color: var(--accent);
   font-weight: 500;
 }
+/* Метаданные: количество ПП и изделий */
 .project-card-meta {
   font-size: 12px;
   color: var(--muted);
@@ -53,6 +62,7 @@
   gap: 10px;
   margin-top: 4px;
 }
+/* Кнопки действий в правом верхнем углу карточки — появляются при hover */
 .project-card-actions {
   position: absolute;
   top: 10px;
@@ -63,6 +73,8 @@
   transition: opacity 0.15s;
 }
 .project-card:hover .project-card-actions { opacity: 1; }
+
+/* ── Маленькие кнопки (edit / delete) на карточке ──────────────────────── */
 .pc-btn {
   width: 28px; height: 28px;
   border: 1px solid var(--border);
@@ -75,9 +87,10 @@
   transition: all 0.15s;
 }
 .pc-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* Вариант «опасного» действия (удаление) */
 .pc-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
-/* Product tags */
+/* ── Тэги изделий на карточке проекта ──────────────────────────────────── */
 .product-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .product-tag {
   display: inline-flex; align-items: center; gap: 4px;
@@ -89,56 +102,74 @@
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен для fetch-запросов (POST/PUT/DELETE) -->
 {% csrf_token %}
 
+<!-- Заголовок страницы с кнопкой создания проекта -->
 <div class="page-header">
   <h1>Управление проектами</h1>
-  {% if request.user|is_writer %}
+  {% if request.user|is_admin_role %}
   <button class="btn btn-primary" onclick="openCreateProjectModal()">
     <i class="fas fa-plus"></i> Создать проект
   </button>
   {% endif %}
 </div>
 
+<!-- Сетка карточек проектов: заполняется из renderProjects() -->
 <div id="projectsGrid" class="projects-grid">
-  <!-- filled by JS -->
+  <!-- Содержимое заполняется JavaScript -->
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
+<!-- Вспомогательные JS-модули -->
+<script src="{% static 'js/utils.js' %}"></script>   <!-- fetchJson, escapeHtml, showToast -->
+<script src="{% static 'js/modal.js' %}"></script>   <!-- openModal, confirmDialog -->
 <script>
-const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+// Экранирование строки для безопасной вставки в JS-строки внутри onclick-атрибутов
+function escapeJs(s) {
+  if (!s) return '';
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// Флаги прав: admin — полный доступ к проектам и изделиям
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %}; // оставляем для совместимости
+const IS_ADMIN  = {% if request.user|is_admin_role %}true{% else %}false{% endif %};
+// Локальный массив проектов
 let projects = [];
 
-/* ── API ──────────────────────────────────────────────────────────────── */
+/* ── Загрузка списка проектов ────────────────────────────────────────────── */
 async function loadProjects() {
+  // GET /api/projects/ — возвращает список с вложенными products и pp_count
   const data = await fetchJson('/api/projects/');
   if (!data._error) projects = Array.isArray(data) ? data : [];
 }
 
-/* ── Render ───────────────────────────────────────────────────────────── */
+/* ── Отрисовка сетки карточек ────────────────────────────────────────────── */
 function renderProjects() {
   const grid = document.getElementById('projectsGrid');
+  // Пустое состояние: нет проектов
   if (projects.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon"><i class="fas fa-project-diagram"></i></div>
         <p>Проектов пока нет</p>
-        ${IS_WRITER ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button>' : ''}
+        ${IS_ADMIN ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button>' : ''}
       </div>`;
     return;
   }
 
+  // Генерируем карточки для каждого проекта
   grid.innerHTML = projects.map(p => {
+    // Тэги изделий: максимум 5 штук, остальные — счётчик «+N»
     const productTags = p.products && p.products.length
       ? `<div class="product-tags">${p.products.slice(0, 5).map(pr =>
           `<span class="product-tag"><i class="fas fa-cube"></i>${escapeHtml(pr.code || pr.name)}</span>`
         ).join('')}${p.products.length > 5 ? `<span class="product-tag">+${p.products.length - 5}</span>` : ''}</div>`
       : '';
 
-    const actionBtns = IS_WRITER ? `
+    // Кнопки действий на карточке — только для admin
+    const actionBtns = IS_ADMIN ? `
       <div class="project-card-actions">
         <button class="pc-btn" onclick="event.stopPropagation(); openEditProjectModal(${p.id})" title="Редактировать">
           <i class="fas fa-pen"></i>
@@ -152,10 +183,14 @@ function renderProjects() {
       </div>` : '';
 
     return `
-      <div class="project-card" onclick="openEditProjectModal(${p.id})">
+      <div class="project-card" onclick="IS_ADMIN && openEditProjectModal(${p.id})">
+        <!-- Краткое наименование (если задано) -->
         ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
+        <!-- Полное наименование проекта -->
         <div class="project-card-title">${escapeHtml(p.name_full)}</div>
+        <!-- Тэги изделий проекта -->
         ${productTags}
+        <!-- Мета-информация: количество ПП и изделий -->
         <div class="project-card-meta">
           <span><i class="fas fa-industry" style="margin-right:4px;"></i>${p.pp_count || 0} производственных планов</span>
           ${p.products ? `<span><i class="fas fa-cube" style="margin-right:4px;"></i>${p.products.length} изделий</span>` : ''}
@@ -165,7 +200,7 @@ function renderProjects() {
   }).join('');
 }
 
-/* ── Create Project ───────────────────────────────────────────────────── */
+/* ── Модал создания нового проекта ──────────────────────────────────────── */
 function openCreateProjectModal() {
   const modal = openModal({
     title: 'Добавить проект',
@@ -188,9 +223,11 @@ function openCreateProjectModal() {
   const shortInp = modal.dialog.querySelector('#mProjShort');
   const saveBtn = modal.dialog.querySelector('#mProjSaveBtn');
 
+  // Обработчик сохранения: POST /api/projects/create/
   async function doSave() {
     const name_full  = inp.value.trim();
     const name_short = shortInp.value.trim();
+    // Полное наименование обязательно
     if (!name_full) { inp.style.borderColor = 'var(--danger)'; return; }
     saveBtn.disabled = true;
     const resp = await fetchJson('/api/projects/create/', {
@@ -207,21 +244,22 @@ function openCreateProjectModal() {
   }
 
   saveBtn.addEventListener('click', doSave);
+  // Сохранение по Enter в поле полного наименования
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); });
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
+  // Фокус на первое поле при открытии модала
   setTimeout(() => inp.focus(), 50);
 }
 
-/* ── Edit Project ─────────────────────────────────────────────────────── */
+/* ── Модал редактирования проекта ───────────────────────────────────────── */
 function openEditProjectModal(id) {
   const proj = projects.find(p => p.id === id);
   if (!proj) return;
 
-  if (!IS_WRITER) {
-    openProductsModal(id);
-    return;
-  }
+  // Только admin может редактировать проект
+  if (!IS_ADMIN) return;
 
+  // Внутренняя функция рендера списка изделий внутри модала
   function renderProductList(products) {
     if (!products || products.length === 0) {
       return `<p style="color:var(--muted);font-size:13px;padding:4px 0;">Изделий нет</p>`;
@@ -232,7 +270,9 @@ function openEditProjectModal(id) {
           <span style="font-size:13px;color:var(--text);">${escapeHtml(pr.name)}</span>
           ${pr.code ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
         </div>
+        <!-- Кнопка редактирования изделия (inline-модал) -->
         <button class="pc-btn" data-edit-prod="${pr.id}" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <!-- Кнопка удаления изделия -->
         <button class="pc-btn danger" data-del-prod="${pr.id}" title="Удалить"><i class="fas fa-trash"></i></button>
       </div>`).join('');
   }
@@ -249,9 +289,12 @@ function openEditProjectModal(id) {
         <label>Краткое наименование / шифр</label>
         <input type="text" id="mEditShort" value="${escapeHtml(proj.name_short)}">
       </div>
+      <!-- Секция управления изделиями проекта -->
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Изделия</div>
+        <!-- Список изделий (обновляется после каждого CRUD-действия) -->
         <div id="mEditProdList">${renderProductList(proj.products)}</div>
+        <!-- Форма добавления нового изделия -->
         <div style="display:flex;gap:8px;margin-top:10px;">
           <input type="text" id="mNewProdName" placeholder="Наименование изделия" style="flex:2;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
           <input type="text" id="mNewProdCode" placeholder="Шифр" style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
@@ -267,19 +310,20 @@ function openEditProjectModal(id) {
   const shortInp = modal.dialog.querySelector('#mEditShort');
   const saveBtn  = modal.dialog.querySelector('#mEditSaveBtn');
 
-  // Обновить список изделий в модале
+  // Обновляет список изделий после CRUD-операции: перезагружает проекты и перерисовывает
   async function refreshProdList() {
     await loadProjects();
     renderProjects();
     const updated = projects.find(p => p.id === id);
     if (updated) {
       modal.dialog.querySelector('#mEditProdList').innerHTML = renderProductList(updated.products);
-      bindProdActions();
+      bindProdActions();  // Перепривязываем обработчики на новые элементы
     }
   }
 
-  // Привязать обработчики кнопок изделий
+  // Привязывает обработчики кнопок редактирования и удаления изделий
   function bindProdActions() {
+    // Кнопки редактирования изделий (открывают inline-модал)
     modal.dialog.querySelectorAll('[data-edit-prod]').forEach(btn => {
       btn.addEventListener('click', () => {
         const prodId = parseInt(btn.getAttribute('data-edit-prod'));
@@ -288,11 +332,13 @@ function openEditProjectModal(id) {
         if (pr) editProductInline(id, prodId, pr.name, pr.code, refreshProdList);
       });
     });
+    // Кнопки удаления изделий
     modal.dialog.querySelectorAll('[data-del-prod]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const prodId = parseInt(btn.getAttribute('data-del-prod'));
         const ok = await confirmDialog('Удалить изделие?', 'Удаление');
         if (!ok) return;
+        // DELETE /api/projects/<id>/products/<prodId>/
         const resp = await fetchJson(`/api/projects/${id}/products/${prodId}/`, { method: 'DELETE' });
         if (!resp._error) await refreshProdList();
       });
@@ -300,15 +346,17 @@ function openEditProjectModal(id) {
   }
   bindProdActions();
 
-  // Добавить изделие
+  // Обработчик добавления нового изделия из поля ввода
   const addBtn = modal.dialog.querySelector('#mAddProdBtn');
   async function doAddProduct() {
     const nameInp = modal.dialog.querySelector('#mNewProdName');
     const codeInp = modal.dialog.querySelector('#mNewProdCode');
     const name = nameInp.value.trim();
     const code = codeInp.value.trim();
+    // Наименование обязательно
     if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
     addBtn.disabled = true;
+    // POST /api/projects/<id>/products/create/
     const resp = await fetchJson(`/api/projects/${id}/products/create/`, {
       method: 'POST',
       body: JSON.stringify({ name, code }),
@@ -320,11 +368,12 @@ function openEditProjectModal(id) {
     addBtn.disabled = false;
   }
   addBtn.addEventListener('click', doAddProduct);
+  // Enter в поле наименования изделия добавляет его
   modal.dialog.querySelector('#mNewProdName').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); doAddProduct(); }
   });
 
-  // Сохранить поля проекта
+  // Обработчик сохранения полей проекта: PUT /api/projects/<id>/
   async function doSave() {
     const name_full  = fullInp.value.trim();
     const name_short = shortInp.value.trim();
@@ -347,11 +396,12 @@ function openEditProjectModal(id) {
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
-/* ── Products Modal ───────────────────────────────────────────────────── */
+/* ── Модал просмотра / управления изделиями проекта (для читателей) ─────── */
 function openProductsModal(projId) {
   const proj = projects.find(p => p.id === projId);
   if (!proj) return;
 
+  // Рендер списка изделий
   function renderProductList(products) {
     if (!products || products.length === 0) {
       return `<p style="color:var(--muted);font-size:13px;padding:8px 0;">Изделий нет</p>`;
@@ -362,8 +412,9 @@ function openProductsModal(projId) {
           <span style="font-size:14px;color:var(--text);">${escapeHtml(pr.name)}</span>
           ${pr.code ? `<span style="font-size:12px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
         </div>
-        ${IS_WRITER ? `
-        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeHtml(pr.name)}', '${escapeHtml(pr.code)}')" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <!-- Кнопки редактирования и удаления изделия (только для admin) -->
+        ${IS_ADMIN ? `
+        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeJs(pr.name)}', '${escapeJs(pr.code)}')" title="Редактировать"><i class="fas fa-pen"></i></button>
         <button class="pc-btn danger" onclick="deleteProduct(${projId}, ${pr.id})" title="Удалить"><i class="fas fa-trash"></i></button>
         ` : ''}
       </div>`).join('');
@@ -373,8 +424,10 @@ function openProductsModal(projId) {
     title: `Изделия проекта: ${escapeHtml(proj.name_short || proj.name_full)}`,
     width: '520px',
     body: `
+      <!-- Список изделий: id="prodList" нужен для динамического обновления -->
       <div id="prodList">${renderProductList(proj.products)}</div>
-      ${IS_WRITER ? `
+      ${IS_ADMIN ? `
+      <!-- Форма добавления нового изделия (только для admin) -->
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Добавить изделие</div>
         <div style="display:flex;gap:8px;">
@@ -388,6 +441,7 @@ function openProductsModal(projId) {
 
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 
+  // Обработчик добавления изделия (если есть кнопка — только для редакторов)
   const addBtn = modal.dialog.querySelector('#addProdBtn');
   if (addBtn) {
     async function doAddProduct() {
@@ -405,7 +459,7 @@ function openProductsModal(projId) {
         nameInp.value = '';
         codeInp.value = '';
         nameInp.style.borderColor = '';
-        // Refresh projects and re-render product list
+        // Перезагружаем проекты и обновляем список изделий в модале
         await loadProjects();
         renderProjects();
         const updatedProj = projects.find(p => p.id === projId);
@@ -416,13 +470,14 @@ function openProductsModal(projId) {
       addBtn.disabled = false;
     }
     addBtn.addEventListener('click', doAddProduct);
+    // Enter добавляет изделие
     modal.dialog.querySelector('#newProdName').addEventListener('keydown', e => {
       if (e.key === 'Enter') doAddProduct();
     });
   }
 }
 
-// Редактирование изделия с callback (используется из openEditProjectModal)
+/* ── Редактирование изделия с колбэком (вызывается из openEditProjectModal) */
 async function editProductInline(projId, prodId, currentName, currentCode, onSaved) {
   const modal = openModal({
     title: 'Редактировать изделие',
@@ -445,6 +500,7 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
   const codeInp = modal.dialog.querySelector('#eProdCodeI');
   const saveBtn = modal.dialog.querySelector('#eProdSaveI');
 
+  // PUT /api/projects/<projId>/products/<prodId>/
   async function doSave() {
     const name = nameInp.value.trim();
     const code = codeInp.value.trim();
@@ -456,6 +512,7 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
     });
     if (!resp._error) {
       modal.close();
+      // Вызываем колбэк для обновления списка в родительском модале
       if (onSaved) await onSaved();
     }
     saveBtn.disabled = false;
@@ -465,6 +522,7 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
+/* ── Редактирование изделия без колбэка (вызывается из openProductsModal) ─ */
 async function editProduct(projId, prodId, currentName, currentCode) {
   const modal = openModal({
     title: 'Редактировать изделие',
@@ -509,6 +567,7 @@ async function editProduct(projId, prodId, currentName, currentCode) {
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
+/* ── Удаление изделия (вызывается из openProductsModal через onclick) ────── */
 async function deleteProduct(projId, prodId) {
   const ok = await confirmDialog('Удалить изделие?', 'Удаление');
   if (!ok) return;
@@ -520,12 +579,13 @@ async function deleteProduct(projId, prodId) {
   }
 }
 
-/* ── Delete Project ───────────────────────────────────────────────────── */
+/* ── Удаление проекта ────────────────────────────────────────────────────── */
 async function deleteProject(id) {
   const proj = projects.find(p => p.id === id);
   const name = proj ? (proj.name_short || proj.name_full) : id;
+  // Предупреждаем что ПП останутся (FK на проект не каскадный)
   const ok = await confirmDialog(
-    `Удалить проект "${escapeHtml(name)}"?<br><small style="color:var(--muted);">Производственные планы, привязанные к нему, останутся.</small>`,
+    `Удалить проект "${name}"? Производственные планы, привязанные к нему, останутся.`,
     'Удаление проекта'
   );
   if (!ok) return;
@@ -537,7 +597,7 @@ async function deleteProject(id) {
   }
 }
 
-/* ── Init ─────────────────────────────────────────────────────────────── */
+/* ── Инициализация: загружаем проекты и рендерим сетку ─────────────────── */
 (async function init() {
   await loadProjects();
   renderProjects();

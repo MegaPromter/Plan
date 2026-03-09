@@ -1,16 +1,21 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница детального просмотра извещения (Notice) -->
 {% block title %}Извещение #{{ object.pk }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Ссылка назад на журнал извещений -->
 <a href="{% url 'works:notice_list' %}">Журнал извещений</a>
 <span>/</span>
+<!-- Текущее извещение — PK как идентификатор -->
 <span class="breadcrumb-current">#{{ object.pk }}</span>
 {% endblock %}
 
+<!-- Помечаем пункт «Журнал извещений» в сайдбаре как активный -->
 {% block nav_notices %}active{% endblock %}
 
+<!-- Кнопка редактирования в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
   <a href="{% url 'works:notice_edit' object.pk %}" class="btn btn-outline"><i class="fas fa-edit"></i> Редактировать</a>
@@ -18,9 +23,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы с PK и бейджем статуса -->
 <div class="page-header">
   <div>
     <h1>Извещение #{{ object.pk }}</h1>
+    <!-- Бейдж статуса: активное (зелёный) или закрытое (серый) -->
     <div style="margin-top:4px;">
       {% if object.status == 'active' %}
         <span class="badge badge-green">{{ object.get_status_display }}</span>
@@ -31,17 +38,25 @@
   </div>
 </div>
 
+<!-- Таблица атрибутов извещения -->
 <div class="section">
   <table class="info-table">
+    <!-- Тип извещения -->
     <tr><th>Тип</th>        <td>{{ object.notice_type|default:"—" }}</td></tr>
+    <!-- Отдел (FK → Department) -->
     <tr><th>Отдел</th>      <td>{{ object.department|default:"—" }}</td></tr>
+    <!-- Исполнитель: full_name из связанного Employee -->
     <tr><th>Исполнитель</th><td>{{ object.executor.full_name|default:"—" }}</td></tr>
+    <!-- Дата выдачи извещения -->
     <tr><th>Дата</th>       <td>{{ object.date_issued|default:"—" }}</td></tr>
+    <!-- Тема (краткое наименование) -->
     <tr><th>Тема</th>       <td>{{ object.subject }}</td></tr>
+    <!-- Описание: linebreaks превращает \n в <p> и <br> -->
     <tr><th>Описание</th>   <td>{{ object.description|linebreaks }}</td></tr>
   </table>
 </div>
 
+<!-- Кнопка возврата к журналу извещений -->
 <div style="margin-top:20px;">
   <a href="{% url 'works:notice_list' %}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> К журналу</a>
 </div>

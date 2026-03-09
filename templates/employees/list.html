@@ -1,14 +1,18 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница списка всех сотрудников с поиском и пагинацией -->
 {% block title %}Сотрудники — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Текущий раздел в хлебных крошках -->
 <span class="breadcrumb-current">Сотрудники</span>
 {% endblock %}
 
+<!-- Помечаем пункт «Сотрудники» в сайдбаре как активный -->
 {% block nav_employees %}active{% endblock %}
 
+<!-- Кнопка «Добавить» в topbar (только для администраторов) -->
 {% block topbar_actions %}
 {% if request.user|is_admin_role %}
   <a href="{% url 'employees:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
@@ -16,17 +20,23 @@
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>Сотрудники</h1>
 </div>
 
+<!-- Строка фильтрации: поиск по ФИО и коду отдела -->
 <form method="get" class="filter-bar">
+  <!-- Поле полнотекстового поиска по ФИО -->
   <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." class="filter-input">
+  <!-- Поле фильтра по коду отдела -->
   <input type="text" name="dept" value="{{ request.GET.dept }}" placeholder="Код отдела" class="filter-input filter-input--sm">
   <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Найти</button>
+  <!-- Сброс всех фильтров — переход на чистый список -->
   <a href="{% url 'employees:list' %}" class="btn btn-outline">Сброс</a>
 </form>
 
+<!-- Таблица сотрудников (показывается если список не пустой) -->
 {% if employees %}
 <table class="data-table">
   <thead>
@@ -42,27 +52,40 @@
     </tr>
   </thead>
   <tbody>
+    <!-- Цикл по сотрудникам из контекста Django -->
     {% for emp in employees %}
     <tr>
+      <!-- Порядковый номер строки -->
       <td class="text-muted">{{ forloop.counter }}</td>
+      <!-- ФИО — ссылка на детальную страницу сотрудника -->
       <td><a href="{% url 'employees:detail' emp.pk %}">{{ emp.full_name }}</a></td>
+      <!-- Роль — бейдж с цветом по роли -->
       <td>
         {% if emp.role == 'admin' %}
           <span class="badge badge-red">{{ emp.get_role_display }}</span>
         {% elif emp.role == 'ntc_head' or emp.role == 'ntc_deputy' %}
+          <!-- Руководители НТЦ — синий -->
           <span class="badge badge-blue">{{ emp.get_role_display }}</span>
         {% elif emp.role == 'dept_head' or emp.role == 'dept_deputy' %}
+          <!-- Руководители отдела — жёлтый -->
           <span class="badge badge-yellow">{{ emp.get_role_display }}</span>
         {% elif emp.role == 'sector_head' %}
+          <!-- Начальник сектора — зелёный -->
           <span class="badge badge-green">{{ emp.get_role_display }}</span>
         {% else %}
+          <!-- Обычный пользователь — серый -->
           <span class="badge badge-gray">{{ emp.get_role_display }}</span>
         {% endif %}
       </td>
+      <!-- Должность (человекочитаемое название из choices) -->
       <td>{{ emp.get_position_display|default:"—" }}</td>
+      <!-- Отдел (название Department) -->
       <td>{{ emp.department|default:"—" }}</td>
+      <!-- Сектор (название Sector) -->
       <td>{{ emp.sector|default:"—" }}</td>
+      <!-- НТЦ-центр (название NTCCenter) -->
       <td>{{ emp.ntc_center|default:"—" }}</td>
+      <!-- Статус активности сотрудника -->
       <td>
         {% if emp.is_active %}
           <span class="badge badge-green">Активен</span>
@@ -75,11 +98,14 @@
   </tbody>
 </table>
 
+<!-- Пагинация (показывается если записей больше чем на одну страницу) -->
 {% if is_paginated %}
 <div class="pagination">
+  <!-- Ссылка «Предыдущая страница» -->
   {% if page_obj.has_previous %}
     <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
   {% endif %}
+  <!-- Номера страниц (±3 от текущей) -->
   {% for num in page_obj.paginator.page_range %}
     {% if page_obj.number == num %}
       <span class="page-link active">{{ num }}</span>
@@ -87,18 +113,22 @@
       <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
     {% endif %}
   {% endfor %}
+  <!-- Ссылка «Следующая страница» -->
   {% if page_obj.has_next %}
     <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.dept %}dept={{ request.GET.dept }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
   {% endif %}
+  <!-- Информация о текущей странице и общем количестве записей -->
   <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (всего {{ page_obj.paginator.count }})</span>
 </div>
 {% endif %}
 
 {% else %}
+<!-- Пустое состояние — сотрудников не найдено по заданным фильтрам -->
 <div class="empty-state">
   <div class="empty-state-icon"><i class="fas fa-users"></i></div>
   <p>Сотрудников не найдено</p>
   {% if request.user|is_admin_role %}
+    <!-- Кнопка добавления первого сотрудника (только для администратора) -->
     <a href="{% url 'employees:create' %}" class="btn btn-primary">Добавить первого сотрудника</a>
   {% endif %}
 </div>

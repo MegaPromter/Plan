@@ -1,28 +1,38 @@
 {% extends "base.html" %}
+<!-- Страница подтверждения удаления записи об отпуске -->
 {% block title %}Удалить отпуск — {{ employee.full_name }} — PlanApp{% endblock %}
 
 {% block content %}
+<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>Удалить отпуск</h1>
 </div>
 
+<!-- Блок подтверждения удаления -->
 <div class="confirm-box">
+  <!-- Вопрос с ФИО сотрудника -->
   <p>Вы уверены, что хотите удалить запись об отпуске сотрудника <strong>{{ employee.full_name }}</strong>?</p>
+  <!-- Детали удаляемой записи для проверки -->
   <ul class="confirm-details">
     <li><strong>Тип:</strong> {{ vacation.get_vac_type_display }}</li>
     <li><strong>Начало:</strong> {{ vacation.date_start }}</li>
     <li><strong>Конец:</strong> {{ vacation.date_end }}</li>
     <li><strong>Дней:</strong> {{ vacation.duration_days }}</li>
+    <!-- Примечание показывается только если заполнено -->
     {% if vacation.notes %}
       <li><strong>Примечание:</strong> {{ vacation.notes }}</li>
     {% endif %}
   </ul>
+  <!-- Предупреждение о необратимости действия -->
   <p class="confirm-warning">Это действие необратимо.</p>
 
+  <!-- Форма подтверждения: POST-запрос выполняет удаление -->
   <form method="post" novalidate>
     {% csrf_token %}
     <div class="form-actions">
+      <!-- Кнопка подтверждения удаления (красная) -->
       <button type="submit" class="btn btn-danger">Удалить</button>
+      <!-- Кнопка отмены: возврат к списку отпусков -->
       <a href="{% url 'employees:vacation_list' employee.pk %}" class="btn btn-outline">Отмена</a>
     </div>
   </form>

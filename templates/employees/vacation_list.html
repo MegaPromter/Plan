@@ -1,18 +1,22 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница списка отпусков конкретного сотрудника -->
 {% block title %}Отпуска — {{ employee.full_name }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
 <span>/</span>
+<!-- Ссылка на детальную страницу сотрудника -->
 <a href="{% url 'employees:detail' employee.pk %}">{{ employee.short_name }}</a>
 <span>/</span>
 <span class="breadcrumb-current">Отпуска</span>
 {% endblock %}
 
+<!-- Помечаем пункт «Сотрудники» в сайдбаре как активный -->
 {% block nav_employees %}active{% endblock %}
 
+<!-- Кнопка добавления отпуска в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
   <a href="{% url 'employees:vacation_add' employee.pk %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить отпуск</a>
@@ -20,6 +24,7 @@
 {% endblock %}
 
 {% block content %}
+<!-- Заголовок: «Отпуска» и ФИО сотрудника -->
 <div class="page-header">
   <div>
     <h1>Отпуска</h1>
@@ -27,6 +32,7 @@
   </div>
 </div>
 
+<!-- Таблица отпусков сотрудника -->
 {% if vacations %}
 <table class="data-table">
   <thead>
@@ -35,16 +41,20 @@
     </tr>
   </thead>
   <tbody>
+    <!-- Цикл по записям об отпусках -->
     {% for v in vacations %}
     <tr>
-      <td>{{ v.get_vac_type_display }}</td>
-      <td>{{ v.date_start }}</td>
-      <td>{{ v.date_end }}</td>
-      <td>{{ v.duration_days }}</td>
-      <td>{{ v.notes|default:"—" }}</td>
+      <td>{{ v.get_vac_type_display }}</td>    <!-- тип отпуска (ежегодный, учебный и т.д.) -->
+      <td>{{ v.date_start }}</td>              <!-- дата начала -->
+      <td>{{ v.date_end }}</td>               <!-- дата окончания -->
+      <td>{{ v.duration_days }}</td>           <!-- длительность в днях (property) -->
+      <td>{{ v.notes|default:"—" }}</td>       <!-- примечание -->
+      <!-- Кнопки действий (только для редакторов) -->
       <td>
         {% if request.user|is_writer %}
+          <!-- Кнопка редактирования отпуска -->
           <a href="{% url 'employees:vacation_edit' v.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+          <!-- Кнопка удаления отпуска -->
           <a href="{% url 'employees:vacation_delete' v.pk %}" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></a>
         {% endif %}
       </td>
@@ -53,15 +63,18 @@
   </tbody>
 </table>
 {% else %}
+<!-- Пустое состояние: отпуска не добавлены -->
 <div class="empty-state">
   <div class="empty-state-icon"><i class="fas fa-calendar-times"></i></div>
   <p>Отпуска не добавлены</p>
   {% if request.user|is_writer %}
+    <!-- Кнопка добавления первого отпуска -->
     <a href="{% url 'employees:vacation_add' employee.pk %}" class="btn btn-primary">Добавить отпуск</a>
   {% endif %}
 </div>
 {% endif %}
 
+<!-- Кнопка возврата на профиль сотрудника -->
 <div style="margin-top:20px;">
   <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> К профилю</a>
 </div>

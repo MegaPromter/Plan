@@ -9,9 +9,7 @@ DELETE /api/work_calendar/<id>/    — удаление записи (admin)
 import logging
 
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import (
     AdminRequiredJsonMixin,
@@ -39,7 +37,6 @@ def _serialize(cal):
     }
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class WorkCalendarListView(LoginRequiredJsonMixin, View):
     """GET — список норм по году; POST create перенаправляется в WorkCalendarCreateView."""
 
@@ -58,7 +55,6 @@ class WorkCalendarListView(LoginRequiredJsonMixin, View):
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class WorkCalendarCreateView(AdminRequiredJsonMixin, View):
     """POST — создание или обновление нормы на месяц (upsert по year+month)."""
 
@@ -96,7 +92,6 @@ class WorkCalendarCreateView(AdminRequiredJsonMixin, View):
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
     """PUT /DELETE /api/work_calendar/<id>/"""
 

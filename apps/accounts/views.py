@@ -59,8 +59,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from apps.employees.models import Employee, Vacation
         ctx = super().get_context_data(**kwargs)
         ctx['works_count']    = Work.objects.count()
-        ctx['tasks_count']    = Work.objects.filter(source_type='task').count()
-        ctx['pp_count']       = Work.objects.filter(source_type='pp').count()
+        ctx['tasks_count']    = Work.objects.filter(show_in_plan=True).count()
+        ctx['pp_count']       = Work.objects.filter(show_in_pp=True).count()
         ctx['notices_count']  = Notice.objects.count()
         ctx['employees_count']= Employee.objects.filter(is_active=True).count()
         ctx['vacations_count']= Vacation.objects.count()
@@ -70,7 +70,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 # Заглушка для разделов в разработке
 _STUB_TITLES = {
     'projects-list':         ('Проекты',                   'Список проектов и их основных характеристик'),
-    'projects-stages':       ('Этапы и подэтапы',          'Управление иерархией этапов проектов'),
+    'projects-stages':       ('Этапы и вехи',               'Управление иерархией этапов проектов'),
     'projects-deadlines':    ('Сроки и вехи',              'Контрольные точки и плановые сроки по проектам'),
     'pp-import':             ('Импорт / экспорт ПП',       'Загрузка и выгрузка данных производственного плана'),
     'analytics-workload':    ('Загрузка сотрудников',      'Анализ плановой и фактической нагрузки по исполнителям'),

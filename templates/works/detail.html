@@ -1,24 +1,30 @@
 {% extends "base.html" %}
 {% load employee_tags %}
+<!-- Страница детального просмотра работы (Work) — основные данные + отчётные документы -->
 {% block title %}{{ object.work_name|default:"Работа" }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
+<!-- Ссылка назад на список с учётом типа работы (pp или task) -->
 <a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}">
   {% if object.source_type == 'pp' %}Производственный план{% else %}План/отчёт{% endif %}
 </a>
 <span>/</span>
+<!-- Название работы (обрезано до 40 символов) -->
 <span class="breadcrumb-current">{{ object.work_name|default:"Работа"|truncatechars:40 }}</span>
 {% endblock %}
 
+<!-- Пометить нужный пункт сайдбара активным в зависимости от типа источника -->
 {% block nav_tasks %}{% if object.source_type != 'pp' %}active{% endif %}{% endblock %}
 {% block nav_pp %}{% if object.source_type == 'pp' %}active{% endif %}{% endblock %}
 
+<!-- Кнопки редактирования и удаления в topbar (только для редакторов) -->
 {% block topbar_actions %}
   {% if request.user|is_writer %}
     <a href="{% url 'works:edit' object.pk %}" class="btn btn-secondary btn-sm">
       <i class="fas fa-edit"></i> Редактировать
     </a>
+    <!-- Кнопка удаления со стилем «опасного» действия -->
     <a href="{% url 'works:delete' object.pk %}" class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);">
       <i class="fas fa-trash"></i> Удалить
     </a>
@@ -28,10 +34,11 @@
 {% block content %}
 <div style="display:flex;flex-direction:column;gap:24px;">
 
-  <!-- Основные данные -->
+  <!-- Основные данные работы -->
   <div class="section">
     <div class="section-header">
       <h2 class="section-title">
+        <!-- Бейдж типа работы: ПП (производственный план) или ПО (план/отчёт) -->
         {% if object.source_type == 'pp' %}
           <span class="badge badge-green" style="margin-right:8px;">ПП</span>
         {% else %}
@@ -40,14 +47,19 @@
         {{ object.work_name|default:"—" }}
       </h2>
     </div>
+    <!-- Таблица атрибутов работы -->
     <table class="info-table">
-      <tr><th>Номер работы</th><td>{{ object.work_number|default:"—" }}</td></tr>
-      <tr><th>Тип работы</th><td>{{ object.work_type|default:"—" }}</td></tr>
-      <tr><th>Описание</th><td>{{ object.description|default:"—" }}</td></tr>
+      <tr><th>Номер работы</th><td>{{ object.work_num|default:"—" }}</td></tr>
+      <tr><th>Тип работы</th><td>{{ object.task_type|default:"—" }}</td></tr>
+      <tr><th>Обозначение</th><td>{{ object.work_designation|default:"—" }}</td></tr>
+      <!-- НТЦ: код и название -->
       <tr><th>НТЦ-центр</th><td>{% if object.ntc_center %}{{ object.ntc_center.code }} — {{ object.ntc_center.name }}{% else %}—{% endif %}</td></tr>
+      <!-- Отдел: код и название -->
       <tr><th>Отдел</th><td>{% if object.department %}{{ object.department.code }} — {{ object.department.name }}{% else %}—{% endif %}</td></tr>
+      <!-- Сектор: код и название -->
       <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.code }} — {{ object.sector.name }}{% else %}—{% endif %}</td></tr>
       <tr><th>Проект</th><td>{% if object.project %}{{ object.project.name }}{% else %}—{% endif %}</td></tr>
+      <!-- Исполнитель: приоритет — связанный Employee, затем executor_name_raw -->
       <tr><th>Исполнитель</th><td>
         {% if object.executor %}{{ object.executor.full_name }}
         {% elif object.executor_name_raw %}{{ object.executor_name_raw }}
@@ -56,6 +68,7 @@
       <tr><th>Дата начала</th><td>{{ object.date_start|default:"—" }}</td></tr>
       <tr><th>Дата окончания</th><td>{{ object.date_end|default:"—" }}</td></tr>
       <tr><th>Дедлайн</th><td>{{ object.deadline|default:"—" }}</td></tr>
+      <!-- Плановые часы хранятся как JSONField (словарь месяц → часы) -->
       <tr><th>Плановые часы</th><td>
         {% if object.plan_hours %}<code style="background:var(--surface2);padding:4px 8px;border-radius:4px;font-size:13px;">{{ object.plan_hours }}</code>{% else %}—{% endif %}
       </td></tr>
@@ -63,26 +76,33 @@
     </table>
   </div>
 
+  <!-- Детали задачи (только для работ типа task — план/отчёт) -->
   {% if object.source_type == 'task' %}{% with td=object.task_detail %}{% if td %}
   <div class="section">
     <div class="section-header"><h2 class="section-title">Детали задачи (ПО)</h2></div>
     <table class="info-table">
-      <tr><th>Этап</th><td>{{ td.stage|default:"—" }}</td></tr>
+      <!-- Этап задачи -->
+      <tr><th>Этап</th><td>{{ td.stage_num|default:"—" }}</td></tr>
+      <!-- Обоснование выполнения работы -->
       <tr><th>Обоснование</th><td>{{ td.justification|default:"—" }}</td></tr>
     </table>
   </div>
   {% endif %}{% endwith %}{% endif %}
 
+  <!-- Детали ПП (только для работ типа pp — производственный план) -->
   {% if object.source_type == 'pp' %}{% with pd=object.pp_detail %}{% if pd %}
   <div class="section">
     <div class="section-header"><h2 class="section-title">Детали производственного плана</h2></div>
     <table class="info-table">
       <tr><th>Код строки</th><td>{{ pd.row_code|default:"—" }}</td></tr>
       <tr><th>Заказ</th><td>{{ pd.work_order|default:"—" }}</td></tr>
+      <!-- Иерархия: Этап / Веха / Работа -->
       <tr><th>Этап / Веха / Работа</th><td>{{ pd.stage_num|default:"—" }} / {{ pd.milestone_num|default:"—" }} / {{ pd.work_num|default:"—" }}</td></tr>
       <tr><th>Обозначение</th><td>{{ pd.work_designation|default:"—" }}</td></tr>
       <tr><th>Листов A4</th><td>{{ pd.sheets_a4|default:"—" }}</td></tr>
+      <!-- Норма и коэффициент для расчёта трудоёмкости -->
       <tr><th>Норма / Коэф</th><td>{{ pd.norm|default:"—" }} / {{ pd.coeff|default:"—" }}</td></tr>
+      <!-- Итоговая трудоёмкость по 2D и 3D моделям -->
       <tr><th>Итого 2D / 3D</th><td>{{ pd.total_2d|default:"—" }} / {{ pd.total_3d|default:"—" }}</td></tr>
       <tr><th>Трудоёмкость</th><td>{{ pd.labor|default:"—" }}</td></tr>
       <tr><th>Начальник сектора</th><td>{{ pd.sector_head_name|default:"—" }}</td></tr>
@@ -90,10 +110,11 @@
   </div>
   {% endif %}{% endwith %}{% endif %}
 
-  <!-- Отчётные документы -->
+  <!-- Отчётные документы по работе -->
   <div class="section">
     <div class="section-header">
       <h2 class="section-title">Отчётные документы</h2>
+      <!-- Кнопка добавления документа (только для редакторов) -->
       {% if request.user|is_writer %}
         <a href="{% url 'works:report_add' object.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Добавить</a>
       {% endif %}
@@ -106,29 +127,34 @@
             <th>Дата приёма</th><th>Тип/Класс</th>
             <th>Л. A4</th><th>Норма</th><th>Коэф.</th><th>Ч. БВД</th>
             <th>Нормоконтроль</th><th>Ссылка</th>
+            <!-- Колонка действий — только для редакторов -->
             {% if request.user|is_writer %}<th></th>{% endif %}
           </tr>
         </thead>
         <tbody>
+          <!-- Цикл по отчётным документам работы (обратная связь через related_name reports) -->
           {% for r in object.reports.all %}
           <tr>
             <td>{{ r.doc_name|default:"—" }}</td>
             <td style="font-size:13px;color:var(--text2);">{{ r.doc_designation|default:"—" }}</td>
             <td style="font-size:13px;color:var(--text2);">{{ r.inventory_num|default:"—" }}</td>
             <td style="font-size:13px;white-space:nowrap;">{{ r.date_accepted|default:"—" }}</td>
+            <!-- Тип и класс документа -->
             <td style="font-size:13px;">{{ r.doc_type|default:"—" }}{% if r.doc_class %}/{{ r.doc_class }}{% endif %}</td>
-            <td>{{ r.sheets_a4|default:"—" }}</td>
-            <td>{{ r.norm|default:"—" }}</td>
-            <td>{{ r.coeff|default:"—" }}</td>
-            <td>{{ r.bvd_hours|default:"—" }}</td>
-            <td style="font-size:13px;">{{ r.norm_control|default:"—" }}</td>
+            <td>{{ r.sheets_a4|default:"—" }}</td>      <!-- листов A4 -->
+            <td>{{ r.norm|default:"—" }}</td>           <!-- норматив -->
+            <td>{{ r.coeff|default:"—" }}</td>          <!-- коэффициент -->
+            <td>{{ r.bvd_hours|default:"—" }}</td>      <!-- часы БВД -->
+            <td style="font-size:13px;">{{ r.norm_control|default:"—" }}</td>  <!-- нормоконтроль -->
             <td style="font-size:13px;">
+              <!-- Ссылка на документ в внешней системе (если задана) -->
               {% if r.doc_link %}
                 <a href="{{ r.doc_link }}" target="_blank" style="color:var(--accent);">
                   <i class="fas fa-external-link-alt"></i>
                 </a>
               {% else %}—{% endif %}
             </td>
+            <!-- Кнопки редактирования и удаления документа (для редакторов) -->
             {% if request.user|is_writer %}
             <td style="white-space:nowrap;">
               <a href="{% url 'works:report_edit' r.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
@@ -136,6 +162,7 @@
             </td>
             {% endif %}
           </tr>
+          <!-- Строка «нет документов» если список пустой -->
           {% empty %}
           <tr class="empty"><td colspan="{% if request.user|is_writer %}12{% else %}11{% endif %}">Документов нет</td></tr>
           {% endfor %}
@@ -144,6 +171,7 @@
     </div>
   </div>
 
+  <!-- Кнопка возврата на список -->
   <div>
     <a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}" class="btn btn-outline">
       <i class="fas fa-arrow-left"></i> Назад к списку

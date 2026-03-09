@@ -11,9 +11,7 @@ import logging
 from datetime import date
 
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import (
     LoginRequiredJsonMixin,
@@ -24,6 +22,22 @@ from apps.employees.models import Department, Employee
 from apps.works.models import Notice
 
 logger = logging.getLogger(__name__)
+
+
+def _check_journal_access(user, notice):
+    """Проверка: writer может менять только записи своего отдела.
+    admin / ntc_head / ntc_deputy — без ограничений.
+    Возвращает строку ошибки или None (доступ разрешён)."""
+    employee = getattr(user, 'employee', None)
+    if not employee:
+        return 'Нет профиля сотрудника'
+    if employee.role in ('admin', 'ntc_head', 'ntc_deputy'):
+        return None
+    if not employee.department:
+        return 'Вашему профилю не назначен отдел'
+    if notice.department_id and employee.department_id != notice.department_id:
+        return 'Вы можете редактировать только записи своего отдела'
+    return None
 
 # Максимальное количество записей на странице
 JOURNAL_MAX = 500
@@ -37,7 +51,6 @@ JOURNAL_ALLOWED_FIELDS = {
 
 # ── GET / POST /api/journal ─────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class JournalListView(LoginRequiredJsonMixin, View):
     """
     GET  -- список записей журнала с фильтрами и пагинацией.
@@ -85,7 +98,6 @@ class JournalListView(LoginRequiredJsonMixin, View):
         return JsonResponse(result, safe=False)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class JournalCreateView(WriterRequiredJsonMixin, View):
     """POST -- создание записи журнала."""
 
@@ -145,7 +157,6 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
 
 # ── PUT / DELETE /api/journal/<id> ──────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class JournalDetailView(WriterRequiredJsonMixin, View):
     """
     PUT    -- обновление записи журнала.
@@ -158,9 +169,14 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
             return JsonResponse({'ok': True})
 
         try:
-            notice = Notice.objects.get(pk=pk)
+            notice = Notice.objects.select_related('department').get(pk=pk)
         except Notice.DoesNotExist:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
+
+        # Проверка доступа по отделу
+        err = _check_journal_access(request.user, notice)
+        if err:
+            return JsonResponse({'error': err}, status=403)
 
         # Фильтрация: принимаем только допустимые поля
         updates = {k: v for k, v in data.items() if k in JOURNAL_ALLOWED_FIELDS}
@@ -230,9 +246,14 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            notice = Notice.objects.get(pk=pk)
+            notice = Notice.objects.select_related('department').get(pk=pk)
         except Notice.DoesNotExist:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
+
+        # Проверка доступа по отделу
+        err = _check_journal_access(request.user, notice)
+        if err:
+            return JsonResponse({'error': err}, status=403)
 
         notice.delete()
         return JsonResponse({'ok': True})

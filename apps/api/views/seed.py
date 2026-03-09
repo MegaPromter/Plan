@@ -2,7 +2,7 @@
 API для генерации тестовых данных (seed).
 
 Все эндпоинты требуют роль admin.
-POST /api/seed              -- генерация случайных задач (Work + TaskWork)
+POST /api/seed              -- генерация случайных задач (Work show_in_plan=True)
 POST /api/seed_executors    -- добавление исполнителей в справочник + назначение
 POST /api/seed_vacations    -- генерация случайных отпусков
 POST /api/fill_all          -- заполнение всех справочников + обновление задач
@@ -15,13 +15,11 @@ from datetime import date, timedelta
 
 from django.db import transaction
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
 from apps.employees.models import Department, Employee, Sector, Vacation
-from apps.works.models import Directory, TaskWork, Work
+from apps.works.models import Directory, Work
 
 logger = logging.getLogger(__name__)
 
@@ -160,10 +158,9 @@ def _get_or_create_sector(dept, sector_code):
 
 # ── POST /api/seed ──────────────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class SeedDataView(AdminRequiredJsonMixin, View):
     """
-    Генерация случайных задач (Work + TaskWork).
+    Генерация случайных задач (Work show_in_plan=True).
     Body: {count: 1-10000}
     """
 
@@ -197,25 +194,22 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                 dept_obj = _get_or_create_dept(dept_code)
                 sector_obj = _get_or_create_sector(dept_obj, sector_code)
 
-                work = Work.objects.create(
-                    source_type=Work.SOURCE_TASK,
+                Work.objects.create(
+                    show_in_plan=True,
+                    task_type=task_type_name,
                     department=dept_obj,
                     sector=sector_obj,
                     work_name=work_name,
-                    work_number=work_number,
-                    description=description,
+                    work_num=work_number,
+                    work_designation=description,
                     executor_name_raw=executor_name,
                     date_start=ds,
                     date_end=de,
                     deadline=deadline,
                     plan_hours=ph,
-                    created_by=employee,
-                )
-
-                TaskWork.objects.create(
-                    work=work,
-                    stage=stage,
+                    stage_num=stage,
                     justification=justification,
+                    created_by=employee,
                 )
 
                 created += 1
@@ -225,7 +219,6 @@ class SeedDataView(AdminRequiredJsonMixin, View):
 
 # ── POST /api/seed_executors ────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class SeedExecutorsView(AdminRequiredJsonMixin, View):
     """
     Добавление исполнителей в Directory(dir_type='executor')
@@ -238,7 +231,6 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
         executors_input = data.get('executors', _SEED_EXECUTORS)
 
         with transaction.atomic():
-            # Существующие исполнители в справочнике
             existing = set(
                 Directory.objects
                 .filter(dir_type='executor')
@@ -261,10 +253,9 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
                     'tasks_updated': 0,
                 })
 
-            # Назначаем случайных исполнителей существующим задачам
-            task_works = Work.objects.filter(
-                source_type=Work.SOURCE_TASK,
-            )[:10_000]
+            task_works = list(
+                Work.objects.filter(show_in_plan=True)[:10_000]
+            )
 
             updated = 0
             for work in task_works:
@@ -284,7 +275,6 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
 
 # ── POST /api/seed_vacations ────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class SeedVacationsView(AdminRequiredJsonMixin, View):
     """
     Генерация случайных отпусков для существующих исполнителей.
@@ -293,17 +283,15 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         with transaction.atomic():
-            # Уникальные исполнители из задач
             executor_names = list(
                 Work.objects
-                .filter(source_type=Work.SOURCE_TASK)
+                .filter(show_in_plan=True)
                 .exclude(executor_name_raw='')
                 .values_list('executor_name_raw', flat=True)
                 .distinct()[:200]
             )
 
             if not executor_names:
-                # Фолбэк -- из справочника
                 executor_names = list(
                     Directory.objects
                     .filter(dir_type='executor')
@@ -313,7 +301,6 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
             if not executor_names:
                 return JsonResponse({'created': 0, 'executors': 0})
 
-            # Находим или создаём Employee для каждого исполнителя
             year = date.today().year
             created = 0
 
@@ -321,19 +308,15 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
                 parts = name.split()
                 last_name = parts[0] if parts else name
                 first_name = parts[1] if len(parts) > 1 else ''
-                patronymic = parts[2] if len(parts) > 2 else ''
 
-                # Ищем сотрудника
                 emp_qs = Employee.objects.filter(last_name__iexact=last_name)
                 if first_name:
                     emp_qs = emp_qs.filter(first_name__istartswith=first_name[:1])
                 emp = emp_qs.first()
 
                 if not emp:
-                    # Пропускаем -- нет Employee-записи для этого имени
                     continue
 
-                # Один случайный отпуск
                 start_day = random.randint(1, 330)
                 d_start = date(year, 1, 1) + timedelta(days=start_day)
                 d_end = d_start + timedelta(days=random.randint(14, 28))
@@ -355,7 +338,6 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
 
 # ── POST /api/fill_all ──────────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class FillAllView(AdminRequiredJsonMixin, View):
     """
     Заполнение всех справочников (Directory) и обновление существующих задач
@@ -366,63 +348,44 @@ class FillAllView(AdminRequiredJsonMixin, View):
         with transaction.atomic():
             # ── 1. Заполняем справочники ──────────────────────────────────────
 
-            # Отделы
             existing_depts = set(
-                Directory.objects
-                .filter(dir_type='dept')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='dept').values_list('value', flat=True)
             )
             for d in SEED_DEPTS:
                 if d not in existing_depts:
                     Directory.objects.create(dir_type='dept', value=d)
 
-            # Перечитываем отделы с id
             dept_entries = {
-                e.value: e
-                for e in Directory.objects.filter(dir_type='dept')
+                e.value: e for e in Directory.objects.filter(dir_type='dept')
             }
 
-            # Секторы (привязаны к родительскому отделу)
             existing_sectors = set(
-                Directory.objects
-                .filter(dir_type='sector')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='sector').values_list('value', flat=True)
             )
             for dept_val, dept_entry in dept_entries.items():
                 for suffix in _SECTOR_SUFFIXES:
                     sector_val = f'{dept_val}-{suffix}'
                     if sector_val not in existing_sectors:
                         Directory.objects.create(
-                            dir_type='sector',
-                            value=sector_val,
-                            parent=dept_entry,
+                            dir_type='sector', value=sector_val, parent=dept_entry,
                         )
 
-            # НТЦ-центры
             existing_centers = set(
-                Directory.objects
-                .filter(dir_type='center')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='center').values_list('value', flat=True)
             )
             for c in SEED_NTC_CENTERS:
                 if c not in existing_centers:
                     Directory.objects.create(dir_type='center', value=c)
 
-            # Должности
             existing_positions = set(
-                Directory.objects
-                .filter(dir_type='position')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='position').values_list('value', flat=True)
             )
             for p in SEED_POSITIONS:
                 if p not in existing_positions:
                     Directory.objects.create(dir_type='position', value=p)
 
-            # Типы задач
             existing_task_types = set(
-                Directory.objects
-                .filter(dir_type='task_type')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='task_type').values_list('value', flat=True)
             )
             for tt in SEED_TASK_TYPES:
                 if tt not in existing_task_types:
@@ -430,11 +393,8 @@ class FillAllView(AdminRequiredJsonMixin, View):
 
             # ── 2. Обновляем существующие задачи случайными данными ────────────
 
-            # Загружаем справочники для рандомизации
             depts = list(
-                Directory.objects
-                .filter(dir_type='dept')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='dept').values_list('value', flat=True)
             )
             sector_qs = Directory.objects.filter(dir_type='sector').select_related('parent')
             sectors_by_parent = {}
@@ -445,16 +405,10 @@ class FillAllView(AdminRequiredJsonMixin, View):
             dept_id_map = {e.value: e.pk for e in Directory.objects.filter(dir_type='dept')}
 
             executors = list(
-                Directory.objects
-                .filter(dir_type='executor')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='executor').values_list('value', flat=True)
             )
 
-            # Берём до 10к задач для обновления
-            works = list(
-                Work.objects
-                .filter(source_type=Work.SOURCE_TASK)[:10_000]
-            )
+            works = list(Work.objects.filter(show_in_plan=True)[:10_000])
 
             for work in works:
                 dept_val = random.choice(depts) if depts else None
@@ -466,6 +420,9 @@ class FillAllView(AdminRequiredJsonMixin, View):
                 work_name_val = random.choice(SEED_WORK_NAMES)
                 work_num_val = f'{random.randint(1, 99):02d}-{random.randint(100, 999)}'
                 just_val = random.choice(SEED_JUSTIFICATIONS)
+                stage_val = random.choice(
+                    _SEED_STAGES.get(random.choice(_SEED_PROJECTS), ['Этап 1'])
+                )
                 desc_val = f'Описание: {work_name_val.lower()}'
 
                 yr = random.choice([2025, 2026])
@@ -474,7 +431,6 @@ class FillAllView(AdminRequiredJsonMixin, View):
                 deadline = de + timedelta(days=random.randint(0, 30))
                 ph = _rand_plan_hours(ds, de)
 
-                # Обновляем Django-модели
                 if dept_val:
                     dept_obj = _get_or_create_dept(dept_val)
                     work.department = dept_obj
@@ -483,39 +439,26 @@ class FillAllView(AdminRequiredJsonMixin, View):
                         work.sector = sector_obj
 
                 work.work_name = work_name_val
-                work.work_number = work_num_val
-                work.description = desc_val
+                work.work_num = work_num_val
+                work.work_designation = desc_val
                 work.executor_name_raw = executor_val or ''
                 work.date_start = ds
                 work.date_end = de
                 work.deadline = deadline
                 work.plan_hours = ph
+                work.justification = just_val
+                work.stage_num = stage_val
 
             if works:
                 Work.objects.bulk_update(
                     works,
                     [
-                        'department', 'sector', 'work_name', 'work_number',
-                        'description', 'executor_name_raw', 'date_start',
+                        'department', 'sector', 'work_name', 'work_num',
+                        'work_designation', 'executor_name_raw', 'date_start',
                         'date_end', 'deadline', 'plan_hours',
+                        'justification', 'stage_num',
                     ],
                     batch_size=1000,
-                )
-
-            # Обновляем TaskWork (justification)
-            task_works = list(
-                TaskWork.objects
-                .filter(work__in=works)
-                .select_related('work')
-            )
-            for tw in task_works:
-                tw.justification = random.choice(SEED_JUSTIFICATIONS)
-                tw.stage = random.choice(
-                    _SEED_STAGES.get(random.choice(_SEED_PROJECTS), ['Этап 1'])
-                )
-            if task_works:
-                TaskWork.objects.bulk_update(
-                    task_works, ['justification', 'stage'], batch_size=1000,
                 )
 
         return JsonResponse({'updated': len(works)})
@@ -523,7 +466,6 @@ class FillAllView(AdminRequiredJsonMixin, View):
 
 # ── POST /api/fill_dept ─────────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class FillDeptView(AdminRequiredJsonMixin, View):
     """
     Заполнение справочника отделов + секторов и назначение отделов задачам.
@@ -531,48 +473,33 @@ class FillDeptView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         with transaction.atomic():
-            # Заполняем справочники отделов
             existing_depts = set(
-                Directory.objects
-                .filter(dir_type='dept')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='dept').values_list('value', flat=True)
             )
             for d in SEED_DEPTS:
                 if d not in existing_depts:
                     Directory.objects.create(dir_type='dept', value=d)
 
-            # Секторы для каждого отдела
             dept_entries = {
-                e.value: e
-                for e in Directory.objects.filter(dir_type='dept')
+                e.value: e for e in Directory.objects.filter(dir_type='dept')
             }
             existing_sectors = set(
-                Directory.objects
-                .filter(dir_type='sector')
-                .values_list('value', flat=True)
+                Directory.objects.filter(dir_type='sector').values_list('value', flat=True)
             )
             for dept_val, dept_entry in dept_entries.items():
                 for suffix in _SECTOR_SUFFIXES:
                     sector_val = f'{dept_val}-{suffix}'
                     if sector_val not in existing_sectors:
                         Directory.objects.create(
-                            dir_type='sector',
-                            value=sector_val,
-                            parent=dept_entry,
+                            dir_type='sector', value=sector_val, parent=dept_entry,
                         )
 
             depts = list(dept_entries.keys())
 
             if not depts:
-                return JsonResponse(
-                    {'error': 'Нет отделов в справочнике'}, status=400
-                )
+                return JsonResponse({'error': 'Нет отделов в справочнике'}, status=400)
 
-            # Назначаем случайные отделы задачам
-            works = list(
-                Work.objects
-                .filter(source_type=Work.SOURCE_TASK)[:10_000]
-            )
+            works = list(Work.objects.filter(show_in_plan=True)[:10_000])
 
             for work in works:
                 dept_code = random.choice(depts)
@@ -580,11 +507,6 @@ class FillDeptView(AdminRequiredJsonMixin, View):
                 work.department = dept_obj
 
             if works:
-                Work.objects.bulk_update(
-                    works, ['department'], batch_size=1000,
-                )
+                Work.objects.bulk_update(works, ['department'], batch_size=1000)
 
-        return JsonResponse({
-            'updated': len(works),
-            'depts_used': depts,
-        })
+        return JsonResponse({'updated': len(works), 'depts_used': depts})

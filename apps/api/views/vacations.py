@@ -13,9 +13,7 @@ from datetime import date
 
 from django.db.models import Q
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.api.mixins import (
     LoginRequiredJsonMixin,
@@ -36,7 +34,6 @@ VACATIONS_MAX = 500
 
 # ── GET / POST /api/vacations ────────────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class VacationListView(LoginRequiredJsonMixin, View):
     """
     GET  -- список отпусков с фильтрами и пагинацией.
@@ -106,7 +103,6 @@ class VacationListView(LoginRequiredJsonMixin, View):
         return JsonResponse(result, safe=False)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class VacationCreateView(WriterRequiredJsonMixin, View):
     """POST -- создание отпуска."""
 
@@ -183,7 +179,6 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
 
 # ── PUT / DELETE /api/vacations/<id> ─────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class VacationDetailView(WriterRequiredJsonMixin, View):
     """
     PUT    -- обновление отпуска.
@@ -195,8 +190,10 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
         if not data:
             return JsonResponse({'error': 'Пустой запрос'}, status=400)
 
+        # Проверка видимости: writer может редактировать только свою зону
+        vis_q = get_vacation_visibility_filter(request.user)
         try:
-            vacation = Vacation.objects.select_related('employee').get(pk=pk)
+            vacation = Vacation.objects.select_related('employee').filter(vis_q).get(pk=pk)
         except Vacation.DoesNotExist:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
 
@@ -272,8 +269,10 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
         return JsonResponse({'ok': True})
 
     def delete(self, request, pk):
+        # Проверка видимости: writer может удалять только свою зону
+        vis_q = get_vacation_visibility_filter(request.user)
         try:
-            vacation = Vacation.objects.get(pk=pk)
+            vacation = Vacation.objects.filter(vis_q).get(pk=pk)
         except Vacation.DoesNotExist:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
 
@@ -283,7 +282,6 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
 
 # ── POST /api/check_vacation_conflict ────────────────────────────────────────
 
-@method_decorator(csrf_exempt, name='dispatch')
 class VacationConflictView(LoginRequiredJsonMixin, View):
     """
     POST -- проверка пересечений с отпусками.

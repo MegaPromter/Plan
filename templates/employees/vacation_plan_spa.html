@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% load static employee_tags %}
+<!-- SPA-страница сводного плана отпусков: инлайн-редактирование, чипы отделов, проверка пересечений -->
 
 {% block title %}План отпусков — Система управления{% endblock %}
 
+<!-- Помечаем пункт «План отпусков» в сайдбаре как активный -->
 {% block nav_vacation_plan %}active{% endblock %}
 
 {% block breadcrumb %}
@@ -10,11 +12,14 @@
 <span class="breadcrumb-current">План отпусков</span>
 {% endblock %}
 
+<!-- Кнопки в topbar: проверка ошибок и добавление отпуска (для редакторов) -->
 {% block topbar_actions %}
+<!-- Кнопка «Ошибки отпусков»: меняет стиль в зависимости от наличия ошибок -->
 <button class="btn btn-outline btn-sm" id="vacErrBtn" onclick="openVacErrModal()">
   <i class="fas fa-exclamation-triangle"></i> Ошибки отпусков
 </button>
 {% if request.user|is_writer %}
+<!-- Кнопка добавления нового отпуска (только для редакторов) -->
 <button class="btn btn-primary btn-sm" onclick="openAddVacationModal()">
   <i class="fas fa-plus"></i> Добавить отпуск
 </button>
@@ -23,9 +28,9 @@
 
 {% block styles %}
 <style>
-/* ── Vacation SPA styles ────────────────────────────────────────────── */
+/* ── Стили SPA плана отпусков ────────────────────────────────────────────── */
 
-/* Filter panel */
+/* Панель фильтров — карточка с двумя строками */
 .vac-filter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -39,11 +44,13 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+/* Разделитель между строками фильтров */
 .vac-filter-row + .vac-filter-row {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
+/* Метка слева от строки фильтров */
 .vac-filter-label {
   font-size: 11px;
   font-weight: 600;
@@ -55,7 +62,7 @@
   min-width: 50px;
 }
 
-/* Department chips */
+/* ── Чипы отделов ────────────────────────────────────────────────────────── */
 .dept-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
 .dept-chip {
   padding: 4px 12px;
@@ -71,13 +78,17 @@
   line-height: 1.4;
 }
 .dept-chip:hover { border-color: var(--accent); color: var(--text); }
+/* Активный чип отдела — синяя заливка */
 .dept-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+/* Чип «Все» — серый при активном состоянии */
 .dept-chip.chip-all.active { background: var(--surface2); border-color: var(--muted); color: var(--text); }
+/* Чип «Без отдела» — пунктирная граница */
 .dept-chip.chip-nodept { border-style: dashed; }
 .dept-chip.chip-nodept.active { background: #2a3347; border-color: var(--text2); border-style: solid; color: var(--text); font-weight: 600; }
+/* Счётчик записей внутри чипа */
 .dept-count { font-size: 10px; opacity: 0.75; margin-left: 3px; }
 
-/* Filter inputs */
+/* ── Поля ввода фильтра ──────────────────────────────────────────────────── */
 .vac-search {
   flex: 1;
   min-width: 140px;
@@ -104,6 +115,7 @@
   cursor: pointer;
 }
 .vac-select:focus { border-color: var(--accent); }
+/* Кнопка «Сбросить фильтры» */
 .vac-filter-reset {
   padding: 5px 10px;
   border-radius: 7px;
@@ -118,7 +130,7 @@
 }
 .vac-filter-reset:hover { border-color: var(--danger); color: var(--danger); }
 
-/* Vacation table */
+/* ── Таблица отпусков ────────────────────────────────────────────────────── */
 .vac-table { width: 100%; border-collapse: collapse; min-width: 800px; }
 .vac-table thead th {
   background: var(--surface2);
@@ -132,15 +144,17 @@
   user-select: none;
   text-align: left;
 }
+/* Сортируемые заголовки: подсвечиваются при наведении */
 .vac-table thead th.sortable { cursor: pointer; }
 .vac-table thead th.sortable:hover { color: var(--text); background: #111827; }
+/* Стрелки сортировки через CSS-псевдоэлементы */
 .vac-table thead th.sort-asc::after  { content: ' \25B2'; color: var(--accent); font-size: 10px; }
 .vac-table thead th.sort-desc::after { content: ' \25BC'; color: var(--accent); font-size: 10px; }
 .vac-table tbody tr { border-bottom: 1px solid var(--border); }
 .vac-table tbody tr:hover { background: rgba(59,130,246,0.04); }
 .vac-table td { border-right: 1px solid var(--border); padding: 6px 8px; font-size: 13px; }
 
-/* Inline inputs */
+/* ── Инлайн-поля ввода в ячейках таблицы ────────────────────────────────── */
 .vac-table input[type="text"],
 .vac-table input:not([type]) {
   width: 100%;
@@ -162,8 +176,10 @@
   font-family: var(--font);
   font-size: 13px;
 }
+/* Лёгкая подсветка поля при фокусе */
 .vac-table input:focus { background: rgba(59,130,246,0.06); border-radius: 4px; }
 
+/* Бейдж кода отдела в строке таблицы */
 .row-dept-badge {
   display: inline-block;
   font-size: 10px;
@@ -177,6 +193,7 @@
   white-space: nowrap;
 }
 
+/* Кнопка удаления строки (крестик) */
 .vac-btn-delete {
   color: var(--danger);
   cursor: pointer;
@@ -189,7 +206,7 @@
 }
 .vac-btn-delete:hover { background: rgba(239,68,68,0.15); }
 
-/* Empty state */
+/* ── Пустое состояние таблицы ────────────────────────────────────────────── */
 .vac-empty-state {
   text-align: center;
   padding: 48px 20px;
@@ -199,7 +216,7 @@
 .vac-empty-state-text { font-size: 15px; }
 .vac-empty-state-sub { font-size: 13px; margin-top: 6px; opacity: 0.7; }
 
-/* Error button badges */
+/* ── Кнопка «Ошибки отпусков» (меняет стиль через JS) ───────────────────── */
 .err-badge {
   display: inline-block;
   background: var(--danger);
@@ -210,10 +227,12 @@
   margin-left: 4px;
   font-weight: 700;
 }
+/* Есть ошибки — жёлтая обводка */
 #vacErrBtn.has-errors { border-color: var(--warning) !important; color: var(--warning) !important; }
+/* Ошибок нет — зелёная обводка */
 #vacErrBtn.no-errors { border-color: var(--success) !important; color: var(--success) !important; }
 
-/* Error modal */
+/* ── Модал ошибок отпусков (pe = plan errors) ────────────────────────────── */
 .pe-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.75);
@@ -239,6 +258,7 @@
 .pe-title { font-size: 18px; font-weight: 700; color: var(--text); }
 .pe-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
 .pe-body { overflow-y: auto; flex: 1; }
+/* Секция внутри модала ошибок (коллапсируемая) */
 .pe-section { border-bottom: 1px solid var(--border); }
 .pe-section-hdr {
   padding: 12px 20px;
@@ -247,11 +267,14 @@
 }
 .pe-section-hdr:hover { background: rgba(255,255,255,0.03); }
 .pe-section-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+/* Бейдж количества ошибок в заголовке секции */
 .pe-count-badge { background: var(--danger); color: #fff; border-radius: 8px; font-size: 12px; padding: 2px 7px; font-weight: 700; }
 .pe-count-badge.warn { background: var(--warning); }
 .pe-count-badge.ok { background: var(--success); }
+/* Тело секции скрыто по умолчанию, раскрывается по клику */
 .pe-section-body { display: none; }
 .pe-section-body.open { display: block; }
+/* Элемент ошибки */
 .pe-item { padding: 10px 24px; border-bottom: 1px solid var(--border); }
 .pe-item:last-child { border-bottom: none; }
 .pe-item-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
@@ -262,9 +285,10 @@
   border-top: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
 }
+/* Время последней проверки */
 .pe-last-check { font-size: 13px; color: var(--muted); }
 
-/* Pagination */
+/* ── Пагинация SPA ───────────────────────────────────────────────────────── */
 .vac-pagination {
   display: flex;
   align-items: center;
@@ -281,11 +305,12 @@
   font-family: var(--font); transition: all 0.15s;
 }
 .vac-page-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* Активная страница — синяя заливка */
 .vac-page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .vac-page-btn:disabled { opacity: 0.4; cursor: default; }
 .vac-page-info { font-size: 12px; color: var(--muted); margin-left: 8px; }
 
-/* Footer row */
+/* ── Итоговая строка таблицы (summary row) ──────────────────────────────── */
 .vac-table-footer td {
   background: rgba(59,130,246,0.05);
   border-top: 2px solid var(--border);
@@ -294,7 +319,7 @@
   color: var(--muted);
 }
 
-/* Modal form */
+/* ── Поля в модальных формах ─────────────────────────────────────────────── */
 .modal-form-group {
   margin-bottom: 16px;
 }
@@ -323,13 +348,14 @@
 .modal-form-group input:focus,
 .modal-form-group select:focus,
 .modal-form-group textarea:focus { border-color: var(--accent); }
+/* Двухколоночный ряд в форме */
 .modal-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-/* Autocomplete dropdown */
+/* ── Автокомплит выпадающий список (поиск сотрудника) ───────────────────── */
 .ac-dropdown {
   position: absolute;
   z-index: 9999;
@@ -349,9 +375,10 @@
   transition: background 0.1s;
 }
 .ac-option:hover { background: var(--surface2); }
+/* Подпись отдела рядом с ФИО в выпадающем списке */
 .ac-option-dept { font-size: 11px; color: var(--muted); margin-left: 6px; }
 
-/* Conflict warning in modal */
+/* ── Предупреждение о пересечении дат в модале добавления ───────────────── */
 .vac-conflict-warn {
   background: rgba(239,68,68,0.1);
   border: 1px solid rgba(239,68,68,0.3);
@@ -360,27 +387,32 @@
   margin-top: 12px;
   font-size: 13px;
   color: #ef4444;
-  display: none;
+  display: none;  /* скрыт по умолчанию, показывается при конфликте */
 }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен для fetch-запросов -->
 {% csrf_token %}
 
-<!-- Error modal overlay -->
+<!-- Модал ошибок отпусков: накладывается поверх страницы, скрыт по умолчанию -->
 <div class="pe-overlay" id="vacErrOverlay">
   <div class="pe-box">
     <div class="pe-header">
       <div>
         <div class="pe-title"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> Ошибки отпусков</div>
+        <!-- Краткое резюме: «Найдено ошибок: N» -->
         <div class="pe-meta" id="vacErrMeta"></div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="closeVacErrModal()"><i class="fas fa-times"></i> Закрыть</button>
     </div>
+    <!-- Тело модала: заполняется из openVacErrModal() -->
     <div class="pe-body" id="vacErrBody"></div>
     <div class="pe-footer">
+      <!-- Время последней автоматической проверки -->
       <span class="pe-last-check" id="vacErrLastCheck"></span>
+      <!-- Ручное обновление проверки -->
       <button class="btn btn-primary btn-sm" onclick="refreshVacErrors()"><i class="fas fa-sync-alt"></i> Обновить</button>
     </div>
   </div>
@@ -390,22 +422,27 @@
   <h1>План отпусков</h1>
 </div>
 
-<!-- Filters -->
+<!-- Панель фильтров -->
 <div class="vac-filter-panel">
-  <!-- Row 1: department chips -->
+  <!-- Строка 1: чипы отделов (строятся динамически из buildDeptChips()) -->
   <div class="vac-filter-row">
     <span class="vac-filter-label">Отдел</span>
     <div class="dept-chips" id="deptChips">
+      <!-- Кнопка «Все» — начальное состояние -->
       <button class="dept-chip chip-all active" onclick="selectAllDepts()">Все</button>
+      <!-- Остальные чипы добавляются из JavaScript -->
     </div>
   </div>
-  <!-- Row 2: text filters -->
+  <!-- Строка 2: текстовые фильтры -->
   <div class="vac-filter-row">
     <span class="vac-filter-label">Фильтр</span>
+    <!-- Поиск по ФИО: oninput перерисовывает таблицу без запроса к серверу -->
     <input class="vac-search" id="filterSearch" type="text" placeholder="Поиск по ФИО..." oninput="renderTable()">
+    <!-- Фильтр по году: список лет собирается из данных в buildYearSelect() -->
     <select class="vac-select" id="filterYear" onchange="renderTable()">
       <option value="">Все годы</option>
     </select>
+    <!-- Фильтр по месяцу -->
     <select class="vac-select" id="filterMonth" onchange="renderTable()">
       <option value="">Все месяцы</option>
       <option value="01">Январь</option>
@@ -421,6 +458,7 @@
       <option value="11">Ноябрь</option>
       <option value="12">Декабрь</option>
     </select>
+    <!-- Фильтр по типу ошибки: пересечения или ошибки дат -->
     <select class="vac-select" id="filterErrors" onchange="renderTable()">
       <option value="">Все записи</option>
       <option value="overlap">Пересечения</option>
@@ -430,59 +468,66 @@
   </div>
 </div>
 
-<!-- Table -->
+<!-- Таблица отпусков -->
 <div class="table-wrap">
   <table class="vac-table">
     <thead>
       <tr>
         <th style="width:36px;">No</th>
+        <!-- Сортируемые столбцы: клик по заголовку переключает направление -->
         <th class="sortable" data-sort="executor" onclick="setSort('executor')">ФИО</th>
         <th class="sortable" data-sort="dept" onclick="setSort('dept')" style="min-width:60px;text-align:center;">Отдел</th>
         <th style="min-width:140px;">Должность</th>
         <th class="sortable" data-sort="date_start" onclick="setSort('date_start')" style="min-width:130px;">Дата начала</th>
         <th class="sortable" data-sort="date_end" onclick="setSort('date_end')" style="min-width:130px;">Дата окончания</th>
         <th style="min-width:120px;">Примечание</th>
-        <th style="width:48px;"></th>
+        <th style="width:48px;"></th>  <!-- Колонка кнопки удаления -->
       </tr>
     </thead>
+    <!-- Тело таблицы: заполняется из renderTable() -->
     <tbody id="vacationTableBody"></tbody>
   </table>
 </div>
 
-<!-- Pagination -->
+<!-- Контейнер пагинации: заполняется из renderPagination() -->
 <div class="vac-pagination" id="vacPagination"></div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
-<script src="{% static 'js/inline_edit.js' %}"></script>
+<!-- Вспомогательные JS-модули -->
+<script src="{% static 'js/utils.js' %}"></script>       <!-- fetchJson, escapeHtml, showToast, debounce -->
+<script src="{% static 'js/modal.js' %}"></script>       <!-- openModal, confirmDialog -->
+<script src="{% static 'js/inline_edit.js' %}"></script>  <!-- InlineEditor (не используется напрямую здесь) -->
 <script>
 /* ========================================================================
-   Vacation Plan SPA
+   Vacation Plan SPA — Сводный план отпусков
    ======================================================================== */
 
+// Флаг прав редактирования
 const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+// Количество записей на одной странице
 const PAGE_SIZE = 50;
 
-/* ── State ────────────────────────────────────────────────────────────── */
-let vacations      = [];
-let empDeptMap      = {};
-let empPositionMap  = {};
-let allEmployees    = [];
-let depts           = [];
-let selectedDepts   = new Set();
-let sortField       = 'date_start';
-let sortDir         = 'asc';
-let currentPage     = 1;
+/* ── Состояние SPA ────────────────────────────────────────────────────────── */
+let vacations      = [];        // Все записи об отпусках с сервера
+let empDeptMap      = {};        // ФИО → код отдела (для быстрого доступа)
+let empPositionMap  = {};        // ФИО → должность
+let allEmployees    = [];        // Все сотрудники (для автокомплита)
+let depts           = [];        // Уникальные коды отделов
+let selectedDepts   = new Set(); // Выбранные отделы для фильтрации (Set)
+let sortField       = 'date_start';  // Текущее поле сортировки
+let sortDir         = 'asc';         // Направление сортировки (asc/desc)
+let currentPage     = 1;             // Текущая страница
 
-/* ── API ──────────────────────────────────────────────────────────────── */
+/* ── Загрузка справочников (сотрудники, отделы) ──────────────────────────── */
 async function loadDirs() {
+  // GET /api/directories/ — возвращает список employees с полями value, dept, position
   const data = await fetchJson('/api/directories/');
   if (data._error) return;
   const employees = data.employees || [];
   allEmployees = employees;
+  // Строим словари для быстрого доступа по ФИО
   empDeptMap = {};
   empPositionMap = {};
   const deptSet = new Set();
@@ -491,14 +536,18 @@ async function loadDirs() {
     if (e.value) empPositionMap[e.value] = e.position || '';
     if (e.dept) deptSet.add(e.dept);
   });
+  // Отсортированный массив уникальных отделов
   depts = Array.from(deptSet).sort();
   buildDeptChips();
 }
 
+/* ── Загрузка всех отпусков ──────────────────────────────────────────────── */
 async function loadVacations() {
+  // GET /api/vacations/ — все записи (видимость зависит от роли)
   const data = await fetchJson('/api/vacations/');
   if (data._error) return;
   vacations = Array.isArray(data) ? data : (data.results || []);
+  // Обновляем чипы, select-год и перерисовываем таблицу
   buildDeptChips();
   buildYearSelect();
   updateChipStyles();
@@ -507,20 +556,22 @@ async function loadVacations() {
   refreshVacErrors();
 }
 
-/* ── Dept chips ───────────────────────────────────────────────────────── */
+/* ── Построение чипов отделов ────────────────────────────────────────────── */
 function buildDeptChips() {
   const container = document.getElementById('deptChips');
+  // Всегда начинаем с кнопки «Все»
   container.innerHTML = '<button class="dept-chip chip-all active" onclick="selectAllDepts()">Все</button>';
   depts.forEach(dept => {
     const chip = document.createElement('button');
     chip.className = 'dept-chip';
     chip.dataset.dept = dept;
     chip.onclick = () => toggleDept(dept);
+    // Считаем количество отпусков для данного отдела
     const cnt = vacations.filter(v => (empDeptMap[v.executor] || '') === dept).length;
     chip.innerHTML = escapeHtml(dept) + (cnt > 0 ? `<span class="dept-count">${cnt}</span>` : '');
     container.appendChild(chip);
   });
-  // "No dept" chip
+  // Чип «Без отдела» — только если такие записи есть
   const noDeptVac = vacations.filter(v => !(empDeptMap[v.executor] || '')).length;
   if (noDeptVac > 0) {
     const chip = document.createElement('button');
@@ -532,6 +583,7 @@ function buildDeptChips() {
   }
 }
 
+// Переключение выбора отдела: добавляет/убирает из Set
 function toggleDept(dept) {
   selectedDepts.has(dept) ? selectedDepts.delete(dept) : selectedDepts.add(dept);
   currentPage = 1;
@@ -539,6 +591,7 @@ function toggleDept(dept) {
   renderTable();
 }
 
+// Сброс выбора отделов: показывать все
 function selectAllDepts() {
   selectedDepts.clear();
   currentPage = 1;
@@ -546,21 +599,25 @@ function selectAllDepts() {
   renderTable();
 }
 
+// Обновляет CSS-классы чипов в соответствии с текущим selectedDepts
 function updateChipStyles() {
   const allChip = document.querySelector('.chip-all');
+  // «Все» активен только когда ничего не выбрано
   if (allChip) allChip.classList.toggle('active', selectedDepts.size === 0);
   document.querySelectorAll('.dept-chip[data-dept]').forEach(chip => {
     chip.classList.toggle('active', selectedDepts.has(chip.dataset.dept));
+    // Обновляем счётчик в чипе
     const cnt = vacations.filter(v => (empDeptMap[v.executor] || '') === chip.dataset.dept).length;
     const label = chip.dataset.dept === '' ? 'Без отдела' : escapeHtml(chip.dataset.dept);
     chip.innerHTML = label + (cnt > 0 ? `<span class="dept-count">${cnt}</span>` : '');
   });
 }
 
-/* ── Year select ──────────────────────────────────────────────────────── */
+/* ── Построение select с годами ──────────────────────────────────────────── */
 function buildYearSelect() {
   const sel = document.getElementById('filterYear');
   const years = new Set();
+  // Собираем уникальные годы из дат начала и окончания
   vacations.forEach(v => {
     if (v.date_start) years.add(v.date_start.slice(0, 4));
     if (v.date_end) years.add(v.date_end.slice(0, 4));
@@ -571,13 +628,15 @@ function buildYearSelect() {
     const opt = document.createElement('option');
     opt.value = y;
     opt.textContent = y;
+    // Сохраняем ранее выбранный год при перестройке списка
     if (y === current) opt.selected = true;
     sel.appendChild(opt);
   });
 }
 
-/* ── Sorting ──────────────────────────────────────────────────────────── */
+/* ── Сортировка ──────────────────────────────────────────────────────────── */
 function setSort(field) {
+  // Клик на тот же столбец — переключаем направление
   if (sortField === field) {
     sortDir = sortDir === 'asc' ? 'desc' : 'asc';
   } else {
@@ -588,6 +647,7 @@ function setSort(field) {
   renderTable();
 }
 
+// Обновляет CSS-классы sort-asc/sort-desc на заголовках
 function updateSortHeaders() {
   document.querySelectorAll('.vac-table thead th.sortable').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
@@ -596,9 +656,11 @@ function updateSortHeaders() {
   });
 }
 
+// Сортирует массив отпусков по текущему sortField и sortDir
 function sortVacations(arr) {
   return [...arr].sort((a, b) => {
     let va, vb;
+    // Сортировка по отделу — через словарь empDeptMap
     if (sortField === 'dept') {
       va = empDeptMap[a.executor] || '';
       vb = empDeptMap[b.executor] || '';
@@ -612,7 +674,7 @@ function sortVacations(arr) {
   });
 }
 
-/* ── Reset filters ────────────────────────────────────────────────────── */
+/* ── Сброс всех фильтров ─────────────────────────────────────────────────── */
 function resetFilters() {
   document.getElementById('filterSearch').value = '';
   document.getElementById('filterYear').value = '';
@@ -624,9 +686,11 @@ function resetFilters() {
   renderTable();
 }
 
-/* ── Overlap detection ────────────────────────────────────────────────── */
+/* ── Поиск пересечений дат отпусков для одного сотрудника ───────────────── */
 function findOverlap(currentId, executor, dateStart, dateEnd) {
+  // Ни одно поле не должно быть пустым
   if (!executor || !dateStart || !dateEnd) return null;
+  // Ищем другой отпуск того же исполнителя, у которого даты пересекаются
   return vacations.find(v =>
     v.id !== currentId && v.executor === executor &&
     v.date_start && v.date_end &&
@@ -634,22 +698,27 @@ function findOverlap(currentId, executor, dateStart, dateEnd) {
   ) || null;
 }
 
-/* ── Render table ────────────────────────────────────────────────────── */
+/* ── Отрисовка таблицы ───────────────────────────────────────────────────── */
 function renderTable() {
   const tbody = document.getElementById('vacationTableBody');
   tbody.innerHTML = '';
 
+  // Читаем значения всех фильтров
   const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
   const yearF = document.getElementById('filterYear').value || '';
   const monthF = document.getElementById('filterMonth').value || '';
   const errFilter = document.getElementById('filterErrors').value || '';
 
+  // Фильтрация по выбранным отделам
   let filtered = selectedDepts.size === 0
     ? vacations
     : vacations.filter(v => selectedDepts.has(empDeptMap[v.executor] || ''));
 
+  // Текстовый поиск по ФИО (executor)
   if (search) filtered = filtered.filter(v => (v.executor || '').toLowerCase().includes(search));
+  // Фильтр по году: запись попадает если хотя бы одна из дат содержит год
   if (yearF) filtered = filtered.filter(v => (v.date_start || '').startsWith(yearF) || (v.date_end || '').startsWith(yearF));
+  // Фильтр по месяцу: отпуск пересекается с указанным месяцем выбранного года
   if (monthF) filtered = filtered.filter(v => {
     if (!v.date_start && !v.date_end) return false;
     const refYear = yearF || (v.date_start || v.date_end || '').slice(0, 4);
@@ -659,19 +728,21 @@ function renderTable() {
     const de = v.date_end || '9999-99-99';
     return ds <= mEnd && de >= mStart;
   });
+  // Фильтр по ошибкам: только пересечения или только ошибки дат
   if (errFilter === 'overlap') filtered = filtered.filter(v => !!findOverlap(v.id, v.executor, v.date_start, v.date_end));
   if (errFilter === 'dateerr') filtered = filtered.filter(v => v.date_start && v.date_end && v.date_start > v.date_end);
 
-  // Sort
+  // Сортировка
   filtered = sortVacations(filtered);
 
+  // Пагинация
   const totalCount = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   if (currentPage > totalPages) currentPage = totalPages;
   const startIdx = (currentPage - 1) * PAGE_SIZE;
   const pageData = filtered.slice(startIdx, startIdx + PAGE_SIZE);
 
-  // Empty state
+  // Пустое состояние
   if (totalCount === 0) {
     const hasFilters = search || yearF || monthF || errFilter || selectedDepts.size > 0;
     tbody.innerHTML = `<tr><td colspan="8" style="padding:0;border:none;">
@@ -685,10 +756,13 @@ function renderTable() {
     return;
   }
 
+  // Отрисовка строк текущей страницы
   pageData.forEach((v, idx) => {
     const overlap = findOverlap(v.id, v.executor, v.date_start, v.date_end);
     const dateError = v.date_start && v.date_end && v.date_start > v.date_end;
+    // Подсвечиваем строку: красноватый фон при ошибке дат, жёлтый при пересечении
     const rowStyle = dateError ? 'background:rgba(239,68,68,0.08)' : (overlap ? 'background:rgba(245,158,11,0.08)' : '');
+    // Иконка-предупреждение в ячейке даты окончания
     const warningHint = dateError
       ? `<span title="Дата окончания раньше даты начала" style="color:var(--danger);margin-left:4px;"><i class="fas fa-exclamation-circle"></i></span>`
       : (overlap ? `<span title="Пересечение с другим отпуском" style="color:var(--warning);margin-left:4px;"><i class="fas fa-exclamation-triangle"></i></span>` : '');
@@ -699,27 +773,36 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.setAttribute('style', rowStyle);
 
+    // Для редакторов — инлайн-поля ввода; для читателей — обычный текст
     if (IS_WRITER) {
       tr.innerHTML = `
         <td style="text-align:center;font-size:12px;color:var(--muted);">${startIdx + idx + 1}</td>
+        <!-- Инлайн-поле ФИО: при изменении отправляет PATCH на сервер -->
         <td><input value="${escapeHtml(v.executor || '')}" data-id="${v.id}" data-field="executor"
              onchange="updateVacation(${v.id}, 'executor', this.value)"></td>
+        <!-- Отдел: вычисляется из empDeptMap, не редактируется напрямую -->
         <td style="color:var(--muted);font-size:12px;text-align:center;">${escapeHtml(dept)}</td>
+        <!-- Должность: вычисляется из empPositionMap -->
         <td style="color:var(--muted);font-size:12px;padding:6px 10px;">${escapeHtml(position)}</td>
+        <!-- Дата начала: красная подчёркивание при ошибке дат -->
         <td><input type="date" value="${escapeHtml(v.date_start || '')}" data-id="${v.id}" data-field="date_start"
              onchange="updateVacation(${v.id}, 'date_start', this.value)"
              style="${dateError ? 'border-bottom:2px solid var(--danger)' : ''}"></td>
+        <!-- Дата окончания: с иконкой предупреждения при ошибке/пересечении -->
         <td><input type="date" value="${escapeHtml(v.date_end || '')}" data-id="${v.id}" data-field="date_end"
              onchange="updateVacation(${v.id}, 'date_end', this.value)"
              style="${dateError ? 'border-bottom:2px solid var(--danger)' : ''}">${warningHint}</td>
+        <!-- Примечание: свободный текст -->
         <td><input value="${escapeHtml(v.notes || '')}" data-id="${v.id}" data-field="notes"
              onchange="updateVacation(${v.id}, 'notes', this.value)"></td>
+        <!-- Кнопка удаления строки -->
         <td style="text-align:center;">
           <button class="vac-btn-delete" onclick="deleteVacation(${v.id})" title="Удалить">
             <i class="fas fa-times"></i>
           </button>
         </td>`;
     } else {
+      // Режим только для чтения: обычный текст
       tr.innerHTML = `
         <td style="text-align:center;font-size:12px;color:var(--muted);">${startIdx + idx + 1}</td>
         <td>${escapeHtml(v.executor || '')}</td>
@@ -734,7 +817,7 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 
-  // Footer row with summary
+  // Итоговая строка с информацией о применённых фильтрах
   const tfoot = document.createElement('tr');
   tfoot.className = 'vac-table-footer';
   const parts = [];
@@ -755,54 +838,65 @@ function renderTable() {
   renderPagination(totalCount, totalPages);
 }
 
-/* ── Pagination ───────────────────────────────────────────────────────── */
+/* ── Отрисовка пагинации ─────────────────────────────────────────────────── */
 function renderPagination(totalCount, totalPages) {
   const container = document.getElementById('vacPagination');
+  // Если страница одна — пагинацию не показываем
   if (totalPages <= 1) {
     container.innerHTML = '';
     return;
   }
 
   let html = '';
+  // Кнопка «Предыдущая»
   html += `<button class="vac-page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>&laquo;</button>`;
 
+  // Номера страниц: всегда показываем первую, последнюю и ±2 от текущей
   for (let p = 1; p <= totalPages; p++) {
     if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
       html += `<button class="vac-page-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
     } else if (p === currentPage - 3 || p === currentPage + 3) {
+      // Многоточие между блоками страниц
       html += '<span style="color:var(--muted);font-size:12px;">...</span>';
     }
   }
 
+  // Кнопка «Следующая»
   html += `<button class="vac-page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>&raquo;</button>`;
+  // Счётчик «текущая / всего»
   html += `<span class="vac-page-info">${currentPage} / ${totalPages}</span>`;
 
   container.innerHTML = html;
 }
 
+// Переход на страницу с прокруткой вверх
 function goToPage(page) {
   currentPage = page;
   renderTable();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ── CRUD ─────────────────────────────────────────────────────────────── */
+/* ── CRUD операции ───────────────────────────────────────────────────────── */
+// Инлайн-обновление одного поля отпуска
 async function updateVacation(id, field, value) {
   const row = vacations.find(v => v.id === id);
   if (row) {
+    // Предварительная проверка: дата конца не может быть раньше даты начала
     const upd = { ...row, [field]: value };
     if ((field === 'date_end' || field === 'date_start') && upd.date_start && upd.date_end && upd.date_start > upd.date_end) {
       showToast('Дата окончания не может быть раньше даты начала', 'warning');
       return;
     }
+    // Оптимистичное обновление локального массива
     row[field] = value;
   }
+  // PUT /api/vacations/<id>/ — обновляем только изменённое поле
   const resp = await fetchJson(`/api/vacations/${id}/`, {
     method: 'PUT',
     body: JSON.stringify({ [field]: value }),
   });
   if (resp._error) {
-    // Reload to revert
+    // При ошибке — перезагружаем данные, чтобы откатить оптимистичное изменение
     await loadVacations();
     return;
   }
@@ -810,11 +904,13 @@ async function updateVacation(id, field, value) {
   refreshVacErrors();
 }
 
+// Удаление записи об отпуске
 async function deleteVacation(id) {
   const ok = await confirmDialog('Удалить запись об отпуске?', 'Удаление');
   if (!ok) return;
   const resp = await fetchJson(`/api/vacations/${id}/`, { method: 'DELETE' });
   if (!resp._error) {
+    // Убираем из локального массива без перезагрузки с сервера
     vacations = vacations.filter(v => v.id !== id);
     renderTable();
     refreshVacErrors();
@@ -822,15 +918,17 @@ async function deleteVacation(id) {
   }
 }
 
-/* ── Add vacation modal ───────────────────────────────────────────────── */
+/* ── Модал добавления нового отпуска ─────────────────────────────────────── */
 function openAddVacationModal() {
   const modal = openModal({
     title: 'Добавить отпуск',
     width: '560px',
     body: `
+      <!-- Поле ФИО с автокомплитом из allEmployees -->
       <div class="modal-form-group" style="position:relative;">
         <label>Сотрудник (ФИО)</label>
         <input type="text" id="vacExecutor" placeholder="Начните вводить ФИО..." autocomplete="off">
+        <!-- Выпадающий список вариантов автокомплита -->
         <div id="vacExecutorDropdown" class="ac-dropdown" style="display:none;"></div>
       </div>
       <div class="modal-form-row">
@@ -857,6 +955,7 @@ function openAddVacationModal() {
         <label>Примечание</label>
         <input type="text" id="vacNotes" placeholder="Примечание (необязательно)">
       </div>
+      <!-- Блок предупреждения о конфликте: виден только при пересечении дат -->
       <div class="vac-conflict-warn" id="vacConflictWarn">
         <i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>
         <span id="vacConflictText"></span>
@@ -866,21 +965,25 @@ function openAddVacationModal() {
       <button class="btn btn-primary" id="createVacBtn">Создать</button>`,
   });
 
-  // Autocomplete for executor
+  // Автокомплит для поля ФИО
   const execInput = modal.dialog.querySelector('#vacExecutor');
   const acDropdown = modal.dialog.querySelector('#vacExecutorDropdown');
 
+  // Debounced-обработчик: показывает варианты при вводе минимум 1 символа
   execInput.addEventListener('input', debounce(() => {
     const q = execInput.value.trim().toLowerCase();
     if (q.length < 1) { acDropdown.style.display = 'none'; return; }
+    // Фильтруем сотрудников по введённой строке (максимум 15 вариантов)
     const matches = allEmployees
       .filter(e => e.value.toLowerCase().includes(q))
       .slice(0, 15);
     if (matches.length === 0) { acDropdown.style.display = 'none'; return; }
+    // Генерируем HTML вариантов
     acDropdown.innerHTML = matches.map(e =>
       `<div class="ac-option" data-value="${escapeHtml(e.value)}">${escapeHtml(e.value)}${e.dept ? '<span class="ac-option-dept">' + escapeHtml(e.dept) + '</span>' : ''}</div>`
     ).join('');
     acDropdown.style.display = 'block';
+    // Клик по варианту подставляет значение в поле
     acDropdown.querySelectorAll('.ac-option').forEach(opt => {
       opt.addEventListener('click', () => {
         execInput.value = opt.dataset.value;
@@ -889,16 +992,18 @@ function openAddVacationModal() {
     });
   }, 150));
 
+  // Скрываем выпадающий список при потере фокуса (с задержкой для обработки клика)
   execInput.addEventListener('blur', () => {
     setTimeout(() => { acDropdown.style.display = 'none'; }, 200);
   });
 
-  // Conflict check on date change
+  // Проверка пересечения дат при изменении полей
   const dateStartInput = modal.dialog.querySelector('#vacDateStart');
   const dateEndInput = modal.dialog.querySelector('#vacDateEnd');
   const conflictWarn = modal.dialog.querySelector('#vacConflictWarn');
   const conflictText = modal.dialog.querySelector('#vacConflictText');
 
+  // Запрос к API для проверки пересечений (POST /api/check_vacation_conflict/)
   async function checkConflict() {
     const executor = execInput.value.trim();
     const ds = dateStartInput.value;
@@ -910,6 +1015,7 @@ function openAddVacationModal() {
       body: JSON.stringify({ executor, date_start: ds, date_end: de }),
     });
     if (!resp._error && resp.conflict) {
+      // Показываем предупреждение (не блокируем создание)
       conflictText.textContent = resp.message || 'Обнаружено пересечение с существующим отпуском';
       conflictWarn.style.display = 'block';
     } else {
@@ -917,11 +1023,12 @@ function openAddVacationModal() {
     }
   }
 
+  // Проверяем пересечение при изменении любого из трёх полей
   dateStartInput.addEventListener('change', checkConflict);
   dateEndInput.addEventListener('change', checkConflict);
   execInput.addEventListener('change', checkConflict);
 
-  // Create
+  // Обработчик создания нового отпуска
   const createBtn = modal.dialog.querySelector('#createVacBtn');
 
   async function doCreate() {
@@ -931,18 +1038,20 @@ function openAddVacationModal() {
     const vac_type = modal.dialog.querySelector('#vacType').value;
     const notes = modal.dialog.querySelector('#vacNotes').value.trim();
 
+    // Валидация обязательных полей
     if (!executor) { execInput.style.borderColor = 'var(--danger)'; showToast('Укажите сотрудника', 'warning'); return; }
     if (!date_start || !date_end) { showToast('Укажите даты начала и окончания', 'warning'); return; }
     if (date_start > date_end) { showToast('Дата окончания раньше даты начала', 'error'); return; }
 
     createBtn.disabled = true;
+    // POST /api/vacations/create/
     const resp = await fetchJson('/api/vacations/create/', {
       method: 'POST',
       body: JSON.stringify({ executor, date_start, date_end, vac_type, notes }),
     });
     if (!resp._error) {
       modal.close();
-      await loadVacations();
+      await loadVacations();  // Перезагружаем все отпуска
       showToast('Отпуск добавлен', 'success');
     }
     createBtn.disabled = false;
@@ -952,15 +1061,18 @@ function openAddVacationModal() {
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
 
-/* ── Error modal ──────────────────────────────────────────────────────── */
+/* ── Расчёт ошибок для кнопки/модала ────────────────────────────────────── */
 function calcVacationErrors() {
-  const overlaps = [];
-  const dateErrs = [];
-  const seen = new Set();
+  const overlaps = [];   // Пересечения дат между двумя отпусками одного сотрудника
+  const dateErrs = [];   // Записи где дата окончания < даты начала
+  const seen = new Set();  // Отслеживаем уже учтённые пары пересечений
   vacations.forEach(v => {
+    // Ошибка дат
     if (v.date_start && v.date_end && v.date_start > v.date_end) dateErrs.push(v);
+    // Пересечение
     const ov = findOverlap(v.id, v.executor, v.date_start, v.date_end);
     if (ov) {
+      // Ключ пары — отсортированная пара ID, чтобы не дублировать
       const key = [Math.min(v.id, ov.id), Math.max(v.id, ov.id)].join('-');
       if (!seen.has(key)) { seen.add(key); overlaps.push({ a: v, b: ov }); }
     }
@@ -968,20 +1080,24 @@ function calcVacationErrors() {
   return { overlaps, dateErrs };
 }
 
+// Обновляет стиль кнопки «Ошибки отпусков» в topbar
 function refreshVacErrors() {
   const btn = document.getElementById('vacErrBtn');
   const { overlaps, dateErrs } = calcVacationErrors();
   const total = overlaps.length + dateErrs.length;
   if (total === 0) {
+    // Нет ошибок — зелёный стиль
     btn.innerHTML = '<i class="fas fa-check"></i> Нет ошибок';
     btn.className = 'btn btn-outline btn-sm no-errors';
   } else {
+    // Есть ошибки — жёлтый стиль с бейджем количества
     btn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Ошибки <span class="err-badge">${total}</span>`;
     btn.className = 'btn btn-outline btn-sm has-errors';
   }
   btn.id = 'vacErrBtn';
 }
 
+// Открытие модала с детальным списком ошибок
 function openVacErrModal() {
   document.getElementById('vacErrBody').innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Анализ...</div>';
   document.getElementById('vacErrOverlay').classList.add('open');
@@ -993,6 +1109,7 @@ function openVacErrModal() {
   const body = document.getElementById('vacErrBody');
   body.innerHTML = '';
 
+  // Секция 1: Пересечения дат
   const sec1 = buildVacErrSection('Пересечения дат', overlaps.length, overlaps.length > 0 ? '' : 'ok',
     overlaps.map(({ a, b }) => ({
       title: escapeHtml(a.executor),
@@ -1000,6 +1117,7 @@ function openVacErrModal() {
       highlight: 'Даты пересекаются',
     }))
   );
+  // Секция 2: Ошибки дат (конец раньше начала)
   const sec2 = buildVacErrSection('Ошибки дат', dateErrs.length, dateErrs.length > 0 ? 'warn' : 'ok',
     dateErrs.map(v => ({
       title: escapeHtml(v.executor || '(без имени)'),
@@ -1010,6 +1128,7 @@ function openVacErrModal() {
 
   body.appendChild(sec1);
   body.appendChild(sec2);
+  // Автораскрываем секции если в них есть ошибки
   if (overlaps.length > 0) sec1.querySelector('.pe-section-body').classList.add('open');
   if (dateErrs.length > 0) sec2.querySelector('.pe-section-body').classList.add('open');
 }
@@ -1018,25 +1137,30 @@ function closeVacErrModal() {
   document.getElementById('vacErrOverlay').classList.remove('open');
 }
 
+// Строит коллапсируемую секцию в модале ошибок
 function buildVacErrSection(title, count, badgeClass, items) {
   const sec = document.createElement('div');
   sec.className = 'pe-section';
+  // Стрелка-индикатор открытого/закрытого состояния
   const arrow = document.createElement('span');
   arrow.style.cssText = 'font-size:12px;color:var(--muted)';
-  arrow.textContent = '\u25BC';
+  arrow.textContent = '\u25BC';  // ▼
   const body = document.createElement('div');
   body.className = 'pe-section-body';
   const hdr = document.createElement('div');
   hdr.className = 'pe-section-hdr';
   hdr.innerHTML = `<span class="pe-section-title">${title} <span class="pe-count-badge ${badgeClass}">${count}</span></span>`;
   hdr.appendChild(arrow);
+  // Клик по заголовку раскрывает/закрывает тело секции
   hdr.onclick = () => {
     body.classList.toggle('open');
-    arrow.textContent = body.classList.contains('open') ? '\u25B2' : '\u25BC';
+    arrow.textContent = body.classList.contains('open') ? '\u25B2' : '\u25BC';  // ▲ или ▼
   };
   if (items.length === 0) {
+    // Нет ошибок данного типа
     body.innerHTML = '<div style="padding:14px 24px;font-size:13px;color:var(--muted)"><i class="fas fa-check" style="color:var(--success);margin-right:4px;"></i> Ошибок не найдено</div>';
   } else {
+    // Список ошибочных записей
     items.forEach(item => {
       const row = document.createElement('div');
       row.className = 'pe-item';
@@ -1050,16 +1174,16 @@ function buildVacErrSection(title, count, badgeClass, items) {
   return sec;
 }
 
-// Close error overlay on backdrop click
+// Закрытие модала ошибок по клику на фон (backdrop)
 document.getElementById('vacErrOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeVacErrModal();
 });
 
-/* ── Init ─────────────────────────────────────────────────────────────── */
+/* ── Инициализация SPA ───────────────────────────────────────────────────── */
 (async function init() {
-  updateSortHeaders();
-  await loadDirs();
-  await loadVacations();
+  updateSortHeaders();     // Отображаем начальные стрелки сортировки
+  await loadDirs();        // Загружаем сотрудников и строим чипы отделов
+  await loadVacations();   // Загружаем отпуска и рендерим таблицу
 })();
 </script>
 {% endblock %}

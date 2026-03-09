@@ -54,9 +54,10 @@ class TestApiPermissions:
         )
         assert resp.status_code == 403
 
-    def test_writer_can_create_pp_project(self, dept_head_user):
+    def test_writer_can_create_pp_project(self, admin_user):
+        # PPProjectCreateView требует AdminRequiredJsonMixin — только для админов
         client = Client()
-        client.force_login(dept_head_user)
+        client.force_login(admin_user)
         resp = client.post(
             '/api/pp_projects/create/',
             data=json.dumps({'name': 'Новый ПП план'}),

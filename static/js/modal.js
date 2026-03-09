@@ -23,8 +23,8 @@ function openModal(options = {}) {
     backdrop.style.cssText = `
         position: fixed; inset: 0; z-index: 9000;
         background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-        display: flex; align-items: flex-start; justify-content: center;
-        padding-top: 60px; animation: modalFadeIn 0.2s ease-out;
+        display: flex; align-items: center; justify-content: center;
+        animation: modalFadeIn 0.2s ease-out;
         overflow-y: auto;
     `;
 
@@ -46,13 +46,14 @@ function openModal(options = {}) {
         padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
     `;
     header.innerHTML = `
-        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text,#e2e8f0);">${title}</h3>
+        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text,#e2e8f0);"></h3>
         <button class="modal-close-btn" style="
             background:none;border:none;color:var(--muted,#64748b);
             font-size:20px;cursor:pointer;padding:4px 8px;
             border-radius:4px;transition:all 0.15s;
         " title="Закрыть">&times;</button>
     `;
+    header.querySelector('h3').textContent = title;
 
     // Body
     const bodyDiv = document.createElement('div');
@@ -175,9 +176,13 @@ function confirmDialog(message, title = 'Подтверждение') {
             resolve(result);
         }
 
+        const msgEl = document.createElement('p');
+        msgEl.style.cssText = 'color:var(--text,#e2e8f0);margin:0;';
+        msgEl.textContent = message;
+
         const modal = openModal({
             title,
-            body: `<p style="color:var(--text,#e2e8f0);margin:0;">${message}</p>`,
+            bodyElement: msgEl,
             width: '400px',
             footer: `
                 <button class="btn btn-outline modal-cancel" style="
