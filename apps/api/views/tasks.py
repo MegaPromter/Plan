@@ -113,6 +113,7 @@ def _serialize_task(work, executors_data=None):
                          else (work.justification or ''),
         'actions': work.actions or {},
         'sector_head': work.sector_head_name or '',
+        'norm': float(work.norm) if work.norm is not None else None,
     }
 
     # Список исполнителей
@@ -223,7 +224,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
                 | Q(executor__last_name__icontains=s)
                 | Q(executor_name_raw__icontains=s)
                 | Q(department__code__icontains=s)
-                | Q(description__icontains=s)
+                | Q(work_designation__icontains=s)
                 | Q(project__name_short__icontains=s)
                 | Q(project__name_full__icontains=s)
                 | Q(task_type__icontains=s)

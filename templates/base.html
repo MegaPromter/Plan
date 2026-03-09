@@ -454,13 +454,18 @@ textarea { resize:vertical; min-height:80px; }
 }
 /* ── Дропдаун карточки пользователя в topbar (base) ──────────────── */
 .base-user-menu-wrap { position:relative; }
-.base-topbar-user { display:flex; flex-direction:column; align-items:flex-end; gap:1px;
-  padding:5px 12px; border-radius:6px; cursor:pointer; user-select:none;
+.base-topbar-user { display:flex; flex-direction:row; align-items:center; gap:8px;
+  padding:5px 10px; border-radius:6px; cursor:pointer; user-select:none;
   background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
   transition:background 0.15s; }
 .base-topbar-user:hover { background:rgba(255,255,255,0.14); }
-.base-topbar-user-name { font-size:14px; font-weight:600; color:#e2e8f0; }
-.base-topbar-user-sub  { font-size:11px; color:rgba(255,255,255,0.45); }
+.base-topbar-user-text { display:flex; flex-direction:column; align-items:flex-end; gap:1px; max-width:160px; }
+.base-topbar-user-name { font-size:14px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+.base-topbar-user-sub  { font-size:11px; color:rgba(255,255,255,0.45); white-space:nowrap; }
+.base-topbar-user-chevron { font-size:10px; color:rgba(255,255,255,0.5); transition:transform 0.2s; }
+.base-user-dropdown.open ~ * .base-topbar-user-chevron,
+#baseUserDropdown.open + * .base-topbar-user-chevron { transform:rotate(180deg); }
+.base-topbar-user.menu-open .base-topbar-user-chevron { transform:rotate(180deg); }
 .base-user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
   background:#fff; border:1px solid #e2e6ed; border-radius:10px;
   box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden;
@@ -571,9 +576,9 @@ textarea { resize:vertical; min-height:80px; }
       </div>
     </div>
 
-    <!-- 1.6 Администрирование -->
+    <!-- 7. Администрирование -->
     <div class="nav-section">
-      <div class="nav-section-title">6. Администрирование</div>
+      <div class="nav-section-title">7. Администрирование</div>
       <!-- Раскрывающийся пункт «Сотрудники» с подпунктами -->
       <div class="nav-dropdown">
         <!-- Кнопка-тоггл дропдауна; onclick вызывает toggleNavDropdown() -->
@@ -662,9 +667,12 @@ textarea { resize:vertical; min-height:80px; }
     <!-- Карточка пользователя с дропдауном -->
     {% if request.user.is_authenticated %}
     <div class="base-user-menu-wrap" id="baseUserMenuWrap">
-      <div class="base-topbar-user" onclick="toggleBaseUserMenu()">
-        <span class="base-topbar-user-name">{% employee_name %}</span>
-        <span class="base-topbar-user-sub">{% employee_role %}</span>
+      <div class="base-topbar-user" id="baseTopbarUser" onclick="toggleBaseUserMenu()" title="{% employee_name %}">
+        <div class="base-topbar-user-text">
+          <span class="base-topbar-user-name">{% employee_name %}</span>
+          <span class="base-topbar-user-sub">{% employee_role %}</span>
+        </div>
+        <i class="fas fa-chevron-down base-topbar-user-chevron"></i>
       </div>
       <div class="base-user-dropdown" id="baseUserDropdown">
         <a href="{% url 'works:plan' %}"><i class="fas fa-tasks"></i> Личный план</a>
@@ -821,13 +829,18 @@ document.addEventListener('click', function(e) {
 
 // ── Дропдаун карточки пользователя в topbar ─────────────────────────────
 function toggleBaseUserMenu() {
-  document.getElementById('baseUserDropdown').classList.toggle('open');
+  var dd = document.getElementById('baseUserDropdown');
+  var btn = document.getElementById('baseTopbarUser');
+  dd.classList.toggle('open');
+  btn.classList.toggle('menu-open');
 }
 document.addEventListener('click', function(e) {
   var wrap = document.getElementById('baseUserMenuWrap');
   if (wrap && !wrap.contains(e.target)) {
     var dd = document.getElementById('baseUserDropdown');
+    var btn = document.getElementById('baseTopbarUser');
     if (dd) dd.classList.remove('open');
+    if (btn) btn.classList.remove('menu-open');
   }
 });
 </script>

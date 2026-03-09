@@ -24,10 +24,18 @@
   text-transform:uppercase;
   letter-spacing:.05em;
   text-align:left;
+  position:sticky; top:60px; z-index:1;
 }
 .notice-table tbody tr:nth-child(even) td { background:var(--surface2); }
 .notice-table tbody tr:nth-child(odd)  td { background:var(--surface); }
 .notice-table tbody tr:hover td { background:var(--accent-light) !important; }
+/* Бейдж статуса */
+.badge-active { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
+  background:#dcfce7; color:#166534; }
+.badge-closed { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
+  background:#f1f5f9; color:#64748b; }
+/* Tooltip для обрезанного текста */
+.notice-table td[title] { cursor:default; }
 </style>
 {% endblock %}
 
@@ -62,17 +70,18 @@
 {% if notices %}
 <table class="notice-table">
   <colgroup>
-    <col style="width:50px;">
-    <col style="width:50px;">
-    <col style="width:120px;">
-    <col style="width:12%;">
-    <col style="width:110px;">
-    <col style="width:110px;">
-    <col style="width:8%;">
-    <col style="width:10%;">
-    <col style="width:10%;">
+    <col style="width:46px;">
+    <col style="width:46px;">
+    <col style="width:115px;">
+    <col style="width:11%;">
+    <col style="width:100px;">
+    <col style="width:100px;">
+    <col style="width:7%;">
+    <col style="width:9%;">
+    <col style="width:9%;">
     <col>
-    {% if request.user|is_writer %}<col style="width:50px;">{% endif %}
+    <col style="width:76px;">
+    {% if request.user|is_writer %}<col style="width:46px;">{% endif %}
   </colgroup>
   <thead>
     <tr>
@@ -86,25 +95,33 @@
       <th>Сектор</th>
       <th>Разработчик</th>
       <th>Описание</th>
+      <th>Статус</th>
       {% if request.user|is_writer %}<th></th>{% endif %}
     </tr>
   </thead>
   <tbody>
     {% for n in notices %}
     <tr>
-      <td style="color:var(--muted);font-size:12px;">{{ forloop.counter }}</td>
-      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.pk }}</a></td>
-      <td>{{ n.notice_number|default:"—" }}</td>
-      <td>{{ n.group|default:"—" }}</td>
-      <td style="white-space:nowrap;">{{ n.date_issued|default:"—" }}</td>
-      <td style="white-space:nowrap;">{{ n.date_expires|default:"—" }}</td>
-      <td>{{ n.department|default:"—" }}</td>
-      <td>{{ n.sector|default:"—" }}</td>
-      <td>{{ n.executor.short_name|default:"—" }}</td>
-      <td style="font-size:13px;color:var(--muted);">{{ n.description|truncatechars:80|default:"—" }}</td>
-      {% if request.user|is_writer %}
+      <td style="color:var(--muted);font-size:12px;text-align:center;">{{ forloop.counter }}</td>
+      <td style="text-align:center;"><a href="{% url 'works:notice_detail' n.pk %}" title="Открыть извещение #{{ n.pk }}">{{ n.pk }}</a></td>
+      <td title="{{ n.notice_number }}">{{ n.notice_number|default:"—" }}</td>
+      <td title="{{ n.group }}">{{ n.group|default:"—" }}</td>
+      <td>{{ n.date_issued|default:"—" }}</td>
+      <td>{{ n.date_expires|default:"—" }}</td>
+      <td title="{{ n.department }}">{{ n.department|default:"—" }}</td>
+      <td title="{{ n.sector }}">{{ n.sector|default:"—" }}</td>
+      <td title="{{ n.executor.full_name }}">{{ n.executor.short_name|default:"—" }}</td>
+      <td title="{{ n.description }}">{{ n.description|truncatechars:60|default:"—" }}</td>
       <td>
-        <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+        {% if n.status == 'active' %}
+          <span class="badge-active">Активно</span>
+        {% else %}
+          <span class="badge-closed">Закрыто</span>
+        {% endif %}
+      </td>
+      {% if request.user|is_writer %}
+      <td style="text-align:center;">
+        <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline" title="Редактировать"><i class="fas fa-edit"></i></a>
       </td>
       {% endif %}
     </tr>

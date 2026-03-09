@@ -234,7 +234,6 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                     continue
                 detail_view._update_field(work, field, value)
 
-        work.refresh_from_db()
         work_data = _serialize_pp(
             Work.objects.select_related('department', 'ntc_center', 'executor', 'pp_project')
             .get(pk=work.pk)

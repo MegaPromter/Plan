@@ -8,6 +8,7 @@ from django.views.generic import (
 from django.urls import reverse_lazy
 # Получение объекта или автоматический возврат 404 при его отсутствии
 from django.shortcuts import get_object_or_404
+from django.contrib import messages
 # Q-объект для построения сложных запросов с логическими операторами
 from django.db.models import Q
 # Стандартная библиотека для работы с JSON
@@ -275,7 +276,7 @@ class NoticeListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # Загружаем извещения с JOIN'ами по отделу и исполнителю
-        qs = Notice.objects.select_related('department', 'executor')
+        qs = Notice.objects.select_related('department', 'sector', 'executor')
         # Фильтр по статусу (активные / закрытые)
         status = self.request.GET.get('status')
         if status in (Notice.STATUS_ACTIVE, Notice.STATUS_CLOSED):
@@ -289,23 +290,30 @@ class NoticeDetailView(LoginRequiredMixin, DetailView):
     model         = Notice
     template_name = 'works/notice_detail.html'
 
+    def get_queryset(self):
+        return Notice.objects.select_related('department', 'sector', 'executor')
+
 
 class NoticeCreateView(WriterRequiredMixin, CreateView):
-    # Форма создания нового извещения
     model         = Notice
     form_class    = NoticeForm
     template_name = 'works/notice_form.html'
-    # После создания перенаправляем на список извещений
     success_url   = reverse_lazy('works:notice_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Извещение успешно создано.')
+        return super().form_valid(form)
 
 
 class NoticeUpdateView(WriterRequiredMixin, UpdateView):
-    # Форма редактирования извещения
     model         = Notice
     form_class    = NoticeForm
     template_name = 'works/notice_form.html'
-    # После сохранения возвращаем на список извещений
     success_url   = reverse_lazy('works:notice_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Извещение успешно сохранено.')
+        return super().form_valid(form)
 
 
 # ── План/Отчёт SPA ──────────────────────────────────────────────────────────
