@@ -340,6 +340,7 @@ class WorkReport(models.Model):
     )
     doc_name         = models.CharField('Наименование документа', max_length=500, blank=True)
     doc_designation  = models.CharField('Обозначение',            max_length=200, blank=True)
+    doc_number       = models.CharField('Номер (для корректировки)', max_length=200, blank=True)
     inventory_num    = models.CharField('Инв. номер',              max_length=100, blank=True)
     date_accepted    = models.DateField('Дата сдачи', null=True, blank=True)
     doc_type         = models.CharField('Вид документа',  max_length=20,

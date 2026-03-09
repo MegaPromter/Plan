@@ -49,6 +49,7 @@ def _serialize_report(r):
         'task_id': r.work_id,
         'doc_name': r.doc_name or '',
         'doc_designation': r.doc_designation or '',
+        'doc_number': r.doc_number or '',
         'inventory_num': r.inventory_num or '',
         'date_accepted': (r.date_accepted.isoformat()
                           if r.date_accepted else ''),
@@ -147,6 +148,7 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
             work_id=task_id,
             doc_name=d.get('doc_name', ''),
             doc_designation=d.get('doc_designation', ''),
+            doc_number=d.get('doc_number', ''),
             inventory_num=d.get('inventory_num', ''),
             date_accepted=_safe_date(d.get('date_accepted')),
             doc_type=d.get('doc_type', ''),
@@ -211,8 +213,8 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
             return JsonResponse({'error': err}, status=403)
 
         report.doc_name = d.get('doc_name', report.doc_name)
-        report.doc_designation = d.get('doc_designation',
-                                       report.doc_designation)
+        report.doc_designation = d.get('doc_designation', report.doc_designation)
+        report.doc_number = d.get('doc_number', report.doc_number)
         report.inventory_num = d.get('inventory_num', report.inventory_num)
         report.doc_type = d.get('doc_type', report.doc_type)
         report.doc_class = d.get('doc_class', report.doc_class)
