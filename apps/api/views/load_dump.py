@@ -45,8 +45,8 @@ class LoadDumpView(View):
         except (json.JSONDecodeError, ValueError):
             body = {}
 
-        secret = body.get('secret', '')
-        expected = os.environ.get('LOAD_DUMP_SECRET', '')
+        secret = body.get('secret', '').strip()
+        expected = os.environ.get('LOAD_DUMP_SECRET', '').strip()
 
         # Отладка
         logger.info('load_dump: secret=%r expected=%r match=%s',
