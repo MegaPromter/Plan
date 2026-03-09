@@ -167,6 +167,12 @@ urlpatterns = [
 
 ]
 
+# ── Загрузка дампа данных (для тестирования на Railway) ─────────────────────
+from apps.api.views.load_dump import LoadDumpView
+urlpatterns += [
+    path('load_dump/', LoadDumpView.as_view()),
+]
+
 # ── Seed-данные (только в DEBUG) ─────────────────────────────────────────────
 # Импортируем настройки Django для проверки режима DEBUG
 from django.conf import settings
