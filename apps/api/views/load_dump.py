@@ -3,6 +3,7 @@ API для загрузки дампа данных из data_dump.json.
 Защищён секретным ключом (env LOAD_DUMP_SECRET).
 
 POST /api/load_dump/  { "secret": "..." }
+GET  /api/load_dump/  — диагностика (показывает состояние)
 """
 import os
 import logging
@@ -25,6 +26,17 @@ DUMP_FILE = os.path.join(
 class LoadDumpView(View):
     """POST — загрузить данные из data_dump.json (требует секрет)."""
 
+    def get(self, request):
+        """Диагностика: показать состояние переменных и файла."""
+        expected = os.environ.get('LOAD_DUMP_SECRET', '')
+        return JsonResponse({
+            'dump_file': DUMP_FILE,
+            'dump_exists': os.path.isfile(DUMP_FILE),
+            'secret_configured': bool(expected),
+            'secret_length': len(expected),
+            'env_keys_sample': [k for k in os.environ if 'LOAD' in k or 'DUMP' in k or 'SECRET' in k.upper()],
+        })
+
     def post(self, request):
         # Проверка секрета
         import json
@@ -35,8 +47,21 @@ class LoadDumpView(View):
 
         secret = body.get('secret', '')
         expected = os.environ.get('LOAD_DUMP_SECRET', '')
+
+        # Отладка
+        logger.info('load_dump: secret=%r expected=%r match=%s',
+                     secret, expected, secret == expected)
+
         if not expected or secret != expected:
-            return JsonResponse({'error': 'Forbidden'}, status=403)
+            return JsonResponse({
+                'error': 'Forbidden',
+                'debug': {
+                    'secret_configured': bool(expected),
+                    'secret_length': len(expected),
+                    'provided_length': len(secret),
+                    'match': secret == expected,
+                },
+            }, status=403)
 
         # Проверяем наличие файла
         if not os.path.isfile(DUMP_FILE):
