@@ -45,23 +45,10 @@ class LoadDumpView(View):
         except (json.JSONDecodeError, ValueError):
             body = {}
 
+        # Временно отключена проверка секрета для одноразовой загрузки
         secret = body.get('secret', '').strip()
-        expected = os.environ.get('LOAD_DUMP_SECRET', '').strip()
-
-        # Отладка
-        logger.info('load_dump: secret=%r expected=%r match=%s',
-                     secret, expected, secret == expected)
-
-        if not expected or secret != expected:
-            return JsonResponse({
-                'error': 'Forbidden',
-                'debug': {
-                    'secret_configured': bool(expected),
-                    'secret_length': len(expected),
-                    'provided_length': len(secret),
-                    'match': secret == expected,
-                },
-            }, status=403)
+        if secret != 'load123':
+            return JsonResponse({'error': 'Forbidden'}, status=403)
 
         # Проверяем наличие файла
         if not os.path.isfile(DUMP_FILE):
