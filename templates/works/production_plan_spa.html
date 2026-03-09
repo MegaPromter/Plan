@@ -1467,7 +1467,7 @@ function openAddRowModal() {
     milestone_num: '', work_num: '', work_designation: '', work_name: '',
     date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '',
     center: _defaultCenter, dept: USER_DEPT || '', sector_head: _defaultSectorHead,
-    executor: '', task_type: '' };
+    executor: '', task_type: (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : 'Выпуск нового документа' };
 
   const tr = document.createElement('tr');
   tr.id = 'ppNewRow';
