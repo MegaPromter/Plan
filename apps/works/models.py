@@ -379,16 +379,23 @@ class Notice(models.Model):
         (STATUS_CLOSED, 'Закрыто'),
     ]
 
+    notice_number = models.CharField('№ ПИ', max_length=100, blank=True)
     notice_type  = models.CharField('Тип извещения', max_length=100, blank=True)
+    group        = models.CharField('Группа', max_length=200, blank=True)
     department   = models.ForeignKey(
         Department, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='notices', verbose_name='Отдел',
     )
+    sector       = models.ForeignKey(
+        Sector, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notices', verbose_name='Сектор',
+    )
     executor     = models.ForeignKey(
         Employee, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='notices', verbose_name='Исполнитель',
+        related_name='notices', verbose_name='Разработчик',
     )
-    date_issued  = models.DateField('Дата выдачи', null=True, blank=True)
+    date_issued  = models.DateField('Дата выпуска', null=True, blank=True)
+    date_expires = models.DateField('Срок действия', null=True, blank=True)
     subject      = models.CharField('Тема', max_length=500, blank=True)
     description  = models.TextField('Описание', blank=True)
     status       = models.CharField('Статус', max_length=10,

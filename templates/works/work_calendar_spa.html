@@ -9,11 +9,13 @@
 <span class="breadcrumb-current">Производственный календарь</span>
 {% endblock %}
 
-<!-- Кнопка добавления записи в topbar (доступна только администраторам) -->
+<!-- Кнопка добавления записи в topbar (только для администраторов) -->
 {% block topbar_actions %}
+{% if request.user|is_admin_role %}
 <button class="btn btn-primary btn-sm" onclick="openAddModal()">
   <i class="fas fa-plus"></i> Добавить запись
 </button>
+{% endif %}
 {% endblock %}
 
 {% block styles %}
@@ -58,6 +60,14 @@
 {% endblock %}
 
 {% block content %}
+{% if not request.user|is_admin_role %}
+<!-- Заглушка для не-администраторов -->
+<div class="stub-page">
+  <div class="stub-icon"><i class="fas fa-calendar-check"></i></div>
+  <h2>Производственный календарь</h2>
+  <p>Раздел находится в разработке.</p>
+</div>
+{% else %}
 <!-- Панель выбора года: при изменении перезагружает данные -->
 <div class="calendar-toolbar">
   <label style="font-size:14px;color:var(--muted);">Год:</label>
@@ -114,6 +124,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

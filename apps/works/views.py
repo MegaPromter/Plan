@@ -324,6 +324,9 @@ class PlanSPAView(LoginRequiredMixin, TemplateView):
         ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
         # Отображаемое имя: краткое ФИО или username
         ctx['username'] = emp.short_name if emp else self.request.user.username
+        # Должность и номер отдела для топбара
+        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
+        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
         # Флаг права записи: для JS-логики отключения/включения кнопок редактирования
         ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
         # Настройки ширин колонок
@@ -349,6 +352,8 @@ class ProjectsSPAView(LoginRequiredMixin, TemplateView):
         # Роль и имя аналогично PlanSPAView
         ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
         ctx['username'] = emp.short_name if emp else self.request.user.username
+        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
+        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
         # Флаг права записи для JS
         ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
         return ctx
@@ -367,6 +372,8 @@ class ProductionPlanSPAView(LoginRequiredMixin, TemplateView):
         # Роль, имя и права записи — стандартный набор для SPA-страниц
         ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
         ctx['username'] = emp.short_name if emp else self.request.user.username
+        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
+        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
         ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
         return ctx
 
@@ -382,8 +389,8 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             return self.request.user.is_superuser
 
 
-class WorkCalendarSPAView(AdminRequiredMixin, TemplateView):
-    """SPA-страница «Производственный календарь» — только для администратора."""
+class WorkCalendarSPAView(LoginRequiredMixin, TemplateView):
+    """SPA-страница «Производственный календарь»."""
     # Шаблон SPA-модуля управления производственным календарём
     template_name = 'works/work_calendar_spa.html'
 
@@ -394,6 +401,8 @@ class WorkCalendarSPAView(AdminRequiredMixin, TemplateView):
         emp = getattr(self.request.user, 'employee', None)
         # Отображаемое имя пользователя
         ctx['username'] = emp.short_name if emp else self.request.user.username
+        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
+        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
         # Текущий год — используется для инициализации выбора года в интерфейсе
         current_year = datetime.date.today().year
         ctx['current_year'] = current_year

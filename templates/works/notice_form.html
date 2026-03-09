@@ -38,8 +38,13 @@
     </div>
     {% endif %}
 
-    <!-- Тип извещения и статус (активное / закрытое) — двухколоночный ряд -->
+    <!-- № ПИ, тип и статус -->
     <div class="form-row">
+      <div class="form-group {% if form.notice_number.errors %}has-error{% endif %}">
+        <label>{{ form.notice_number.label }}</label>
+        {{ form.notice_number }}
+        {% if form.notice_number.errors %}<span class="form-error">{{ form.notice_number.errors.0 }}</span>{% endif %}
+      </div>
       <div class="form-group {% if form.notice_type.errors %}has-error{% endif %}">
         <label>{{ form.notice_type.label }}</label>
         {{ form.notice_type }}
@@ -52,25 +57,43 @@
       </div>
     </div>
 
-    <!-- Отдел, исполнитель и дата выдачи извещения — трёхколоночный ряд -->
+    <!-- Группа -->
+    <div class="form-group {% if form.group.errors %}has-error{% endif %}">
+      <label>{{ form.group.label }}</label>
+      {{ form.group }}
+      {% if form.group.errors %}<span class="form-error">{{ form.group.errors.0 }}</span>{% endif %}
+    </div>
+
+    <!-- Отдел, сектор, разработчик -->
     <div class="form-row">
-      <!-- Отдел (FK → Department) -->
       <div class="form-group {% if form.department.errors %}has-error{% endif %}">
         <label>{{ form.department.label }}</label>
         {{ form.department }}
         {% if form.department.errors %}<span class="form-error">{{ form.department.errors.0 }}</span>{% endif %}
       </div>
-      <!-- Исполнитель (FK → Employee) -->
+      <div class="form-group {% if form.sector.errors %}has-error{% endif %}">
+        <label>{{ form.sector.label }}</label>
+        {{ form.sector }}
+        {% if form.sector.errors %}<span class="form-error">{{ form.sector.errors.0 }}</span>{% endif %}
+      </div>
       <div class="form-group {% if form.executor.errors %}has-error{% endif %}">
         <label>{{ form.executor.label }}</label>
         {{ form.executor }}
         {% if form.executor.errors %}<span class="form-error">{{ form.executor.errors.0 }}</span>{% endif %}
       </div>
-      <!-- Дата выдачи извещения -->
+    </div>
+
+    <!-- Дата выпуска, срок действия -->
+    <div class="form-row">
       <div class="form-group {% if form.date_issued.errors %}has-error{% endif %}">
         <label>{{ form.date_issued.label }}</label>
         {{ form.date_issued }}
         {% if form.date_issued.errors %}<span class="form-error">{{ form.date_issued.errors.0 }}</span>{% endif %}
+      </div>
+      <div class="form-group {% if form.date_expires.errors %}has-error{% endif %}">
+        <label>{{ form.date_expires.label }}</label>
+        {{ form.date_expires }}
+        {% if form.date_expires.errors %}<span class="form-error">{{ form.date_expires.errors.0 }}</span>{% endif %}
       </div>
     </div>
 

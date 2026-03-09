@@ -3,15 +3,41 @@
 <!-- Страница журнала извещений (Notice list) с фильтром по статусу -->
 {% block title %}Журнал извещений — Система управления{% endblock %}
 
+{% block styles %}
+<style>
+/* Таблица извещений: чёткие линии, равномерные ячейки */
+.notice-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+.notice-table th,
+.notice-table td {
+  padding:8px 10px;
+  font-size:13px;
+  border:1px solid var(--border);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.notice-table th {
+  background:var(--surface2);
+  font-weight:700;
+  font-size:11px;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  text-align:left;
+}
+.notice-table tbody tr:nth-child(even) td { background:var(--surface2); }
+.notice-table tbody tr:nth-child(odd)  td { background:var(--surface); }
+.notice-table tbody tr:hover td { background:var(--accent-light) !important; }
+</style>
+{% endblock %}
+
 {% block breadcrumb %}
 <span>/</span>
 <span class="breadcrumb-current">Журнал извещений</span>
 {% endblock %}
 
-<!-- Помечаем пункт «Журнал извещений» в сайдбаре как активный -->
 {% block nav_notices %}active{% endblock %}
 
-<!-- Кнопка добавления извещения в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
   <a href="{% url 'works:notice_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
@@ -19,69 +45,63 @@
 {% endblock %}
 
 {% block content %}
-<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>Журнал извещений</h1>
 </div>
 
-<!-- Строка фильтров: только по статусу (active / closed) -->
 <form method="get" class="filter-bar">
-  <!-- Выпадающий список статусов -->
   <select name="status" class="filter-select">
     <option value="">Все статусы</option>
-    <!-- Выделяем выбранный статус по значению GET-параметра -->
     <option value="active"  {% if request.GET.status == "active"  %}selected{% endif %}>Активные</option>
     <option value="closed"  {% if request.GET.status == "closed"  %}selected{% endif %}>Закрытые</option>
   </select>
   <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-  <!-- Сброс фильтров: возврат на список без параметров -->
   <a href="{% url 'works:notice_list' %}" class="btn btn-outline">Сброс</a>
 </form>
 
-<!-- Таблица извещений (отображается только если есть записи) -->
 {% if notices %}
-<table class="data-table">
+<table class="notice-table">
+  <colgroup>
+    <col style="width:50px;">
+    <col style="width:50px;">
+    <col style="width:120px;">
+    <col style="width:12%;">
+    <col style="width:110px;">
+    <col style="width:110px;">
+    <col style="width:8%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col>
+    {% if request.user|is_writer %}<col style="width:50px;">{% endif %}
+  </colgroup>
   <thead>
     <tr>
-      <th style="width:50px;">#</th>              <!-- PK извещения -->
-      <th style="width:120px;">Тип</th>           <!-- Тип извещения -->
-      <th style="width:120px;">Отдел</th>         <!-- Связанный отдел -->
-      <th style="width:120px;">Исполнитель</th>   <!-- Связанный сотрудник (short_name) -->
-      <th style="width:100px;">Дата</th>          <!-- Дата выдачи -->
-      <th>Тема</th>                               <!-- Краткое наименование -->
-      <th>Описание</th>                           <!-- Текст (усечённый) -->
-      <th style="width:80px;">Статус</th>         <!-- Бейдж статуса -->
-      <!-- Колонка действий — только для редакторов -->
-      {% if request.user|is_writer %}<th style="width:60px;"></th>{% endif %}
+      <th>№ стр.</th>
+      <th>№</th>
+      <th>ПИ</th>
+      <th>Группа</th>
+      <th>Дата выпуска</th>
+      <th>Срок действия</th>
+      <th>Отдел</th>
+      <th>Сектор</th>
+      <th>Разработчик</th>
+      <th>Описание</th>
+      {% if request.user|is_writer %}<th></th>{% endif %}
     </tr>
   </thead>
   <tbody>
-    <!-- Цикл по извещениям из queryset (context notices) -->
     {% for n in notices %}
     <tr>
-      <!-- PK — ссылка на детальную страницу -->
+      <td style="color:var(--muted);font-size:12px;">{{ forloop.counter }}</td>
       <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.pk }}</a></td>
-      <!-- Тип извещения -->
-      <td>{{ n.notice_type|default:"—" }}</td>
-      <!-- Отдел -->
-      <td>{{ n.department|default:"—" }}</td>
-      <!-- Короткое имя исполнителя (short_name — фамилия + инициалы) -->
-      <td>{{ n.executor.short_name|default:"—" }}</td>
-      <!-- Дата выдачи (без переноса) -->
+      <td>{{ n.notice_number|default:"—" }}</td>
+      <td>{{ n.group|default:"—" }}</td>
       <td style="white-space:nowrap;">{{ n.date_issued|default:"—" }}</td>
-      <!-- Тема — ссылка на детальную страницу, усечённая до 60 символов -->
-      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.subject|truncatechars:60 }}</a></td>
-      <!-- Описание — приглушённый текст, усечённый до 80 символов -->
+      <td style="white-space:nowrap;">{{ n.date_expires|default:"—" }}</td>
+      <td>{{ n.department|default:"—" }}</td>
+      <td>{{ n.sector|default:"—" }}</td>
+      <td>{{ n.executor.short_name|default:"—" }}</td>
       <td style="font-size:13px;color:var(--muted);">{{ n.description|truncatechars:80|default:"—" }}</td>
-      <!-- Бейдж статуса: active — зелёный, остальные — серый -->
-      <td>
-        {% if n.status == 'active' %}
-          <span class="badge badge-green">{{ n.get_status_display }}</span>
-        {% else %}
-          <span class="badge badge-gray">{{ n.get_status_display }}</span>
-        {% endif %}
-      </td>
-      <!-- Кнопка редактирования (только для редакторов) -->
       {% if request.user|is_writer %}
       <td>
         <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
@@ -92,38 +112,29 @@
   </tbody>
 </table>
 
-<!-- Пагинация с сохранением фильтра ?status= -->
 {% if is_paginated %}
 <div class="pagination">
-  <!-- Кнопка «Предыдущая» — сохраняем параметр status -->
   {% if page_obj.has_previous %}
     <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
   {% endif %}
-  <!-- Номера страниц (±3 от текущей) -->
   {% for num in page_obj.paginator.page_range %}
     {% if page_obj.number == num %}
-      <!-- Текущая страница — выделена классом active -->
       <span class="page-link active">{{ num }}</span>
     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-      <!-- Ближайшие страницы — ссылки с сохранением фильтра -->
       <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
     {% endif %}
   {% endfor %}
-  <!-- Кнопка «Следующая» -->
   {% if page_obj.has_next %}
     <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
   {% endif %}
-  <!-- Счётчик: текущая страница / всего страниц -->
   <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
 </div>
 {% endif %}
 
 {% else %}
-<!-- Пустое состояние: извещений не найдено (или список вообще пуст) -->
 <div class="empty-state">
   <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
   <p>Извещений не найдено</p>
-  <!-- Кнопка добавления первого извещения (только для редакторов) -->
   {% if request.user|is_writer %}
     <a href="{% url 'works:notice_add' %}" class="btn btn-primary">Добавить первое извещение</a>
   {% endif %}

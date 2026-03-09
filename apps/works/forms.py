@@ -59,13 +59,11 @@ class NoticeForm(forms.ModelForm):
         model  = Notice
         # Редактируемые поля (created_at и updated_at заполняются автоматически)
         fields = [
-            'notice_type', 'department', 'executor',
-            'date_issued', 'subject', 'description', 'status',
+            'notice_number', 'notice_type', 'group', 'department', 'sector', 'executor',
+            'date_issued', 'date_expires', 'subject', 'description', 'status',
         ]
-        # Переопределяем виджеты для удобства ввода
         widgets = {
-            # Дата выдачи извещения — нативный HTML5 date-picker
-            'date_issued': forms.DateInput(attrs={'type': 'date'}),
-            # Описание — многострочное текстовое поле (4 строки)
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'date_issued':  forms.DateInput(attrs={'type': 'date'}),
+            'date_expires': forms.DateInput(attrs={'type': 'date'}),
+            'description':  forms.Textarea(attrs={'rows': 4}),
         }

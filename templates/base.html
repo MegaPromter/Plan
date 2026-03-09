@@ -452,6 +452,26 @@ textarea { resize:vertical; min-height:80px; }
   .page-content { padding:16px; }                    /* меньше отступы контента */
   .form-row { grid-template-columns:1fr; }           /* однколоночная форма на мобильных */
 }
+/* ── Дропдаун карточки пользователя в topbar (base) ──────────────── */
+.base-user-menu-wrap { position:relative; }
+.base-topbar-user { display:flex; flex-direction:column; align-items:flex-end; gap:1px;
+  padding:5px 12px; border-radius:6px; cursor:pointer; user-select:none;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+  transition:background 0.15s; }
+.base-topbar-user:hover { background:rgba(255,255,255,0.14); }
+.base-topbar-user-name { font-size:14px; font-weight:600; color:#e2e8f0; }
+.base-topbar-user-sub  { font-size:11px; color:rgba(255,255,255,0.45); }
+.base-user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
+  background:#fff; border:1px solid #e2e6ed; border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden;
+  display:none; flex-direction:column; z-index:9999; }
+.base-user-dropdown.open { display:flex; }
+.base-user-dropdown a { display:flex; align-items:center; gap:10px;
+  padding:10px 16px; font-size:14px; color:#1e293b; text-decoration:none;
+  transition:background 0.12s; }
+.base-user-dropdown a:hover { background:#f8f9fb; }
+.base-user-dropdown .ud-sep { height:1px; background:#e2e6ed; margin:2px 0; }
+.base-user-dropdown .ud-danger { color:#ef4444; }
 </style>
 {% block styles %}{% endblock %}
 </head>
@@ -530,12 +550,25 @@ textarea { resize:vertical; min-height:80px; }
       </a>
     </div>
 
-    <!-- 6. Справочники (видны всем пользователям) -->
+    <!-- 6. Справочники -->
     <div class="nav-section">
-      <a href="{% url 'accounts:admin_spa' %}" class="nav-item nav-section-btn {% block nav_directories %}{% endblock %}">
-        <i class="fas fa-book"></i>
-        <span>6. Справочники</span>
-      </a>
+      <div class="nav-dropdown">
+        <button class="nav-item nav-section-btn nav-dropdown-toggle {% block nav_directories %}{% endblock %}" onclick="toggleNavDropdown(this)">
+          <i class="fas fa-book"></i>
+          <span>6. Справочники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="{% url 'works:work_calendar' %}" class="nav-item nav-subitem {% block nav_work_calendar %}{% endblock %}">
+            <i class="fas fa-calendar-check"></i>
+            <span>Производственный календарь</span>
+          </a>
+          <a href="{% url 'accounts:stub' 'norms' %}" class="nav-item nav-subitem">
+            <i class="fas fa-ruler"></i>
+            <span>Нормативы</span>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- 1.6 Администрирование -->
@@ -559,6 +592,10 @@ textarea { resize:vertical; min-height:80px; }
             <i class="fas fa-calendar-alt"></i>
             <span>План отпусков</span>
           </a>
+          <a href="{% url 'accounts:stub' 'business-trips' %}" class="nav-item nav-subitem">
+            <i class="fas fa-plane"></i>
+            <span>План командировок</span>
+          </a>
         </div>
       </div>
       <!-- Раздел «Подразделения» (заглушка) -->
@@ -568,11 +605,6 @@ textarea { resize:vertical; min-height:80px; }
       </a>
       <!-- Ссылки, доступные только администратору (тег is_admin_role проверяет роль) -->
       {% if request.user|is_admin_role %}
-      <!-- Производственный календарь (только для admin) -->
-      <a href="{% url 'works:work_calendar' %}" class="nav-item" id="nav-work-calendar">
-        <i class="fas fa-calendar-alt"></i>
-        <span>Производственный календарь</span>
-      </a>
       <!-- Панель администратора Django -->
       <a href="/admin/" class="nav-item">
         <i class="fas fa-cogs"></i>
@@ -627,11 +659,22 @@ textarea { resize:vertical; min-height:80px; }
     <div class="topbar-spacer"></div>
     <!-- Дополнительные кнопки в topbar (определяются в дочерних шаблонах) -->
     {% block topbar_actions %}{% endblock %}
-    <!-- Кнопка выхода в topbar (показывается только авторизованным пользователям) -->
+    <!-- Карточка пользователя с дропдауном -->
     {% if request.user.is_authenticated %}
-    <a href="{% url 'accounts:logout' %}" class="btn btn-outline btn-sm" title="Выйти из системы">
-      <i class="fas fa-sign-out-alt"></i> Выйти
-    </a>
+    <div class="base-user-menu-wrap" id="baseUserMenuWrap">
+      <div class="base-topbar-user" onclick="toggleBaseUserMenu()">
+        <span class="base-topbar-user-name">{% employee_name %}</span>
+        <span class="base-topbar-user-sub">{% employee_role %}</span>
+      </div>
+      <div class="base-user-dropdown" id="baseUserDropdown">
+        <a href="{% url 'works:plan' %}"><i class="fas fa-tasks"></i> Личный план</a>
+        <a href="{% url 'accounts:stub' 'analytics-reports' %}"><i class="fas fa-file-alt"></i> Отчёт</a>
+        <div class="ud-sep"></div>
+        <a href="{% url 'accounts:profile' %}"><i class="fas fa-cog"></i> Настройки</a>
+        <div class="ud-sep"></div>
+        <a href="{% url 'accounts:logout' %}" class="ud-danger"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+      </div>
+    </div>
     {% endif %}
   </header>
 
@@ -707,9 +750,21 @@ function showToast(message, type) {
 
 // ── Функция переключения раскрывающегося пункта меню (дропдаун) ─────────
 function toggleNavDropdown(btn) {
-  btn.classList.toggle('open');        // поворачиваем шеврон
-  var menu = btn.nextElementSibling;   // берём следующий элемент — меню дропдауна
-  if (menu) menu.classList.toggle('open'); // показываем/скрываем подменю
+  btn.classList.toggle('open');
+  var menu = btn.nextElementSibling;
+  if (menu) menu.classList.toggle('open');
+  _saveNavDropdownState();
+}
+
+// Сохраняем индексы открытых дропдаунов в localStorage
+function _saveNavDropdownState() {
+  var open = [];
+  document.querySelectorAll('.nav-dropdown-toggle.open').forEach(function(btn, i) {
+    // Используем текст кнопки как ключ
+    var span = btn.querySelector('span');
+    if (span) open.push(span.textContent.trim());
+  });
+  localStorage.setItem('navDropdownOpen', JSON.stringify(open));
 }
 
 // ── Инициализация после загрузки DOM ────────────────────────────────────
@@ -717,13 +772,22 @@ document.addEventListener('DOMContentLoaded', function() {
   // Находим скрытые Django-сообщения и показываем их как Toast
   document.querySelectorAll('.django-message').forEach(function(el) {
     var t = el.dataset.type;
-    // Определяем тип toast по классу Django-сообщения
     var type = t && t.indexOf('error') >= 0 ? 'error'
              : t && t.indexOf('warning') >= 0 ? 'warning' : 'success';
     showToast(el.textContent.trim(), type);
   });
+  // Восстанавливаем открытые дропдауны из localStorage
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem('navDropdownOpen') || '[]'); } catch(e) {}
+  document.querySelectorAll('.nav-dropdown-toggle').forEach(function(btn) {
+    var span = btn.querySelector('span');
+    if (span && saved.indexOf(span.textContent.trim()) >= 0) {
+      btn.classList.add('open');
+      var menu = btn.nextElementSibling;
+      if (menu) menu.classList.add('open');
+    }
+  });
   // Авто-раскрытие дропдауна если активный подраздел
-  // Если в меню есть активный подпункт — раскрываем его родительский дропдаун
   document.querySelectorAll('.nav-dropdown-menu .nav-item.active').forEach(function(el) {
     var menu = el.closest('.nav-dropdown-menu');
     var toggle = menu && menu.previousElementSibling;
@@ -753,6 +817,18 @@ document.addEventListener('click', function(e) {
   if (!e.target.classList.contains('modal-overlay')) return;
   if (!e.target.classList.contains('open')) return;
   e.target.classList.remove('open');
+});
+
+// ── Дропдаун карточки пользователя в topbar ─────────────────────────────
+function toggleBaseUserMenu() {
+  document.getElementById('baseUserDropdown').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('baseUserMenuWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var dd = document.getElementById('baseUserDropdown');
+    if (dd) dd.classList.remove('open');
+  }
 });
 </script>
 <!-- Блок пользовательских скриптов из дочерних шаблонов -->

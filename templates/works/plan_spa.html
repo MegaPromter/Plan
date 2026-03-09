@@ -115,9 +115,26 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); font
 .breadcrumb-current { color:#fff; font-weight:500; }
 /* Распорка между левой и правой частями топбара */
 .topbar-sep { flex:1; }
-/* Чип с именем пользователя */
+/* Дропдаун карточки пользователя */
+.user-menu-wrap { position:relative; }
 .topbar-user { font-size:14px; color:var(--nav-text2); background:rgba(255,255,255,0.08);
-  border:1px solid var(--nav-border); padding:5px 12px; border-radius:6px; }
+  border:1px solid var(--nav-border); padding:5px 12px; border-radius:6px;
+  display:flex; flex-direction:column; align-items:flex-end; gap:1px;
+  cursor:pointer; user-select:none; transition:background 0.15s; }
+.topbar-user:hover { background:rgba(255,255,255,0.14); }
+.topbar-user-name { font-weight:600; }
+.topbar-user-sub { font-size:11px; color:rgba(255,255,255,0.45); }
+.user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.18); overflow:hidden;
+  display:none; flex-direction:column; z-index:300; }
+.user-dropdown.open { display:flex; }
+.user-dropdown a { display:flex; align-items:center; gap:10px;
+  padding:10px 16px; font-size:14px; color:var(--text); text-decoration:none;
+  transition:background 0.12s; }
+.user-dropdown a:hover { background:var(--surface2); }
+.user-dropdown .ud-sep { height:1px; background:var(--border); margin:2px 0; }
+.user-dropdown .ud-danger { color:var(--danger); }
 /* Базовая кнопка в топбаре (прозрачный фон, белая рамка) */
 .topbar-btn { padding:6px 14px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);
   background:transparent; color:var(--nav-text2); font-family:var(--font);
@@ -300,14 +317,16 @@ tr.pp-locked .pp-lock-badge {
 /* ── Таблица отчёта ──────────────────────────────────────────── */
 .report-table-wrap { overflow-x:auto; }
 /* Широкая таблица отчётных строк (горизонтальная прокрутка) */
-.report-table { border-collapse:collapse; min-width:1600px; width:100%; font-size:16px; }
-.report-table th { background:var(--surface2); border:1px solid var(--border); padding:8px 10px;
-  font-size:12px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+.report-table { border-collapse:collapse; min-width:1100px; width:100%; font-size:14px; }
+.report-table th { background:var(--surface2); border:1px solid var(--border); padding:6px 8px;
+  font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
 .report-table td { border:1px solid var(--border); padding:0; vertical-align:top; }
 /* Редактируемая ячейка таблицы отчёта */
-.report-table .r-cell { width:100%; padding:6px 8px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:16px; min-height:32px; resize:none; overflow:hidden; display:block; }
+.report-table .r-cell { width:100%; padding:5px 7px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:14px; min-height:30px; resize:none; overflow:hidden; display:block; }
 .report-table .r-cell:focus { background:var(--accent-light); }
+.report-table .r-cell-date { min-height:30px; height:30px; cursor:pointer; }
+.report-table .r-cell-select { height:30px; appearance:auto; cursor:pointer; }
 /* Кнопка удаления строки отчёта */
 .r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
@@ -658,9 +677,18 @@ tr.pp-locked .pp-lock-badge {
       <a href="/accounts/stub/analytics-deadlines/" class="nav-item"><i class="fas fa-chart-line"></i><span>Исполнение сроков</span></a>
       <a href="/accounts/stub/analytics-reports/" class="nav-item"><i class="fas fa-file-alt"></i><span>Отчёты</span></a>
     </div>
-    <!-- Секция «5. Справочники» (видна всем пользователям) -->
+    <!-- Секция «5. Справочники» -->
     <div class="nav-section">
-      <a href="/accounts/admin-spa/" class="nav-item nav-section-btn"><i class="fas fa-book"></i><span>5. Справочники</span></a>
+      <div class="nav-dropdown">
+        <button class="nav-item nav-section-btn nav-dropdown-toggle" onclick="toggleNavDropdown(this)">
+          <i class="fas fa-book"></i><span>5. Справочники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="/works/work-calendar/" class="nav-item nav-subitem"><i class="fas fa-calendar-check"></i><span>Производственный календарь</span></a>
+          <a href="/accounts/stub/norms/" class="nav-item nav-subitem"><i class="fas fa-ruler"></i><span>Нормативы</span></a>
+        </div>
+      </div>
     </div>
     <!-- Секция «6. Администрирование» -->
     <div class="nav-section">
@@ -674,7 +702,8 @@ tr.pp-locked .pp-lock-badge {
         </button>
         <div class="nav-dropdown-menu">
           <a href="/employees/" class="nav-item nav-subitem"><i class="fas fa-list"></i><span>Список сотрудников</span></a>
-          <a href="/employees/vacation-plan/" class="nav-item nav-subitem"><i class="fas fa-calendar-alt"></i><span>План отпусков</span></a>
+          <a href="/employees/vacations/" class="nav-item nav-subitem"><i class="fas fa-calendar-alt"></i><span>План отпусков</span></a>
+          <a href="/accounts/stub/business-trips/" class="nav-item nav-subitem"><i class="fas fa-plane"></i><span>План командировок</span></a>
         </div>
       </div>
       <a href="/accounts/stub/subdivisions/" class="nav-item"><i class="fas fa-sitemap"></i><span>Подразделения</span></a>
@@ -714,10 +743,21 @@ tr.pp-locked .pp-lock-badge {
   <div class="topbar-sep"></div>
   <!-- Кнопка открытия модала «Ошибки планирования»; меняет состояние has-errors/no-errors -->
   <button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()">⚠️ Ошибки планирования</button>
-  <!-- Чип с именем пользователя из Django-контекста -->
-  <div class="topbar-user">{{ username }}</div>
-  <!-- Кнопка выхода из системы -->
-  <a href="/accounts/logout/"><button class="topbar-btn danger">Выйти</button></a>
+  <!-- Карточка пользователя с дропдаун-меню -->
+  <div class="user-menu-wrap">
+    <div class="topbar-user" onclick="toggleUserMenu()">
+      <span class="topbar-user-name">{{ username }}</span>
+      {% if user_position or user_dept %}<span class="topbar-user-sub">{% if user_dept %}Отд. {{ user_dept }}{% if user_position %} · {% endif %}{% endif %}{{ user_position }}</span>{% endif %}
+    </div>
+    <div class="user-dropdown" id="userDropdown">
+      <a href="/works/plan/"><i class="fas fa-tasks" style="width:16px;text-align:center;"></i> Личный план</a>
+      <a href="/accounts/stub/analytics-reports/"><i class="fas fa-file-alt" style="width:16px;text-align:center;"></i> Отчёт</a>
+      <div class="ud-sep"></div>
+      <a href="/accounts/profile/"><i class="fas fa-cog" style="width:16px;text-align:center;"></i> Настройки</a>
+      <div class="ud-sep"></div>
+      <a href="/accounts/logout/" class="ud-danger"><i class="fas fa-sign-out-alt" style="width:16px;text-align:center;"></i> Выйти</a>
+    </div>
+  </div>
 </div>
 
 <!-- ══ Тулбар: строка фильтрации по периоду ══════════════════════════════ -->
@@ -949,7 +989,7 @@ tr.pp-locked .pp-lock-badge {
 
 <!-- REPORT MODAL -->
 <div class="modal-overlay" id="reportModal">
-<div class="modal">
+<div class="modal" style="max-width:min(1700px,98vw);width:98vw;min-height:0;">
   <div class="modal-header">
     <div>
       <div class="modal-title">📄 Отчёт по задаче</div>
@@ -957,14 +997,29 @@ tr.pp-locked .pp-lock-badge {
     </div>
     <button class="modal-close" onclick="closeReportModal()">✕</button>
   </div>
-  <div class="modal-body">
+  <div class="modal-body" style="padding:16px 12px;">
     <div class="report-table-wrap">
     <table class="report-table">
-      <thead><tr>
-        <th>Наименование отчётного документа</th><th>Обозначение</th><th>Инвентарный №</th>
-        <th>Дата принятия</th><th>Вид doc</th><th>Класс doc</th><th>Листов А4</th>
-        <th>Норматив</th><th>Коэфф. сл./новизны</th><th>БВД (ч)</th><th>Нормоконтроль</th><th>Ссылка</th><th></th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th colspan="2" style="text-align:center;">Отчётный документ</th>
+          <th rowspan="2">Инвентарный №</th>
+          <th rowspan="2">Дата принятия</th>
+          <th rowspan="2">Вид doc</th>
+          <th rowspan="2">Класс doc</th>
+          <th rowspan="2">Листов А4 (факт)</th>
+          <th rowspan="2">Норматив</th>
+          <th rowspan="2">Коэфф. сл./новизны</th>
+          <th rowspan="2">БВД (ч)</th>
+          <th rowspan="2">Нормоконтроль</th>
+          <th rowspan="2">Ссылка</th>
+          <th rowspan="2"></th>
+        </tr>
+        <tr>
+          <th>Наименование</th>
+          <th>Обозначение</th>
+        </tr>
+      </thead>
       <tbody id="reportBody"></tbody>
     </table>
     </div>
@@ -1142,6 +1197,7 @@ const USER_CENTER = "{{ request.user.employee.effective_ntc_center.code|default:
 let tasks = [];
 let colSettings = {{ col_settings|safe }};
 let currentTaskId = null;
+let currentTask = null;
 let reportRows = [];
 let pendingTaskType = null;
 let newTaskExecutorsList = [];
@@ -1179,15 +1235,29 @@ function toggleNavDropdown(btn) {
   btn.classList.toggle('open');
   var menu = btn.nextElementSibling;
   if (menu) menu.classList.toggle('open');
+  var open = [];
+  document.querySelectorAll('.nav-dropdown-toggle.open').forEach(function(b) {
+    var s = b.querySelector('span'); if (s) open.push(s.textContent.trim());
+  });
+  localStorage.setItem('navDropdownOpen', JSON.stringify(open));
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+  // Восстанавливаем открытые дропдауны сайдбара из localStorage
+  var _saved = []; try { _saved = JSON.parse(localStorage.getItem('navDropdownOpen')||'[]'); } catch(e){}
+  document.querySelectorAll('.nav-dropdown-toggle').forEach(function(btn) {
+    var s = btn.querySelector('span');
+    if (s && _saved.indexOf(s.textContent.trim()) >= 0) {
+      btn.classList.add('open');
+      var menu = btn.nextElementSibling; if (menu) menu.classList.add('open');
+    }
+  });
+
   // Сбрасываем скролл сайдбара в начало — браузер может автоскроллить к .active
   var sidebarNav = document.querySelector('.sidebar-nav');
   if (sidebarNav) sidebarNav.scrollTop = 0;
 
-  // ESC закрывает модалку задачи (у неё свой класс new-task-modal, а не modal-overlay)
-  // а также pe-overlay (ошибки планирования) и type-modal
+  // ESC закрывает модалки (в порядке приоритета: верхний модал первым)
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
     const peModal = document.getElementById('peModal');
@@ -1200,17 +1270,25 @@ window.addEventListener("DOMContentLoaded", async () => {
       closeTypeModal();
       return;
     }
+    const reportModal = document.getElementById('reportModal');
+    if (reportModal && reportModal.classList.contains('open')) {
+      closeReportModal();
+      return;
+    }
     const modal = document.getElementById('newTaskModal');
     if (modal && modal.classList.contains('open')) {
-      e.stopPropagation(); // не даём base.html обработать повторно
+      e.stopPropagation();
       closeNewTaskModal();
     }
   });
 
   // Клик по фону new-task-modal закрывает через closeNewTaskModal() (сбрасывает состояние)
-  // modal-overlay закрываются глобально через base.html
   document.getElementById('newTaskModal').addEventListener('click', function(e) {
     if (e.target === this) closeNewTaskModal();
+  });
+  // Клик по фону reportModal закрывает через closeReportModal()
+  document.getElementById('reportModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReportModal();
   });
 
   document.getElementById("yearDisplay").textContent = selectedYear;
@@ -1439,7 +1517,7 @@ async function openPlanningErrors() {
         highlight: `Просрочено на ${daysCalc} дн.`,
         actions: [
           { label: "✏️ Редактировать", fn: `closePeModal();openEditTaskModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
-          { label: "📝 Внести отчёт",  fn: `closePeModal();openReportModal(${t.id},'${(t.work_name||"").replace(/'/g,"\\'")}')` },
+          { label: "📝 Внести отчёт",  fn: `closePeModal();openReportModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
           { label: "Игнорировать",     fn: `peSetIgnored('overdue_${t.id}');closePeModal();` },
         ]
       };
@@ -1742,7 +1820,8 @@ function mccConfirmPostpone(taskId) {
 }
 function mccOpenReport(taskId, taskName) {
   closeMonthCheckModal();
-  openReportModal(taskId, taskName);
+  const taskObj = tasks.find(x => x.id === taskId) || {id: taskId, work_name: taskName};
+  openReportModal(taskObj);
   const origClose = window._origCloseReport || closeReportModal;
   window._origCloseReport = closeReportModal;
   window.closeReportModal = function() {
@@ -2337,7 +2416,7 @@ function makeRow(t, num) {
   const repBtn = document.createElement("button");
   repBtn.className = "btn-report"; repBtn.textContent = "📄 Отчёт";
   repBtn.style.display = "inline-block";
-  repBtn.onclick = () => openReportModal(t.id, t.work_name || `Задача #${t.id}`);
+  repBtn.onclick = () => openReportModal(t);
   const delBtn = document.createElement("button");
   delBtn.className = "btn-del"; delBtn.textContent = "✕";
   delBtn.style.display = "inline-block";
@@ -3029,53 +3108,131 @@ async function loadDirs() {
 }
 
 // ── REPORT ────────────────────────────────────────────────────────────────
-async function openReportModal(taskId, taskName) {
-  currentTaskId = taskId;
-  document.getElementById("reportTaskRef").textContent = taskName;
-  const res = await fetch(`/api/reports/${taskId}/`);
+// Поля, используемые в таблице (порядок = порядок колонок)
+const RFIELDS=["doc_name","doc_designation","inventory_num","date_accepted","doc_type","doc_class","sheets_a4","norm","coeff","bvd_hours","norm_control","doc_link"];
+// Обязательные поля (все кроме bvd_hours и coeff)
+const RFIELDS_REQUIRED=["doc_name","doc_designation","inventory_num","date_accepted","doc_type","doc_class","sheets_a4","norm","norm_control","doc_link"];
+// Варианты нормоконтроля
+const NORM_CONTROL_OPTIONS = ["штатный", "029"];
+
+async function openReportModal(taskOrId) {
+  // Принимает объект задачи или ID
+  if (typeof taskOrId === 'object' && taskOrId !== null) {
+    currentTask = taskOrId;
+    currentTaskId = taskOrId.id;
+  } else {
+    currentTaskId = taskOrId;
+    currentTask = tasks.find(x => x.id === taskOrId) || {id: taskOrId};
+  }
+  document.getElementById("reportTaskRef").textContent = currentTask.work_name || `Задача #${currentTaskId}`;
+  const res = await fetch(`/api/reports/${currentTaskId}/`);
   reportRows = await res.json();
+  // Если отчётов нет — добавляем пустую строку сразу
+  if (reportRows.length === 0) {
+    reportRows.push(_makeNewReportRow());
+  }
   renderReportTable();
   document.getElementById("reportModal").classList.add("open");
 }
-function closeReportModal() { document.getElementById("reportModal").classList.remove("open"); currentTaskId=null; }
+
+function _makeNewReportRow() {
+  const row = {task_id: currentTaskId};
+  // Подставляем норматив из задачи
+  if (currentTask && currentTask.norm != null && currentTask.norm !== '') {
+    row.norm = currentTask.norm;
+  }
+  // Для «Выпуск нового документа» подставляем наименование и обозначение
+  if (currentTask && (currentTask.task_type || 'Выпуск нового документа') === 'Выпуск нового документа') {
+    if (currentTask.work_name) row.doc_name = currentTask.work_name;
+    if (currentTask.description) row.doc_designation = currentTask.description;
+  }
+  return row;
+}
+
+function closeReportModal() { document.getElementById("reportModal").classList.remove("open"); currentTaskId=null; currentTask=null; }
+
+// ── Дропдаун карточки пользователя ───────────────────────────────────────────
+function toggleUserMenu() {
+  document.getElementById("userDropdown").classList.toggle("open");
+}
+document.addEventListener("click", e => {
+  const wrap = document.querySelector(".user-menu-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById("userDropdown").classList.remove("open");
+  }
+});
+
 function renderReportTable() {
   const tbody = document.getElementById("reportBody");
   tbody.innerHTML = "";
   reportRows.forEach((r,i) => tbody.appendChild(makeReportRow(r,i)));
   requestAnimationFrame(() => {
-    tbody.querySelectorAll("textarea").forEach(ta => {
+    tbody.querySelectorAll("textarea.r-cell").forEach(ta => {
       ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px";
     });
   });
 }
-const RFIELDS=["doc_name","doc_designation","inventory_num","date_accepted","doc_type","doc_class","sheets_a4","norm","coeff","bvd_hours","norm_control","doc_link"];
+
 function makeReportRow(r, idx) {
   const tr=document.createElement("tr"); tr.dataset.rid=r.id||"";
   RFIELDS.forEach(f=>{
     const td=document.createElement("td");
-    const inp=document.createElement("textarea");
-    inp.className="r-cell"; inp.rows=1; inp.value=r[f]||""; inp.dataset.field=f;
-    inp.addEventListener("input",()=>{inp.style.height="auto";inp.style.height=inp.scrollHeight+"px";});
-    td.appendChild(inp); tr.appendChild(td);
+    if (f === 'date_accepted') {
+      // Поле даты — input[type=date]
+      const inp=document.createElement("input");
+      inp.type="date"; inp.className="r-cell r-cell-date"; inp.dataset.field=f;
+      inp.value=r[f]||"";
+      td.appendChild(inp);
+    } else if (f === 'norm_control') {
+      // Выпадающий список нормоконтроля
+      const sel=document.createElement("select");
+      sel.className="r-cell r-cell-select"; sel.dataset.field=f;
+      const emptyOpt=document.createElement("option"); emptyOpt.value=""; emptyOpt.textContent="—";
+      sel.appendChild(emptyOpt);
+      NORM_CONTROL_OPTIONS.forEach(opt=>{
+        const o=document.createElement("option"); o.value=opt; o.textContent=opt;
+        if(r[f]===opt) o.selected=true;
+        sel.appendChild(o);
+      });
+      td.appendChild(sel);
+    } else {
+      const inp=document.createElement("textarea");
+      inp.className="r-cell"; inp.rows=1; inp.value=r[f]!=null?String(r[f]):""; inp.dataset.field=f;
+      inp.addEventListener("input",()=>{inp.style.height="auto";inp.style.height=inp.scrollHeight+"px";});
+      td.appendChild(inp);
+    }
+    tr.appendChild(td);
   });
   const delTd=document.createElement("td"); delTd.style.padding="4px 6px";
   const delBtn=document.createElement("button"); delBtn.className="r-del"; delBtn.textContent="✕";
   delBtn.onclick=async()=>{
-    if(r.id) await fetch(`/api/reports/${r.id}/detail/`,{method:"DELETE",headers:apiHeaders()});
+    if(r.id) await fetchJson(`/api/reports/${r.id}/detail/`,{method:"DELETE"});
     reportRows.splice(idx,1); renderReportTable();
   };
   delTd.appendChild(delBtn); tr.appendChild(delTd); return tr;
 }
-function addReportRow() { reportRows.push({task_id:currentTaskId}); renderReportTable(); }
+
+function addReportRow() {
+  reportRows.push(_makeNewReportRow());
+  renderReportTable();
+}
+
 async function saveAllReports() {
-  for (const tr of document.querySelectorAll("#reportBody tr")) {
+  const trs = Array.from(document.querySelectorAll("#reportBody tr"));
+  for (const tr of trs) {
     const rid=tr.dataset.rid; const data={task_id:currentTaskId};
-    tr.querySelectorAll(".r-cell").forEach(inp=>{data[inp.dataset.field]=inp.value||null;});
+    tr.querySelectorAll(".r-cell").forEach(el=>{data[el.dataset.field]=el.value||null;});
+    // Валидация обязательных полей
+    const missing = RFIELDS_REQUIRED.filter(f => !data[f] || String(data[f]).trim()==='');
+    if (missing.length > 0) {
+      notify("Заполните все обязательные поля (кроме БВД и коэфф.)", "err");
+      return;
+    }
     if(rid){
-      await fetch(`/api/reports/${rid}/detail/`,{method:"PUT",headers:apiHeaders(),body:JSON.stringify(data)});
+      await fetchJson(`/api/reports/${rid}/detail/`,{method:"PUT",body:JSON.stringify(data)});
     } else {
-      const res=await fetch("/api/reports/",{method:"POST",headers:apiHeaders(),body:JSON.stringify(data)});
-      const {id}=await res.json(); tr.dataset.rid=id;
+      const resp=await fetchJson("/api/reports/",{method:"POST",body:JSON.stringify(data)});
+      if(resp && resp.id) tr.dataset.rid=resp.id;
     }
   }
   notify("✓ Отчёт сохранён","ok");
