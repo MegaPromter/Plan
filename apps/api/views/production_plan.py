@@ -29,7 +29,7 @@ from apps.api.audit import log_action
 
 logger = logging.getLogger(__name__)
 
-TASKS_MAX = 500
+TASKS_MAX = 100000
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +234,12 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                     continue
                 detail_view._update_field(work, field, value)
 
-        return JsonResponse({'id': work.id})
+        work.refresh_from_db()
+        work_data = _serialize_pp(
+            Work.objects.select_related('department', 'ntc_center', 'executor', 'pp_project')
+            .get(pk=work.pk)
+        )
+        return JsonResponse({'id': work.id, 'work': work_data})
 
 
 # ---------------------------------------------------------------------------

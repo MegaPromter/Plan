@@ -1141,6 +1141,7 @@ function renderPPTable() {
   // Строим строки таблицы
   filtered.forEach((row, idx) => {
     const tr = document.createElement('tr');
+    tr.dataset.id = row.id;
     // Первый столбец — порядковый номер (1-based)
     let html = `<td>${idx + 1}</td>`;
 
@@ -1467,7 +1468,7 @@ function openAddRowModal() {
   </td>`;
 
   tr.innerHTML = html;
-  tbody.appendChild(tr);
+  tbody.prepend(tr);
 
   // Автофокус на первое поле (код строки)
   const firstInput = tr.querySelector('input[data-col="row_code"], input');
@@ -1528,13 +1529,28 @@ function openAddRowModal() {
     if (!resp._error) {
       _addingRow = false;
       tr.remove();
-      // Перезагружаем и перерисовываем таблицу
-      await loadPPRows(currentProjectId);
+      // Сбрасываем фильтры, чтобы новая запись была точно видна
+      colFilters = {};
+      mfSelections = {};
+      document.querySelectorAll('.mf-trigger.active').forEach(b => {
+        b.classList.remove('active');
+        b.textContent = '▼';
+      });
+      document.getElementById('filtersActiveBadge').style.display = 'none';
+      if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
+      // Вставляем новую запись в начало rows напрямую (не зависим от лимита пагинации)
+      if (resp.work) {
+        rows = rows.filter(r => r.id !== resp.id);
+        rows.unshift(resp.work);
+      } else {
+        await loadPPRows(currentProjectId);
+      }
       renderPPTable();
       showToast('Строка добавлена', 'success');
-      // Прокрутить к последней добавленной строке
-      const allRows = document.querySelectorAll('#ppTableBody tr');
-      if (allRows.length) allRows[allRows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Прокрутить к новой строке по id
+      const newId = resp.id;
+      const newTr = document.querySelector(`#ppTableBody tr[data-id="${newId}"]`);
+      if (newTr) newTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
     }
