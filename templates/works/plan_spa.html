@@ -779,7 +779,7 @@ tr.pp-locked .pp-lock-badge {
   <!-- Каждый th содержит .col-resize — ручку изменения ширины (drag-resize) -->
   <th id="th-type"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
   <th id="th-dept"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector"><div class="th-inner">Сектор<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-sector"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
   <th id="th-project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
   <th id="th-stage"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
   <th id="th-wnum"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
@@ -2156,7 +2156,7 @@ function makeRow(t, num) {
 
   const cols = [
     {field:"dept",         type:"select", dirKey:"dept"},
-    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept"},
+    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head"},
     {field:"project",      type:"select", dirKey:"project"},
     {field:"stage",        type:"select", dirKey:"stage",    parentField:"project", parentDirKey:"project"},
     {field:"work_number",  type:"text"},
@@ -2243,6 +2243,18 @@ function makeRow(t, num) {
         });
       }
       td.appendChild(sel);
+      // Если у колонки есть extraField — ищем head_name сектора из dirs
+      if (col.extraField) {
+        const sectorCode = t[col.field] || '';
+        const sectorEntry = (dirs['_ids_sector'] || []).find(s => s.value === sectorCode);
+        const headName = sectorEntry ? (sectorEntry.head_name || '') : '';
+        if (headName) {
+          const extra = document.createElement("div");
+          extra.style.cssText = "font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+          extra.textContent = headName;
+          td.appendChild(extra);
+        }
+      }
     } else {
       const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
       inp.className = "cell-edit" + (col.type === "date" ? " date" : "");

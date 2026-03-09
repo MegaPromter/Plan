@@ -74,11 +74,20 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
             for d in Department.objects.order_by('code')
         ]
         # Секторы из модели Sector (с привязкой к отделу через parent_id)
-        # Собираем начальников секторов: role='sector_head' → словарь sector_code → full_name
+        def _short_name(full):
+            """«Иванов Иван Иванович» → «Иванов И.И.»"""
+            parts = (full or '').split()
+            if len(parts) >= 3:
+                return f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
+            if len(parts) == 2:
+                return f'{parts[0]} {parts[1][0]}.'
+            return full or ''
+
+        # Собираем начальников секторов: role='sector_head' → словарь sector_code → сокр. ФИО
         sector_heads = {}
         for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
             if emp.sector:
-                sector_heads[emp.sector.code] = emp.full_name
+                sector_heads[emp.sector.code] = _short_name(emp.full_name)
 
         result['sector'] = [
             {

@@ -57,7 +57,7 @@ def _build_pp_justification(work):
     if work.milestone_num:
         parts.append(f'Веха {work.milestone_num}')
     if work.work_num:
-        parts.append(f'Работа {work.work_num}')
+        parts.append(f'№ работы {work.work_num}')
     return '; '.join(parts)
 
 
@@ -87,7 +87,9 @@ def _serialize_task(work, executors_data=None):
         'task_type': (work.task_type or 'Выпуск нового документа') if is_from_pp
                      else (work.task_type or ''),
         'dept': (work.department.code if work.department else '') or '',
-        'sector': (work.sector.code if work.sector else '') or '',
+        # Для ПП-записей сектор хранится в sector_head_name (код сектора)
+        'sector': work.sector_head_name or (work.sector.code if work.sector else '') or '' if is_from_pp
+                  else (work.sector.code if work.sector else '') or '',
         'project': project_name,
         'work_name': work.work_name or '',
         # Единые поля (и ПП, и СП пишут/читают одни и те же колонки)
@@ -110,6 +112,7 @@ def _serialize_task(work, executors_data=None):
         'justification': _build_pp_justification(work) if is_from_pp
                          else (work.justification or ''),
         'actions': work.actions or {},
+        'sector_head': work.sector_head_name or '',
     }
 
     # Список исполнителей
