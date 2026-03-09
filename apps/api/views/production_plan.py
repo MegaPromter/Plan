@@ -419,6 +419,11 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
             pp_project_id=filter_project_id,
         )
 
+        # Если переданы конкретные ids (отфильтрованные на клиенте) — синхронизируем только их
+        ids = d.get('ids')
+        if ids and isinstance(ids, list):
+            qs = qs.filter(pk__in=ids)
+
         # Включаем show_in_plan одним запросом
         synced = qs.update(show_in_plan=True)
 

@@ -1622,14 +1622,33 @@ async function syncToTasks() {
     return String(v).trim() !== '';
   }
 
+  // Синхронизируем только отфильтрованные строки (видимые в таблице)
+  const filteredRows = rows.filter(row => {
+    for (const [col, val] of Object.entries(colFilters)) {
+      if (col.startsWith('mf_')) {
+        const field = col.slice(3);
+        if (val.size > 0) {
+          const cellVal = (field === 'date_end')
+            ? (row[field] || '').slice(0, 7)
+            : (row[field] || '');
+          if (!val.has(cellVal)) return false;
+        }
+        continue;
+      }
+      const cellVal = (row[col] || '').toString().toLowerCase();
+      if (!cellVal.includes(val)) return false;
+    }
+    return true;
+  });
+
   // Сбрасываем предыдущие ошибки валидации
   document.querySelectorAll('.cell-error').forEach(el => el.classList.remove('cell-error'));
 
   let hasErrors = false;
   let errorCount = 0;
 
-  // Проверяем каждую строку на наличие обязательных полей
-  for (const row of rows) {
+  // Проверяем каждую отфильтрованную строку на наличие обязательных полей
+  for (const row of filteredRows) {
     // Пропускаем полностью пустые строки
     const allEmpty = PP_COLUMNS.every(c => !isFilled(row[c]));
     if (allEmpty) continue;
@@ -1660,10 +1679,13 @@ async function syncToTasks() {
     return;
   }
 
+  // Передаём серверу ids только отфильтрованных строк
+  const filteredIds = filteredRows.map(r => r.id);
+
   // POST /api/production_plan/sync/ — запускаем перенос данных на сервере
   const resp = await fetchJson('/api/production_plan/sync/', {
     method: 'POST',
-    body: JSON.stringify({ project_id: currentProjectId }),
+    body: JSON.stringify({ project_id: currentProjectId, ids: filteredIds }),
   });
   if (!resp._error) {
     // Показываем сколько задач перенесено/обновлено
