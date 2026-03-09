@@ -270,6 +270,14 @@ select option{background:var(--surface);}
       </div>
     </div>
 
+    <!-- Чекбокс «Админские права» (только для тестирования) -->
+    <div class="field" style="margin-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="regAdmin" style="width:18px;height:18px">
+        Получить права администратора (для тестирования)
+      </label>
+    </div>
+
     <!-- Блок ошибок регистрации (скрыт по умолчанию, показывается через JS) -->
     <div class="reg-error" id="regError"></div>
     <!-- Блок успешной регистрации (скрыт по умолчанию) -->
@@ -458,6 +466,7 @@ async function submitReg() {
   const sector     = document.getElementById('regSector').value;
   const username   = document.getElementById('regUsername').value.trim();
   const password   = document.getElementById('regPassword').value;
+  const isAdmin    = document.getElementById('regAdmin').checked;
 
   const errEl = document.getElementById('regError');
   const okEl  = document.getElementById('regSuccess');
@@ -493,7 +502,8 @@ async function submitReg() {
       method: 'POST',
       headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
       body: JSON.stringify({last_name: lastName, first_name: firstName,
-                            patronymic, position, center, dept, sector, username, password})
+                            patronymic, position, center, dept, sector, username, password,
+                            is_admin: isAdmin})
     });
     const data = await res.json();
     if (!res.ok) {
