@@ -11,6 +11,8 @@ import os
 
 # get_user_model — получаем модель пользователя (кастомную или стандартную)
 from django.contrib.auth import get_user_model
+# ValidationError — исключение при нарушении бизнес-правил (model.clean)
+from django.core.exceptions import ValidationError
 # IntegrityError — исключение при нарушении ограничений БД (уникальный login)
 from django.db import IntegrityError, transaction
 # JsonResponse — HTTP-ответ с JSON-телом
@@ -219,7 +221,7 @@ class RegisterPublicView(View):
                     password=password,
                 )
                 # Создаём связанный профиль Employee
-                Employee.objects.create(
+                emp = Employee(
                     user=user,
                     # Публичная регистрация всегда даёт роль 'user'
                     role='user',
@@ -231,6 +233,13 @@ class RegisterPublicView(View):
                     department=dept_obj,      # FK на Department
                     sector=sector_obj,        # FK на Sector
                 )
+                emp.full_clean()
+                emp.save()
+        except ValidationError as e:
+            return JsonResponse(
+                {'error': e.message if hasattr(e, 'message') else str(e)},
+                status=400,
+            )
         except IntegrityError:
             # Нарушение ограничения уникальности: логин уже занят
             return JsonResponse(

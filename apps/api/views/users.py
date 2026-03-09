@@ -11,6 +11,7 @@ PUT     /api/users/<id>/password  -- сброс пароля
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views import View
@@ -121,7 +122,13 @@ class UserListView(AdminRequiredJsonMixin, View):
                     center_obj, _ = NTCCenter.objects.get_or_create(code=center_code, defaults={'name': ''})
                     emp.ntc_center = center_obj
                 if dept_code or sector_code or center_code:
+                    emp.full_clean()
                     emp.save()
+        except ValidationError as e:
+            return JsonResponse(
+                {'error': e.message if hasattr(e, 'message') else str(e)},
+                status=400,
+            )
         except IntegrityError:
             return JsonResponse(
                 {'error': 'Пользователь уже существует'}, status=400
@@ -234,6 +241,14 @@ class UserDetailView(AdminRequiredJsonMixin, View):
                 employee.ntc_center = center_obj
             else:
                 employee.ntc_center = None
+
+        try:
+            employee.full_clean()
+        except ValidationError as e:
+            return JsonResponse(
+                {'error': e.message if hasattr(e, 'message') else str(e)},
+                status=400,
+            )
 
         employee.save()
 

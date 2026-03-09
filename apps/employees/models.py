@@ -13,6 +13,7 @@ from django.db import models
 # Получение модели пользователя, определённой в настройках (AUTH_USER_MODEL)
 from django.contrib.auth import get_user_model
 # Валидаторы для ограничения диапазона числовых значений
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 # Ссылка на активную модель пользователя (по умолчанию auth.User)
@@ -230,6 +231,30 @@ class Employee(models.Model):
         verbose_name_plural = 'Сотрудники'
         # Сортировка по алфавиту: фамилия, затем имя
         ordering = ['last_name', 'first_name']
+
+    def clean(self):
+        """Валидация: один начальник на отдел, один начальник на сектор."""
+        super().clean()
+        # Проверка: в отделе может быть только один начальник
+        if self.role == self.ROLE_DEPT_HEAD and self.department:
+            qs = Employee.objects.filter(
+                role=self.ROLE_DEPT_HEAD, department=self.department,
+            ).exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    f'В отделе «{self.department}» уже есть начальник: '
+                    f'{qs.first().full_name}'
+                )
+        # Проверка: в секторе может быть только один начальник
+        if self.role == self.ROLE_SECTOR_HEAD and self.sector:
+            qs = Employee.objects.filter(
+                role=self.ROLE_SECTOR_HEAD, sector=self.sector,
+            ).exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    f'В секторе «{self.sector}» уже есть начальник: '
+                    f'{qs.first().full_name}'
+                )
 
     def __str__(self):
         # Строковое представление — полное ФИО сотрудника
