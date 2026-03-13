@@ -13,7 +13,7 @@ from datetime import date as dt_date
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views import View
 
@@ -22,10 +22,11 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import PRODUCTION_ALLOWED_FIELDS
+from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, get_visibility_filter
 from apps.works.models import Work, PPProject, AuditLog
-from apps.employees.models import Employee, Department, NTCCenter
+from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
+from apps.api.views.reports import _sync_notices_for_work
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +77,10 @@ def _serialize_pp(work):
         'date_start': work.date_start.isoformat() if work.date_start else '',
         'date_end': work.date_end.isoformat() if work.date_end else '',
         'dept': (work.department.code if work.department else '') or '',
-        'center': (work.ntc_center.code if work.ntc_center else '') or '',
-        'executor': (work.executor.full_name if work.executor else
-                     work.executor_name_raw) or '',
+        'center': (work.ntc_center.code if work.ntc_center
+                   else (work.department.ntc_center.code
+                         if work.department and work.department.ntc_center else '')) or '',
+        'executor': (work.executor.full_name if work.executor else '') or '',
         'created_by': work.created_by_id,
         'created_at': work.created_at.isoformat() if work.created_at else '',
         'updated_at': work.updated_at.isoformat() if work.updated_at else '',
@@ -95,9 +97,10 @@ def _serialize_pp(work):
         'total_2d': _round_labor(work.total_2d) if work.total_2d is not None else '',
         'total_3d': _round_labor(work.total_3d) if work.total_3d is not None else '',
         'labor': _round_labor(work.labor) if work.labor is not None else '',
-        'sector_head': work.sector_head_name or '',
+        'sector_head': (work.sector.name or work.sector.code if work.sector else '') or '',
         'task_type': work.task_type or '',
         'project_id': work.pp_project_id,
+        'predecessors_count': getattr(work, '_pred_count', 0) or 0,
     }
 
 
@@ -139,15 +142,18 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         except (ValueError, TypeError):
             project_id = None
 
-        # Только записи ПП — сервер отдаёт все записи,
-        # фильтрация по отделу реализована на клиенте (по умолчанию — свой отдел)
+        # ПП доступен для просмотра всем авторизованным пользователям;
+        # фильтрация по отделу — на клиенте (дефолт: свой отдел)
         qs = Work.objects.filter(show_in_pp=True)
 
         if project_id:
             qs = qs.filter(pp_project_id=project_id)
 
-        qs = qs.select_related(
-            'department', 'ntc_center', 'executor', 'pp_project',
+        qs = qs.annotate(
+            _pred_count=Count('predecessor_links'),
+        ).select_related(
+            'department', 'department__ntc_center', 'ntc_center',
+            'executor', 'sector', 'pp_project',
         ).order_by('id')
 
         # Общее количество (до пагинации) — для клиента
@@ -224,18 +230,22 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 created_by=employee,
             )
 
-            # Применяем остальные поля внутри той же транзакции
+            # Применяем остальные поля без промежуточных save()
             detail_view = ProductionPlanDetailView()
+            changed = False
             for field in PRODUCTION_ALLOWED_FIELDS:
                 if field in ('work_name', 'task_type'):
                     continue
                 value = d.get(field)
                 if value is None or value == '':
                     continue
-                detail_view._update_field(work, field, value)
+                detail_view._update_field(work, field, value, save=False)
+                changed = True
+            if changed:
+                work.save()
 
         work_data = _serialize_pp(
-            Work.objects.select_related('department', 'ntc_center', 'executor', 'pp_project')
+            Work.objects.select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project')
             .get(pk=work.pk)
         )
         return JsonResponse({'id': work.id, 'work': work_data})
@@ -288,7 +298,12 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             err = _check_dept_access(request.user, work)
             if err:
                 return JsonResponse({'error': err}, status=403)
-            work.delete()
+            if work.show_in_plan:
+                # Запись также видна в СП — не удаляем, а убираем из ПП
+                work.show_in_pp = False
+                work.save(update_fields=['show_in_pp'])
+            else:
+                work.delete()
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error("ProductionPlanDetailView.delete error: %s", e, exc_info=True)
@@ -309,7 +324,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             value = 'Выпуск нового документа'
 
         work = Work.objects.filter(pk=pk, show_in_pp=True).select_related(
-            'department', 'ntc_center', 'executor',
+            'department', 'ntc_center', 'executor', 'sector',
         ).first()
         if not work:
             return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
@@ -319,13 +334,14 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         if err:
             return JsonResponse({'error': err}, status=403)
 
-        # Optimistic locking — сравниваем через isoformat() чтобы избежать
-        # расхождения формата строк (пробел vs 'T' в ISO 8601)
+        # Optimistic locking — нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
+        # (отбрасываем микросекунды и TZ-суффикс для надёжного сравнения)
         client_updated_at = d.get('updated_at')
         if client_updated_at:
-            server_ts = work.updated_at.isoformat() if work.updated_at else ''
-            # Нормализуем клиентскую строку: заменяем пробел на T
-            client_ts = str(client_updated_at).replace(' ', 'T')
+            server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
+                         if work.updated_at else '')
+            raw = str(client_updated_at).replace(' ', 'T')
+            client_ts = raw[:19] if len(raw) >= 19 else raw
             if server_ts != client_ts:
                 return JsonResponse({
                     'error': 'conflict',
@@ -338,7 +354,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
 
         return JsonResponse({'ok': True})
 
-    def _update_field(self, work, field, value):
+    def _update_field(self, work, field, value, save=True):
         """Обновляет одно поле в Work."""
         if field == 'work_name':
             work.work_name = value or ''
@@ -347,16 +363,17 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         elif field == 'date_end':
             work.date_end = _safe_date(value)
         elif field == 'executor':
-            work.executor_name_raw = value or ''
             if value:
                 parts = value.split()
-                emp = Employee.objects.filter(
-                    last_name__icontains=parts[0]
-                ).first() if parts else None
-                if emp and emp.full_name == value:
-                    work.executor = emp
-                else:
-                    work.executor = None
+                qs = Employee.objects.all()
+                if parts:
+                    qs = qs.filter(last_name__iexact=parts[0])
+                if len(parts) >= 2:
+                    qs = qs.filter(first_name__iexact=parts[1])
+                if len(parts) >= 3:
+                    qs = qs.filter(patronymic__iexact=parts[2])
+                emp = qs.first() if parts else None
+                work.executor = emp if (emp and emp.full_name == value) else None
             else:
                 work.executor = None
         elif field == 'dept':
@@ -374,20 +391,34 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         elif field in _PP_DECIMAL_FIELDS:
             setattr(work, field, _safe_decimal(value))
         elif field == 'sector_head':
-            work.sector_head_name = value or ''
+            # sector_head теперь устанавливается через FK sector
+            if value:
+                sec = Sector.objects.filter(
+                    Q(code=value) | Q(name=value),
+                    department=work.department,
+                ).first() if work.department else Sector.objects.filter(
+                    Q(code=value) | Q(name=value),
+                ).first()
+                work.sector = sec
+            else:
+                work.sector = None
         elif field == 'task_type':
             work.task_type = value or ''
         else:
             # row_code, work_order, stage_num, milestone_num, work_num, work_designation
             setattr(work, field, value or '')
-        work.save()
+        if save:
+            work.save()
+            # Синхронизация ЖИ при смене task_type
+            if field == 'task_type':
+                _sync_notices_for_work(work)
 
 
 # ---------------------------------------------------------------------------
 #  POST /api/production_plan/sync
 # ---------------------------------------------------------------------------
 
-class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
+class ProductionPlanSyncView(LoginRequiredJsonMixin, View):
     """POST /api/production_plan/sync — синхронизация ПП → СП.
 
     Никаких копий/дублей: просто включает show_in_plan=True на записях ПП,

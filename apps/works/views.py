@@ -9,19 +9,19 @@ from django.urls import reverse_lazy
 # Получение объекта или автоматический возврат 404 при его отсутствии
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
-# Q-объект для построения сложных запросов с логическими операторами
-from django.db.models import Q
-# Стандартная библиотека для работы с JSON
-import json
 
 # Модель сотрудника — нужна для получения роли и настроек пользователя
 from apps.employees.models import Employee
 # Модель отдела — используется в контексте для фильтрации по отделам
 from apps.employees.models import Department
+# Единый фильтр видимости (с поддержкой RoleDelegation и show_all_depts)
+from apps.api.utils import get_visibility_filter
 # Основные модели данного приложения
 from .models import Work, WorkReport, Notice
 # Формы для создания и редактирования объектов
 from .forms  import WorkForm, WorkReportForm, NoticeForm
+# Общий миксин для SPA-страниц
+from .mixins import SPAContextMixin
 # Стандартная библиотека для работы с датами
 import datetime
 
@@ -37,49 +37,6 @@ class WriterRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         except Employee.DoesNotExist:
             # Если профиля Employee нет — разрешаем суперпользователям
             return self.request.user.is_superuser
-
-
-# ── Вспомогательная функция: фильтр видимости ─────────────────────────────────
-
-def visibility_filter(user) -> Q:
-    """
-    Возвращает Q-объект для фильтрации Work по роли пользователя.
-    admin → без фильтра (Q())
-    ntc_head/ntc_deputy → по ntc_center
-    dept_head/dept_deputy → по department
-    sector_head → по department + sector
-    user → по executor или created_by
-    """
-    try:
-        # Получаем профиль Employee для данного пользователя
-        emp = user.employee
-    except Employee.DoesNotExist:
-        # Если профиля нет — суперпользователь видит всё, остальные — ничего
-        if user.is_superuser:
-            return Q()
-        return Q(pk__in=[])   # ничего не показываем
-
-    # Получаем роль сотрудника для дальнейшей логики
-    role = emp.role
-
-    # Администратор и суперпользователь видят все записи без ограничений
-    if role == Employee.ROLE_ADMIN or user.is_superuser:
-        return Q()
-
-    # Руководители НТЦ видят все работы своего НТЦ-центра
-    if role in (Employee.ROLE_NTC_HEAD, Employee.ROLE_NTC_DEPUTY):
-        return Q(ntc_center=emp.ntc_center)
-
-    # Начальники и замы отдела видят все работы своего отдела
-    if role in (Employee.ROLE_DEPT_HEAD, Employee.ROLE_DEPT_DEPUTY):
-        return Q(department=emp.department)
-
-    # Начальник сектора видит работы своего отдела И своего сектора
-    if role == Employee.ROLE_SECTOR_HEAD:
-        return Q(department=emp.department, sector=emp.sector)
-
-    # ROLE_USER — только свои работы (исполнитель или создатель)
-    return Q(executor=emp) | Q(created_by=emp)
 
 
 # ── Работы ────────────────────────────────────────────────────────────────────
@@ -99,7 +56,7 @@ class WorkListView(LoginRequiredMixin, ListView):
         qs = Work.objects.select_related(
             'department', 'sector',
             'ntc_center', 'executor', 'project',
-        ).filter(visibility_filter(self.request.user))
+        ).filter(get_visibility_filter(self.request.user))
 
         # Фильтры из GET-параметров
         # Фильтр по источнику (план задач или производственный план)
@@ -137,8 +94,6 @@ class WorkListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         # Вызываем родительский метод для стандартных контекстных переменных
         ctx = super().get_context_data(**kwargs)
-        # Передаём в шаблон список вариантов источника (для фильтров)
-        ctx['source_choices'] = Work.SOURCE_CHOICES
         # Список всех отделов (для фильтра по отделу)
         ctx['departments'] = Department.objects.order_by('code')
         # Диапазон годов для фильтра (3 прошлых + текущий + 2 будущих)
@@ -156,7 +111,7 @@ class WorkDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         # Применяем фильтр видимости + загружаем все связанные объекты одним запросом
         return Work.objects.filter(
-            visibility_filter(self.request.user)
+            get_visibility_filter(self.request.user)
         ).select_related(
             'department', 'sector', 'ntc_center',
             'executor', 'project', 'created_by',
@@ -196,7 +151,7 @@ class WorkUpdateView(WriterRequiredMixin, UpdateView):
 
     def get_queryset(self):
         # Пользователь может редактировать только видимые ему записи
-        return Work.objects.filter(visibility_filter(self.request.user))
+        return Work.objects.filter(get_visibility_filter(self.request.user))
 
     def get_success_url(self):
         # После редактирования возвращаем на детальную страницу
@@ -213,7 +168,7 @@ class WorkDeleteView(WriterRequiredMixin, DeleteView):
 
     def get_queryset(self):
         # Пользователь может удалять только видимые ему записи
-        return Work.objects.filter(visibility_filter(self.request.user))
+        return Work.objects.filter(get_visibility_filter(self.request.user))
 
 
 # ── Отчётные документы ────────────────────────────────────────────────────────
@@ -279,7 +234,7 @@ class NoticeListView(LoginRequiredMixin, ListView):
         qs = Notice.objects.select_related('department', 'sector', 'executor')
         # Фильтр по статусу (активные / закрытые)
         status = self.request.GET.get('status')
-        if status in (Notice.STATUS_ACTIVE, Notice.STATUS_CLOSED):
+        if status in {c[0] for c in Notice.STATUS_CHOICES}:
             qs = qs.filter(status=status)
         # Сортировка: самые свежие извещения первыми
         return qs.order_by('-date_issued')
@@ -318,72 +273,20 @@ class NoticeUpdateView(WriterRequiredMixin, UpdateView):
 
 # ── План/Отчёт SPA ──────────────────────────────────────────────────────────
 
-class PlanSPAView(LoginRequiredMixin, TemplateView):
-    """Главная SPA-страница «План/Отчёт» — аналог Flask plan.html."""
-    # Шаблон SPA с подключением JS-логики
+class PlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """Главная SPA-страница «План/Отчёт»."""
     template_name = 'works/plan_spa.html'
-
-    def get_context_data(self, **kwargs):
-        # Получаем базовый контекст
-        ctx = super().get_context_data(**kwargs)
-        # Пытаемся получить профиль Employee для данного пользователя
-        emp = getattr(self.request.user, 'employee', None)
-        # Роль: из профиля Employee или дефолтная ('admin' для суперпользователя)
-        ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
-        # Отображаемое имя: краткое ФИО или username
-        ctx['username'] = emp.short_name if emp else self.request.user.username
-        # Должность и номер отдела для топбара
-        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
-        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
-        # Флаг права записи: для JS-логики отключения/включения кнопок редактирования
-        ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
-        # Настройки ширин колонок
-        col_settings = {}
-        if emp and emp.col_settings:
-            # Убеждаемся, что col_settings — словарь (не строка, не None)
-            col_settings = emp.col_settings if isinstance(emp.col_settings, dict) else {}
-        # Сериализуем в JSON для передачи в JS через data-атрибут или глобальную переменную
-        ctx['col_settings'] = json.dumps(col_settings)
-        return ctx
+    include_col_settings = True
 
 
-class ProjectsSPAView(LoginRequiredMixin, TemplateView):
+class ProjectsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Управление проектами»."""
-    # Шаблон SPA-модуля управления проектами (УП)
     template_name = 'works/projects_spa.html'
 
-    def get_context_data(self, **kwargs):
-        # Получаем базовый контекст
-        ctx = super().get_context_data(**kwargs)
-        # Пытаемся получить профиль Employee
-        emp = getattr(self.request.user, 'employee', None)
-        # Роль и имя аналогично PlanSPAView
-        ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
-        ctx['username'] = emp.short_name if emp else self.request.user.username
-        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
-        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
-        # Флаг права записи для JS
-        ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
-        return ctx
 
-
-class ProductionPlanSPAView(LoginRequiredMixin, TemplateView):
+class ProductionPlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Производственный план»."""
-    # Шаблон SPA-модуля производственного плана (ПП)
     template_name = 'works/production_plan_spa.html'
-
-    def get_context_data(self, **kwargs):
-        # Получаем базовый контекст
-        ctx = super().get_context_data(**kwargs)
-        # Пытаемся получить профиль Employee
-        emp = getattr(self.request.user, 'employee', None)
-        # Роль, имя и права записи — стандартный набор для SPA-страниц
-        ctx['role'] = emp.role if emp else ('admin' if self.request.user.is_superuser else 'user')
-        ctx['username'] = emp.short_name if emp else self.request.user.username
-        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
-        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
-        ctx['is_writer'] = (emp.is_writer if emp else self.request.user.is_superuser)
-        return ctx
 
 
 class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -397,23 +300,13 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             return self.request.user.is_superuser
 
 
-class WorkCalendarSPAView(LoginRequiredMixin, TemplateView):
+class WorkCalendarSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Производственный календарь»."""
-    # Шаблон SPA-модуля управления производственным календарём
     template_name = 'works/work_calendar_spa.html'
 
     def get_context_data(self, **kwargs):
-        # Получаем базовый контекст
         ctx = super().get_context_data(**kwargs)
-        # Пытаемся получить профиль Employee
-        emp = getattr(self.request.user, 'employee', None)
-        # Отображаемое имя пользователя
-        ctx['username'] = emp.short_name if emp else self.request.user.username
-        ctx['user_position'] = emp.get_position_display() if emp and emp.position else ''
-        ctx['user_dept'] = emp.department.code if emp and emp.department else ''
-        # Текущий год — используется для инициализации выбора года в интерфейсе
         current_year = datetime.date.today().year
         ctx['current_year'] = current_year
-        # Диапазон годов для переключателя (3 прошлых + текущий + 3 будущих)
         ctx['years'] = list(range(current_year - 3, current_year + 4))
         return ctx

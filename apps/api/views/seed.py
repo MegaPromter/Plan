@@ -19,7 +19,7 @@ from django.views import View
 
 from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
 from apps.employees.models import Department, Employee, Sector, Vacation
-from apps.works.models import Directory, Work
+from apps.works.models import Directory, PPProject, Work
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +169,8 @@ class SeedDataView(AdminRequiredJsonMixin, View):
         count = min(int(data.get('count', 1000)), 10_000)
 
         employee = getattr(request.user, 'employee', None)
+        # Кэшируем сотрудников для назначения executor FK
+        employees = list(Employee.objects.all()[:200])
 
         created = 0
         with transaction.atomic():
@@ -178,7 +180,6 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                 sector_code = random.choice(sectors)
                 project = random.choice(_SEED_PROJECTS)
                 stage = random.choice(_SEED_STAGES.get(project, ['Этап 1']))
-                executor_name = random.choice(_SEED_EXECUTORS)
                 task_type_name = random.choice(SEED_TASK_TYPES)
                 work_name = random.choice(SEED_WORK_NAMES)
                 work_number = f'{random.randint(1, 99):02d}-{random.randint(100, 999)}'
@@ -199,10 +200,10 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                     task_type=task_type_name,
                     department=dept_obj,
                     sector=sector_obj,
+                    executor=random.choice(employees) if employees else None,
                     work_name=work_name,
                     work_num=work_number,
                     work_designation=description,
-                    executor_name_raw=executor_name,
                     date_start=ds,
                     date_end=de,
                     deadline=deadline,
@@ -213,6 +214,46 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                 )
 
                 created += 1
+
+            # ── ПП-записи (show_in_pp=True) ──────────────────────────────
+            pp_projects = list(PPProject.objects.all())
+            pp_count = min(count // 2, 500)  # половина от SP, макс 500
+            if pp_projects:
+                for idx in range(pp_count):
+                    dept_code = random.choice(SEED_DEPTS)
+                    sectors = _SEED_SECTORS.get(dept_code, [f'{dept_code}-010'])
+                    sector_code = random.choice(sectors)
+                    task_type_name = random.choice(SEED_TASK_TYPES)
+                    work_name = random.choice(SEED_WORK_NAMES)
+                    work_number = f'{random.randint(1, 99):02d}-{random.randint(100, 999)}'
+
+                    dept_obj = _get_or_create_dept(dept_code)
+                    sector_obj = _get_or_create_sector(dept_obj, sector_code)
+
+                    sheets = random.randint(1, 50)
+                    norm_val = round(random.uniform(0.5, 5.0), 2)
+                    coeff_val = round(random.uniform(0.8, 1.5), 3)
+
+                    Work.objects.create(
+                        show_in_pp=True,
+                        pp_project=random.choice(pp_projects),
+                        task_type=task_type_name,
+                        department=dept_obj,
+                        sector=sector_obj,
+                        executor=random.choice(employees) if employees else None,
+                        work_name=work_name,
+                        work_num=work_number,
+                        work_designation=f'АБВГ.{random.randint(100000, 999999)}.{random.randint(1, 99):03d}',
+                        row_code=f'РС-{idx + 1:03d}',
+                        stage_num=f'Этап {random.randint(1, 5)}',
+                        milestone_num=f'Веха {random.randint(1, 10)}',
+                        sheets_a4=sheets,
+                        norm=norm_val,
+                        coeff=coeff_val,
+                        labor=round(sheets * norm_val * coeff_val, 2),
+                        created_by=employee,
+                    )
+                    created += 1
 
         return JsonResponse({'inserted': created})
 
@@ -253,18 +294,21 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
                     'tasks_updated': 0,
                 })
 
+            # Назначаем случайных сотрудников (Employee FK) существующим задачам
+            employees = list(Employee.objects.all()[:200])
             task_works = list(
                 Work.objects.filter(show_in_plan=True)[:10_000]
             )
 
             updated = 0
-            for work in task_works:
-                work.executor_name_raw = random.choice(all_exec)
-                updated += 1
+            if employees:
+                for work in task_works:
+                    work.executor = random.choice(employees)
+                    updated += 1
 
-            Work.objects.bulk_update(
-                task_works, ['executor_name_raw'], batch_size=1000,
-            )
+                Work.objects.bulk_update(
+                    task_works, ['executor'], batch_size=1000,
+                )
 
         return JsonResponse({
             'added_executors': len(new_names),
@@ -283,13 +327,17 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         with transaction.atomic():
-            executor_names = list(
+            # Берём сотрудников, назначенных исполнителями задач
+            executor_ids = list(
                 Work.objects
-                .filter(show_in_plan=True)
-                .exclude(executor_name_raw='')
-                .values_list('executor_name_raw', flat=True)
+                .filter(show_in_plan=True, executor__isnull=False)
+                .values_list('executor_id', flat=True)
                 .distinct()[:200]
             )
+            executor_names = list(
+                Employee.objects.filter(pk__in=executor_ids)
+                .values_list('last_name', flat=True)
+            ) if executor_ids else []
 
             if not executor_names:
                 executor_names = list(
@@ -407,6 +455,8 @@ class FillAllView(AdminRequiredJsonMixin, View):
             executors = list(
                 Directory.objects.filter(dir_type='executor').values_list('value', flat=True)
             )
+            # Кэшируем сотрудников для назначения executor FK
+            employees = list(Employee.objects.all()[:200])
 
             works = list(Work.objects.filter(show_in_plan=True)[:10_000])
 
@@ -415,7 +465,6 @@ class FillAllView(AdminRequiredJsonMixin, View):
                 dept_dir_id = dept_id_map.get(dept_val)
                 secs = sectors_by_parent.get(dept_dir_id, [])
                 sector_val = random.choice(secs) if secs else None
-                executor_val = random.choice(executors) if executors else None
                 task_type_val = random.choice(SEED_TASK_TYPES)
                 work_name_val = random.choice(SEED_WORK_NAMES)
                 work_num_val = f'{random.randint(1, 99):02d}-{random.randint(100, 999)}'
@@ -438,10 +487,10 @@ class FillAllView(AdminRequiredJsonMixin, View):
                         sector_obj = _get_or_create_sector(dept_obj, sector_val)
                         work.sector = sector_obj
 
+                work.executor = random.choice(employees) if employees else None
                 work.work_name = work_name_val
                 work.work_num = work_num_val
                 work.work_designation = desc_val
-                work.executor_name_raw = executor_val or ''
                 work.date_start = ds
                 work.date_end = de
                 work.deadline = deadline
@@ -453,8 +502,8 @@ class FillAllView(AdminRequiredJsonMixin, View):
                 Work.objects.bulk_update(
                     works,
                     [
-                        'department', 'sector', 'work_name', 'work_num',
-                        'work_designation', 'executor_name_raw', 'date_start',
+                        'department', 'sector', 'executor', 'work_name',
+                        'work_num', 'work_designation', 'date_start',
                         'date_end', 'deadline', 'plan_hours',
                         'justification', 'stage_num',
                     ],

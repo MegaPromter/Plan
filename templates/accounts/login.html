@@ -338,9 +338,15 @@ function _fillDepts(center) {
   document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
   document.getElementById('regDept').value = '';
   document.getElementById('regSector').value = '';
-  if (!center) return;
-  // Берём отделы из кэша справочника по коду НТЦ
-  const list = (_regDirs.depts_by_center || {})[center] || [];
+
+  let list;
+  if (center) {
+    // Отделы конкретного НТЦ
+    list = (_regDirs.depts_by_center || {})[center] || [];
+  } else {
+    // НТЦ не выбран — показываем ВСЕ отделы (плоский список)
+    list = _regDirs.dept || [];
+  }
   list.forEach(v => {
     const o = document.createElement('option');
     o.value = o.textContent = v;
@@ -363,8 +369,14 @@ function _applyPositionFields(position) {
 
   // Сбрасываем значения при смене должности
   document.getElementById('regCenter').value = '';
-  document.getElementById('regDept').innerHTML = '<option value="">— выберите —</option>';
   document.getElementById('regSector').innerHTML = '<option value="">— выберите —</option>';
+
+  // Для должностей, где нужен отдел — заполняем список сразу (все отделы)
+  if (showDept) {
+    _fillDepts('');  // НТЦ не выбран → показать все отделы
+  } else {
+    document.getElementById('regDept').innerHTML = '<option value="">— выберите —</option>';
+  }
 }
 
 // Открыть модальное окно регистрации

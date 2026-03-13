@@ -46,7 +46,7 @@ class WorkAdmin(admin.ModelAdmin):
             'fields': ('ntc_center', 'department', 'sector', 'project'),
         }),
         ('Исполнитель', {
-            'fields': ('executor', 'executor_name_raw'),
+            'fields': ('executor',),
         }),
         ('Сроки', {
             'fields': ('date_start', 'date_end', 'deadline'),
@@ -62,7 +62,7 @@ class WorkAdmin(admin.ModelAdmin):
             'fields': (
                 'pp_project', 'row_code', 'work_order', 'stage_num',
                 'milestone_num', 'sheets_a4', 'norm', 'coeff',
-                'total_2d', 'total_3d', 'labor', 'sector_head_name',
+                'total_2d', 'total_3d', 'labor',
             ),
             'classes': ('collapse',),
         }),

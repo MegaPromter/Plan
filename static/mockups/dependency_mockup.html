@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мокап — Связи задач (Dependencies) — План/отчёт</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f0f2f5; --surface: #ffffff; --surface2: #f8f9fb;
+  --border: #e2e6ed; --border2: #c8d0dc;
+  --nav-bg: #1a2744; --nav-border: #243358;
+  --nav-text: #a8bbd4; --nav-text2: #cddaeb;
+  --nav-active-bg: rgba(255,255,255,0.10); --nav-hover-bg: rgba(255,255,255,0.06);
+  --topbar-bg: #1e2e50;
+  --accent: #2563eb; --accent2: #1d4ed8; --accent-glow: rgba(37,99,235,0.10); --accent-light: #eff6ff;
+  --text: #1e293b; --text2: #475569; --muted: #94a3b8; --muted2: #64748b;
+  --danger: #dc2626; --success: #16a34a; --warning: #d97706;
+  --font: 'IBM Plex Sans', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --header-h: 56px; --toolbar-h: 52px;
+  --sidebar-width: 260px;
+}
+
+body { background: var(--bg); font-family: var(--font); color: var(--text); font-size: 15px; overflow-x: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh;
+  background: var(--nav-bg); border-right: 1px solid var(--nav-border);
+  display: flex; flex-direction: column; z-index: 200;
+}
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--nav-border); }
+.sidebar-logo {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 22px; font-weight: 700; color: #fff; text-decoration: none;
+}
+.sidebar-logo-icon {
+  width: 36px; height: 36px; background: var(--accent); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-section { margin-bottom: 24px; }
+.nav-section-title {
+  font-size: 11px; font-weight: 600; color: var(--nav-text); opacity: 0.7;
+  text-transform: uppercase; letter-spacing: 0.08em; padding: 0 12px; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px;
+  color: var(--nav-text); text-decoration: none; font-size: 14px; font-weight: 500;
+  transition: all 0.15s ease; margin-bottom: 2px; border-left: 3px solid transparent;
+}
+.nav-item:hover { background: var(--nav-hover-bg); color: var(--nav-text2); }
+.nav-item.active { background: var(--nav-active-bg); color: #fff; border-left: 3px solid #fff; }
+.nav-item i { width: 20px; text-align: center; font-size: 15px; opacity: 0.8; }
+.nav-item.active i { opacity: 1; }
+
+.sidebar-footer { padding: 16px; border-top: 1px solid var(--nav-border); }
+.user-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  background: rgba(255,255,255,0.06); border-radius: 10px;
+}
+.user-avatar {
+  width: 40px; height: 40px; background: var(--accent); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 16px; color: #fff;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-weight: 600; font-size: 14px; color: #fff; }
+.user-role { font-size: 12px; color: var(--nav-text); }
+
+/* ── Topbar ── */
+.topbar {
+  position: fixed; top: 0; left: var(--sidebar-width); right: 0; z-index: 100;
+  height: var(--header-h); background: var(--topbar-bg);
+  border-bottom: 1px solid var(--nav-border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px;
+}
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.breadcrumb a { color: var(--nav-text); text-decoration: none; }
+.breadcrumb span { color: var(--nav-text); opacity: 0.6; }
+.breadcrumb-current { color: #fff; font-weight: 500; }
+.topbar-sep { flex: 1; }
+.topbar-user {
+  font-size: 14px; color: var(--nav-text2); background: rgba(255,255,255,0.08);
+  border: 1px solid var(--nav-border); padding: 5px 12px; border-radius: 6px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px; cursor: pointer;
+}
+.topbar-user-name { font-weight: 600; }
+.topbar-user-sub { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+/* ── Toolbar ── */
+.toolbar {
+  position: fixed; top: var(--header-h); left: var(--sidebar-width); right: 0; z-index: 90;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 10px 20px; display: flex; align-items: center; gap: 16px;
+  height: var(--toolbar-h);
+}
+.toolbar-label { font-size: 13px; color: var(--text2); font-weight: 500; }
+.toolbar select {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-family: var(--font); font-size: 13px; background: #fff;
+}
+.toolbar-badge {
+  background: var(--accent-light); color: var(--accent); font-size: 13px;
+  font-weight: 600; padding: 4px 12px; border-radius: 6px;
+}
+
+/* ── Main content ── */
+.main {
+  margin-left: var(--sidebar-width);
+  padding-top: calc(var(--header-h) + var(--toolbar-h));
+}
+.table-wrap {
+  overflow-x: auto; padding: 0 12px 80px 12px;
+}
+table { width: 100%; border-collapse: collapse; min-width: 2200px; }
+thead th {
+  position: sticky; top: 0; z-index: 10; background: #eef1f7;
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  padding: 10px 8px; border-bottom: 2px solid var(--border2);
+  white-space: nowrap; text-align: left;
+}
+tbody td {
+  padding: 7px 8px; border-bottom: 1px solid var(--border);
+  font-size: 14px; vertical-align: middle;
+}
+tbody tr:nth-child(even) { background: var(--surface2); }
+tbody tr:hover { background: var(--accent-light); }
+
+/* Number cell */
+.num-cell {
+  text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted2);
+  width: 42px; min-width: 42px;
+}
+
+/* Type badges */
+.type-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 5px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.type-badge.razrab { background: rgba(37,99,235,0.12); color: #2563eb; }
+.type-badge.vypusk { background: rgba(22,163,74,0.12); color: #16a34a; }
+.type-badge.korr { background: rgba(217,119,6,0.12); color: #d97706; }
+.type-badge.proverka { background: rgba(168,85,247,0.12); color: #a855f7; }
+
+/* Cell inputs */
+.cell-edit {
+  width: 100%; border: 1px solid transparent; background: transparent;
+  padding: 4px 6px; font-family: var(--font); font-size: 14px;
+  border-radius: 4px; resize: none; color: var(--text);
+}
+.cell-edit:focus { border-color: var(--accent); background: #fff; outline: none; }
+.cell-select {
+  width: 100%; border: 1px solid transparent; background: transparent;
+  padding: 4px 4px; font-family: var(--font); font-size: 13px;
+  border-radius: 4px; color: var(--text); cursor: pointer;
+}
+.cell-select:focus { border-color: var(--accent); background: #fff; }
+
+.date-display {
+  font-family: var(--mono); font-size: 13px; color: var(--text);
+  cursor: pointer; padding: 2px 4px;
+}
+
+/* ── DEPENDENCIES COLUMN (NEW!) ── */
+.dep-cell {
+  min-width: 130px; max-width: 180px; padding: 4px 6px !important;
+}
+.dep-tags {
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+}
+.dep-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px; font-size: 12px;
+  font-weight: 500; cursor: pointer; transition: all 0.15s;
+  border: 1px solid;
+}
+.dep-tag.fs { background: rgba(37,99,235,0.08); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+.dep-tag.ss { background: rgba(22,163,74,0.08); color: #16a34a; border-color: rgba(22,163,74,0.25); }
+.dep-tag.ff { background: rgba(168,85,247,0.08); color: #a855f7; border-color: rgba(168,85,247,0.25); }
+.dep-tag.sf { background: rgba(217,119,6,0.08); color: #d97706; border-color: rgba(217,119,6,0.25); }
+.dep-tag:hover { filter: brightness(0.95); transform: scale(1.03); }
+.dep-tag .dep-id { font-family: var(--mono); font-weight: 700; }
+.dep-tag .dep-type { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.dep-tag .dep-lag { font-family: var(--mono); font-size: 10px; opacity: 0.7; }
+
+.dep-add-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%; border: 1px dashed var(--border2);
+  background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 14px; transition: all 0.15s;
+}
+.dep-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Warning icon */
+.dep-warn {
+  color: var(--warning); font-size: 14px; cursor: help;
+}
+
+/* ── Actions column ── */
+.actions-cell { white-space: nowrap; }
+.btn-icon {
+  width: 32px; height: 32px; border: 1px solid var(--border); background: var(--surface);
+  border-radius: 6px; cursor: pointer; color: var(--text2); font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn-icon.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(220,38,38,0.06); }
+.btn-icon.dep-btn { border-color: rgba(37,99,235,0.3); color: var(--accent); }
+.btn-icon.dep-btn:hover { background: var(--accent); color: #fff; }
+
+/* PP locked row */
+tr.pp-locked { background: rgba(254,243,199,0.3); }
+tr.pp-locked:hover { background: rgba(254,243,199,0.5); }
+.pp-lock-badge {
+  display: block; font-size: 10px; color: var(--warning);
+  white-space: nowrap; margin-top: 2px;
+}
+
+/* ── Executor display ── */
+.exec-item {
+  font-size: 13px; color: var(--text); background: rgba(168,85,247,0.1);
+  padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(168,85,247,0.2);
+  margin-bottom: 3px;
+}
+.exec-hours { color: var(--muted); font-family: var(--mono); }
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/* ── MODAL: Dependency Editor ───────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 500; align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--surface); border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25); width: 680px; max-width: 95vw;
+  max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+  animation: modalIn 0.2s ease;
+}
+@keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+.modal-header {
+  display: flex; align-items: center; gap: 12px; padding: 20px 24px;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.modal-header-icon {
+  width: 40px; height: 40px; background: var(--accent-light); color: var(--accent);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.modal-header-text { flex: 1; }
+.modal-title { font-size: 17px; font-weight: 600; color: var(--text); }
+.modal-subtitle { font-size: 13px; color: var(--muted2); margin-top: 2px; }
+.modal-close {
+  width: 36px; height: 36px; border: none; background: transparent;
+  color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.modal-close:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+.dep-section { margin-bottom: 24px; }
+.dep-section-title {
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.dep-section-title i { font-size: 12px; opacity: 0.6; }
+
+.dep-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 8px; transition: all 0.12s;
+}
+.dep-row:hover { border-color: var(--accent); background: var(--accent-light); }
+.dep-row-num {
+  font-family: var(--mono); font-weight: 700; font-size: 14px;
+  color: var(--accent); min-width: 32px; text-align: center;
+}
+.dep-row-name {
+  flex: 1; font-size: 14px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dep-row-type {
+  padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  border: 1px solid; cursor: pointer; min-width: 50px; text-align: center;
+}
+.dep-row-type.fs { background: rgba(37,99,235,0.08); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+.dep-row-type.ss { background: rgba(22,163,74,0.08); color: #16a34a; border-color: rgba(22,163,74,0.25); }
+.dep-row-type.ff { background: rgba(168,85,247,0.08); color: #a855f7; border-color: rgba(168,85,247,0.25); }
+
+.dep-row-lag {
+  display: flex; align-items: center; gap: 4px;
+}
+.dep-row-lag input {
+  width: 52px; text-align: center; font-family: var(--mono); font-size: 13px;
+  padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px;
+  background: #fff;
+}
+.dep-row-lag input:focus { border-color: var(--accent); outline: none; }
+.dep-row-lag span { font-size: 12px; color: var(--muted); }
+
+.dep-row-remove {
+  width: 28px; height: 28px; border: none; background: transparent;
+  color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.dep-row-remove:hover { background: rgba(220,38,38,0.08); color: var(--danger); }
+
+/* Warning banner */
+.dep-warning {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px;
+  background: rgba(217,119,6,0.08); border: 1px solid rgba(217,119,6,0.25);
+  border-radius: 10px; margin-bottom: 16px; font-size: 13px; color: #92400e;
+}
+.dep-warning i { color: var(--warning); font-size: 16px; margin-top: 1px; }
+.dep-warning-text { flex: 1; line-height: 1.5; }
+.dep-warning strong { color: var(--warning); }
+
+/* Add dropdown */
+.dep-add-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  border: 2px dashed var(--border); border-radius: 10px; cursor: pointer;
+  transition: all 0.15s; color: var(--muted);
+}
+.dep-add-row:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.dep-add-row i { font-size: 14px; }
+.dep-add-row span { font-size: 13px; font-weight: 500; }
+
+/* Followers (read only) */
+.dep-follower-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: rgba(0,0,0,0.02); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 8px; opacity: 0.75;
+}
+
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface2);
+}
+.btn {
+  padding: 8px 20px; border-radius: 8px; font-family: var(--font);
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.12s;
+  border: 1px solid var(--border);
+}
+.btn-secondary { background: #fff; color: var(--text); }
+.btn-secondary:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent2); }
+
+/* ── MOCKUP LABEL ── */
+.mockup-banner {
+  position: fixed; top: 8px; right: 8px; z-index: 9999;
+  background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff;
+  padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+
+/* Highlighted row when hovered from dependency */
+tr.dep-highlight {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+  background: var(--accent-light) !important;
+}
+
+/* Search autocomplete dropdown for adding deps */
+.dep-search-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 600;
+  max-height: 200px; overflow-y: auto; margin-top: 4px;
+}
+.dep-search-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  cursor: pointer; font-size: 14px; transition: background 0.1s;
+}
+.dep-search-item:hover { background: var(--accent-light); }
+.dep-search-item .si-num { font-family: var(--mono); font-weight: 700; color: var(--accent); min-width: 28px; }
+.dep-search-item .si-name { flex: 1; color: var(--text); }
+.dep-search-item .si-type { font-size: 11px; color: var(--muted); }
+
+/* Tooltip for dep-warn */
+.dep-warn[data-tooltip] { position: relative; }
+.dep-warn[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #fff; padding: 6px 12px; border-radius: 6px;
+  font-size: 12px; white-space: nowrap; z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Connection line indicators between rows */
+.dep-connector {
+  position: absolute; left: 18px; width: 2px; background: var(--accent);
+  opacity: 0.3; pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-banner">
+  <i class="fas fa-palette"></i> МОКАП — Связи задач (Dependencies)
+</div>
+
+<!-- ══ Sidebar ══ -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <a class="sidebar-logo" href="#">
+      <span class="sidebar-logo-icon"><i class="fas fa-cube"></i></span>
+      <span>Планирование</span>
+    </a>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Планирование</div>
+      <a href="#" class="nav-item active"><i class="fas fa-clipboard-list"></i> План / отчёт</a>
+      <a href="#" class="nav-item"><i class="fas fa-industry"></i> Производств. план</a>
+      <a href="#" class="nav-item"><i class="fas fa-folder-tree"></i> Проекты (УП)</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Журналы</div>
+      <a href="#" class="nav-item"><i class="fas fa-book"></i> Журнал извещений</a>
+      <a href="#" class="nav-item"><i class="fas fa-calendar-alt"></i> Производств. календарь</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Справочники</div>
+      <a href="#" class="nav-item"><i class="fas fa-users"></i> Сотрудники</a>
+      <a href="#" class="nav-item"><i class="fas fa-building"></i> Структура</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">И</div>
+      <div class="user-info">
+        <div class="user-name">Иванов А.П.</div>
+        <div class="user-role">Начальник отдела</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Topbar ══ -->
+<div class="topbar">
+  <div class="breadcrumb">
+    <a href="#">Главная</a><span>/</span>
+    <span class="breadcrumb-current">План / отчёт</span>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-user">
+    <span class="topbar-user-name">Иванов А.П.</span>
+    <span class="topbar-user-sub">Начальник отдела</span>
+  </div>
+</div>
+
+<!-- ══ Toolbar ══ -->
+<div class="toolbar">
+  <span class="toolbar-label">Год:</span>
+  <select><option>2026</option></select>
+  <span class="toolbar-label" style="margin-left:12px;">Месяц:</span>
+  <select><option>Март</option><option>Весь год</option></select>
+  <div style="flex:1;"></div>
+  <span class="toolbar-badge"><i class="fas fa-tasks"></i> Задач: 7</span>
+  <span class="toolbar-badge" style="background:rgba(22,163,74,0.1);color:var(--success);"><i class="fas fa-link"></i> Связей: 6</span>
+</div>
+
+<!-- ══ Main Table ══ -->
+<div class="main">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th style="width:42px;text-align:center;">№</th>
+  <th style="width:120px;">Тип задачи</th>
+  <th style="width:80px;">Отдел</th>
+  <th style="width:100px;">Проект</th>
+  <th style="width:60px;">№ Этапа</th>
+  <th style="width:250px;">Наименование</th>
+  <th style="width:150px;">Разработчик</th>
+  <th style="width:100px;">Дата начала</th>
+  <th style="width:100px;">Дата оконч.</th>
+  <th style="width:160px;"><i class="fas fa-link" style="color:var(--accent);margin-right:4px;"></i> Предш.</th>
+  <th style="width:30px;"></th>
+  <th style="width:170px;">Действия</th>
+</tr>
+</thead>
+<tbody id="taskBody">
+<!-- Row 1 -->
+<tr id="row-1">
+  <td class="num-cell">1</td>
+  <td><span class="type-badge razrab">Разработка</span></td>
+  <td><select class="cell-select"><option>О-120</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">1</td>
+  <td><textarea class="cell-edit" rows="1">Разработка чертежа корпуса КД-450</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Петров С.И.</strong> <span class="exec-hours">(120ч)</span></div>
+  </td>
+  <td><span class="date-display">01.03.2026</span></td>
+  <td><span class="date-display">20.03.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span style="color:var(--muted);font-size:13px;">—</span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(1)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(1)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 2 -->
+<tr id="row-2">
+  <td class="num-cell">2</td>
+  <td><span class="type-badge razrab">Разработка</span></td>
+  <td><select class="cell-select"><option>О-120</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">1</td>
+  <td><textarea class="cell-edit" rows="1">Разработка электрической схемы</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Сидоров М.К.</strong> <span class="exec-hours">(80ч)</span></div>
+  </td>
+  <td><span class="date-display">10.03.2026</span></td>
+  <td><span class="date-display">28.03.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span class="dep-tag fs" onclick="openDepModal(2)" onmouseenter="highlightRow(1)" onmouseleave="unhighlightRow(1)">
+        <span class="dep-id">#1</span>
+        <span class="dep-type">FS</span>
+      </span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(2)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(2)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 3 — PP locked -->
+<tr id="row-3" class="pp-locked">
+  <td class="num-cell">3<span class="pp-lock-badge">&#x1F512; ПП</span></td>
+  <td><span class="type-badge razrab">Разработка</span></td>
+  <td><select class="cell-select" disabled><option>О-120</option></select></td>
+  <td><select class="cell-select" disabled><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">2</td>
+  <td><textarea class="cell-edit" rows="1" readonly>Расчёт прочности элементов</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Козлов Д.А.</strong> <span class="exec-hours">(160ч)</span></div>
+  </td>
+  <td><span class="date-display">15.03.2026</span></td>
+  <td><span class="date-display">15.04.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span class="dep-tag fs" onclick="openDepModal(3)" onmouseenter="highlightRow(1)" onmouseleave="unhighlightRow(1)">
+        <span class="dep-id">#1</span>
+        <span class="dep-type">FS</span>
+      </span>
+      <span class="dep-tag ss" onclick="openDepModal(3)" onmouseenter="highlightRow(2)" onmouseleave="unhighlightRow(2)">
+        <span class="dep-id">#2</span>
+        <span class="dep-type">SS</span>
+      </span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(3)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(3)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 4 -->
+<tr id="row-4">
+  <td class="num-cell">4</td>
+  <td><span class="type-badge proverka">Проверка</span></td>
+  <td><select class="cell-select"><option>О-120</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">2</td>
+  <td><textarea class="cell-edit" rows="1">Нормоконтроль комплекта КД</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Волкова Е.Н.</strong> <span class="exec-hours">(40ч)</span></div>
+  </td>
+  <td><span class="date-display">25.03.2026</span></td>
+  <td><span class="date-display">05.04.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span class="dep-tag fs" onclick="openDepModal(4)" onmouseenter="highlightRow(1)" onmouseleave="unhighlightRow(1)">
+        <span class="dep-id">#1</span>
+        <span class="dep-type">FS</span>
+        <span class="dep-lag">+5д</span>
+      </span>
+      <span class="dep-tag ff" onclick="openDepModal(4)" onmouseenter="highlightRow(3)" onmouseleave="unhighlightRow(3)">
+        <span class="dep-id">#3</span>
+        <span class="dep-type">FF</span>
+      </span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(4)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(4)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 5 -->
+<tr id="row-5">
+  <td class="num-cell">5</td>
+  <td><span class="type-badge korr">Корректировка</span></td>
+  <td><select class="cell-select"><option>О-120</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">2</td>
+  <td><textarea class="cell-edit" rows="1">Корректировка по замечаниям НК</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Петров С.И.</strong> <span class="exec-hours">(32ч)</span></div>
+  </td>
+  <td><span class="date-display">06.04.2026</span></td>
+  <td><span class="date-display">15.04.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span class="dep-tag fs" onclick="openDepModal(5)" onmouseenter="highlightRow(4)" onmouseleave="unhighlightRow(4)">
+        <span class="dep-id">#4</span>
+        <span class="dep-type">FS</span>
+      </span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(5)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(5)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 6 — with date conflict warning -->
+<tr id="row-6">
+  <td class="num-cell">6</td>
+  <td><span class="type-badge vypusk">Выпуск</span></td>
+  <td><select class="cell-select"><option>О-120</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-А</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">3</td>
+  <td><textarea class="cell-edit" rows="1">Финальный выпуск документации</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Петров С.И.</strong> <span class="exec-hours">(16ч)</span></div>
+    <div class="exec-item"><strong>Волкова Е.Н.</strong> <span class="exec-hours">(8ч)</span></div>
+  </td>
+  <td><span class="date-display" style="color:var(--danger);font-weight:600;">10.04.2026</span></td>
+  <td><span class="date-display">20.04.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span class="dep-tag fs" onclick="openDepModal(6)" onmouseenter="highlightRow(5)" onmouseleave="unhighlightRow(5)">
+        <span class="dep-id">#5</span>
+        <span class="dep-type">FS</span>
+      </span>
+      <span class="dep-tag ff" onclick="openDepModal(6)" onmouseenter="highlightRow(3)" onmouseleave="unhighlightRow(3)">
+        <span class="dep-id">#3</span>
+        <span class="dep-type">FF</span>
+      </span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(6)">+</button>
+    </div>
+  </td>
+  <td>
+    <i class="fas fa-exclamation-triangle dep-warn" data-tooltip="Конфликт: #5 завершается 15.04, но эта задача начинается 10.04 (FS нарушен)"></i>
+  </td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(6)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+
+<!-- Row 7 -->
+<tr id="row-7">
+  <td class="num-cell">7</td>
+  <td><span class="type-badge razrab">Разработка</span></td>
+  <td><select class="cell-select"><option>О-130</option></select></td>
+  <td><select class="cell-select"><option>ПР-2026-Б</option></select></td>
+  <td style="font-family:var(--mono);text-align:center;">1</td>
+  <td><textarea class="cell-edit" rows="1">Разработка технологической оснастки</textarea></td>
+  <td>
+    <div class="exec-item"><strong>Громов В.А.</strong> <span class="exec-hours">(200ч)</span></div>
+  </td>
+  <td><span class="date-display">01.03.2026</span></td>
+  <td><span class="date-display">30.04.2026</span></td>
+  <td class="dep-cell">
+    <div class="dep-tags">
+      <span style="color:var(--muted);font-size:13px;">—</span>
+      <button class="dep-add-btn" title="Добавить связь" onclick="openDepModal(7)">+</button>
+    </div>
+  </td>
+  <td></td>
+  <td class="actions-cell">
+    <button class="btn-icon" title="Редактировать"><i class="fas fa-pen"></i></button>
+    <button class="btn-icon dep-btn" title="Связи" onclick="openDepModal(7)"><i class="fas fa-link"></i></button>
+    <button class="btn-icon" title="Отчёт"><i class="fas fa-file-alt"></i></button>
+    <button class="btn-icon danger" title="Удалить"><i class="fas fa-trash"></i></button>
+  </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- ══ MODAL: Dependency Editor for Task #4 ═══════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="depModal">
+<div class="modal-box">
+  <div class="modal-header">
+    <div class="modal-header-icon"><i class="fas fa-link"></i></div>
+    <div class="modal-header-text">
+      <div class="modal-title">Связи задачи #4</div>
+      <div class="modal-subtitle">Нормоконтроль комплекта КД</div>
+    </div>
+    <button class="modal-close" onclick="closeDepModal()"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Warning -->
+    <div class="dep-warning">
+      <i class="fas fa-exclamation-triangle"></i>
+      <div class="dep-warning-text">
+        <strong>Конфликт дат:</strong> Задача #1 завершается <strong>20.03</strong>, lag +5д = <strong>25.03</strong> — совпадает с датой начала.
+        Рассогласование дат отмечено в таблице значком <i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i>
+      </div>
+    </div>
+
+    <!-- Predecessors -->
+    <div class="dep-section">
+      <div class="dep-section-title">
+        <i class="fas fa-arrow-left"></i> Предшественники (2)
+      </div>
+
+      <div class="dep-row">
+        <div class="dep-row-num">#1</div>
+        <div class="dep-row-name">Разработка чертежа корпуса КД-450</div>
+        <select class="dep-row-type fs" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(37,99,235,0.25);background:rgba(37,99,235,0.08);color:#2563eb;cursor:pointer;font-family:var(--font);">
+          <option selected>FS</option>
+          <option>SS</option>
+          <option>FF</option>
+          <option>SF</option>
+        </select>
+        <div class="dep-row-lag">
+          <input type="number" value="5">
+          <span>дн.</span>
+        </div>
+        <button class="dep-row-remove" title="Удалить связь"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="dep-row">
+        <div class="dep-row-num">#3</div>
+        <div class="dep-row-name">Расчёт прочности элементов <span style="font-size:11px;color:var(--warning);">🔒 ПП</span></div>
+        <select class="dep-row-type ff" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(168,85,247,0.25);background:rgba(168,85,247,0.08);color:#a855f7;cursor:pointer;font-family:var(--font);">
+          <option>FS</option>
+          <option>SS</option>
+          <option selected>FF</option>
+          <option>SF</option>
+        </select>
+        <div class="dep-row-lag">
+          <input type="number" value="0">
+          <span>дн.</span>
+        </div>
+        <button class="dep-row-remove" title="Удалить связь"><i class="fas fa-times"></i></button>
+      </div>
+
+      <!-- Add predecessor -->
+      <div class="dep-add-row" onclick="this.style.display='none';document.getElementById('addPredSearch').style.display='block';">
+        <i class="fas fa-plus"></i>
+        <span>Добавить предшественника</span>
+      </div>
+      <div id="addPredSearch" style="display:none;position:relative;">
+        <input type="text" placeholder="Поиск задачи по номеру или названию..." style="width:100%;padding:10px 14px;border:2px solid var(--accent);border-radius:10px;font-family:var(--font);font-size:14px;outline:none;" value="Разработка">
+        <div class="dep-search-dropdown">
+          <div class="dep-search-item">
+            <span class="si-num">#2</span>
+            <span class="si-name">Разработка электрической схемы</span>
+            <span class="si-type">Разработка</span>
+          </div>
+          <div class="dep-search-item">
+            <span class="si-num">#7</span>
+            <span class="si-name">Разработка технологической оснастки</span>
+            <span class="si-type">Разработка</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Successors (read-only view) -->
+    <div class="dep-section">
+      <div class="dep-section-title">
+        <i class="fas fa-arrow-right"></i> Последователи (1)
+      </div>
+
+      <div class="dep-follower-row">
+        <div class="dep-row-num">#5</div>
+        <div class="dep-row-name">Корректировка по замечаниям НК</div>
+        <span class="dep-row-type fs" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(37,99,235,0.25);background:rgba(37,99,235,0.08);color:#2563eb;">FS</span>
+        <span style="font-size:12px;color:var(--muted);font-family:var(--mono);">0 дн.</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">редактируется из задачи #5</span>
+      </div>
+
+      <div class="dep-follower-row">
+        <div class="dep-row-num">#6</div>
+        <div class="dep-row-name">Финальный выпуск документации</div>
+        <span class="dep-row-type ff" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(168,85,247,0.25);background:rgba(168,85,247,0.08);color:#a855f7;">FF</span>
+        <span style="font-size:12px;color:var(--muted);font-family:var(--mono);">0 дн.</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">редактируется из задачи #6</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeDepModal()">Отмена</button>
+    <button class="btn btn-primary" onclick="closeDepModal()"><i class="fas fa-check" style="margin-right:6px;"></i>Сохранить</button>
+  </div>
+</div>
+</div>
+
+<script>
+// Row highlighting on hover over dep tags
+function highlightRow(num) {
+  const row = document.getElementById('row-' + num);
+  if (row) row.classList.add('dep-highlight');
+}
+function unhighlightRow(num) {
+  const row = document.getElementById('row-' + num);
+  if (row) row.classList.remove('dep-highlight');
+}
+
+// Modal open/close
+function openDepModal(taskNum) {
+  document.getElementById('depModal').classList.add('open');
+}
+function closeDepModal() {
+  document.getElementById('depModal').classList.remove('open');
+  // Reset search
+  const search = document.getElementById('addPredSearch');
+  if (search) search.style.display = 'none';
+  const addRow = search?.previousElementSibling;
+  if (addRow) addRow.style.display = '';
+}
+
+// ESC to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDepModal();
+});
+</script>
+
+</body>
+</html>

@@ -62,6 +62,14 @@ VACATION_ALLOWED_FIELDS = {
 }
 
 
+# ── IP-адрес клиента ──────────────────────────────────────────────────────────
+
+def get_client_ip(request):
+    """Возвращает IP-адрес клиента из REMOTE_ADDR.
+    X-Forwarded-For не используется — легко подделать."""
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
 # ── Фильтрация по ролям (visibility) ──────────────────────────────────────────
 
 def get_visibility_filter(user):
@@ -109,21 +117,21 @@ def get_visibility_filter(user):
             # Отдел не назначен — ничего не показываем
             q = Q(pk__isnull=True)
     elif role == 'sector_head':
-        # Начальник сектора видит свой сектор (или весь отдел если сектор не назначен)
+        # Начальник сектора видит только свой сектор
         if employee.department and employee.sector:
             # Оба поля заполнены — фильтруем по отделу И сектору
             q = Q(department=employee.department, sector=employee.sector)
-        elif employee.department:
-            # Только отдел — видит весь отдел
-            q = Q(department=employee.department)
         else:
-            # Ничего не назначено — ничего не показываем
+            # Сектор или отдел не назначен — ничего не показываем
+            # (sector_head без привязки к сектору не должен видеть весь отдел)
             q = Q(pk__isnull=True)
     else:
-        # user — видит только свои задачи (где он исполнитель или создатель)
-        q = Q(executor=employee) | Q(created_by=employee)
-        # Также учитываем исполнителей, привязанных по фамилии (raw-строка)
-        q = q | Q(executor_name_raw__icontains=employee.last_name)
+        # user — видит задачи своего отдела (как dept_head)
+        if employee.department:
+            q = Q(department=employee.department)
+        else:
+            # Отдел не назначен — видит только свои задачи
+            q = Q(executor=employee) | Q(created_by=employee)
 
     # Добавляем делегирования: временно расширяем видимость на чужие данные
     delegations = RoleDelegation.objects.filter(
@@ -142,8 +150,8 @@ def get_visibility_filter(user):
             # Делегирование по сектору
             q = q | Q(sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            # Делегирование по конкретному исполнителю (по части ФИО)
-            q = q | Q(executor_name_raw__icontains=d.scope_value)
+            # Делегирование по конкретному исполнителю (по фамилии через FK)
+            q = q | Q(executor__last_name__icontains=d.scope_value)
 
     return q
 
@@ -183,17 +191,14 @@ def get_vacation_visibility_filter(user):
         else:
             q = Q(pk__isnull=True)
     elif role == 'sector_head':
-        # Начальник сектора — видит отпуска своего сектора
+        # Начальник сектора — видит отпуска только своего сектора
         if employee.department and employee.sector:
-            # Фильтруем и по отделу, и по сектору
             q = Q(
                 employee__department=employee.department,
                 employee__sector=employee.sector,
             )
-        elif employee.department:
-            # Только отдел
-            q = Q(employee__department=employee.department)
         else:
+            # Сектор или отдел не назначен — ничего не показываем
             q = Q(pk__isnull=True)
     else:
         # Обычный пользователь — видит только свои отпуска
@@ -270,9 +275,9 @@ def validate_plan_hours(ph) -> tuple[dict, str | None]:
         if fv < 0:
             # Отрицательные часы недопустимы
             return {}, f'plan_hours: отрицательное значение для ключа "{k}"'
-        if fv > 0:
-            # Записываем только ненулевые значения (0 часов — нет смысла хранить)
-            clean[k] = fv
+        # Сохраняем все значения включая 0 — явный 0 означает сброс часов;
+        # клиент может проверять наличие ключа в словаре
+        clean[k] = fv
     return clean, None
 
 

@@ -14,7 +14,7 @@ import logging
 from datetime import date as dt_date
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views import View
 
@@ -38,6 +38,7 @@ from apps.works.models import (
 )
 from apps.employees.models import Employee, Department, Sector, NTCCenter
 from apps.api.audit import log_action
+from apps.api.views.reports import _sync_notices_for_work
 
 logger = logging.getLogger(__name__)
 
@@ -82,21 +83,21 @@ def _serialize_task(work, executors_data=None):
     if is_from_pp and work.labor is not None:
         pp_labor_val = str(float(work.labor))
 
+    # Сектор: всегда через FK
+    sector_val = (work.sector.code if work.sector else '') or ''
+
     d = {
         'id': work.id,
         'task_type': (work.task_type or 'Выпуск нового документа') if is_from_pp
                      else (work.task_type or ''),
         'dept': (work.department.code if work.department else '') or '',
-        # Для ПП-записей сектор хранится в sector_head_name (код сектора)
-        'sector': work.sector_head_name or (work.sector.code if work.sector else '') or '' if is_from_pp
-                  else (work.sector.code if work.sector else '') or '',
+        'sector': sector_val,
         'project': project_name,
         'work_name': work.work_name or '',
         # Единые поля (и ПП, и СП пишут/читают одни и те же колонки)
         'work_number': work.work_num or '',
         'description': work.work_designation or '',
-        'executor': (work.executor.full_name if work.executor else
-                     work.executor_name_raw) or '',
+        'executor': (work.executor.full_name if work.executor else '') or '',
         'date_start': work.date_start.isoformat() if work.date_start else '',
         'date_end': work.date_end.isoformat() if work.date_end else '',
         # Для ПП-записей deadline = date_end (срок из ПП)
@@ -112,7 +113,7 @@ def _serialize_task(work, executors_data=None):
         'justification': _build_pp_justification(work) if is_from_pp
                          else (work.justification or ''),
         'actions': work.actions or {},
-        'sector_head': work.sector_head_name or '',
+        'sector_head': (work.sector.name or work.sector.code if work.sector else '') or '',
         'norm': float(work.norm) if work.norm is not None else None,
     }
 
@@ -132,6 +133,14 @@ def _serialize_task(work, executors_data=None):
 
     d['pp_labor'] = pp_labor_val
     d['from_pp'] = is_from_pp
+    d['predecessors_count'] = getattr(work, '_pred_count', 0) or 0
+
+    # Индикатор просроченности: deadline (или date_end) < сегодня
+    today = dt_date.today()
+    effective_deadline = (work.date_end if is_from_pp else work.deadline) or work.date_end
+    d['is_overdue'] = bool(
+        effective_deadline and effective_deadline < today
+    )
 
     return d
 
@@ -146,6 +155,9 @@ class TaskListView(LoginRequiredJsonMixin, View):
     def get(self, request):
         try:
             return self._get_tasks(request)
+        except (ValueError, TypeError) as e:
+            logger.warning("TaskListView.get bad request: %s", e)
+            return JsonResponse({'error': f'Некорректные параметры: {e}'}, status=400)
         except Exception as e:
             logger.error("TaskListView.get error: %s", e, exc_info=True)
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
@@ -180,6 +192,8 @@ class TaskListView(LoginRequiredJsonMixin, View):
             try:
                 yr = int(year)
                 mn = int(month)
+                if not (1 <= mn <= 12) or not (1900 <= yr <= 2100):
+                    raise ValueError(f'Недопустимый период: {yr}-{mn}')
                 from datetime import date
                 sel_start = date(yr, mn, 1)
                 sel_end = date(yr, mn + 1, 1) if mn < 12 else date(yr + 1, 1, 1)
@@ -199,6 +213,8 @@ class TaskListView(LoginRequiredJsonMixin, View):
         elif year:
             try:
                 yr = int(year)
+                if not (1900 <= yr <= 2100):
+                    raise ValueError(f'Недопустимый год: {yr}')
                 from datetime import date
                 yr_start = date(yr, 1, 1)
                 yr_end = date(yr + 1, 1, 1)
@@ -222,7 +238,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
             qs = qs.filter(
                 Q(work_name__icontains=s)
                 | Q(executor__last_name__icontains=s)
-                | Q(executor_name_raw__icontains=s)
+                | Q(executor__first_name__icontains=s)
                 | Q(department__code__icontains=s)
                 | Q(work_designation__icontains=s)
                 | Q(project__name_short__icontains=s)
@@ -233,12 +249,14 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         total_count = qs.count()
 
-        qs = qs.select_related(
+        qs = qs.annotate(
+            _pred_count=Count('predecessor_links'),
+        ).select_related(
             'department', 'sector', 'project',
             'executor', 'ntc_center', 'created_by',
             'pp_project', 'pp_project__up_project',
         ).prefetch_related(
-            'task_executors',
+            'task_executors', 'task_executors__executor',
         ).order_by('-id')
         qs = qs[offset:offset + limit]
 
@@ -250,7 +268,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
             execs = []
             for te in w.task_executors.all():
                 execs.append({
-                    'name': te.executor_name,
+                    'name': te.executor.full_name if te.executor else te.executor_name,
                     'hours': parse_json_hours(te.plan_hours),
                 })
             if execs:
@@ -282,6 +300,9 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
     def post(self, request):
         try:
             return self._create(request)
+        except (ValueError, TypeError) as e:
+            logger.warning("TaskCreateView bad request: %s", e)
+            return JsonResponse({'error': f'Некорректные данные: {e}'}, status=400)
         except Exception as e:
             logger.error("TaskCreateView error: %s", e, exc_info=True)
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
@@ -333,7 +354,6 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
                 work_name=d.get('work_name', ''),
                 work_num=d.get('work_number', ''),
                 work_designation=d.get('description', ''),
-                executor_name_raw=d.get('executor', ''),
                 plan_hours=ph,
                 stage_num=d.get('stage', ''),
                 justification=d.get('justification', ''),
@@ -363,6 +383,9 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
     def put(self, request, pk):
         try:
             return self._update(request, pk)
+        except (ValueError, TypeError) as e:
+            logger.warning("TaskDetailView.put bad request: %s", e)
+            return JsonResponse({'error': f'Некорректные данные: {e}'}, status=400)
         except Exception as e:
             logger.error("TaskDetailView.put error: %s", e, exc_info=True)
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
@@ -370,18 +393,26 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
     def delete(self, request, pk):
         try:
             vis_q = get_visibility_filter(request.user)
-            work = Work.objects.filter(pk=pk, show_in_plan=True).filter(vis_q).first()
-            if not work:
-                return JsonResponse({'error': 'Задача не найдена'}, status=404)
-            log_action(request, AuditLog.ACTION_TASK_DELETE,
-                       object_id=work.id, object_repr=work.work_name)
-            if work.show_in_pp:
-                # Запись видна и в ПП — только убираем из СП, не удаляя
-                work.show_in_plan = False
-                work.actions = {}
-                work.save(update_fields=['show_in_plan', 'actions'])
-            else:
-                work.delete()
+            with transaction.atomic():
+                # select_for_update: блокируем строку от конкурентных изменений
+                work = (
+                    Work.objects
+                    .select_for_update()
+                    .filter(pk=pk, show_in_plan=True)
+                    .filter(vis_q)
+                    .first()
+                )
+                if not work:
+                    return JsonResponse({'error': 'Задача не найдена'}, status=404)
+                log_action(request, AuditLog.ACTION_TASK_DELETE,
+                           object_id=work.id, object_repr=work.work_name)
+                if work.show_in_pp:
+                    # Запись видна и в ПП — только убираем из СП, не удаляя
+                    work.show_in_plan = False
+                    work.actions = {}
+                    work.save(update_fields=['show_in_plan', 'actions'])
+                else:
+                    work.delete()
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error("TaskDetailView.delete error: %s", e, exc_info=True)
@@ -400,10 +431,14 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
         if d.get('_mcc_finish'):
             return self._mcc_finish(work)
 
-        # Optimistic locking: сравнение через isoformat для надёжного формата
+        # Optimistic locking: нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
+        # (отбрасываем микросекунды и TZ-суффикс для надёжного сравнения)
         if 'updated_at' in d and d['updated_at'] is not None:
-            server_ts = work.updated_at.isoformat() if work.updated_at else ''
-            client_ts = str(d['updated_at']).replace(' ', 'T')
+            server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
+                         if work.updated_at else '')
+            raw = str(d['updated_at']).replace(' ', 'T')
+            # Обрезаем микросекунды (.123456) и TZ-суффикс (+00:00 / Z)
+            client_ts = raw[:19] if len(raw) >= 19 else raw
             if server_ts != client_ts:
                 return JsonResponse({
                     'error': 'conflict',
@@ -413,13 +448,31 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
 
         # from_pp: запись из ПП — ПП-поля заблокированы для редактирования в СП
         is_from_pp = work.show_in_pp
+        _PP_LOCKED_FIELDS = frozenset((
+            'work_name', 'work_number', 'description',
+            'task_type', 'dept', 'sector', 'project',
+            'stage', 'justification', 'deadline',
+        ))
         if is_from_pp and not d.get('_mcc_finish'):
-            # Блокируем изменение полей, управляемых из ПП
-            # deadline для ПП-записей = date_end (из ПП), менять нельзя
-            for lf in ('work_name', 'work_number', 'description',
-                       'task_type', 'dept', 'sector', 'project',
-                       'stage', 'justification', 'deadline'):
-                d.pop(lf, None)
+            # Определяем какие заблокированные поля клиент пытался изменить
+            attempted_locked = [lf for lf in _PP_LOCKED_FIELDS if lf in d]
+            if attempted_locked:
+                # Проверяем, остаются ли разрешённые поля
+                non_service = {k for k in d if not k.startswith('_') and k != 'updated_at'}
+                remaining = non_service - _PP_LOCKED_FIELDS
+                if not remaining:
+                    # Все переданные поля заблокированы — отклоняем
+                    return JsonResponse({
+                        'error': 'Запись из ПП: редактирование заблокированных полей запрещено',
+                        'locked_fields': attempted_locked,
+                    }, status=403)
+                # Есть и разрешённые поля — тихо убираем заблокированные, добавим warning
+                for lf in attempted_locked:
+                    d.pop(lf, None)
+                logger.info(
+                    "PP lock: task %d — ignored locked fields %s",
+                    pk, attempted_locked,
+                )
 
         with transaction.atomic():
             if 'plan_hours_update' in d:
@@ -441,7 +494,6 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.work_name = d.get('work_name', work.work_name)
                     work.work_num = d.get('work_number', work.work_num)
                     work.work_designation = d.get('description', work.work_designation)
-                work.executor_name_raw = d.get('executor', work.executor_name_raw)
                 work.plan_hours = ph
 
                 _set_work_fk_fields(work, d, request)
@@ -458,6 +510,10 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.actions = actions
 
                 work.save()
+
+                # Синхронизация ЖИ при смене task_type
+                if 'task_type' in d:
+                    _sync_notices_for_work(work)
 
             # Обновление списка исполнителей
             if 'executors_list' in d:
@@ -517,10 +573,13 @@ class TaskExecutorsView(LoginRequiredJsonMixin, View):
 
     def get(self, request, pk):
         try:
-            executors = TaskExecutor.objects.filter(work_id=pk)
+            vis_q = get_visibility_filter(request.user)
+            if not Work.objects.filter(pk=pk, show_in_plan=True).filter(vis_q).exists():
+                return JsonResponse({'error': 'Задача не найдена'}, status=403)
+            executors = TaskExecutor.objects.filter(work_id=pk).select_related('executor')
             result = [
                 {
-                    'name': te.executor_name,
+                    'name': te.executor.full_name if te.executor else te.executor_name,
                     'hours': parse_json_hours(te.plan_hours),
                 }
                 for te in executors
@@ -551,12 +610,25 @@ def _set_work_fk_fields(work, d, request):
 
     # sector
     sector = d.get('sector', '')
-    if sector and work.department:
-        sec_obj = Sector.objects.filter(
-            code=sector, department=work.department,
-        ).first()
-        if sec_obj:
-            work.sector = sec_obj
+    if sector:
+        if work.department:
+            sec_obj = Sector.objects.filter(
+                code=sector, department=work.department,
+            ).first()
+            if sec_obj:
+                work.sector = sec_obj
+            else:
+                logger.warning(
+                    "Сектор '%s' не найден для отдела '%s'",
+                    sector, work.department.code,
+                )
+        else:
+            # Попытка без привязки к отделу — ищем по коду
+            sec_obj = Sector.objects.filter(code=sector).first()
+            if sec_obj:
+                work.sector = sec_obj
+            else:
+                logger.warning("Сектор '%s' не найден (отдел не задан)", sector)
 
     # project — УП-проект по названию
     project = d.get('project', '')
@@ -568,18 +640,19 @@ def _set_work_fk_fields(work, d, request):
         if proj_obj:
             work.project = proj_obj
 
-    # executor
+    # executor — поиск по ФИО (фамилия + имя + отчество)
     executor = d.get('executor', '')
     if executor:
-        work.executor_name_raw = executor
         parts = executor.split()
-        emp = Employee.objects.filter(
-            last_name__icontains=parts[0]
-        ).first() if parts else None
-        if emp and emp.full_name == executor:
-            work.executor = emp
-        else:
-            work.executor = None
+        qs = Employee.objects.all()
+        if parts:
+            qs = qs.filter(last_name__iexact=parts[0])
+        if len(parts) >= 2:
+            qs = qs.filter(first_name__iexact=parts[1])
+        if len(parts) >= 3:
+            qs = qs.filter(patronymic__iexact=parts[2])
+        emp = qs.first() if parts else None
+        work.executor = emp if (emp and emp.full_name == executor) else None
 
     # center — из профиля пользователя (только при создании, чтобы не
     # перезаписывать НТЦ при обновлении чужим пользователем)
@@ -608,6 +681,25 @@ def _set_date_fields(work, d):
                     setattr(work, attr, None)
 
 
+def _resolve_employee(name):
+    """Ищет Employee по ФИО. Возвращает (Employee|None, name_str)."""
+    name = (name or '').strip()
+    if not name:
+        return None, name
+    parts = name.split()
+    qs = Employee.objects.all()
+    if parts:
+        qs = qs.filter(last_name__iexact=parts[0])
+    if len(parts) >= 2:
+        qs = qs.filter(first_name__iexact=parts[1])
+    if len(parts) >= 3:
+        qs = qs.filter(patronymic__iexact=parts[2])
+    emp = qs.first() if parts else None
+    if emp and emp.full_name == name:
+        return emp, name
+    return None, name
+
+
 def _save_executors(work, executors):
     """Сохраняет список исполнителей задачи."""
     objs = []
@@ -615,10 +707,12 @@ def _save_executors(work, executors):
         hours = ex.get('hours', {})
         if isinstance(hours, str):
             hours = parse_json_hours(hours)
+        emp, name = _resolve_employee(ex.get('name', ''))
         objs.append(
             TaskExecutor(
                 work=work,
-                executor_name=ex.get('name', ''),
+                executor=emp,
+                executor_name=name,
                 plan_hours=hours if isinstance(hours, dict) else {},
             )
         )

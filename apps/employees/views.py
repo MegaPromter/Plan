@@ -113,7 +113,7 @@ class VacationPlanView(LoginRequiredMixin, ListView):
     # Модель для отображения всех отпусков
     model               = Vacation
     # Шаблон таблицы/календаря отпусков
-    template_name       = 'employees/vacation_plan.html'
+    template_name       = 'employees/vacation_plan_spa.html'
     # Имя переменной в контексте шаблона
     context_object_name = 'vacations'
     # Количество записей на странице

@@ -122,13 +122,24 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'                    # куда collectstat
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # WhiteNoise: сжатие + хеш в имени файла
 
 # --- Кэш (используется rate-limiting middleware) -----------------------
-# Кэш в памяти процесса — быстро, но не разделяется между воркерами (достаточно для rate limiting)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # in-memory кэш (не персистентный)
-        'LOCATION': 'planapp-cache',  # уникальный идентификатор пространства имён кэша
+_CACHE_BACKEND = env('CACHE_BACKEND', default='locmem')
+if _CACHE_BACKEND == 'redis':
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': env('REDIS_URL', default='redis://127.0.0.1:6379/0'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'planapp-cache',
+        }
+    }
 
 # --- Безопасность -------------------------------------------------------
 SECURE_CONTENT_TYPE_NOSNIFF = True  # запрет MIME-sniffing: браузер не угадывает тип контента

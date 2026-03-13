@@ -1,11 +1,11 @@
 """
 API для журнала извещений (Notice).
 
-CRUD-операции над таблицей Notice (аналог Flask journal).
+CRUD-операции над таблицей Notice.
 GET     /api/journal          -- список записей журнала
-POST    /api/journal          -- создание записи (writer)
+POST    /api/journal/create   -- создание записи (writer, ручной ввод)
 PUT     /api/journal/<id>     -- обновление записи (writer)
-DELETE  /api/journal/<id>     -- удаление записи (writer)
+DELETE  /api/journal/<id>     -- удаление записи (writer, только ручные)
 """
 import logging
 from datetime import date
@@ -18,7 +18,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.employees.models import Department, Employee
+from apps.employees.models import Department, Employee, Sector
 from apps.works.models import Notice
 
 logger = logging.getLogger(__name__)
@@ -35,29 +35,98 @@ def _check_journal_access(user, notice):
         return None
     if not employee.department:
         return 'Вашему профилю не назначен отдел'
-    if notice.department_id and employee.department_id != notice.department_id:
+    # Определяем отдел записи
+    if notice.is_auto:
+        work = notice.work_report.work if notice.work_report else None
+        dept_id = work.department_id if work else None
+    else:
+        dept_id = notice.department_id
+    if dept_id and employee.department_id != dept_id:
         return 'Вы можете редактировать только записи своего отдела'
     return None
 
-# Максимальное количество записей на странице
-JOURNAL_MAX = 500
 
-# Поля, допустимые для обновления
-JOURNAL_ALLOWED_FIELDS = {
-    'notice_type', 'dept', 'executor', 'date_issued',
-    'subject', 'description', 'status',
-}
+def _safe_date(val):
+    if not val:
+        return None
+    try:
+        return date.fromisoformat(str(val))
+    except (ValueError, TypeError):
+        return None
 
 
-# ── GET / POST /api/journal ─────────────────────────────────────────────────
+def _serialize_notice(n):
+    """Гибридная сериализация: автоматические записи читают из WorkReport/Work,
+    ручные — из собственных полей Notice."""
+    if n.work_report_id:
+        wr = n.work_report
+        w = wr.work if wr else None
+        ii_pi = wr.ii_pi or ''
+        notice_number = wr.doc_number or ''
+        date_issued = wr.date_accepted.isoformat() if wr.date_accepted else ''
+        date_expires = wr.date_expires.isoformat() if wr.date_expires else ''
+        subject = w.work_name if w else ''
+        doc_designation = w.work_designation if w else ''
+        dept = w.department.code if w and w.department else ''
+        dept_name = w.department.name if w and w.department else ''
+        sector = (w.sector.name or w.sector.code if w and w.sector else '')
+        executor = (w.executor.full_name if w and w.executor else '')
+    else:
+        ii_pi = n.ii_pi or ''
+        notice_number = n.notice_number or ''
+        date_issued = n.date_issued.isoformat() if n.date_issued else ''
+        date_expires = n.date_expires.isoformat() if n.date_expires else ''
+        subject = n.subject or ''
+        doc_designation = n.doc_designation or ''
+        dept = n.department.code if n.department else ''
+        dept_name = n.department.name if n.department else ''
+        sector = (n.sector.name or n.sector.code) if n.sector else ''
+        executor = n.executor.full_name if n.executor else ''
+
+    # Определяем связанную задачу (work_id)
+    if n.work_report_id:
+        wr_local = n.work_report
+        w_local = wr_local.work if wr_local else None
+        work_id = w_local.pk if w_local else None
+    else:
+        work_id = None
+
+    return {
+        'id': n.pk,
+        'is_auto': n.is_auto,
+        'work_id': work_id,
+        'task_id': work_id,  # алиас для совместимости
+        'ii_pi': ii_pi,
+        'notice_number': notice_number,
+        'date_issued': date_issued,
+        'date_expires': date_expires,
+        'subject': subject,
+        'doc_designation': doc_designation,
+        'dept': dept,
+        'dept_name': dept_name,
+        'sector': sector,
+        'executor': executor,
+        'description': n.description or '',
+        'status': n.computed_status,
+        'status_raw': n.status,
+        # Реквизиты погашения
+        'closure_notice_number': n.closure_notice_number or '',
+        'closure_date_issued': (n.closure_date_issued.isoformat()
+                                if n.closure_date_issued else ''),
+        'closure_executor': n.closure_executor or '',
+    }
+
+
+# Максимальное количество записей
+JOURNAL_MAX = 5000
+
+
+# ── GET /api/journal ──────────────────────────────────────────────────────────
 
 class JournalListView(LoginRequiredJsonMixin, View):
-    """
-    GET  -- список записей журнала с фильтрами и пагинацией.
-    """
+    """GET -- список записей журнала с фильтрами."""
 
     def get(self, request):
-        # Пагинация
         try:
             per_page = int(request.GET.get('per_page', 0)) or JOURNAL_MAX
             page = int(request.GET.get('page', 1))
@@ -67,62 +136,93 @@ class JournalListView(LoginRequiredJsonMixin, View):
         page = max(page, 1)
         offset = (page - 1) * per_page
 
-        qs = Notice.objects.select_related('department', 'executor')
+        qs = Notice.objects.select_related(
+            'work_report',
+            'work_report__work',
+            'work_report__work__department',
+            'work_report__work__sector',
+            'work_report__work__executor',
+            'department', 'sector', 'executor',
+        )
 
-        # Фильтр по статусу
-        status = request.GET.get('status', '').strip()
-        if status:
-            qs = qs.filter(status=status)
+        status_filter = request.GET.get('status', '').strip()
 
-        # Фильтр по отделу
         dept = request.GET.get('dept', '').strip()
         if dept:
-            qs = qs.filter(department__code=dept)
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(work_report__work__department__code=dept)
+                | Q(work_report__isnull=True, department__code=dept)
+            )
 
-        qs = qs.order_by('-created_at')
+        # Для auto-записей date_issued=NULL (дата хранится в work_report).
+        # Используем Coalesce чтобы auto-записи сортировались по date_accepted.
+        from django.db.models.functions import Coalesce
+        qs = qs.annotate(
+            effective_date=Coalesce(
+                'date_issued',
+                'work_report__date_accepted',
+            ),
+        ).order_by('-effective_date', '-created_at')
 
-        rows = qs[offset:offset + per_page]
-        result = []
-        for n in rows:
-            result.append({
-                'id': n.pk,
-                'notice_type': n.notice_type,
-                'dept': n.department.code if n.department else '',
-                'executor': n.executor.full_name if n.executor else '',
-                'date_issued': n.date_issued.isoformat() if n.date_issued else '',
-                'subject': n.subject,
-                'description': n.description,
-                'status': n.status,
-            })
+        # Фильтрация по статусу
+        if status_filter in ('closed_yes', 'closed_no'):
+            # closed-статусы совпадают с raw — фильтруем на уровне БД
+            qs = qs.filter(status=status_filter)
+            total = qs.count()
+            result = [_serialize_notice(n) for n in qs[offset:offset + per_page]]
+        elif status_filter in ('active', 'expired'):
+            # computed_status вычисляется динамически (expired для ПИ) —
+            # берём все active, фильтруем в Python, затем пагинируем
+            qs = qs.filter(status=Notice.STATUS_ACTIVE)
+            all_serialized = [_serialize_notice(n) for n in qs]
+            filtered = [r for r in all_serialized if r['status'] == status_filter]
+            total = len(filtered)
+            result = filtered[offset:offset + per_page]
+        else:
+            total = qs.count()
+            result = [_serialize_notice(n) for n in qs[offset:offset + per_page]]
 
-        return JsonResponse(result, safe=False)
+        resp = JsonResponse(result, safe=False)
+        resp['X-Total-Count'] = total
+        return resp
 
+
+# ── POST /api/journal/create ──────────────────────────────────────────────────
 
 class JournalCreateView(WriterRequiredJsonMixin, View):
-    """POST -- создание записи журнала."""
+    """POST -- создание записи журнала (ручной ввод, work_report=NULL)."""
 
     def post(self, request):
+        try:
+            return self._create(request)
+        except Exception as e:
+            logger.error("JournalCreateView error: %s", e, exc_info=True)
+            return JsonResponse(
+                {'error': 'Внутренняя ошибка сервера'}, status=500,
+            )
+
+    def _create(self, request):
         data = parse_json_body(request)
+        if not data:
+            return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
-        notice_type = data.get('notice_type', '')
-        dept_code = data.get('dept', '').strip()
-        executor_name = data.get('executor', '').strip()
-        date_issued_str = data.get('date_issued', '')
-        subject = data.get('subject', '')
-        description = data.get('description', '')
-        status = data.get('status', Notice.STATUS_ACTIVE)
+        dept_code = (data.get('dept') or '').strip()
+        sector_name = (data.get('sector') or '').strip()
+        executor_name = (data.get('executor') or '').strip()
 
-        # Ищем отдел по коду
-        department = None
-        if dept_code:
-            department = Department.objects.filter(code=dept_code).first()
+        department = Department.objects.filter(code=dept_code).first() if dept_code else None
+        sector = None
+        if sector_name and department:
+            sector = Sector.objects.filter(department=department, name=sector_name).first()
+            if not sector:
+                sector = Sector.objects.filter(name=sector_name).first()
 
-        # Ищем исполнителя по имени
         executor = None
         if executor_name:
             parts = executor_name.split()
             qs = Employee.objects.all()
-            if len(parts) >= 1:
+            if parts:
                 qs = qs.filter(last_name__iexact=parts[0])
             if len(parts) >= 2:
                 qs = qs.filter(first_name__iexact=parts[1])
@@ -130,114 +230,166 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
                 qs = qs.filter(patronymic__iexact=parts[2])
             executor = qs.first()
 
-        # Парсим дату
-        date_issued = None
-        if date_issued_str:
-            try:
-                date_issued = date.fromisoformat(date_issued_str)
-            except (ValueError, TypeError):
-                pass
-
-        # Валидация статуса
-        if status not in (Notice.STATUS_ACTIVE, Notice.STATUS_CLOSED):
+        valid_statuses = {c[0] for c in Notice.STATUS_CHOICES}
+        status = data.get('status', Notice.STATUS_ACTIVE)
+        if status not in valid_statuses:
             status = Notice.STATUS_ACTIVE
 
         notice = Notice.objects.create(
-            notice_type=notice_type,
+            notice_number=data.get('notice_number', '') or '',
+            ii_pi=data.get('ii_pi', '') or '',
+            notice_type=data.get('notice_type', '') or '',
+            group=data.get('group', '') or '',
+            doc_designation=data.get('doc_designation', '') or '',
             department=department,
+            sector=sector,
             executor=executor,
-            date_issued=date_issued,
-            subject=subject,
-            description=description,
+            date_issued=_safe_date(data.get('date_issued')),
+            date_expires=_safe_date(data.get('date_expires')),
+            subject=data.get('subject', '') or '',
+            description=data.get('description', '') or '',
             status=status,
         )
 
-        return JsonResponse({'id': notice.pk}, status=201)
+        return JsonResponse({'id': notice.pk, 'notice': _serialize_notice(
+            Notice.objects.select_related(
+                'department', 'sector', 'executor',
+            ).get(pk=notice.pk)
+        )}, status=201)
 
 
-# ── PUT / DELETE /api/journal/<id> ──────────────────────────────────────────
+# ── PUT / DELETE /api/journal/<id> ────────────────────────────────────────────
 
 class JournalDetailView(WriterRequiredJsonMixin, View):
-    """
-    PUT    -- обновление записи журнала.
-    DELETE -- удаление записи журнала.
-    """
+    """PUT / DELETE -- обновление/удаление записи журнала."""
+
+    def _get_notice(self, pk):
+        try:
+            return Notice.objects.select_related(
+                'work_report',
+                'work_report__work',
+                'work_report__work__department',
+                'work_report__work__sector',
+                'work_report__work__executor',
+                'department', 'sector', 'executor',
+            ).get(pk=pk)
+        except Notice.DoesNotExist:
+            return None
 
     def put(self, request, pk):
+        try:
+            return self._update(request, pk)
+        except Exception as e:
+            logger.error("JournalDetailView.put error: %s", e, exc_info=True)
+            return JsonResponse(
+                {'error': 'Внутренняя ошибка сервера'}, status=500,
+            )
+
+    def _update(self, request, pk):
         data = parse_json_body(request)
         if not data:
             return JsonResponse({'ok': True})
 
-        try:
-            notice = Notice.objects.select_related('department').get(pk=pk)
-        except Notice.DoesNotExist:
+        notice = self._get_notice(pk)
+        if not notice:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
 
-        # Проверка доступа по отделу
         err = _check_journal_access(request.user, notice)
         if err:
             return JsonResponse({'error': err}, status=403)
 
-        # Фильтрация: принимаем только допустимые поля
-        updates = {k: v for k, v in data.items() if k in JOURNAL_ALLOWED_FIELDS}
-        if not updates:
-            return JsonResponse({'ok': True})
-
         update_fields = []
 
-        if 'notice_type' in updates:
-            notice.notice_type = updates['notice_type']
-            update_fields.append('notice_type')
+        # --- Валидация погашения ---
+        new_status = data.get('status', notice.status)
+        if new_status in ('closed_yes', 'closed_no'):
+            cn = data.get('closure_notice_number',
+                          notice.closure_notice_number or '')
+            cd = data.get('closure_date_issued') or (
+                notice.closure_date_issued.isoformat()
+                if notice.closure_date_issued else '')
+            ce = data.get('closure_executor',
+                          notice.closure_executor or '')
+            if not cn or not cd or not ce:
+                return JsonResponse({
+                    'error': 'Для погашения необходимы: '
+                             '№ документа, дата и исполнитель',
+                }, status=400)
 
-        if 'dept' in updates:
-            dept_code = updates['dept'].strip() if updates['dept'] else ''
-            if dept_code:
-                department = Department.objects.filter(code=dept_code).first()
-                notice.department = department
-            else:
-                notice.department = None
-            update_fields.append('department')
-
-        if 'executor' in updates:
-            executor_name = updates['executor'].strip() if updates['executor'] else ''
-            if executor_name:
-                parts = executor_name.split()
-                qs = Employee.objects.all()
-                if len(parts) >= 1:
-                    qs = qs.filter(last_name__iexact=parts[0])
-                if len(parts) >= 2:
-                    qs = qs.filter(first_name__iexact=parts[1])
-                if len(parts) >= 3:
-                    qs = qs.filter(patronymic__iexact=parts[2])
-                notice.executor = qs.first()
-            else:
-                notice.executor = None
-            update_fields.append('executor')
-
-        if 'date_issued' in updates:
-            date_str = updates['date_issued']
-            if date_str:
-                try:
-                    notice.date_issued = date.fromisoformat(date_str)
-                except (ValueError, TypeError):
-                    pass
-            else:
-                notice.date_issued = None
-            update_fields.append('date_issued')
-
-        if 'subject' in updates:
-            notice.subject = updates['subject']
-            update_fields.append('subject')
-
-        if 'description' in updates:
-            notice.description = updates['description']
+        # --- Поля, доступные для всех записей ---
+        if 'description' in data:
+            notice.description = data['description'] or ''
             update_fields.append('description')
 
-        if 'status' in updates:
-            status_val = updates['status']
-            if status_val in (Notice.STATUS_ACTIVE, Notice.STATUS_CLOSED):
-                notice.status = status_val
+        if 'status' in data:
+            val = data['status']
+            if val in {c[0] for c in Notice.STATUS_CHOICES}:
+                notice.status = val
                 update_fields.append('status')
+
+        for f in ('closure_notice_number', 'closure_executor'):
+            if f in data:
+                setattr(notice, f, data[f] or '')
+                update_fields.append(f)
+
+        if 'closure_date_issued' in data:
+            notice.closure_date_issued = _safe_date(data['closure_date_issued'])
+            update_fields.append('closure_date_issued')
+
+        # --- Поля ручного ввода (только для не-авто записей) ---
+        if not notice.is_auto:
+            for f in ('notice_number', 'ii_pi', 'notice_type', 'group',
+                      'doc_designation', 'subject', 'description'):
+                if f in data and f not in update_fields:
+                    setattr(notice, f, data[f] or '')
+                    update_fields.append(f)
+
+            if 'dept' in data:
+                dept_code = (data['dept'] or '').strip()
+                notice.department = (
+                    Department.objects.filter(code=dept_code).first()
+                    if dept_code else None
+                )
+                update_fields.append('department')
+
+            if 'sector' in data:
+                sector_name = (data['sector'] or '').strip()
+                sector = None
+                if sector_name:
+                    if notice.department:
+                        sector = Sector.objects.filter(
+                            department=notice.department, name=sector_name,
+                        ).first()
+                    if not sector:
+                        sector = Sector.objects.filter(
+                            name=sector_name,
+                        ).first()
+                notice.sector = sector
+                update_fields.append('sector')
+
+            if 'executor' in data:
+                executor_name = (data['executor'] or '').strip()
+                if executor_name:
+                    parts = executor_name.split()
+                    qs = Employee.objects.all()
+                    if parts:
+                        qs = qs.filter(last_name__iexact=parts[0])
+                    if len(parts) >= 2:
+                        qs = qs.filter(first_name__iexact=parts[1])
+                    if len(parts) >= 3:
+                        qs = qs.filter(patronymic__iexact=parts[2])
+                    notice.executor = qs.first()
+                else:
+                    notice.executor = None
+                update_fields.append('executor')
+
+            if 'date_issued' in data:
+                notice.date_issued = _safe_date(data['date_issued'])
+                update_fields.append('date_issued')
+
+            if 'date_expires' in data:
+                notice.date_expires = _safe_date(data['date_expires'])
+                update_fields.append('date_expires')
 
         if update_fields:
             notice.save(update_fields=update_fields + ['updated_at'])
@@ -246,11 +398,24 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            notice = Notice.objects.select_related('department').get(pk=pk)
-        except Notice.DoesNotExist:
+            return self._delete(request, pk)
+        except Exception as e:
+            logger.error("JournalDetailView.delete error: %s", e, exc_info=True)
+            return JsonResponse(
+                {'error': 'Внутренняя ошибка сервера'}, status=500,
+            )
+
+    def _delete(self, request, pk):
+        notice = self._get_notice(pk)
+        if not notice:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
 
-        # Проверка доступа по отделу
+        if notice.is_auto:
+            return JsonResponse(
+                {'error': 'Автоматические записи нельзя удалить вручную'},
+                status=400,
+            )
+
         err = _check_journal_access(request.user, notice)
         if err:
             return JsonResponse({'error': err}, status=403)

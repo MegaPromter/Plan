@@ -115,15 +115,18 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); font
 .breadcrumb-current { color:#fff; font-weight:500; }
 /* Распорка между левой и правой частями топбара */
 .topbar-sep { flex:1; }
-/* Дропдаун карточки пользователя */
+/* Дропдаун карточки пользователя (стиль base.html) */
 .user-menu-wrap { position:relative; }
 .topbar-user { font-size:14px; color:var(--nav-text2); background:rgba(255,255,255,0.08);
-  border:1px solid var(--nav-border); padding:5px 12px; border-radius:6px;
-  display:flex; flex-direction:column; align-items:flex-end; gap:1px;
+  border:1px solid rgba(255,255,255,0.15); padding:5px 10px; border-radius:6px;
+  display:flex; flex-direction:row; align-items:center; gap:8px;
   cursor:pointer; user-select:none; transition:background 0.15s; }
 .topbar-user:hover { background:rgba(255,255,255,0.14); }
-.topbar-user-name { font-weight:600; }
-.topbar-user-sub { font-size:11px; color:rgba(255,255,255,0.45); }
+.topbar-user-text { display:flex; flex-direction:column; align-items:flex-end; gap:1px; max-width:160px; }
+.topbar-user-name { font-weight:600; font-size:14px; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+.topbar-user-sub { font-size:11px; color:rgba(255,255,255,0.45); white-space:nowrap; }
+.topbar-user-chevron { font-size:10px; color:rgba(255,255,255,0.5); transition:transform 0.2s; }
+.topbar-user.menu-open .topbar-user-chevron { transform:rotate(180deg); }
 .user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
   background:var(--surface); border:1px solid var(--border); border-radius:10px;
   box-shadow:0 8px 24px rgba(0,0,0,0.18); overflow:hidden;
@@ -145,6 +148,17 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); font
 .topbar-btn.primary:hover { background:var(--accent2); }
 /* Опасная кнопка (красный контур) */
 .topbar-btn.danger { border-color:rgba(220,38,38,0.5); color:#f87171; }
+/* ── Кнопки topbar (стиль base.html) ──────────────────────────────── */
+.btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
+  font-size:14px; font-weight:600; font-family:var(--font);
+  cursor:pointer; border:none; transition:all 0.15s; }
+.btn-primary  { background:var(--accent); color:#fff; }
+.btn-primary:hover  { background:var(--accent2); transform:translateY(-1px); box-shadow:0 4px 12px rgba(59,130,246,0.4); }
+.btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
+.btn-outline:hover  { border-color:var(--border2); color:var(--text); }
+.btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
+.topbar .btn-outline { border-color:rgba(255,255,255,0.2); color:var(--nav-text2); background:transparent; }
+.topbar .btn-outline:hover { border-color:rgba(255,255,255,0.45); color:#fff; background:rgba(255,255,255,0.06); }
 /* Тулбар: строка с фильтром по году/месяцу и сводкой плана */
 .toolbar { position:fixed; top:var(--header-h); left:var(--sidebar-width); right:0; z-index:90;
   background:var(--surface); border-bottom:1px solid var(--border);
@@ -256,6 +270,67 @@ td.num-cell { text-align:center; color:var(--muted); font-family:var(--mono);
 .btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(220,38,38,0.3);
   background:transparent; color:var(--danger); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
 .btn-del:hover { background:rgba(220,38,38,0.08); }
+/* Кнопка и бейдж зависимостей */
+.btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);
+  background:transparent; color:#7c3aed; font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
+.btn-deps:hover { background:rgba(139,92,246,0.1); }
+.dep-badge { display:inline-block; background:rgba(139,92,246,0.12); color:#7c3aed; font-size:13px;
+  font-weight:600; padding:2px 8px; border-radius:10px; font-family:var(--mono); min-width:22px; text-align:center; }
+.dep-badge.zero { background:transparent; color:var(--muted); font-weight:400; }
+/* Модал зависимостей */
+.deps-modal { max-width:700px; width:95vw; }
+.deps-table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
+.deps-table th, .deps-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.deps-table th { background:var(--surface2); font-weight:600; color:var(--text2); font-size:13px; }
+.deps-table td { color:var(--text); }
+.deps-table .dep-type-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:12px;
+  font-weight:600; font-family:var(--mono); background:rgba(37,99,235,0.1); color:var(--accent); }
+.deps-add-form { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; padding:12px; background:var(--surface2); border-radius:8px; margin-top:12px; }
+.deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
+.deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
+  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); }
+/* Searchable dropdown */
+.search-dropdown { position:relative; }
+.search-dropdown-input { width:100%; padding:6px 30px 6px 10px; border:1px solid var(--border); border-radius:6px;
+  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); box-sizing:border-box; }
+.search-dropdown-input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 2px rgba(37,99,235,0.15); }
+.search-dropdown-arrow { position:absolute; right:8px; top:50%; transform:translateY(-50%); pointer-events:none;
+  font-size:10px; color:var(--muted); }
+.search-dropdown-list { position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto;
+  background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 6px 6px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12); z-index:300; display:none; }
+.search-dropdown-list.open { display:block; }
+.search-dropdown-item { padding:6px 10px; font-size:14px; cursor:pointer; color:var(--text); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.search-dropdown-item:hover, .search-dropdown-item.highlighted { background:rgba(37,99,235,0.08); }
+.search-dropdown-item.selected { background:rgba(37,99,235,0.12); font-weight:600; }
+.search-dropdown-empty { padding:8px 10px; font-size:13px; color:var(--muted); font-style:italic; }
+.deps-section-title { font-size:15px; font-weight:600; color:var(--text); margin:16px 0 8px; display:flex; align-items:center; gap:6px; }
+.deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
+  border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
+.deps-align-bar .warn-icon { font-size:20px; }
+.deps-align-bar .warn-text { flex:1; font-size:14px; color:var(--text2); }
+/* Табы Таблица/Ганта */
+.view-tabs { display:flex; gap:0; margin-left:var(--sidebar-width); padding:0 20px; background:var(--surface);
+  border-bottom:1px solid var(--border); position:fixed; top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h));
+  left:0; right:0; z-index:89; height:38px; align-items:stretch; }
+.view-tabs.sidebar-collapsed { margin-left:0; }
+.view-tab { padding:0 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
+  background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
+.view-tab:hover { color:var(--text); background:var(--surface2); }
+.view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.gantt-scale-group { display:inline-flex; gap:0; margin-left:auto; align-items:stretch; }
+.gantt-scale-btn { padding:0 12px; font-size:12px; font-weight:500; color:var(--text2); cursor:pointer;
+  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
+.gantt-scale-btn:hover { color:var(--text); background:var(--surface2); }
+.gantt-scale-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.gantt-filter-btn { padding:0 14px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer;
+  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
+.gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
+.gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
+#ganttContainer { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + 38px); margin-left:var(--sidebar-width);
+  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - 38px); display:none; }
+#ganttContainer.sidebar-collapsed { margin-left:0; }
 /* Кнопка сброса пароля (таблица пользователей) */
 .btn-reset-pw { padding:4px 8px; border-radius:5px; border:1px solid rgba(217,119,6,0.3);
   background:transparent; color:var(--warning); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; margin-right:4px; }
@@ -323,13 +398,29 @@ tr.pp-locked .pp-lock-badge {
 .report-table td { border:1px solid var(--border); padding:0; vertical-align:top; }
 /* Редактируемая ячейка таблицы отчёта */
 .report-table .r-cell { width:100%; padding:5px 7px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:14px; min-height:30px; resize:none; overflow:hidden; display:block; }
+  color:var(--text); font-family:var(--font); font-size:14px; min-height:30px; resize:none; overflow:visible; display:block; word-break:break-word; }
 .report-table .r-cell:focus { background:var(--accent-light); }
 .report-table .r-cell-date { min-height:30px; height:30px; cursor:pointer; }
 .report-table .r-cell-select { height:30px; appearance:auto; cursor:pointer; }
 /* Неактивная ячейка отчёта (поле заблокировано для данного типа задачи) */
-.report-table .r-cell-disabled { background:var(--surface2) !important; color:var(--text2); cursor:not-allowed; opacity:0.6; }
-/* Кнопка удаления строки отчёта */
+.report-table td.r-td-disabled {
+  background:#dde1e7 !important;
+  padding:0;
+}
+.report-table .r-cell-disabled {
+  background:#dde1e7 !important;
+  color:#8a929e !important;
+  border-color:transparent !important;
+  cursor:not-allowed !important;
+  pointer-events:none;
+  width:100%; box-sizing:border-box;
+  opacity:1 !important;
+}
+/* Кнопки действий строки отчёта */
+.r-save { padding:3px 9px; border-radius:4px; border:none;
+  background:var(--success); color:#fff; font-size:14px; cursor:pointer; font-family:var(--font); font-weight:700; margin-right:2px; }
+.r-save:hover { opacity:0.85; }
+.r-save:disabled { opacity:0.5; cursor:default; }
 .r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
 .r-del:hover { background:rgba(239,68,68,0.1); }
@@ -366,7 +457,7 @@ tr.pp-locked .pp-lock-badge {
 .pe-header { padding:18px 24px 12px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between; }
 .pe-title { font-size:20px; font-weight:700; color:var(--text); }
-/* Мета-строка: «Месяц Год · Найдено ошибок: N · Норма: 170 ч/мес» */
+/* Мета-строка: «Месяц Год · Найдено ошибок: N · Норма: XXX ч/мес» */
 .pe-meta { font-size:16px; color:var(--muted); margin-top:3px; }
 .pe-body { overflow-y:auto; flex:1; }
 /* Одна секция (раздел) в списке ошибок */
@@ -745,11 +836,21 @@ tr.pp-locked .pp-lock-badge {
   <div class="topbar-sep"></div>
   <!-- Кнопка открытия модала «Ошибки планирования»; меняет состояние has-errors/no-errors -->
   <button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()">⚠️ Ошибки планирования</button>
-  <!-- Карточка пользователя с дропдаун-меню -->
+  {% if request.user|is_writer %}
+  <!-- Добавить новую задачу (открывает inline-строку) -->
+  <button class="btn btn-primary btn-sm" onclick="openInlineNewRow()">
+    <i class="fas fa-plus"></i> Добавить задачу
+  </button>
+  {% endif %}
+  <span id="exportBtnContainer"></span>
+  <!-- Карточка пользователя с дропдаун-меню (стиль base.html) -->
   <div class="user-menu-wrap">
     <div class="topbar-user" onclick="toggleUserMenu()">
-      <span class="topbar-user-name">{{ username }}</span>
-      {% if user_position or user_dept %}<span class="topbar-user-sub">{% if user_dept %}Отд. {{ user_dept }}{% if user_position %} · {% endif %}{% endif %}{{ user_position }}</span>{% endif %}
+      <div class="topbar-user-text">
+        <span class="topbar-user-name">{{ username }}</span>
+        <span class="topbar-user-sub">{% employee_role %}</span>
+      </div>
+      <i class="fas fa-chevron-down topbar-user-chevron"></i>
     </div>
     <div class="user-dropdown" id="userDropdown">
       <a href="/works/plan/"><i class="fas fa-tasks" style="width:16px;text-align:center;"></i> Личный план</a>
@@ -812,31 +913,52 @@ tr.pp-locked .pp-lock-badge {
   </div>
 </div>
 
+<!-- ══ Переключатель видов: Таблица / Диаграмма Ганта ═════════════════════ -->
+<div class="view-tabs" id="viewTabs">
+  <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
+  <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
+  <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
+    <button class="gantt-scale-btn" data-scale="day" onclick="setGanttScale('day')">Дни</button>
+    <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">Недели</button>
+    <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">Месяцы</button>
+    <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
+  </span>
+  <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" title="Показать только задачи с зависимостями">🔗 Только зависимые</button>
+</div>
+
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
-<div class="table-wrap">
+<div class="table-wrap" id="tableView" style="margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + 38px);">
 <table id="mainTable">
 <!-- Строка заголовков колонок (липкая, остаётся при прокрутке) -->
-<thead><tr>
+<thead>
+<tr>
   <!-- Колонка порядкового номера -->
-  <th class="th-num"><div class="th-inner" style="justify-content:center;">№</div></th>
+  <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
   <!-- Каждый th содержит .col-resize — ручку изменения ширины (drag-resize) -->
-  <th id="th-type"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-dept"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-stage"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-type" rowspan="2"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-project" rowspan="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-stage" rowspan="2"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum" rowspan="2"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just" rowspan="2"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <!-- Группа: Обозначение + Наименование -->
+  <th colspan="2" style="text-align:center;">Группа</th>
+  <!-- Колонка исполнителей: показывает список ФИО с часами -->
+  <th id="th-exec" rowspan="2"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-ds" rowspan="2"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
+  <th id="th-de" rowspan="2"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
+  <th id="th-dead" rowspan="2"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
+  <!-- Колонка зависимостей (предшественники) -->
+  <th id="th-deps" rowspan="2"><div class="th-inner">Предш.<div class="col-resize" data-col="deps"></div></div></th>
+  <!-- Колонка кнопок действий (редактировать, отчёт, удалить) -->
+  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
+</tr>
+<tr>
   <th id="th-desc"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
   <th id="th-wname"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
-  <!-- Колонка исполнителей: показывает список ФИО с часами -->
-  <th id="th-exec"><div class="th-inner">ФИО сотрудника/ план(ч)<div class="col-resize" data-col="exec"></div></div></th>
-  <th id="th-ds"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
-  <th id="th-de"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
-  <th id="th-dead"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
-  <!-- Колонка кнопок действий (редактировать, отчёт, удалить) -->
-  <th id="th-rep" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
-</tr></thead>
+</tr>
+</thead>
 <!-- Строка фильтрации (вторая строка thead) -->
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
@@ -856,6 +978,7 @@ tr.pp-locked .pp-lock-badge {
   <th><div class="filter-cell"><input class="col-filter" data-col="date_start" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="date_end" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="deadline" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="has_deps" onclick="toggleMf(this)">▼</button></div></th>
   <th></th>
 </tr>
 <!-- Тело таблицы: заполняется JS-функцией renderTable() через makeRow() -->
@@ -863,11 +986,10 @@ tr.pp-locked .pp-lock-badge {
 </table>
 </div>
 
-<!-- ══ Нижняя панель с кнопкой добавления задачи ══════════════════════════ -->
-<div class="add-row-wrap">
-  <!-- Открывает inline-строку создания задачи прямо в таблице -->
-  <button class="btn-add" id="btnAddTask" onclick="openInlineNewRow()">＋ Добавить задачу</button>
-</div>
+<!-- Кнопка «Добавить задачу» перенесена в topbar -->
+
+<!-- ══ Контейнер диаграммы Ганта ═══════════════════════════════════════════ -->
+<div id="ganttContainer"></div>
 
 <!-- ══ Модал выбора типа задачи ════════════════════════════════════════════ -->
 <!-- Открывается при нажатии «+ Добавить задачу»; выбор типа запускает openNewTaskModal() -->
@@ -937,7 +1059,7 @@ tr.pp-locked .pp-lock-badge {
         <input class="form-input" id="nt-work_name" type="text" placeholder="Наименование работ">
       </div>
       <div class="form-field full">
-        <label class="form-label">Сотрудники (исполнитель)</label>
+        <label class="form-label">Разработчик</label>
         <div style="display:flex;gap:10px;margin-bottom:10px;">
           <select class="form-select" id="nt-executor-select" style="flex:1;">
             <option value="">Выберите сотрудника...</option>
@@ -1008,7 +1130,8 @@ tr.pp-locked .pp-lock-badge {
           <th id="rh_ii_pi" rowspan="2" style="display:none;">ИИ/ПИ</th>
           <th colspan="2" style="text-align:center;">Отчётный документ</th>
           <th rowspan="2" id="rh_inventory">Инвентарный №</th>
-          <th rowspan="2">Дата принятия</th>
+          <th rowspan="2">Дата выпуска</th>
+          <th id="rh_date_expires" rowspan="2" style="display:none;">Срок действия</th>
           <th rowspan="2">Вид doc</th>
           <th rowspan="2">Класс doc</th>
           <th rowspan="2">Листов А4 (факт)</th>
@@ -1029,8 +1152,7 @@ tr.pp-locked .pp-lock-badge {
     </div>
   </div>
   <div class="modal-footer">
-    <button class="topbar-btn primary" onclick="addReportRow()">＋ Добавить строку</button>
-    <button class="topbar-btn" onclick="saveAllReports()">💾 Сохранить всё</button>
+    <button class="topbar-btn primary" onclick="addReportRow()" id="btnAddReportRow" style="display:none;">＋ Добавить строку</button>
     <button class="topbar-btn" onclick="closeReportModal()">Закрыть</button>
   </div>
 </div>
@@ -1129,6 +1251,90 @@ tr.pp-locked .pp-lock-badge {
 </div>
 </div>
 
+<!-- DEPENDENCIES MODAL -->
+<div class="modal-overlay" id="depsModal">
+<div class="modal deps-modal">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title" id="depsModalTitle">Зависимости задачи</div>
+      <div id="depsModalDates" style="font-size:17px;font-weight:600;color:var(--text2);margin-top:4px;"></div>
+    </div>
+    <button class="modal-close" onclick="closeDepsModal()">✕</button>
+  </div>
+  <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+    <!-- Предшественники (редактируемые) -->
+    <div class="deps-section-title">⬅ Предшественники <span id="depsPredCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
+    <div id="depsPredBody"></div>
+
+    <!-- Форма добавления -->
+    <div class="deps-add-form" id="depsAddForm" style="display:none;">
+      <div style="flex:1;min-width:200px;">
+        <label>Задача-предшественник</label>
+        <div class="search-dropdown" id="depsAddPredDropdown" style="margin-top:4px;">
+          <input type="text" class="search-dropdown-input" id="depsAddPredInput" placeholder="Поиск задачи..." autocomplete="off">
+          <span class="search-dropdown-arrow">▼</span>
+          <div class="search-dropdown-list" id="depsAddPredList"></div>
+          <input type="hidden" id="depsAddPredSelect" value="">
+        </div>
+      </div>
+      <div>
+        <label>Тип связи</label>
+        <select id="depsAddType" style="margin-top:4px;">
+          <option value="FS">FS — Окончание–Начало</option>
+          <option value="SS">SS — Начало–Начало</option>
+          <option value="FF">FF — Окончание–Окончание</option>
+          <option value="SF">SF — Начало–Окончание</option>
+        </select>
+      </div>
+      <div>
+        <label>Лаг (дней)</label>
+        <input type="number" id="depsAddLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
+      </div>
+      <button class="topbar-btn primary" onclick="addPredecessor()" style="margin-top:18px;">Добавить</button>
+    </div>
+
+    <!-- Последователи -->
+    <div class="deps-section-title" style="margin-top:24px;">➡ Последователи <span id="depsSuccCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
+    <div id="depsSuccBody"></div>
+
+    <!-- Форма добавления последователя -->
+    <div class="deps-add-form" id="depsAddSuccForm" style="display:none;">
+      <div style="flex:1;min-width:200px;">
+        <label>Задача-последователь</label>
+        <div class="search-dropdown" id="depsAddSuccDropdown" style="margin-top:4px;">
+          <input type="text" class="search-dropdown-input" id="depsAddSuccInput" placeholder="Поиск задачи..." autocomplete="off">
+          <span class="search-dropdown-arrow">▼</span>
+          <div class="search-dropdown-list" id="depsAddSuccList"></div>
+          <input type="hidden" id="depsAddSuccSelect" value="">
+        </div>
+      </div>
+      <div>
+        <label>Тип связи</label>
+        <select id="depsAddSuccType" style="margin-top:4px;">
+          <option value="FS">FS — Окончание–Начало</option>
+          <option value="SS">SS — Начало–Начало</option>
+          <option value="FF">FF — Окончание–Окончание</option>
+          <option value="SF">SF — Начало–Окончание</option>
+        </select>
+      </div>
+      <div>
+        <label>Лаг (дней)</label>
+        <input type="number" id="depsAddSuccLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
+      </div>
+      <button class="topbar-btn primary" onclick="addSuccessor()" style="margin-top:18px;">Добавить</button>
+    </div>
+
+    <!-- Выравнивание дат -->
+    <div class="deps-align-bar" id="depsAlignBar" style="display:none;">
+      <span class="warn-icon">⚠️</span>
+      <span class="warn-text" id="depsAlignText"></span>
+      <button class="topbar-btn primary" id="depsAlignPredBtn" onclick="alignDates(false)" style="display:none;">Выровнять по предшественникам</button>
+      <button class="topbar-btn primary" id="depsAlignSuccBtn" onclick="alignDates(true)" style="display:none;">Выровнять последователей</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- PLANNING ERRORS MODAL -->
 <div class="pe-overlay" id="peModal" onclick="if(event.target===this)closePeModal()">
   <div class="pe-box">
@@ -1174,6 +1380,16 @@ function getCSRF() {
 function apiHeaders(extra) {
   return Object.assign({'Content-Type':'application/json','X-CSRFToken':getCSRF()}, extra||{});
 }
+async function fetchJson(url, opts={}) {
+  const res = await fetch(url, Object.assign({headers: apiHeaders()}, opts));
+  if (!res.ok) {
+    let msg = 'Ошибка сервера ' + res.status;
+    try { const e = await res.json(); if (e.error) msg = e.error; } catch(_) {}
+    throw new Error(msg);
+  }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : {};
+}
 </script>
 
 <script>
@@ -1198,6 +1414,21 @@ const USER_DEPT   = "{{ request.user.employee.department.code|default:'' }}";
 const USER_SECTOR = "{{ request.user.employee.sector.code|default:'' }}";
 // Полный код НТЦ пользователя (например «НТЦ-2Ц»), используется в колонке center
 const USER_CENTER = "{{ request.user.employee.effective_ntc_center.code|default:'' }}";
+
+// Может ли текущий пользователь редактировать строку с данным dept/sector
+function _canModify(rowDept, rowSector) {
+  if (!IS_WRITER) return false;
+  if (IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy') return true;
+  if (USER_ROLE === 'sector_head') return !!rowSector && rowSector === USER_SECTOR;
+  // dept_head, dept_deputy — только свой отдел
+  return !!rowDept && rowDept === USER_DEPT;
+}
+
+// «Полный доступ» — admin/ntc_head/ntc_deputy (для ЖИ: может удалять)
+function _isFullAccess() {
+  return IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy';
+}
+
 let tasks = [];
 let colSettings = {{ col_settings|safe }};
 let currentTaskId = null;
@@ -1294,6 +1525,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('reportModal').addEventListener('click', function(e) {
     if (e.target === this) closeReportModal();
   });
+  // Клик по фону depsModal закрывает
+  document.getElementById('depsModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDepsModal();
+  });
 
   document.getElementById("yearDisplay").textContent = selectedYear;
   if (selectedMonth) {
@@ -1347,7 +1582,7 @@ async function loadTasks() {
 // ОШИБКИ ПЛАНИРОВАНИЯ
 // Проверяются только по запросу пользователя (кнопка «Ошибки планирования»)
 // ══════════════════════════════════════════════════════════════════════════
-const DEFAULT_MONTH_NORM = 170; // ч/мес если в производственном календаре не задано
+const DEFAULT_MONTH_NORM = 168; // ч/мес если в производственном календаре не задано
 const PE_IGNORE_KEY = "pe_ignored_v2"; // ключ localStorage для игнорируемых ошибок
 
 // Хранилище игнорируемых ошибок: { [errKey]: true }
@@ -1373,7 +1608,9 @@ async function calcPlanningErrors() {
   if (!showAll && selectedYear === curYear && selectedMonth === curMonth && tasks.length > 0) {
     allTasks = tasks;
   } else {
-    allTasks = await fetch(`/api/tasks/?year=${curYear}&month=${curMonth}`).then(r=>r.ok?r.json():[]);
+    try {
+      allTasks = await fetch(`/api/tasks/?year=${curYear}&month=${curMonth}`).then(r=>r.ok?r.json():[]);
+    } catch(e) { console.error('calcPlanningErrors: fetch tasks error', e); allTasks = []; }
   }
 
   // Норма рабочего времени из производственного календаря
@@ -1395,7 +1632,7 @@ async function calcPlanningErrors() {
   } catch {}
 
   // ── 1. Просроченные задачи (срок прошёл, отчёт не заполнен) ──────────────
-  const overdueChecks = await Promise.all(
+  const overdueResults = await Promise.allSettled(
     allTasks
       .filter(t => {
         const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
@@ -1403,10 +1640,14 @@ async function calcPlanningErrors() {
         return (de && de < todayStr) || (dead && dead < todayStr);
       })
       .map(async t => {
-        const reports = await fetch(`/api/reports/${t.id}/`).then(r=>r.json());
-        return { task: t, hasReport: reports.length > 0 };
+        try {
+          const reports = await fetch(`/api/reports/${t.id}/`).then(r=>r.ok?r.json():[]);
+          return { task: t, hasReport: reports.length > 0 };
+        } catch { return { task: t, hasReport: false }; }
       })
   );
+  const overdueChecks = overdueResults
+    .filter(r => r.status === 'fulfilled').map(r => r.value);
   const overdue = overdueChecks
     .filter(c => !c.hasReport && !peIsIgnored(`overdue_${c.task.id}`))
     .map(c => c.task);
@@ -1496,7 +1737,7 @@ async function openPlanningErrors() {
 
   const result = await refreshPlanningErrors();
   const { overdue, badDates, overloaded, underloaded, vacConflicts,
-          curYear, curMonth, curKey, total, monthNorm, MONTHS_RU } = result;
+          curYear, curMonth, curKey, total, monthNorm, MONTHS_RU, todayStr } = result;
 
   document.getElementById("peMeta").textContent =
     `${MONTHS_RU[curMonth]} ${curYear} · Найдено ошибок: ${total} · Норма: ${monthNorm} ч/мес`;
@@ -1709,15 +1950,21 @@ async function checkMonthStart() {
   const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
   const prevYear  = now.getMonth() === 0 ? now.getFullYear()-1 : now.getFullYear();
 
-  const res = await fetch(`/api/tasks/?year=${prevYear}&month=${prevMonth}`);
-  const monthTasks = await res.json();
+  let monthTasks;
+  try {
+    const res = await fetch(`/api/tasks/?year=${prevYear}&month=${prevMonth}`);
+    monthTasks = res.ok ? await res.json() : [];
+  } catch(e) { console.error('checkMonthStart: fetch error', e); return; }
   if (!monthTasks.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
 
-  const checks = await Promise.all(monthTasks.map(async t => {
-    const r = await fetch(`/api/reports/${t.id}/`);
-    const reports = await r.json();
-    return { task: t, hasReport: reports.length > 0 };
+  const results = await Promise.allSettled(monthTasks.map(async t => {
+    try {
+      const r = await fetch(`/api/reports/${t.id}/`);
+      const reports = r.ok ? await r.json() : [];
+      return { task: t, hasReport: reports.length > 0 };
+    } catch { return { task: t, hasReport: false }; }
   }));
+  const checks = results.filter(r => r.status === 'fulfilled').map(r => r.value);
 
   const missing = checks.filter(c => !c.hasReport);
   if (!missing.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
@@ -1928,6 +2175,8 @@ function getMfValues(col) {
     if (col === "executor") {
       if (t.executor) vals.add(t.executor);
       (t.executors_list || []).forEach(ex => { if (ex.name) vals.add(ex.name); });
+    } else if (col === "has_deps") {
+      vals.add((t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей");
     } else {
       if (t[col]) vals.add(t[col]);
     }
@@ -2120,6 +2369,7 @@ function clearAllColFilters() {
   renderTable();
 }
 
+// Авторесайз всех textarea в контейнере (подгоняет высоту под содержимое)
 function _resizeTextareas(container) {
   container.querySelectorAll("textarea.cell-edit").forEach(ta => {
     ta.style.height = "auto";
@@ -2127,6 +2377,7 @@ function _resizeTextareas(container) {
   });
 }
 
+// Рисует основную таблицу задач: фильтрует по colFilters, чанками по 50 строк
 function renderTable() {
   const tbody = document.getElementById("taskBody");
   tbody.innerHTML = "";
@@ -2140,6 +2391,9 @@ function renderTable() {
             const inSingle = val.has(t.executor || "");
             const inList   = (t.executors_list || []).some(ex => val.has(ex.name || ""));
             if (!inSingle && !inList) return false;
+          } else if (field === "has_deps") {
+            const label = (t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей";
+            if (!val.has(label)) return false;
           } else {
             if (!val.has(t[field] || "")) return false;
           }
@@ -2210,12 +2464,19 @@ function getTaskMonthKeys(dateStart, dateEnd, deadline) {
   return keys;
 }
 
+// ── Создание строки таблицы задач ─────────────────────────────────────────
+// Формирует <tr> с ячейками: №, тип, колонки данных, зависимости, действия.
+// Для role=user — все поля read-only (текст), для writer — интерактивные.
+// Для ПП-записей (isFromPP) — часть полей заблокирована даже для writer.
 function makeRow(t, num) {
+  // Создаём строку и привязываем ID задачи
   const tr = document.createElement("tr");
   tr.dataset.id = t.id;
+  // Флаг: задача перенесена из Производственного плана
   const isFromPP = !!t.from_pp;
   if (isFromPP) tr.classList.add('pp-locked');
 
+  // ── Колонка «№» с бейджем 🔒 ПП для перенесённых задач ──
   const numTd = document.createElement("td");
   numTd.className = "num-cell"; numTd.textContent = num;
   if (isFromPP) {
@@ -2227,21 +2488,27 @@ function makeRow(t, num) {
   }
   tr.appendChild(numTd);
 
+  // ── Колонка «Тип задачи» — цветной бейдж ──
   const typeTd = document.createElement("td");
   typeTd.style.cssText = "padding:6px 8px;vertical-align:middle";
   if (t.task_type) {
     const badge = document.createElement("span");
+    // CSS-класс бейджа определяется первым словом типа задачи (нижний регистр)
     badge.className = `type-badge ${t.task_type.toLowerCase().split(" ")[0]}`;
     badge.textContent = t.task_type;
     typeTd.appendChild(badge);
   }
   tr.appendChild(typeTd);
 
+  // ── Определение колонок данных ──
+  // Каждая колонка: field — поле в объекте задачи, type — тип ячейки,
+  // dirKey — ключ справочника для select, parentField/parentDirKey — каскадная фильтрация,
+  // extraField — дополнительное отображение (напр. ФИО руководителя сектора)
   const cols = [
     {field:"dept",         type:"select", dirKey:"dept"},
     {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head"},
     {field:"project",      type:"select", dirKey:"project"},
-    {field:"stage",        type:"select", dirKey:"stage",    parentField:"project", parentDirKey:"project"},
+    {field:"stage",        type:"select", dirKey:"stage"},
     {field:"work_number",  type:"text"},
     {field:"justification",type:"text"},
     {field:"description",  type:"text"},
@@ -2251,18 +2518,95 @@ function makeRow(t, num) {
     {field:"date_end",     type:"date"},
     {field:"deadline",     type:"date"},
   ];
+  // Сокращённые ключи колонок — для привязки ширин через th-элементы
   const colKeys = ["dept","sector","project","stage","wnum","just","desc","wname","exec","ds","de","dead"];
 
+  // ── Цикл по колонкам: создание ячеек данных ──
   cols.forEach((col, idx) => {
     const td = document.createElement("td");
     if (col.type === "date") td.classList.add("td-date");
+    // Синхронизируем ширину ячейки с заголовком таблицы
     const thEl = document.getElementById(`th-${colKeys[idx]}`);
     if (thEl && thEl.style.width) td.style.width = thEl.style.width;
 
+    // ── Read-only режим: role=user ИЛИ чужой отдел/сектор ─────────────
+    // Все ячейки отображаются как статичный текст без интерактивных элементов.
+    // Бэкенд дополнительно защищён WriterRequiredJsonMixin (403 при попытке PUT).
+    // Для ПП-записей (isFromPP) не применяем — у них своя логика блокировки.
+    if (!IS_WRITER || (!_canModify(t.dept, t.sector) && !isFromPP)) {
+      td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;";
+      if (col.field === "executor") {
+        // Исполнители: отображаем как список бейджей (без интерактива)
+        const execList = t.executors_list || [];
+        if (execList.length > 0) {
+          // Обёртка: слева — бейджи исполнителей, справа — суммарная трудоёмкость
+          const wrapper = document.createElement("div");
+          wrapper.style.cssText = "display:flex;align-items:center;gap:8px;";
+          const container = document.createElement("div");
+          container.style.cssText = "display:flex;flex-direction:column;gap:4px;flex:1;";
+          let grandTotal = 0;
+          // Каждый исполнитель — фиолетовый бейдж с ФИО и часами
+          execList.forEach(ex => {
+            const execItem = document.createElement("div");
+            execItem.style.cssText = "font-size:15px;color:var(--text);background:rgba(168,85,247,0.1);padding:3px 8px;border-radius:4px;border:1px solid rgba(168,85,247,0.2);";
+            const hours = ex.hours || {};
+            let totalHours = 0;
+            // Если выбран конкретный месяц — показываем часы за месяц, иначе — сумму за все
+            if (selectedMonth) {
+              const key = `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`;
+              totalHours = hours[key] || 0;
+            } else {
+              totalHours = Object.values(hours).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+            }
+            grandTotal += totalHours;
+            execItem.innerHTML = `<strong>${escapeHtml(ex.name)}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
+            container.appendChild(execItem);
+          });
+          wrapper.appendChild(container);
+          // Суммарная трудоёмкость — синий бейдж справа
+          if (grandTotal > 0) {
+            const totalEl = document.createElement("div");
+            totalEl.style.cssText = "min-width:44px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:600;color:var(--accent);background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:6px;padding:4px 6px;white-space:nowrap;flex-shrink:0;";
+            totalEl.textContent = grandTotal + " ч";
+            wrapper.appendChild(totalEl);
+          }
+          td.appendChild(wrapper);
+        } else {
+          // Нет исполнителей — просто текст поля
+          td.textContent = t[col.field] || '';
+        }
+      } else if (col.type === "date") {
+        // Даты: преобразуем YYYY-MM-DD → DD.MM.YYYY
+        td.textContent = t[col.field] ? t[col.field].split('-').reverse().join('.') : '';
+      } else if (col.type === "select" && col.extraField) {
+        // Сектор: код + ФИО руководителя сектора под ним
+        td.textContent = t[col.field] || '';
+        const sectorCode = t[col.field] || '';
+        const sectorEntry = (dirs['_ids_sector'] || []).find(s => s.value === sectorCode);
+        const headName = sectorEntry ? (sectorEntry.head_name || '') : '';
+        if (headName) {
+          const extra = document.createElement("div");
+          extra.style.cssText = "font-size:11px;color:var(--muted);margin-top:2px;";
+          extra.textContent = headName;
+          td.appendChild(extra);
+        }
+      } else {
+        // Все остальные поля (dept, project, stage, text-поля) — просто текст
+        td.textContent = t[col.field] || '';
+      }
+      tr.appendChild(td);
+      return; // Пропускаем интерактивную часть ниже
+    }
+
+    // ── Writer: интерактивные поля ─────────────────────────────────────
+    // Для writer — полные select/textarea/input с обработчиками сохранения.
+
     if (col.field === "executor") {
+      // Колонка «Исполнитель» — особая логика отображения
       td.style.cssText = "padding:6px 8px;vertical-align:middle;";
       const execList = t.executors_list || [];
       if (execList.length > 0 || isFromPP) {
+        // Если есть исполнители — показываем бейджи (не select)
         // Обёртка: слева — список исполнителей, справа — суммарная трудоёмкость
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "display:flex;align-items:center;gap:8px;";
@@ -2271,11 +2615,13 @@ function makeRow(t, num) {
         container.style.cssText = "display:flex;flex-direction:column;gap:4px;flex:1;";
 
         let grandTotal = 0;
+        // Каждый исполнитель — фиолетовый бейдж с ФИО и часами за период
         execList.forEach(ex => {
           const execItem = document.createElement("div");
           execItem.style.cssText = "font-size:15px;color:var(--text);background:rgba(168,85,247,0.1);padding:3px 8px;border-radius:4px;border:1px solid rgba(168,85,247,0.2);";
           const hours = ex.hours || {};
           let totalHours = 0;
+          // Если выбран конкретный месяц — часы за этот месяц, иначе — сумма за все
           if (selectedMonth) {
             const key = `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`;
             totalHours = hours[key] || 0;
@@ -2289,7 +2635,7 @@ function makeRow(t, num) {
 
         wrapper.appendChild(container);
 
-        // Суммарная трудоёмкость справа, по центру
+        // Суммарная трудоёмкость — синий бейдж справа по центру
         if (grandTotal > 0) {
           const totalEl = document.createElement("div");
           totalEl.style.cssText = "min-width:44px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:600;color:var(--accent);background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:6px;padding:4px 6px;white-space:nowrap;flex-shrink:0;";
@@ -2299,29 +2645,36 @@ function makeRow(t, num) {
 
         td.appendChild(wrapper);
       } else {
+        // Нет исполнителей — показываем select для выбора (если не ПП)
         const sel = document.createElement("select");
         sel.className = "cell-select";
         sel.dataset.field = col.field;
         sel.dataset.dirKey = col.dirKey;
         fillSelect(sel, col.dirKey, t[col.field], null, null);
+        // При выборе — автосохранение задачи
         sel.addEventListener("change", () => saveTask(t.id, tr));
         td.appendChild(sel);
       }
     }
     else if (col.type === "select") {
+      // ── Select-поля (dept, sector, project, stage) ──
       const sel = document.createElement("select");
       sel.className = "cell-select";
       sel.dataset.field = col.field;
       if (col.parentField) sel.dataset.parentField = col.parentField;
       if (col.parentDirKey) sel.dataset.parentDirKey = col.parentDirKey;
       if (col.dirKey) sel.dataset.dirKey = col.dirKey;
+      // Заполняем варианты из справочника, учитывая каскадную зависимость
       fillSelect(sel, col.dirKey, t[col.field], col.parentField ? t[col.parentField] : null, col.parentDirKey);
       if (isFromPP) {
+        // ПП-записи: select заблокирован — поля из ПП нельзя менять
         sel.disabled = true;
       } else {
+        // Обычные записи: при изменении — каскад + автосохранение
         sel.addEventListener("change", () => {
+          // При смене отдела — обновляем список секторов
           if (col.field === "dept") { const s = tr.querySelector("select[data-field='sector']"); if(s) fillSelect(s,"sector",null,sel.value,"dept"); }
-          if (col.field === "project") { const s = tr.querySelector("select[data-field='stage']"); if(s) fillSelect(s,"stage",null,sel.value,"project"); }
+          // stage не зависит от project — каскад не нужен
           saveTask(t.id, tr);
         });
       }
@@ -2339,24 +2692,29 @@ function makeRow(t, num) {
         }
       }
     } else {
+      // ── Text/date поля (work_number, justification, description, etc.) ──
+      // text → textarea, date → input[type=date]
       const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
       inp.className = "cell-edit" + (col.type === "date" ? " date" : "");
       inp.dataset.field = col.field;
       if (col.type === "date") {
         inp.type = "date";
-        // Показываем дату как текст через data-атрибут, скрываем нативный инпут
+        // Дата отображается как текст (DD.MM.YYYY); при клике — раскрывается нативный date-picker
         const fmtDate = v => v ? v.split('-').reverse().join('.') : '';
+        // Скрываем нативный input — показываем через span
         inp.style.cssText = "position:absolute;opacity:0;pointer-events:none;width:0;height:0;";
         const span = document.createElement("span");
         span.className = "date-display";
         span.dataset.field = col.field;
         span.textContent = fmtDate(t[col.field]);
-        // Поля, разрешённые для ПП-записей в инлайн-режиме
+        // Для ПП-записей разрешено редактировать только date_start и date_end
         const ppAllowedInline = new Set(["date_start", "date_end"]);
         if (!isFromPP || ppAllowedInline.has(col.field)) {
+          // Клик по тексту даты → показать date-picker
           span.style.cursor = "pointer";
           span.title = "Нажмите для редактирования";
           span.addEventListener("click", () => { inp.style.cssText = ""; inp.focus(); span.style.display = "none"; });
+          // При потере фокуса — скрыть picker, обновить текст
           inp.addEventListener("blur", () => {
             inp.style.cssText = "position:absolute;opacity:0;pointer-events:none;width:0;height:0;";
             span.textContent = fmtDate(inp.value);
@@ -2366,6 +2724,7 @@ function makeRow(t, num) {
         td.appendChild(span);
       }
       inp.value = t[col.field] || "";
+      // Автовысота textarea при вводе текста
       if (inp.tagName === "TEXTAREA") {
         inp.rows = 1;
         inp.addEventListener("input", () => { inp.style.height="auto"; inp.style.height=inp.scrollHeight+"px"; });
@@ -2373,34 +2732,43 @@ function makeRow(t, num) {
       // Для ПП-записей блокируем все поля кроме разрешённых (date_start, date_end)
       const ppAllowedFields = new Set(["date_start", "date_end"]);
       if (isFromPP && !ppAllowedFields.has(col.field)) { inp.readOnly = true; inp.tabIndex = -1; }
+      // Обработчик изменения — автосохранение + логика пересчёта часов при смене дат
       inp.addEventListener("change", async () => {
+        // ПП-поля (кроме дат) — игнорируем
         if (isFromPP && !ppAllowedFields.has(col.field)) return;
         if (col.field === "date_start" || col.field === "date_end") {
+          // Если есть исполнители и диапазон дат расширился — предупреждаем
           const hasExecutors = (t.executors_list && t.executors_list.length > 0) || t.executor;
           if (hasExecutors) {
             const dsInp = tr.querySelector("input[data-field='date_start']");
             const deInp = tr.querySelector("input[data-field='date_end']");
             const newStart = dsInp?.value || t.date_start;
             const newEnd = deInp?.value || t.date_end;
+            // Вычисляем добавленные месяцы (для распределения часов)
             const oldKeys = getTaskMonthKeys(t.date_start, t.date_end, t.deadline);
             const newKeys = getTaskMonthKeys(newStart, newEnd, t.deadline);
             const addedMonths = newKeys.filter(k => !oldKeys.includes(k));
             if (addedMonths.length > 0) {
+              // Показываем модал подтверждения расширения дат
               showDateChangeModal(addedMonths.length, async (confirmed) => {
                 if (confirmed) {
                   await saveTask(t.id, tr);
                   await loadTasks();
+                  // Открываем модал редактирования для настройки часов по новым месяцам
                   const updatedTask = tasks.find(task => task.id === t.id);
                   if (updatedTask) openEditTaskModal(updatedTask);
                 } else {
+                  // Откат значения при отмене
                   inp.value = t[col.field] || "";
                 }
               }, t.id, tr);
               return;
             }
           }
+          // Обновляем ячейку плановых часов
           updatePlanHoursCell(tr, t);
         }
+        // Автосохранение задачи на сервер
         saveTask(t.id, tr);
       });
       td.appendChild(inp);
@@ -2408,30 +2776,65 @@ function makeRow(t, num) {
     tr.appendChild(td);
   });
 
-  // Actions
+  // ── Колонка «Зависимости» — бейдж с количеством предшественников ──
+  const depsTd = document.createElement("td");
+  depsTd.style.cssText = "padding:6px 8px;vertical-align:middle;text-align:center;";
+  const pc = t.predecessors_count || 0;
+  const depBadge = document.createElement("span");
+  depBadge.className = "dep-badge" + (pc === 0 ? " zero" : "");
+  depBadge.textContent = pc;
+  depBadge.title = pc > 0 ? `${pc} предш.` : "Нет зависимостей";
+  depBadge.style.cursor = "pointer";
+  // Клик — открывает модал управления зависимостями
+  depBadge.onclick = () => openDepsModal(t);
+  depsTd.appendChild(depBadge);
+  tr.appendChild(depsTd);
+
+  // ── Колонка «Действия» — кнопки в зависимости от роли ──
+  // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
+  // User:   📄 отчёт, 🔗 зависимости (только просмотр)
   const actTd = document.createElement("td");
   actTd.className = "actions-cell";
   actTd.style.display = "table-cell";
+  // Кнопка «Редактировать» — открывает полный модал редактирования задачи
+  // Для ПП-записей: частичное редактирование (иконка 🔒 ✏️)
   const editBtn = document.createElement("button");
   editBtn.className = "btn-edit-row"; editBtn.textContent = isFromPP ? "🔒 ✏️" : "✏️";
   editBtn.title = isFromPP ? "Редактирование (частичное): задача из Производственного плана" : "Редактировать";
   editBtn.style.display = "inline-block";
   editBtn.onclick = () => openEditTaskModal(t);
+  // Кнопка «Отчёт» — открывает модал отчётных документов (для всех ролей)
   const repBtn = document.createElement("button");
   repBtn.className = "btn-report"; repBtn.textContent = "📄 Отчёт";
   repBtn.style.display = "inline-block";
   repBtn.onclick = () => openReportModal(t);
+  // Кнопка «Удалить» — удаляет задачу с подтверждением
   const delBtn = document.createElement("button");
   delBtn.className = "btn-del"; delBtn.textContent = "✕";
   delBtn.style.display = "inline-block";
   delBtn.onclick = () => deleteTask(t.id, tr);
-  actTd.appendChild(editBtn); actTd.appendChild(repBtn); actTd.appendChild(delBtn);
+  // Кнопка «Зависимости» — открывает модал связей (для всех ролей)
+  const depsBtn = document.createElement("button");
+  depsBtn.className = "btn-deps"; depsBtn.textContent = "🔗";
+  depsBtn.title = "Зависимости";
+  depsBtn.style.display = "inline-block";
+  depsBtn.onclick = () => openDepsModal(t);
+  // ✏️ и ✕ — только если пользователь может редактировать эту строку (свой отдел/сектор)
+  // 📄 и 🔗 — для всех (read-only операции)
+  const rowEditable = _canModify(t.dept, t.sector);
+  if (rowEditable) actTd.appendChild(editBtn);
+  actTd.appendChild(repBtn);
+  actTd.appendChild(depsBtn);
+  if (rowEditable) actTd.appendChild(delBtn);
   tr.appendChild(actTd);
   return tr;
 }
 
+// Заглушка обновления ячейки часов — данные обновляются при следующем loadTasks
 function updatePlanHoursCell(tr, t) { /* placeholder — server returns updated data on next loadTasks */ }
 
+// Заполняет <select> вариантами из справочника dirs[dirKey]
+// parentVal/parentDirKey — фильтрация дочерних записей по родительскому значению
 function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   sel.innerHTML = "<option value=''>—</option>";
   // Исполнители хранятся в _ids_employees (реальные Employee), а не в _ids_executor
@@ -2474,6 +2877,7 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   });
 }
 
+// Собирает данные из ячеек строки таблицы в объект для отправки на сервер
 function getRowData(tr) {
   const data = {};
   tr.querySelectorAll(".cell-edit,.cell-select").forEach(inp => {
@@ -2492,6 +2896,7 @@ function getRowData(tr) {
   return data;
 }
 
+// Сохраняет изменения задачи на сервер (PUT /api/tasks/<id>/) из inline-ячеек
 async function saveTask(id, tr) {
   const data = getRowData(tr);
   tr.style.outline = '1px solid rgba(59,130,246,0.4)';
@@ -2516,16 +2921,28 @@ async function saveTask(id, tr) {
   }
 }
 
+// Удаляет задачу (DELETE /api/tasks/<id>/) с подтверждением + анимация исчезновения
 async function deleteTask(id, tr) {
   if (!await confirmDialog("Удалить задачу?", "Удаление")) return;
-  await fetch(`/api/tasks/${id}/`, {method:"DELETE", headers:apiHeaders()});
-  tr.style.transition = "opacity 0.2s, transform 0.2s";
-  tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
-  setTimeout(() => {
-    tr.remove();
-    document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => td.textContent = i+1);
-  }, 200);
-  notify("Задача удалена", "ok");
+  try {
+    const res = await fetch(`/api/tasks/${id}/`, {method:"DELETE", headers:apiHeaders()});
+    if (!res.ok) {
+      let msg = 'Ошибка удаления';
+      try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+      notify(msg, "err"); return;
+    }
+    // Удаляем из локального массива задач
+    tasks = tasks.filter(t => t.id !== id);
+    tr.style.transition = "opacity 0.2s, transform 0.2s";
+    tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
+    setTimeout(() => {
+      tr.remove();
+      document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => td.textContent = i+1);
+    }, 200);
+    notify("Задача удалена", "ok");
+  } catch(e) {
+    notify("Ошибка сети: " + e.message, "err");
+  }
 }
 
 // ── TYPE MODAL ────────────────────────────────────────────────────────────
@@ -2537,8 +2954,8 @@ function selectTypeAndProceed(el) {
   openNewTaskModal(pendingTaskType);
 }
 
-// ── INLINE NEW ROW (без модала) ───────────────────────────────────────────
-let _addingTaskRow = false;
+// ── INLINE NEW ROW — добавление задачи прямо в таблице (без модала) ───────
+let _addingTaskRow = false;                          // Флаг: строка добавления уже показана
 
 const TASK_TYPES = [
   'Разработка',
@@ -2586,7 +3003,7 @@ function openInlineNewRow() {
     {id:'inr-dept',          type:'select', dirKey:'dept'},
     {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept'},
     {id:'inr-project',       type:'select', dirKey:'project'},
-    {id:'inr-stage',         type:'select', dirKey:'stage',   parentId:'inr-project', parentDirKey:'project'},
+    {id:'inr-stage',         type:'select', dirKey:'stage'},
     {id:'inr-work_number',   type:'text',   placeholder:'№ работы'},
     {id:'inr-justification', type:'text',   placeholder:'Обоснование'},
     {id:'inr-description',   type:'text',   placeholder:'Обозначение'},
@@ -2631,12 +3048,7 @@ function openInlineNewRow() {
           }
         });
       }
-      if (def.id === 'inr-project') {
-        sel.addEventListener('change', () => {
-          const stageSel = document.getElementById('inr-stage');
-          if (stageSel) fillSelect(stageSel, 'stage', null, sel.value, 'project');
-        });
-      }
+      // stage не зависит от project — каскад не нужен
       td.appendChild(sel);
     } else {
       const ta = document.createElement('textarea');
@@ -2762,10 +3174,11 @@ function openInlineNewRow() {
   });
 }
 
-// ── NEW TASK FORM MODAL ───────────────────────────────────────────────────
-let editingTaskId = null;
-let _editingTaskOriginal = null;
+// ── NEW TASK FORM MODAL — модал создания/редактирования задачи ─────────────
+let editingTaskId = null;                            // ID редактируемой задачи (null = создание)
+let _editingTaskOriginal = null;                     // Исходные данные задачи (для сравнения)
 
+// Открывает модал создания новой задачи; taskType — тип задачи, prefill — начальные значения
 function openNewTaskModal(taskType, prefill) {
   editingTaskId = null;
   newTaskExecutorsList = [];
@@ -2781,7 +3194,7 @@ function openNewTaskModal(taskType, prefill) {
   populateFormSelect(document.getElementById("nt-dept"),     "dept",     _ntDefDept,   null, null);
   populateFormSelect(document.getElementById("nt-sector"),   "sector",   _ntDefSector, _ntDefDept || null, "dept");
   populateFormSelect(document.getElementById("nt-project"),  "project",  prefill?.project  || null, null, null);
-  populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, prefill?.project || null, "project");
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, null, null);
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
   ["work_name","work_number","justification","date_start","date_end","deadline","actions"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = prefill?.[f] || ""; });
@@ -2800,6 +3213,7 @@ function openNewTaskModal(taskType, prefill) {
   document.getElementById("newTaskModal").classList.add("open");
 }
 
+// Открывает модал редактирования существующей задачи; t — объект задачи
 function openEditTaskModal(t) {
   editingTaskId = t.id;
   _editingTaskOriginal = t;
@@ -2814,7 +3228,7 @@ function openEditTaskModal(t) {
   populateFormSelect(document.getElementById("nt-dept"),     "dept",     t.dept     || null, null, null);
   populateFormSelect(document.getElementById("nt-sector"),   "sector",   t.sector   || null, t.dept || null, "dept");
   populateFormSelect(document.getElementById("nt-project"),  "project",  t.project  || null, null, null);
-  populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, t.project || null, "project");
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, null, null);
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
   ["work_name","work_number","justification","date_start","date_end","deadline"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = t[f] || ""; });
@@ -2843,6 +3257,7 @@ function openEditTaskModal(t) {
   document.getElementById("newTaskModal").classList.add("open");
 }
 
+// Блокирует ПП-поля в модале (isPP=true: запись из Производственного плана)
 function _applyPPLock(isPP) {
   document.getElementById("pp-edit-hint")?.remove();
   const ppAllowed = new Set(["nt-date_start", "nt-date_end", "nt-plan_hours_single", "nt-executor-select"]);
@@ -2865,6 +3280,7 @@ function _applyPPLock(isPP) {
   }
 }
 
+// Закрывает модал создания/редактирования и сбрасывает состояние
 function closeNewTaskModal() {
   document.getElementById("newTaskModal").classList.remove("open");
   editingTaskId = null; _editingTaskOriginal = null;
@@ -2873,12 +3289,14 @@ function closeNewTaskModal() {
   document.getElementById("nt-pp-labor-wrap").style.display = "none";
 }
 
+// Каскад: при смене отдела → обновляем сектор и исполнителей
 function onNewTaskDeptChange() {
   const deptVal = document.getElementById("nt-dept").value;
   populateFormSelect(document.getElementById("nt-sector"), "sector", null, deptVal, "dept");
   // При смене отдела сбрасываем сектор → показываем всех сотрудников отдела
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, deptVal, "dept");
 }
+// Каскад: при смене сектора → обновляем исполнителей (фильтр по сектору или отделу)
 function onNewTaskSectorChange() {
   const sectorVal = document.getElementById("nt-sector").value;
   const deptVal   = document.getElementById("nt-dept").value;
@@ -2889,10 +3307,10 @@ function onNewTaskSectorChange() {
   }
 }
 function onNewTaskProjectChange() {
-  populateFormSelect(document.getElementById("nt-stage"), "stage", null,
-    document.getElementById("nt-project").value, "project");
+  // stage не зависит от project — каскад не нужен
 }
 
+// При изменении дат задачи — перестраиваем поля помесячных часов
 function onNewTaskDateChange(prefillHours) {
   const ds = document.getElementById("nt-date_start").value;
   const de = document.getElementById("nt-date_end").value;
@@ -2936,6 +3354,7 @@ function onNewTaskDateChange(prefillHours) {
   renderNewTaskExecutorsList();
 }
 
+// Пересчитывает и отображает сумму часов (из исполнителей или помесячных полей)
 function updateTotalHours() {
   const execInputs = document.querySelectorAll("#nt-executors-list input[data-exec-index]");
   const monthInputs = document.querySelectorAll("#nt-plan-months-wrap input[data-month]");
@@ -2969,6 +3388,7 @@ function updateTotalHours() {
   if (hasExec || hasMonth || hasSingle) document.getElementById("nt-labor-row").style.display = "";
 }
 
+// Заполняет <select> в модале создания/редактирования; аналог fillSelect для формы
 function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   sel.innerHTML = "<option value=''>—</option>";
   // Исполнители хранятся в _ids_employees (реальные Employee), а не в _ids_executor
@@ -3011,6 +3431,7 @@ function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   }
 }
 
+// Создаёт или обновляет задачу: проверяет конфликты с отпуском, собирает данные, POST/PUT
 async function submitNewTask() {
   const ds = document.getElementById("nt-date_start").value || null;
   const de = document.getElementById("nt-date_end").value || null;
@@ -3083,13 +3504,22 @@ async function submitNewTask() {
   }
 
   if (editingTaskId) {
-    await fetch(`/api/tasks/${editingTaskId}/`, {
+    const res = await fetch(`/api/tasks/${editingTaskId}/`, {
       method: "PUT", headers: apiHeaders(), body: JSON.stringify(data)
     });
+    if (!res.ok) {
+      let msg = 'Ошибка сохранения';
+      try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+      notify(msg, "err"); return;
+    }
     closeNewTaskModal(); await loadTasks(); notify("✓ Изменения сохранены", "ok");
   } else {
     const res = await fetch("/api/tasks/create/", {method:"POST", headers:apiHeaders(), body:JSON.stringify(data)});
-    const {id} = await res.json();
+    if (!res.ok) {
+      let msg = 'Ошибка создания задачи';
+      try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+      notify(msg, "err"); return;
+    }
     closeNewTaskModal(); await loadTasks(); notify("✓ Задача создана", "ok");
   }
 }
@@ -3151,7 +3581,11 @@ function _reportConfig(taskType) {
   return { disabled, required, bvd_required, is_correction };
 }
 
+// Открывает модал отчётных документов для задачи.
+// Принимает объект задачи или числовой ID.
+// Загружает список отчётов из API, для writer создаёт пустую строку если нет данных.
 async function openReportModal(taskOrId) {
+  // Определяем задачу — из объекта или по ID
   if (typeof taskOrId === 'object' && taskOrId !== null) {
     currentTask = taskOrId;
     currentTaskId = taskOrId.id;
@@ -3159,17 +3593,22 @@ async function openReportModal(taskOrId) {
     currentTaskId = taskOrId;
     currentTask = tasks.find(x => x.id === taskOrId) || {id: taskOrId};
   }
+  // Заголовок модала — наименование задачи
   document.getElementById("reportTaskRef").textContent = currentTask.work_name || `Задача #${currentTaskId}`;
   const res = await fetch(`/api/reports/${currentTaskId}/`);
   reportRows = await res.json();
-  // Если отчётов нет — сразу одна пустая строка, не нужно нажимать «Добавить»
-  if (reportRows.length === 0) {
+  // Если отчётов нет — для writer сразу одна пустая строка, не нужно нажимать «Добавить»
+  if (reportRows.length === 0 && IS_WRITER) {
     reportRows.push(_makeNewReportRow());
   }
   renderReportTable();
+  // Кнопка «Добавить строку» — только для writer
+  const addRowBtn = document.getElementById("btnAddReportRow");
+  if (addRowBtn) addRowBtn.style.display = IS_WRITER ? "" : "none";
   document.getElementById("reportModal").classList.add("open");
 }
 
+// Создаёт объект пустой строки отчёта с дефолтными полями
 function _makeNewReportRow() {
   const row = {task_id: currentTaskId};
   // Норматив из ЕТБД
@@ -3186,12 +3625,17 @@ function closeReportModal() { document.getElementById("reportModal").classList.r
 
 // ── Дропдаун карточки пользователя ───────────────────────────────────────────
 function toggleUserMenu() {
-  document.getElementById("userDropdown").classList.toggle("open");
+  const dd = document.getElementById("userDropdown");
+  const user = document.querySelector(".topbar-user");
+  dd.classList.toggle("open");
+  if (user) user.classList.toggle("menu-open", dd.classList.contains("open"));
 }
 document.addEventListener("click", e => {
   const wrap = document.querySelector(".user-menu-wrap");
   if (wrap && !wrap.contains(e.target)) {
     document.getElementById("userDropdown").classList.remove("open");
+    const user = document.querySelector(".topbar-user");
+    if (user) user.classList.remove("menu-open");
   }
 });
 
@@ -3203,50 +3647,69 @@ function _updateReportHeader(cfg) {
   // «Инвентарный №» → «Номер изв.» для корректировки
   const thInv = document.getElementById('rh_inventory');
   if (thInv) thInv.textContent = cfg.is_correction ? 'Номер изв.' : 'Инвентарный №';
+  // Колонка «Срок действия» — только для корректировки
+  const thExp = document.getElementById('rh_date_expires');
+  if (thExp) thExp.style.display = cfg.is_correction ? '' : 'none';
 }
 
+// Перерисовывает таблицу отчётов: обновляет заголовки и пересоздаёт строки
 function renderReportTable() {
   const cfg = _reportConfig((currentTask && currentTask.task_type) || '');
-  _updateReportHeader(cfg);
+  _updateReportHeader(cfg);                          // Настраиваем видимость колонок по типу задачи
   const tbody = document.getElementById("reportBody");
-  tbody.innerHTML = "";
-  reportRows.forEach((r,i) => tbody.appendChild(makeReportRow(r, i, cfg)));
+  tbody.innerHTML = "";                               // Очищаем tbody перед перерисовкой
+  reportRows.forEach((r,i) => tbody.appendChild(makeReportRow(r, i, cfg))); // Создаём строки заново
 }
 
+// Хелпер: создаёт <td> с <select> для строки отчёта
+// field    — имя поля (data-field), options — массив вариантов,
+// currentVal — текущее значение, isDisabled — блокировка ввода
 function _makeSelectCell(field, options, currentVal, isDisabled) {
   const td = document.createElement("td");
   const sel = document.createElement("select");
   sel.className = "r-cell r-cell-select"; sel.dataset.field = field;
+  // Пустой вариант «—» по умолчанию
   const emptyOpt = document.createElement("option"); emptyOpt.value = ""; emptyOpt.textContent = "—";
   sel.appendChild(emptyOpt);
+  // Заполняем варианты; выбираем совпадающий
   options.forEach(opt => {
     const o = document.createElement("option"); o.value = opt; o.textContent = opt;
     if (currentVal === opt) o.selected = true;
     sel.appendChild(o);
   });
-  if (isDisabled) { sel.disabled = true; sel.classList.add('r-cell-disabled'); }
+  // Блокируем поле если isDisabled (зависит от типа задачи/конфига)
+  if (isDisabled) { sel.disabled = true; sel.classList.add('r-cell-disabled'); td.classList.add('r-td-disabled'); }
   td.appendChild(sel);
   return td;
 }
 
+// Хелпер: создаёт <td> с <textarea> для строки отчёта
+// field — имя поля, value — начальное значение, isDisabled — блокировка
 function _makeTextCell(field, value, isDisabled) {
   const td = document.createElement("td");
   const inp = document.createElement("textarea");
   inp.className = "r-cell"; inp.rows = 1;
-  inp.value = value != null ? String(value) : "";
+  inp.value = value != null ? String(value) : "";  // null/undefined → пустая строка
   inp.dataset.field = field;
+  // Авторесайз по мере ввода текста
   inp.addEventListener("input", () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
-  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
+  // Блокируем поле если isDisabled (зависит от типа задачи/конфига)
+  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); td.classList.add('r-td-disabled'); }
   td.appendChild(inp);
+  // Авторесайз при начальной загрузке (текст уже заполнен)
+  requestAnimationFrame(() => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
   return td;
 }
 
+// Хелпер: создаёт <td> с <input type="date"> для строки отчёта
+// field — имя поля, value — дата ISO (YYYY-MM-DD), isDisabled — блокировка
 function _makeDateCell(field, value, isDisabled) {
   const td = document.createElement("td");
   const inp = document.createElement("input");
   inp.type = "date"; inp.className = "r-cell r-cell-date"; inp.dataset.field = field;
-  inp.value = value || "";
-  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); }
+  inp.value = value || "";                          // Пустая строка если дата не задана
+  // Блокируем поле если isDisabled (зависит от типа задачи/конфига)
+  if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); td.classList.add('r-td-disabled'); }
   td.appendChild(inp);
   return td;
 }
@@ -3258,6 +3721,17 @@ function makeReportRow(r, idx, cfg) {
   if (cfg.is_correction) {
     const td = _makeSelectCell('ii_pi', II_PI_OPTIONS, r.ii_pi || '', false);
     td.style.display = '';
+    // При смене ИИ/ПИ обновляем disabled у поля Срок действия в той же строке
+    const sel = td.querySelector('select');
+    if (sel) sel.addEventListener('change', function() {
+      const expiresCell = tr.querySelector('[data-field="date_expires"]');
+      if (!expiresCell) return;
+      const isII = this.value === 'ИИ';
+      expiresCell.disabled = isII;
+      expiresCell.classList.toggle('r-cell-disabled', isII);
+      expiresCell.closest('td').classList.toggle('r-td-disabled', isII);
+      if (isII) expiresCell.value = '';
+    });
     tr.appendChild(td);
   } else {
     // Пустая ячейка-заглушка чтобы colspan в thead работал правильно
@@ -3275,8 +3749,16 @@ function makeReportRow(r, idx, cfg) {
     tr.appendChild(_makeTextCell('inventory_num', r.inventory_num, cfg.disabled.has('inventory_num')));
   }
 
-  // Дата принятия
+  // Дата выпуска
   tr.appendChild(_makeDateCell('date_accepted', r.date_accepted, cfg.disabled.has('date_accepted')));
+
+  // Срок действия — только для корректировки; disabled если ИИ/ПИ = «ИИ»
+  if (cfg.is_correction) {
+    const expiresDisabled = (r.ii_pi === 'ИИ');
+    tr.appendChild(_makeDateCell('date_expires', r.date_expires, expiresDisabled));
+  } else {
+    const td = document.createElement("td"); td.style.display = 'none'; tr.appendChild(td);
+  }
 
   // Вид doc
   tr.appendChild(_makeTextCell('doc_type', r.doc_type, cfg.disabled.has('doc_type')));
@@ -3302,27 +3784,142 @@ function makeReportRow(r, idx, cfg) {
   // Ссылка
   tr.appendChild(_makeTextCell('doc_link', r.doc_link, cfg.disabled.has('doc_link')));
 
-  // Кнопка удаления
-  const delTd = document.createElement("td"); delTd.style.padding = "4px 6px";
-  const delBtn = document.createElement("button"); delBtn.className = "r-del"; delBtn.textContent = "✕";
-  delBtn.onclick = async () => {
-    if (r.id) await fetchJson(`/api/reports/${r.id}/detail/`, {method: "DELETE"});
-    reportRows.splice(idx, 1); renderReportTable();
-  };
-  delTd.appendChild(delBtn); tr.appendChild(delTd); return tr;
+  // Кнопки ✓ сохранить / ✕ удалить — только для writer
+  const actTd = document.createElement("td"); actTd.style.cssText = "padding:4px 6px;white-space:nowrap;";
+
+  if (IS_WRITER) {
+    const saveBtn = document.createElement("button"); saveBtn.className = "r-save"; saveBtn.title = "Сохранить строку";
+    saveBtn.textContent = "✓";
+    saveBtn.onclick = async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "…";
+      const ok = await saveOneReportRow(tr, r, idx);
+      if (ok) { saveBtn.textContent = "✓"; saveBtn.disabled = false; }
+      else { saveBtn.textContent = "✓"; saveBtn.disabled = false; }
+    };
+
+    const delBtn = document.createElement("button"); delBtn.className = "r-del"; delBtn.title = "Удалить строку";
+    delBtn.textContent = "✕";
+    delBtn.onclick = async () => {
+      if (!confirm("Удалить строку отчёта? Данные будут удалены из ЕТБД без возможности восстановления.")) return;
+      if (r.id) await fetchJson(`/api/reports/${r.id}/detail/`, {method: "DELETE"});
+      reportRows.splice(idx, 1); renderReportTable();
+    };
+
+    actTd.appendChild(saveBtn); actTd.appendChild(delBtn);
+  }
+
+  // Для role=user: все поля read-only
+  if (!IS_WRITER) {
+    tr.querySelectorAll('textarea, input, select').forEach(el => { el.disabled = true; });
+  }
+
+  tr.appendChild(actTd); return tr;
 }
 
+function _syncRowsFromDom() {
+  // Считываем текущие значения из DOM обратно в reportRows (сохраняем введённые данные)
+  const trs = document.querySelectorAll("#reportBody tr");
+  trs.forEach((tr, idx) => {
+    if (!reportRows[idx]) return;
+    tr.querySelectorAll(".r-cell").forEach(el => {
+      if (!el.disabled) reportRows[idx][el.dataset.field] = el.value || '';
+    });
+  });
+}
+
+// Добавляет пустую строку в таблицу отчётов (кнопка «＋ Добавить строку»)
 function addReportRow() {
-  reportRows.push(_makeNewReportRow());
-  renderReportTable();
+  _syncRowsFromDom();                               // Сначала сохраняем введённые данные из DOM
+  reportRows.push(_makeNewReportRow());              // Добавляем пустую строку в массив
+  renderReportTable();                               // Перерисовываем таблицу
 }
 
+// Сохраняет одну строку отчёта (кнопка ✓ в строке)
+// tr — DOM-строка таблицы, r — объект из reportRows, idx — индекс в массиве
+async function saveOneReportRow(tr, r, idx) {
+  const cfg = _reportConfig((currentTask && currentTask.task_type) || '');
+  const data = {task_id: currentTaskId};             // ID задачи-владельца
+  // Собираем значения всех полей из DOM-элементов строки
+  tr.querySelectorAll(".r-cell").forEach(el => { data[el.dataset.field] = el.value || null; });
+
+  const missing = Array.from(cfg.required).filter(f => !data[f] || String(data[f]).trim() === '');
+  if (cfg.bvd_required && (!data.bvd_hours || String(data.bvd_hours).trim() === '')) missing.push('bvd_hours');
+  if (missing.length > 0) {
+    notify("Заполните обязательные поля: " + missing.join(", "), "err");
+    return false;
+  }
+
+  // Валидация URL в поле «Ссылка»
+  if (data.doc_link && !/^https?:\/\/\S+/.test(data.doc_link.trim())) {
+    notify("Поле «Ссылка» должно содержать URL (http:// или https://)", "err");
+    return false;
+  }
+
+  try {
+    const rid = tr.dataset.rid || r.id;
+    if (rid) {
+      await fetchJson(`/api/reports/${rid}/detail/`, {method: "PUT", body: JSON.stringify(data)});
+    } else {
+      const resp = await fetchJson("/api/reports/", {method: "POST", body: JSON.stringify(data)});
+      if (resp && resp.id) { tr.dataset.rid = resp.id; reportRows[idx].id = resp.id; }
+    }
+    // Визуальный фидбек: строка мигает зелёным
+    tr.style.transition = 'background .2s';
+    tr.style.background = 'var(--success-light, #dcfce7)';
+    setTimeout(() => { tr.style.background = ''; }, 1200);
+    notify("✓ Строка сохранена", "ok");
+
+    // Автозаполнение ЖИ для ПИ
+    if (data.ii_pi === 'ПИ' && currentTask) {
+      await _syncNoticeFromReport(data, tr.dataset.rid || r.id);
+    }
+
+    return true;
+  } catch(e) {
+    notify("Ошибка сохранения: " + e.message, "err");
+    return false;
+  }
+}
+
+// Автоматически создаёт запись в ЖИ при сохранении строки отчёта с типом ПИ
+// data — собранные поля строки, reportId — ID сохранённого отчёта
+async function _syncNoticeFromReport(data, reportId) {
+  // Берём текущую задачу для получения отдела
+  const task = currentTask || {};
+  const noticeData = {
+    ii_pi: 'ПИ',
+    notice_number: data.doc_number || '',
+    subject: data.doc_name || '',
+    doc_designation: data.doc_designation || '',
+    date_issued: data.date_accepted || '',
+    date_expires: data.date_expires || '',
+    dept: task.dept || '',
+    status: 'active',
+  };
+  try {
+    if (noticeData.notice_number) {
+      // Проверяем: нет ли уже записи в ЖИ с таким же номером и типом ПИ (защита от дублей)
+      const existing = await fetchJson(`/api/journal/?per_page=100000`);
+      const list = Array.isArray(existing) ? existing : (existing.results || []);
+      const already = list.some(n => n.notice_number === noticeData.notice_number && n.ii_pi === 'ПИ');
+      if (!already) {
+        await fetchJson('/api/journal/create/', {method: 'POST', body: JSON.stringify(noticeData)});
+      }
+    }
+  } catch(e) {
+    // Не критично — просто логируем
+    console.warn('ЖИ автозаполнение:', e.message);
+  }
+}
+
+// Сохраняет все строки отчёта разом (кнопка «Сохранить всё» в модале)
 async function saveAllReports() {
   const cfg = _reportConfig((currentTask && currentTask.task_type) || '');
-  const trs = Array.from(document.querySelectorAll("#reportBody tr"));
+  const trs = Array.from(document.querySelectorAll("#reportBody tr")); // Все строки таблицы
   for (const tr of trs) {
-    const rid = tr.dataset.rid;
-    const data = {task_id: currentTaskId};
+    const rid = tr.dataset.rid;                      // ID записи (пустой для новых)
+    const data = {task_id: currentTaskId};            // ID задачи-владельца
+    // Собираем значения полей из DOM
     tr.querySelectorAll(".r-cell").forEach(el => { data[el.dataset.field] = el.value || null; });
 
     // Обязательные поля с учётом типа задачи
@@ -3348,9 +3945,15 @@ async function saveAllReports() {
   notify("✓ Отчёт сохранён", "ok");
 }
 
-// ── USERS ─────────────────────────────────────────────────────────────────
+// ── USERS — управление пользователями (admin-only модал) ──────────────────
+// Открывает модал со списком пользователей; загружает данные с /api/users/
 async function openUsersModal() {
-  const res=await fetch("/api/users/"); const users=await res.json();
+  let users;
+  try {
+    const res=await fetch("/api/users/");
+    users = res.ok ? await res.json() : [];
+  } catch(e) { notify("Ошибка загрузки пользователей: " + e.message, "err"); return; }
+  // Рендерим таблицу: заголовок + строка на каждого пользователя
   const tbl=document.getElementById("usersTable");
   tbl.innerHTML="<tr><th>Логин</th><th>Роль</th><th style='text-align:right'>Действия</th></tr>";
   users.forEach(u=>{
@@ -3359,12 +3962,15 @@ async function openUsersModal() {
       <button class="btn-reset-pw" data-uid="${u.id}" data-uname="${escapeHtml(u.username)}" title="Сбросить пароль">🔑 Пароль</button>
       <button class="btn-del" data-uid="${u.id}" title="Удалить">✕</button>
     </td>`;
+    // Привязываем обработчики к кнопкам сброса пароля и удаления
     tr.querySelector('.btn-reset-pw').addEventListener('click', function() { resetUserPassword(u.id, u.username); });
     tr.querySelector('.btn-del').addEventListener('click', function() { delUser(u.id); });
     tbl.appendChild(tr);
   });
   document.getElementById("usersModal").classList.add("open");
 }
+
+// Создаёт нового пользователя (POST /api/users/)
 async function createUser() {
   const username=document.getElementById("newUser").value.trim();
   const password=document.getElementById("newPass").value;
@@ -3372,8 +3978,10 @@ async function createUser() {
   if(!username||!password) return notify("Введите логин и пароль","err");
   const res=await fetch("/api/users/",{method:"POST",headers:apiHeaders(),body:JSON.stringify({username,password,role})});
   const data=await res.json(); if(data.error) return notify(data.error,"err");
-  notify("✓ Пользователь создан","ok"); openUsersModal();
+  notify("✓ Пользователь создан","ok"); openUsersModal(); // Перезагружаем таблицу
 }
+
+// Удаляет пользователя (DELETE /api/users/<id>/) с подтверждением
 async function delUser(id) {
   if (!await confirmDialog("Удалить пользователя?", "Удаление пользователя")) return;
   const resp = await fetch(`/api/users/${id}/`, {method: "DELETE", headers: apiHeaders()});
@@ -3383,19 +3991,23 @@ async function delUser(id) {
     showToast(errMsg, "error");
     return;
   }
-  openUsersModal();
+  openUsersModal(); // Перезагружаем таблицу
 }
+
+// Удаляет ВСЕ задачи из БД (admin-only, debug) с подтверждением
 async function deleteAllTasks() {
   if (!await confirmDialog("Удалить ВСЕ задачи из базы данных? Это действие необратимо.", "Очистить задачи")) return;
   try {
     const res = await fetch('/api/tasks/all/', { method: 'DELETE', headers:apiHeaders() });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    notify('Все задачи удалены', 'ok'); await loadTasks();
+    notify('Все задачи удалены', 'ok'); await loadTasks(); // Перерисовываем таблицу
   } catch (e) { notify('Ошибка удаления: ' + e.message, 'err'); }
 }
+
+// Сбрасывает пароль пользователя (PUT /api/users/<uid>/password/)
 async function resetUserPassword(uid, username) {
   const newPw = prompt(`Новый пароль для пользователя "${username}":`, "");
-  if (newPw === null) return;
+  if (newPw === null) return;                         // Отмена диалога
   if (newPw.length < 4) { notify("Пароль слишком короткий (мин. 4 символа)", "err"); return; }
   const res = await fetch(`/api/users/${uid}/password/`, {
     method: "PUT", headers: apiHeaders(), body: JSON.stringify({password: newPw})
@@ -3404,36 +4016,49 @@ async function resetUserPassword(uid, username) {
   else { const err = await res.json().catch(() => ({})); notify("Ошибка: " + (err.error || res.status), "err"); }
 }
 
-// ── COL RESIZE ────────────────────────────────────────────────────────────
+// ── COL RESIZE — изменение ширины колонок перетаскиванием ──────────────────
+// Инициализирует drag-обработчики на ручках .col-resize в заголовках таблицы
 function initColResize() {
   document.querySelectorAll(".col-resize").forEach(handle => {
     const th=handle.closest("th"); let startX,startW;
     handle.addEventListener("mousedown",e=>{
       e.preventDefault(); startX=e.clientX; startW=th.offsetWidth;
+      // mousemove — изменяем ширину колонки в реальном времени
       const onMove=ev=>{
         const w=Math.max(60,startW+ev.clientX-startX); th.style.width=w+"px";
         const idx=th.cellIndex;
+        // Синхронизируем ширину ячеек в теле таблицы
         document.querySelectorAll("#mainTable tbody tr").forEach(tr=>{if(tr.cells[idx])tr.cells[idx].style.width=w+"px";});
-        colSettings[handle.dataset.col]={width:w};
-        _resizeTextareas(document.getElementById("taskBody"));
+        colSettings[handle.dataset.col]={width:w};   // Запоминаем в настройках
+        _resizeTextareas(document.getElementById("taskBody")); // Подгоняем высоту textarea
       };
+      // mouseup — завершаем drag, сохраняем настройки на сервер
       const onUp=()=>{document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);saveColSettings();};
       document.addEventListener("mousemove",onMove); document.addEventListener("mouseup",onUp);
     });
   });
 }
+
+// Применяет сохранённые ширины колонок из colSettings (загружены с сервера)
 function applyColSettings() {
-  const DATE_COLS_MIN = {ds:150, de:160, dead:175};
+  const DATE_COLS_MIN = {ds:150, de:160, dead:175};   // Минимальная ширина для колонок дат
+  // Устанавливаем сохранённую ширину (но не меньше минимума для дат)
   for(const[key,val]of Object.entries(colSettings)){const th=document.getElementById(`th-${key}`);if(th&&val.width){const minW=DATE_COLS_MIN[key]||0;th.style.width=Math.max(val.width,minW)+"px";}}
+  // Для колонок дат без сохранённой ширины — задаём minWidth
   for(const[key,minW]of Object.entries(DATE_COLS_MIN)){const th=document.getElementById(`th-${key}`);if(th&&!colSettings[key]?.width)th.style.minWidth=minW+"px";}
 }
+
+// Сохраняет настройки ширины колонок на сервер (POST /api/col_settings/)
 async function saveColSettings() {
-  await fetch("/api/col_settings/",{method:"POST",headers:apiHeaders(),body:JSON.stringify(colSettings)});
+  try {
+    await fetch("/api/col_settings/",{method:"POST",headers:apiHeaders(),body:JSON.stringify(colSettings)});
+  } catch(e) { console.error('saveColSettings error:', e); }
 }
 
+// Обёртка для уведомлений: переводит short-коды (ok/err/info) в формат showToast
 function notify(msg, type="ok") {
-  const el=document.createElement("div"); el.className=`notif ${type}`; el.textContent=msg;
-  document.body.appendChild(el); setTimeout(()=>el.remove(),2500);
+  const map = {ok: 'success', err: 'error', info: 'info'};
+  showToast(msg, map[type] || 'info');
 }
 
 // ── DATE CHANGE MODAL ─────────────────────────────────────────────────────
@@ -3477,7 +4102,8 @@ function closeVacationConflictModal(action) {
   if (vacationConflictResolve) { vacationConflictResolve(action); vacationConflictResolve = null; }
 }
 
-// ── NEW TASK EXECUTORS MANAGEMENT ─────────────────────────────────────────
+// ── NEW TASK EXECUTORS MANAGEMENT — управление исполнителями при создании новой задачи ──
+// Добавляет выбранного сотрудника в список исполнителей новой задачи
 function addExecutorToNewTask() {
   const select = document.getElementById('nt-executor-select');
   const executorName = select.value;
@@ -3488,12 +4114,14 @@ function addExecutorToNewTask() {
   select.value = '';
   notify('Исполнитель добавлен', 'ok');
 }
+// Удаляет исполнителя из списка новой задачи по индексу (с подтверждением)
 async function removeExecutorFromNewTask(index) {
   if (!await confirmDialog('Удалить исполнителя?', 'Удаление')) return;
   newTaskExecutorsList.splice(index, 1);
   renderNewTaskExecutorsList();
   notify('Исполнитель удалён', 'ok');
 }
+// Перерисовывает список исполнителей новой задачи (бейджи + поля часов по месяцам)
 function renderNewTaskExecutorsList() {
   const container = document.getElementById('nt-executors-list');
   if (newTaskExecutorsList.length === 0) {
@@ -3539,6 +4167,7 @@ function renderNewTaskExecutorsList() {
   });
   updateTotalHours();
 }
+// Обновляет часы исполнителя в новой задаче при изменении input поля
 function updateNewTaskExecutorHours(index, monthKey, value) {
   if (!newTaskExecutorsList[index]) return;
   const numValue = parseFloat(value);
@@ -3550,22 +4179,30 @@ function updateNewTaskExecutorHours(index, monthKey, value) {
   updateTotalHours();
 }
 
-// ── EXECUTORS MANAGEMENT (standalone modal) ───────────────────────────────
-let currentTaskForExecutors = null;
-let taskExecutorsData = [];
+// ── EXECUTORS MANAGEMENT — модал управления исполнителями существующей задачи ──
+let currentTaskForExecutors = null;                  // ID задачи, для которой открыт модал
+let taskExecutorsData = [];                          // Массив исполнителей текущей задачи
 
+// Открывает модал исполнителей: загружает данные с сервера, рисует список
 async function openExecutorsModal(taskId, taskName) {
   currentTaskForExecutors = taskId;
   document.getElementById('executorsTaskRef').textContent = `Задача: ${taskName}`;
-  const res = await fetch(`/api/tasks/${taskId}/executors/`);
-  taskExecutorsData = await res.json();
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/executors/`);
+    taskExecutorsData = res.ok ? await res.json() : [];
+  } catch(e) {
+    notify("Ошибка загрузки исполнителей: " + e.message, "err");
+    taskExecutorsData = [];
+  }
   renderExecutorsList();
   document.getElementById('executorsModal').classList.add('open');
 }
+// Закрывает модал исполнителей и очищает данные
 function closeExecutorsModal() {
   document.getElementById('executorsModal').classList.remove('open');
   currentTaskForExecutors = null; taskExecutorsData = [];
 }
+// Перерисовывает список исполнителей в модале (имя + поля часов по месяцам)
 function renderExecutorsList() {
   const container = document.getElementById('executorsList');
   if (taskExecutorsData.length === 0) {
@@ -3598,6 +4235,7 @@ function renderExecutorsList() {
     container.appendChild(item);
   });
 }
+// Возвращает массив последних 12 месяцев (ключ YYYY-MM + подпись) для полей часов
 function getMonthsForTask() {
   const months = [];
   const now = new Date();
@@ -3609,6 +4247,7 @@ function getMonthsForTask() {
   }
   return months;
 }
+// Добавляет выбранного сотрудника в список исполнителей (модал существующей задачи)
 function addExecutorToTask() {
   const select = document.getElementById('newExecutorSelect');
   const executorName = select.value;
@@ -3617,16 +4256,19 @@ function addExecutorToTask() {
   taskExecutorsData.push({ name: executorName, hours: {} });
   renderExecutorsList(); select.value = ''; notify('Исполнитель добавлен', 'ok');
 }
+// Удаляет исполнителя из задачи по индексу (с подтверждением)
 async function removeExecutor(index) {
   if (!await confirmDialog('Удалить исполнителя из этой задачи?', 'Удаление')) return;
   taskExecutorsData.splice(index, 1); renderExecutorsList(); notify('Исполнитель удалён', 'ok');
 }
+// Обновляет часы исполнителя существующей задачи при изменении input поля
 function updateExecutorHours(index, monthKey, value) {
   if (!taskExecutorsData[index]) return;
   const numValue = parseFloat(value);
   if (isNaN(numValue) || numValue < 0) taskExecutorsData[index].hours[monthKey] = 0;
   else taskExecutorsData[index].hours[monthKey] = numValue;
 }
+// Сохраняет список исполнителей задачи на сервер (PUT /api/tasks/<id>/)
 async function saveTaskExecutors() {
   if (!currentTaskForExecutors) return;
   try {
@@ -3639,7 +4281,648 @@ async function saveTaskExecutors() {
   } catch (error) { console.error('Error saving executors:', error); notify('Ошибка сохранения', 'err'); }
 }
 
-// ── SIDEBAR TOGGLE ────────────────────────────────────────────────────────
+// ── DEPENDENCIES — модал управления зависимостями между задачами ──────────
+let currentDepsTaskId = null;                        // ID задачи, для которой открыт модал
+let currentDepsTask = null;                          // Объект задачи целиком
+
+// Открывает модал зависимостей: заголовок, даты, формы добавления (только writer)
+function openDepsModal(t) {
+  currentDepsTaskId = t.id;
+  currentDepsTask = t;
+  const modal = document.getElementById('depsModal');
+  document.getElementById('depsModalTitle').textContent =
+    `Зависимости: ${t.work_name || t.work_num || '#' + t.id}`;
+  const ds = t.date_start ? t.date_start.split('-').reverse().join('.') : '—';
+  const de = t.date_end ? t.date_end.split('-').reverse().join('.') : '—';
+  document.getElementById('depsModalDates').textContent = `Сроки: ${ds} → ${de}`;
+  if (IS_WRITER) {
+    document.getElementById('depsAddForm').style.display = '';
+    document.getElementById('depsAddSuccForm').style.display = '';
+    _populateDepsSelect(t.id);
+    _populateSuccSelect(t.id);
+  } else {
+    document.getElementById('depsAddForm').style.display = 'none';
+    document.getElementById('depsAddSuccForm').style.display = 'none';
+  }
+  modal.classList.add('open');
+  loadDeps(t.id);
+}
+
+// Закрывает модал зависимостей и очищает данные
+function closeDepsModal() {
+  document.getElementById('depsModal').classList.remove('open');
+  currentDepsTaskId = null;
+  currentDepsTask = null;
+}
+
+// Загружает предшественников и последователей для задачи, рисует таблицы + баннер конфликтов
+async function loadDeps(taskId) {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/dependencies/`, { headers: apiHeaders() });
+    if (!res.ok) { notify('Ошибка загрузки зависимостей', 'err'); return; }
+    const data = await res.json();
+    renderPredecessors(data.predecessors || []);
+    renderSuccessors(data.successors || []);
+    const alignBar = document.getElementById('depsAlignBar');
+    const txt = document.getElementById('depsAlignText');
+    const predBtn = document.getElementById('depsAlignPredBtn');
+    const succBtn = document.getElementById('depsAlignSuccBtn');
+    const hasDeps = (data.predecessors || []).length > 0 || (data.successors || []).length > 0;
+    if (data.has_conflict && IS_WRITER) {
+      alignBar.style.display = '';
+      txt.textContent = '⚠ Обнаружен конфликт сроков';
+      txt.style.color = 'var(--danger, #e53e3e)';
+      predBtn.style.display = data.has_pred_conflict ? '' : 'none';
+      succBtn.style.display = data.has_succ_conflict ? '' : 'none';
+    } else if (hasDeps) {
+      alignBar.style.display = '';
+      txt.textContent = '✓ Даты соответствуют зависимостям';
+      txt.style.color = 'var(--success)';
+      predBtn.style.display = 'none';
+      succBtn.style.display = 'none';
+    } else {
+      alignBar.style.display = 'none';
+    }
+  } catch (e) {
+    console.error('loadDeps error:', e);
+    notify('Ошибка загрузки зависимостей', 'err');
+  }
+}
+
+// Рисует таблицу предшественников (задача, тип связи, лаг, даты, кнопка удаления)
+function renderPredecessors(preds) {
+  const wrap = document.getElementById('depsPredBody');
+  document.getElementById('depsPredCount').textContent = preds.length ? `(${preds.length})` : '';
+  if (preds.length === 0) {
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет предшественников</div>';
+    return;
+  }
+  let html = '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
+  if (IS_WRITER) html += '<th style="width:40px;"></th>';
+  html += '</tr></thead><tbody>';
+  preds.forEach(d => {
+    const rowStyle = d.conflict ? 'background:rgba(229,62,62,0.08);' : '';
+    html += `<tr data-dep-id="${d.id}" style="${rowStyle}">`;
+    html += `<td>${escapeHtml(d.work_name || d.work_num || '#' + d.work_id)}</td>`;
+    html += `<td><span class="dep-type-badge">${d.dep_type}</span></td>`;
+    html += `<td style="font-family:var(--mono);">${d.lag_days}д</td>`;
+    const ds = d.date_start ? d.date_start.split('-').reverse().join('.') : '—';
+    const de = d.date_end ? d.date_end.split('-').reverse().join('.') : '—';
+    const dateColor = d.conflict ? 'color:var(--danger, #e53e3e);font-weight:600;' : 'color:var(--text2);';
+    html += `<td style="font-size:13px;${dateColor}">${ds} → ${de}${d.conflict ? ' ⚠' : ''}</td>`;
+    if (IS_WRITER) {
+      html += `<td><button class="btn-del" onclick="deleteDep(${d.id})" title="Удалить связь">✕</button></td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// Рисует таблицу последователей (задача, тип связи, лаг, даты, кнопка удаления)
+function renderSuccessors(succs) {
+  const wrap = document.getElementById('depsSuccBody');
+  document.getElementById('depsSuccCount').textContent = succs.length ? `(${succs.length})` : '';
+  if (succs.length === 0) {
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет последователей</div>';
+    return;
+  }
+  let html = '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
+  if (IS_WRITER) html += '<th style="width:40px;"></th>';
+  html += '</tr></thead><tbody>';
+  succs.forEach(d => {
+    const rowStyle = d.conflict ? 'background:rgba(229,62,62,0.08);' : '';
+    html += `<tr style="${rowStyle}">`;
+    html += `<td>${escapeHtml(d.work_name || d.work_num || '#' + d.work_id)}</td>`;
+    html += `<td><span class="dep-type-badge">${d.dep_type}</span></td>`;
+    html += `<td style="font-family:var(--mono);">${d.lag_days}д</td>`;
+    const ds = d.date_start ? d.date_start.split('-').reverse().join('.') : '—';
+    const de = d.date_end ? d.date_end.split('-').reverse().join('.') : '—';
+    const dateColor = d.conflict ? 'color:var(--danger, #e53e3e);font-weight:600;' : 'color:var(--text2);';
+    html += `<td style="font-size:13px;${dateColor}">${ds} → ${de}${d.conflict ? ' ⚠' : ''}</td>`;
+    if (IS_WRITER) {
+      html += `<td><button class="btn-del" onclick="deleteDep(${d.id})" title="Удалить связь">✕</button></td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/* ── Searchable predecessor dropdown — поисковый дропдаун предшественников ── */
+let _depsDropdownItems = [];                         // Все доступные задачи для выбора
+let _depsDropdownHighlight = -1;                     // Индекс подсвеченного элемента (клавиатурная навигация)
+
+// Заполняет массив элементов дропдауна (исключая текущую задачу)
+function _populateDepsSelect(excludeId) {
+  const input = document.getElementById('depsAddPredInput');
+  const hidden = document.getElementById('depsAddPredSelect');
+  input.value = '';
+  hidden.value = '';
+  _depsDropdownItems = [];
+  tasks.forEach(t => {
+    if (t.id === excludeId) return;
+    const name = t.work_name || t.work_num || '#' + t.id;
+    const dept = t.dept ? ` [${t.dept}]` : '';
+    _depsDropdownItems.push({ id: t.id, label: name + dept });
+  });
+  _renderDepsDropdownList('');
+}
+
+// Рисует отфильтрованный список в дропдауне предшественников
+function _renderDepsDropdownList(filter) {
+  const list = document.getElementById('depsAddPredList');
+  const lc = filter.toLowerCase();
+  const filtered = lc ? _depsDropdownItems.filter(it => it.label.toLowerCase().includes(lc)) : _depsDropdownItems;
+  const selectedId = document.getElementById('depsAddPredSelect').value;
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="search-dropdown-empty">Ничего не найдено</div>';
+  } else {
+    list.innerHTML = filtered.map(it =>
+      `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`
+    ).join('');
+  }
+  _depsDropdownHighlight = -1;
+}
+
+// IIFE: инициализация поискового дропдауна предшественников (focus, input, keydown, click)
+(function initDepsDropdown() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('depsAddPredInput');
+    const list = document.getElementById('depsAddPredList');
+    const hidden = document.getElementById('depsAddPredSelect');
+    if (!input) return;
+
+    // Показать список при фокусе и при вводе текста
+    input.addEventListener('focus', () => { _renderDepsDropdownList(input.value); list.classList.add('open'); });
+    input.addEventListener('input', () => { _renderDepsDropdownList(input.value); list.classList.add('open'); });
+
+    input.addEventListener('keydown', e => {
+      const items = list.querySelectorAll('.search-dropdown-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); _depsDropdownHighlight = Math.min(_depsDropdownHighlight + 1, items.length - 1); _highlightDepsItem(items); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); _depsDropdownHighlight = Math.max(_depsDropdownHighlight - 1, 0); _highlightDepsItem(items); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (_depsDropdownHighlight >= 0 && items[_depsDropdownHighlight]) items[_depsDropdownHighlight].click(); }
+      else if (e.key === 'Escape') { list.classList.remove('open'); }
+    });
+
+    list.addEventListener('click', e => {
+      const item = e.target.closest('.search-dropdown-item');
+      if (!item) return;
+      hidden.value = item.dataset.value;
+      input.value = item.textContent;
+      list.classList.remove('open');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#depsAddPredDropdown')) list.classList.remove('open');
+    });
+  });
+})();
+
+// Подсвечивает текущий элемент в дропдауне предшественников (навигация стрелками)
+function _highlightDepsItem(items) {
+  items.forEach((it, i) => it.classList.toggle('highlighted', i === _depsDropdownHighlight));
+  if (items[_depsDropdownHighlight]) items[_depsDropdownHighlight].scrollIntoView({ block: 'nearest' });
+}
+
+/* ── Searchable successor dropdown — поисковый дропдаун последователей ──── */
+let _succDropdownItems = [];                         // Все доступные задачи для выбора
+let _succDropdownHighlight = -1;                     // Индекс подсвеченного элемента
+
+// Заполняет массив элементов дропдауна последователей (исключая текущую задачу)
+function _populateSuccSelect(excludeId) {
+  const input = document.getElementById('depsAddSuccInput');
+  const hidden = document.getElementById('depsAddSuccSelect');
+  input.value = '';
+  hidden.value = '';
+  _succDropdownItems = [];
+  tasks.forEach(t => {
+    if (t.id === excludeId) return;
+    const name = t.work_name || t.work_num || '#' + t.id;
+    const dept = t.dept ? ` [${t.dept}]` : '';
+    _succDropdownItems.push({ id: t.id, label: name + dept });
+  });
+  _renderSuccDropdownList('');
+}
+
+// Рисует отфильтрованный список в дропдауне последователей
+function _renderSuccDropdownList(filter) {
+  const list = document.getElementById('depsAddSuccList');
+  const lc = filter.toLowerCase();
+  const filtered = lc ? _succDropdownItems.filter(it => it.label.toLowerCase().includes(lc)) : _succDropdownItems;
+  const selectedId = document.getElementById('depsAddSuccSelect').value;
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="search-dropdown-empty">Ничего не найдено</div>';
+  } else {
+    list.innerHTML = filtered.map(it =>
+      `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`
+    ).join('');
+  }
+  _succDropdownHighlight = -1;
+}
+
+// Подсвечивает текущий элемент в дропдауне последователей (навигация стрелками)
+function _highlightSuccItem(items) {
+  items.forEach((it, i) => it.classList.toggle('highlighted', i === _succDropdownHighlight));
+  if (items[_succDropdownHighlight]) items[_succDropdownHighlight].scrollIntoView({ block: 'nearest' });
+}
+
+// IIFE: инициализация поискового дропдауна последователей
+(function initSuccDropdown() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('depsAddSuccInput');
+    const list = document.getElementById('depsAddSuccList');
+    const hidden = document.getElementById('depsAddSuccSelect');
+    if (!input) return;
+
+    input.addEventListener('focus', () => { _renderSuccDropdownList(input.value); list.classList.add('open'); });
+    input.addEventListener('input', () => { _renderSuccDropdownList(input.value); list.classList.add('open'); });
+
+    input.addEventListener('keydown', e => {
+      const items = list.querySelectorAll('.search-dropdown-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); _succDropdownHighlight = Math.min(_succDropdownHighlight + 1, items.length - 1); _highlightSuccItem(items); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); _succDropdownHighlight = Math.max(_succDropdownHighlight - 1, 0); _highlightSuccItem(items); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (_succDropdownHighlight >= 0 && items[_succDropdownHighlight]) items[_succDropdownHighlight].click(); }
+      else if (e.key === 'Escape') { list.classList.remove('open'); }
+    });
+
+    list.addEventListener('click', e => {
+      const item = e.target.closest('.search-dropdown-item');
+      if (!item) return;
+      hidden.value = item.dataset.value;
+      input.value = item.textContent;
+      list.classList.remove('open');
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#depsAddSuccDropdown')) list.classList.remove('open');
+    });
+  });
+})();
+
+// Добавляет последователя (POST /api/tasks/<succId>/dependencies/)
+async function addSuccessor() {
+  const succId = document.getElementById('depsAddSuccSelect').value;
+  if (!succId) { notify('Выберите задачу', 'err'); return; }
+  const depType = document.getElementById('depsAddSuccType').value;
+  const lagDays = parseInt(document.getElementById('depsAddSuccLag').value) || 0;
+  try {
+    // successor = выбранная задача, predecessor = текущая задача
+    const res = await fetch(`/api/tasks/${parseInt(succId)}/dependencies/`, {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ predecessor_id: currentDepsTaskId, dep_type: depType, lag_days: lagDays }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      notify('Зависимость добавлена', 'ok');
+      document.getElementById('depsAddSuccInput').value = '';
+      document.getElementById('depsAddSuccSelect').value = '';
+      loadDeps(currentDepsTaskId);
+      // Обновить badges: у текущей задачи прибавился последователь (badge не меняется),
+      // у выбранной задачи прибавился предшественник
+      const succTask = tasks.find(t => t.id === parseInt(succId));
+      if (succTask) {
+        succTask.predecessors_count = (succTask.predecessors_count || 0) + 1;
+        const badge = document.querySelector(`[data-task-id="${succId}"] .dep-badge, tr[data-id="${succId}"] .dep-badge`);
+        if (badge) { badge.textContent = succTask.predecessors_count; badge.classList.remove('zero'); }
+      }
+    } else {
+      notify(data.error || 'Ошибка', 'err');
+    }
+  } catch (e) {
+    console.error('addSuccessor error:', e);
+    notify('Ошибка добавления', 'err');
+  }
+}
+
+// Добавляет предшественника (POST /api/tasks/<currentId>/dependencies/)
+async function addPredecessor() {
+  const predId = document.getElementById('depsAddPredSelect').value;
+  if (!predId) { notify('Выберите задачу', 'err'); return; }
+  const depType = document.getElementById('depsAddType').value;
+  const lagDays = parseInt(document.getElementById('depsAddLag').value) || 0;
+  try {
+    const res = await fetch(`/api/tasks/${currentDepsTaskId}/dependencies/`, {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ predecessor_id: parseInt(predId), dep_type: depType, lag_days: lagDays }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      notify('Зависимость добавлена', 'ok');
+      document.getElementById('depsAddPredInput').value = '';
+      document.getElementById('depsAddPredSelect').value = '';
+      loadDeps(currentDepsTaskId);
+      // Обновить badge в таблице
+      _updateDepsBadge(currentDepsTaskId, 1);
+    } else {
+      notify(data.error || 'Ошибка', 'err');
+    }
+  } catch (e) {
+    console.error('addPredecessor error:', e);
+    notify('Ошибка добавления', 'err');
+  }
+}
+
+// Удаляет зависимость (DELETE /api/dependencies/<depId>/) с подтверждением
+async function deleteDep(depId) {
+  if (!confirm('Удалить эту зависимость?')) return;
+  try {
+    const res = await fetch(`/api/dependencies/${depId}/`, {
+      method: 'DELETE', headers: apiHeaders(),
+    });
+    if (res.ok) {
+      notify('Зависимость удалена', 'ok');
+      loadDeps(currentDepsTaskId);
+      _updateDepsBadge(currentDepsTaskId, -1);
+    } else {
+      notify('Ошибка удаления', 'err');
+    }
+  } catch (e) {
+    console.error('deleteDep error:', e);
+    notify('Ошибка удаления', 'err');
+  }
+}
+
+// Выравнивает даты задач по зависимостям (POST /api/tasks/<id>/align_dates/)
+// cascade=true → выравнивает всех последователей, false → только текущую задачу
+async function alignDates(cascade) {
+  const msg = cascade
+    ? 'Выровнять даты всех последователей по зависимостям?'
+    : 'Выровнять даты этой задачи по предшественникам?';
+  if (!await confirmDialog(msg)) return;
+  try {
+    const res = await fetch(`/api/tasks/${currentDepsTaskId}/align_dates/`, {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ cascade: cascade }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      notify(`Даты выровнены (${data.aligned_count} задач)`, 'ok');
+      loadDeps(currentDepsTaskId);
+      loadTasks(); // Обновить всю таблицу
+    } else {
+      notify(data.error || 'Ошибка выравнивания', 'err');
+    }
+  } catch (e) {
+    console.error('alignDates error:', e);
+    notify('Ошибка выравнивания', 'err');
+  }
+}
+
+function _updateDepsBadge(taskId, delta) {
+  // Обновить счётчик в данных и в DOM
+  const t = tasks.find(x => x.id === taskId);
+  if (t) t.predecessors_count = (t.predecessors_count || 0) + delta;
+  const row = document.querySelector(`tr[data-id="${taskId}"]`);
+  if (row) {
+    const badge = row.querySelector('.dep-badge');
+    if (badge && t) {
+      const pc = t.predecessors_count || 0;
+      badge.textContent = pc;
+      badge.className = 'dep-badge' + (pc === 0 ? ' zero' : '');
+      badge.title = pc > 0 ? `${pc} предш.` : 'Нет зависимостей';
+    }
+  }
+}
+
+// Клиентская проверка конфликтов дат (информативный текст, не блокирующая)
+function _checkDateConflict(preds) {
+  if (!currentDepsTask) return;
+  const t = currentDepsTask;
+  const txt = document.getElementById('depsAlignText');
+  // Показать кнопки выравнивания
+  document.querySelectorAll('#depsAlignBar button').forEach(b => b.style.display = '');
+  if (!t.date_start) { txt.textContent = '⚠ Даты можно выровнять по зависимостям'; txt.style.color = 'var(--danger)'; return; }
+  // Определить ожидаемую дату начала (клиентская оценка для информативного текста)
+  let expectedStart = null;
+  preds.forEach(d => {
+    let refDate;
+    if (d.dep_type === 'FS' || d.dep_type === 'FF') refDate = d.date_end;
+    else refDate = d.date_start;
+    if (!refDate) return;
+    const ref = new Date(refDate);
+    ref.setDate(ref.getDate() + (d.lag_days || 0));
+    if (!expectedStart || ref > expectedStart) expectedStart = ref;
+  });
+  if (!expectedStart) return;
+  const actual = new Date(t.date_start);
+  const diffDays = Math.round((actual - expectedStart) / 86400000);
+  if (diffDays < 0) {
+    txt.textContent = `⚠ Задача начинается на ${Math.abs(diffDays)} дн. раньше расчётной даты`;
+    txt.style.color = 'var(--danger)';
+  } else {
+    txt.textContent = '⚠ Даты можно выровнять по зависимостям';
+    txt.style.color = 'var(--warning)';
+  }
+}
+
+// ── VIEW TABS — переключение между табличным видом и диаграммой Ганта ─────
+let currentView = 'table';                           // Текущий вид: 'table' или 'gantt'
+let ganttLoaded = false;                             // Флаг: библиотека dhtmlxGantt загружена
+
+let ganttDepsFilterActive = false;                   // Фильтр: показывать только задачи с зависимостями
+let _ganttDepsSet = new Set();                       // IDs задач, у которых есть зависимости
+
+// Переключает вид (table ↔ gantt), лениво загружает Гант при первом переключении
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+  const tableEl = document.getElementById('tableView');
+  const ganttEl = document.getElementById('ganttContainer');
+  const addRow = document.querySelector('.add-row-wrap');
+  const filterBtn = document.getElementById('ganttFilterDeps');
+  const scaleGroup = document.getElementById('ganttScaleGroup');
+  if (view === 'table') {
+    tableEl.style.display = '';
+    ganttEl.style.display = 'none';
+    if (addRow) addRow.style.display = '';
+    if (filterBtn) filterBtn.style.display = 'none';
+    if (scaleGroup) scaleGroup.style.display = 'none';
+  } else {
+    tableEl.style.display = 'none';
+    ganttEl.style.display = 'block';
+    if (addRow) addRow.style.display = 'none';
+    if (filterBtn) filterBtn.style.display = '';
+    if (scaleGroup) scaleGroup.style.display = '';
+    if (!ganttLoaded) {
+      loadGantt();
+      ganttLoaded = true;
+    } else {
+      renderGantt();
+    }
+  }
+}
+
+// Переключает фильтр «только задачи с зависимостями» на диаграмме Ганта
+function toggleGanttDepsFilter() {
+  ganttDepsFilterActive = !ganttDepsFilterActive;
+  const btn = document.getElementById('ganttFilterDeps');
+  btn.classList.toggle('active', ganttDepsFilterActive);
+  renderGantt();
+}
+
+// Устанавливает масштаб диаграммы Ганта (day/week/month/year)
+function setGanttScale(scale) {
+  if (typeof gantt === 'undefined') return;
+  document.querySelectorAll('#ganttScaleGroup .gantt-scale-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.scale === scale));
+  if (scale === 'day') {
+    gantt.config.scale_unit = 'month';
+    gantt.config.date_scale = '%M %Y';
+    gantt.config.subscales = [{ unit: 'day', step: 1, date: '%d' }];
+    gantt.config.min_column_width = 28;
+  } else if (scale === 'week') {
+    gantt.config.scale_unit = 'month';
+    gantt.config.date_scale = '%M %Y';
+    gantt.config.subscales = [{ unit: 'week', step: 1, date: '%d — ' }];
+    gantt.config.min_column_width = 60;
+  } else if (scale === 'month') {
+    gantt.config.scale_unit = 'year';
+    gantt.config.date_scale = '%Y';
+    gantt.config.subscales = [{ unit: 'month', step: 1, date: '%M' }];
+    gantt.config.min_column_width = 50;
+  } else if (scale === 'year') {
+    gantt.config.scale_unit = 'year';
+    gantt.config.date_scale = '%Y';
+    gantt.config.subscales = [];
+    gantt.config.min_column_width = 80;
+  }
+  gantt.render();
+}
+
+// Ленивая загрузка dhtmlxGantt: подключает CSS и JS, при успехе — настройка + рендер
+function loadGantt() {
+  const cssLink = document.createElement('link');
+  cssLink.rel = 'stylesheet';
+  cssLink.href = '/static/lib/dhtmlxgantt/dhtmlxgantt.css';
+  document.head.appendChild(cssLink);
+  const script = document.createElement('script');
+  script.src = '/static/lib/dhtmlxgantt/dhtmlxgantt.js';
+  script.onload = () => {
+    setupGantt();
+    renderGantt();
+  };
+  script.onerror = () => {
+    document.getElementById('ganttContainer').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--muted);font-size:16px;">' +
+      '⚠ Библиотека dhtmlxGantt не загружена.<br>Скачайте GPL-версию и поместите в <code>static/lib/dhtmlxgantt/</code></div>';
+  };
+  document.head.appendChild(script);
+}
+
+// Устанавливает русскую локаль для dhtmlxGantt (месяцы, дни недели, подписи)
+function _applyGanttLocaleRu() {
+  if (typeof gantt === 'undefined') return;
+  gantt.locale = {
+    date: {
+      month_full: ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"],
+      month_short: ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
+      day_full: ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"],
+      day_short: ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"]
+    },
+    labels: {
+      new_task: "Новая задача",
+      icon_save: "Сохранить",
+      icon_cancel: "Отмена",
+      icon_details: "Детали",
+      icon_edit: "Редактировать",
+      icon_delete: "Удалить",
+      confirm_closing: "",
+      confirm_deleting: "Удалить запись?",
+      section_description: "Описание",
+      section_time: "Период",
+      section_type: "Тип",
+      column_text: "Задача",
+      column_start_date: "Начало",
+      column_duration: "Длительность",
+      column_add: "",
+      link: "Связь",
+      confirm_link_deleting: "Удалить связь?",
+      link_start: "(начало)",
+      link_end: "(конец)",
+      type_task: "Задача",
+      type_project: "Проект",
+      type_milestone: "Веха",
+      minutes: "мин",
+      hours: "ч",
+      days: "дн",
+      weeks: "нед",
+      months: "мес",
+      years: "лет"
+    }
+  };
+}
+
+// Начальная настройка dhtmlxGantt: формат дат, масштаб, колонки, read-only режим
+function setupGantt() {
+  if (typeof gantt === 'undefined') return;
+  _applyGanttLocaleRu();
+  gantt.config.date_format = "%Y-%m-%d";
+  gantt.config.scale_unit = "year";
+  gantt.config.date_scale = "%Y";
+  gantt.config.subscales = [{ unit: "month", step: 1, date: "%M" }];
+  gantt.config.min_column_width = 50;
+  gantt.config.columns = [
+    { name: "text", label: "Задача", width: 250, tree: false },
+    { name: "start_date", label: "Начало", align: "center", width: 90 },
+    { name: "end_date", label: "Окончание", align: "center", width: 90 },
+  ];
+  gantt.config.readonly = true;
+  gantt.config.show_links = true;
+  gantt.config.drag_links = false;
+  gantt.config.drag_move = false;
+  gantt.config.drag_resize = false;
+  gantt.init("ganttContainer");
+}
+
+// Загружает зависимости с сервера и отрисовывает диаграмму Ганта
+async function renderGantt() {
+  if (typeof gantt === 'undefined') return;
+  try {
+    // Загрузка связей
+    const depsRes = await fetch('/api/dependencies/?context=plan', { headers: apiHeaders() });
+    const deps = depsRes.ok ? await depsRes.json() : [];
+
+    // Собрать ID задач, участвующих в зависимостях
+    _ganttDepsSet = new Set();
+    deps.forEach(d => { _ganttDepsSet.add(d.source); _ganttDepsSet.add(d.target); });
+
+    // Маппинг типов: FS=0, SS=1, FF=2, SF=3
+    const typeMap = { 'FS': '0', 'SS': '1', 'FF': '2', 'SF': '3' };
+
+    let filteredTasks = tasks.filter(t => t.date_start && t.date_end);
+    if (ganttDepsFilterActive) {
+      filteredTasks = filteredTasks.filter(t => _ganttDepsSet.has(t.id));
+    }
+
+    const ganttData = {
+      data: filteredTasks.map(t => ({
+        id: t.id,
+        text: t.work_name || t.work_num || '#' + t.id,
+        start_date: t.date_start,
+        end_date: t.date_end,
+        department: t.dept || '',
+      })),
+      links: deps.map(d => ({
+        id: d.id,
+        source: d.source,
+        target: d.target,
+        type: typeMap[d.type] || '0',
+        lag: d.lag || 0,
+      })),
+    };
+
+    gantt.clearAll();
+    gantt.parse(ganttData);
+  } catch (e) {
+    console.error('renderGantt error:', e);
+  }
+}
+
+// ── SIDEBAR TOGGLE — сворачивание/разворачивание боковой панели ────────────
 const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const topbar = document.getElementById('topbar');
@@ -3647,6 +4930,8 @@ const toolbar = document.querySelector('.toolbar');
 const searchbar = document.querySelector('.searchbar');
 const tableWrap = document.querySelector('.table-wrap');
 const addRowWrap = document.querySelector('.add-row-wrap');
+const viewTabs = document.getElementById('viewTabs');
+const ganttEl = document.getElementById('ganttContainer');
 
 if (sidebarToggle) {
   sidebarToggle.addEventListener('click', () => {
@@ -3656,6 +4941,8 @@ if (sidebarToggle) {
     if (searchbar) searchbar.classList.toggle('sidebar-collapsed');
     if (tableWrap) tableWrap.classList.toggle('sidebar-collapsed');
     if (addRowWrap) addRowWrap.classList.toggle('sidebar-collapsed');
+    if (viewTabs) viewTabs.classList.toggle('sidebar-collapsed');
+    if (ganttEl) ganttEl.classList.toggle('sidebar-collapsed');
     localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
   });
   if (localStorage.getItem('sidebarCollapsed') === 'true') {
@@ -3665,10 +4952,72 @@ if (sidebarToggle) {
     if (searchbar) searchbar.classList.add('sidebar-collapsed');
     if (tableWrap) tableWrap.classList.add('sidebar-collapsed');
     if (addRowWrap) addRowWrap.classList.add('sidebar-collapsed');
+    if (viewTabs) viewTabs.classList.add('sidebar-collapsed');
+    if (ganttEl) ganttEl.classList.add('sidebar-collapsed');
   }
 }
 </script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/export.js"></script>
 <script src="/static/js/modal.js"></script>
+<script>
+// Экспорт — инициализация после загрузки export.js
+buildExportDropdown('exportBtnContainer', {
+  pageName: 'СП',
+  columns: [
+    { key: 'task_type',    header: 'Тип задачи',     width: 120 },
+    { key: 'dept',         header: 'Отдел',           width: 80,  forceText: true },
+    { key: 'sector',       header: 'Сектор',          width: 100, forceText: true },
+    { key: 'project',      header: 'Проект',          width: 140 },
+    { key: 'work_name',    header: 'Наименование',    width: 240 },
+    { key: 'work_number',  header: 'Номер работы',    width: 100 },
+    { key: 'description',  header: 'Описание',        width: 200 },
+    { key: 'executor',     header: 'Исполнитель',     width: 140 },
+    { key: 'date_start',   header: 'Дата начала',     width: 100 },
+    { key: 'date_end',     header: 'Дата окончания',  width: 100 },
+    { key: 'deadline',     header: 'Крайний срок',    width: 100 },
+    { key: 'plan_hours',   header: 'Плановые часы',   width: 100,
+      format: r => Object.values(r.plan_hours_all || {}).reduce((s,v) => s + (parseFloat(v)||0), 0) },
+    { key: 'stage',        header: 'Этап',            width: 120 },
+    { key: 'justification',header: 'Обоснование',     width: 200 },
+  ],
+  getAllData:      () => tasks,
+  getFilteredData: spGetFilteredRows,
+});
+
+// Возвращает отфильтрованные задачи для экспорта (применяет colFilters + multi-select)
+function spGetFilteredRows() {
+  return tasks.filter(t => {
+    for (const [col, val] of Object.entries(colFilters)) {
+      if (col.startsWith('mf_')) {
+        const field = col.slice(3);
+        if (val.size > 0) {
+          if (field === 'executor') {
+            const inS = val.has(t.executor || '');
+            const inL = (t.executors_list || []).some(ex => val.has(ex.name || ''));
+            if (!inS && !inL) return false;
+          } else if (field === 'has_deps') {
+            const label = (t.predecessors_count || 0) > 0 ? 'Со связями' : 'Без связей';
+            if (!val.has(label)) return false;
+          } else {
+            if (!val.has(t[field] || '')) return false;
+          }
+        }
+        continue;
+      }
+      if (col === 'plan_hours_total') {
+        const total = Object.values(t.plan_hours_all || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+        const thr = parseFloat(val);
+        if (!isNaN(thr) && total < thr) return false;
+        continue;
+      }
+      const cv = (t[col] || '').toString().toLowerCase();
+      if (!cv.includes(val)) return false;
+    }
+    return true;
+  });
+}
+</script>
 
 </body>
 </html>

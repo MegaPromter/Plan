@@ -125,8 +125,8 @@
           </td>
           <!-- Номер работы (повторяется в отдельной колонке) -->
           <td style="color:var(--text2);font-size:13px;">{{ work.work_num|default:"—" }}</td>
-          <!-- ФИО исполнителя: executor_name_raw (синхронизируется сигналом с Employee.full_name) -->
-          <td style="font-size:13px;">{{ work.executor_name_raw|default:"—" }}</td>
+          <!-- ФИО исполнителя: через FK executor → Employee -->
+          <td style="font-size:13px;">{% if work.executor %}{{ work.executor.full_name }}{% else %}—{% endif %}</td>
           <!-- Дата начала работы -->
           <td style="color:var(--text2);font-size:13px;white-space:nowrap;">{{ work.date_start|default:"—" }}</td>
           <!-- Дата окончания работы -->

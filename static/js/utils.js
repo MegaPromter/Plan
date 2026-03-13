@@ -72,19 +72,20 @@ function showToast(message, type = 'info', duration = 4000) {
     const toast = document.createElement('div');
 
     const colors = {
-        info:    { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)', text: '#93c5fd' },
-        success: { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  text: '#86efac' },
-        warning: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: '#fcd34d' },
-        error:   { bg: 'rgba(220,38,38,0.92)',   border: 'rgba(255,100,100,0.9)', text: '#ffffff' },
+        info:    { bg: 'rgba(59,130,246,0.22)', border: 'rgba(59,130,246,0.6)', text: '#bfdbfe' },
+        success: { bg: 'rgba(34,197,94,0.22)',  border: 'rgba(34,197,94,0.6)',  text: '#a7f3d0' },
+        warning: { bg: 'rgba(245,158,11,0.25)', border: 'rgba(245,158,11,0.6)', text: '#fde68a' },
+        error:   { bg: 'rgba(220,38,38,0.95)',   border: 'rgba(255,100,100,1)', text: '#ffffff' },
     };
     const c = colors[type] || colors.info;
 
     toast.style.cssText = `
-        background: ${c.bg}; border: 1px solid ${c.border}; color: ${c.text};
-        padding: 10px 16px; border-radius: 8px; font-size: 13px;
-        backdrop-filter: blur(12px); pointer-events: auto;
+        background: ${c.bg}; border: 1.5px solid ${c.border}; color: ${c.text};
+        padding: 14px 22px; border-radius: 10px; font-size: 15px; font-weight: 500;
+        backdrop-filter: blur(14px); pointer-events: auto;
         animation: toastIn 0.3s ease-out;
-        max-width: 400px; word-wrap: break-word;
+        max-width: 480px; min-width: 240px; word-wrap: break-word;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     `;
     toast.textContent = message;
     container.appendChild(toast);
@@ -106,6 +107,7 @@ function showToast(message, type = 'info', duration = 4000) {
     `;
     document.head.appendChild(style);
 })();
+
 
 /* ── Debounce ────────────────────────────────────────────────────────────── */
 

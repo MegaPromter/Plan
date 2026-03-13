@@ -33,8 +33,6 @@ class LoadDumpView(View):
             'dump_file': DUMP_FILE,
             'dump_exists': os.path.isfile(DUMP_FILE),
             'secret_configured': bool(expected),
-            'secret_length': len(expected),
-            'env_keys_sample': [k for k in os.environ if 'LOAD' in k or 'DUMP' in k or 'SECRET' in k.upper()],
         })
 
     def post(self, request):
@@ -45,9 +43,9 @@ class LoadDumpView(View):
         except (json.JSONDecodeError, ValueError):
             body = {}
 
-        # Временно отключена проверка секрета для одноразовой загрузки
+        expected_secret = os.environ.get('LOAD_DUMP_SECRET', '')
         secret = body.get('secret', '').strip()
-        if secret != 'load123':
+        if not expected_secret or secret != expected_secret:
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         # Проверяем наличие файла

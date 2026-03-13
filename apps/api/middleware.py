@@ -26,21 +26,11 @@ logger = logging.getLogger(__name__)
 _RATE_RULES = [
     ('rl_login',    '/accounts/login/',       10,  60,  False),  # страница входа
     ('rl_reg',      '/api/register_public/',   5, 300,  True),   # регистрация
-    ('rl_api',      '/api/',                 300,  60,  True),   # весь API
+    ('rl_api',      '/api/',                3000,  60,  True),   # весь API
 ]
 
 
-def _get_ip(request):
-    """Возвращает реальный IP-адрес клиента.
-    Учитывает цепочку прокси через заголовок X-Forwarded-For.
-    """
-    # Заголовок X-Forwarded-For содержит список IP: клиент, прокси1, прокси2, ...
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded:
-        # Берём первый IP — он соответствует исходному клиенту
-        return x_forwarded.split(',')[0].strip()
-    # Нет прокси — берём прямой IP (REMOTE_ADDR), дефолт '0.0.0.0'
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+from apps.api.utils import get_client_ip as _get_ip
 
 
 class RateLimitMiddleware:

@@ -27,7 +27,7 @@ from apps.api.mixins import (
 # Sector (сектор), NTCCenter (НТЦ-центр)
 from apps.employees.models import Employee, Department, Sector, NTCCenter
 # Модели работ: Directory (справочник), PPProject (проект ПП)
-from apps.works.models import Directory, PPProject
+from apps.works.models import Directory, PPProject, Project, Work
 
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)
@@ -126,6 +126,22 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
                 'sector': sector_code,
                 'position': position,
             })
+
+        # Виртуальный справочник проектов (из модели Project)
+        result['project'] = [
+            {'id': p.pk, 'value': p.name, 'parent_id': None}
+            for p in Project.objects.order_by('name_short', 'name_full')
+        ]
+
+        # Виртуальный справочник этапов (уникальные stage_num из Work)
+        stage_vals = sorted(set(
+            Work.objects.exclude(stage_num='')
+            .values_list('stage_num', flat=True)
+        ))
+        result['stage'] = [
+            {'id': idx, 'value': v, 'parent_id': None}
+            for idx, v in enumerate(stage_vals, start=1)
+        ]
 
         # Добавляем виртуальный справочник сотрудников
         result['employees'] = employees

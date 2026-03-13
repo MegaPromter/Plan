@@ -9,17 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _get_ip(request):
-    """Извлекает реальный IP-адрес клиента из запроса.
-    Учитывает заголовок X-Forwarded-For, выставляемый обратным прокси (nginx и т.п.).
-    """
-    # Проверяем заголовок X-Forwarded-For (список IP через запятую при цепочке прокси)
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded:
-        # Берём первый IP в списке — это исходный адрес клиента
-        return x_forwarded.split(',')[0].strip()
-    # Если прокси нет — берём прямой IP из переменной REMOTE_ADDR
-    return request.META.get('REMOTE_ADDR')
+from apps.api.utils import get_client_ip as _get_ip
 
 
 def log_action(request, action, object_id=None, object_repr='', details=None):

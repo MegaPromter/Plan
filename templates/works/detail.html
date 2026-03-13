@@ -59,11 +59,9 @@
       <!-- Сектор: код и название -->
       <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.code }} — {{ object.sector.name }}{% else %}—{% endif %}</td></tr>
       <tr><th>Проект</th><td>{% if object.project %}{{ object.project.name }}{% else %}—{% endif %}</td></tr>
-      <!-- Исполнитель: приоритет — связанный Employee, затем executor_name_raw -->
+      <!-- Исполнитель: через FK executor → Employee -->
       <tr><th>Исполнитель</th><td>
-        {% if object.executor %}{{ object.executor.full_name }}
-        {% elif object.executor_name_raw %}{{ object.executor_name_raw }}
-        {% else %}—{% endif %}
+        {% if object.executor %}{{ object.executor.full_name }}{% else %}—{% endif %}
       </td></tr>
       <tr><th>Дата начала</th><td>{{ object.date_start|default:"—" }}</td></tr>
       <tr><th>Дата окончания</th><td>{{ object.date_end|default:"—" }}</td></tr>
@@ -105,7 +103,7 @@
       <!-- Итоговая трудоёмкость по 2D и 3D моделям -->
       <tr><th>Итого 2D / 3D</th><td>{{ pd.total_2d|default:"—" }} / {{ pd.total_3d|default:"—" }}</td></tr>
       <tr><th>Трудоёмкость</th><td>{{ pd.labor|default:"—" }}</td></tr>
-      <tr><th>Начальник сектора</th><td>{{ pd.sector_head_name|default:"—" }}</td></tr>
+      <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.name }}{% else %}—{% endif %}</td></tr>
     </table>
   </div>
   {% endif %}{% endwith %}{% endif %}

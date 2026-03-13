@@ -219,11 +219,10 @@ class RegisterPublicView(View):
                     password=password,
                 )
                 # Создаём связанный профиль Employee
-                is_admin = bool(data.get('is_admin', False))
+                # Публичная регистрация всегда создаёт пользователя с ролью 'user'
                 Employee.objects.create(
                     user=user,
-                    # Роль: admin если запрошены админ-права, иначе user
-                    role='admin' if is_admin else 'user',
+                    role='user',
                     last_name=last_name,
                     first_name=first_name,
                     patronymic=patronymic,

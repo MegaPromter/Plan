@@ -1,0 +1,30 @@
+Traceback (most recent call last):
+  File "D:\Program\Body\planapp_django\manage.py", line 19, in <module>
+    main()
+    ~~~~^^
+  File "D:\Program\Body\planapp_django\manage.py", line 15, in main
+    execute_from_command_line(sys.argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\core\management\__init__.py", line 419, in execute_from_command_line
+    utility.execute()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\core\management\__init__.py", line 395, in execute
+    django.setup()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\__init__.py", line 16, in setup
+    from django.urls import set_script_prefix
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\urls\__init__.py", line 1, in <module>
+    from .base import (
+    ...<3 lines>...
+    )
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\urls\base.py", line 8, in <module>
+    from .exceptions import NoReverseMatch, Resolver404
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\urls\exceptions.py", line 1, in <module>
+    from django.http import Http404
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\http\__init__.py", line 2, in <module>
+    from django.http.request import (
+        HttpRequest, QueryDict, RawPostDataException, UnreadablePostError,
+    )
+  File "C:\Users\理蝾韁AppData\Local\Programs\Python\Python314\Lib\site-packages\django\http\request.py", line 1, in <module>
+    import cgi
+ModuleNotFoundError: No module named 'cgi'

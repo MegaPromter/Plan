@@ -1,41 +1,123 @@
 {% extends "base.html" %}
-{% load employee_tags %}
-<!-- Страница журнала извещений (Notice list) с фильтром по статусу -->
+{% load static employee_tags %}
 {% block title %}Журнал извещений — Система управления{% endblock %}
 
 {% block styles %}
 <style>
-/* Таблица извещений: чёткие линии, равномерные ячейки */
-.notice-table { width:100%; border-collapse:collapse; table-layout:fixed; }
-.notice-table th,
-.notice-table td {
-  padding:8px 10px;
-  font-size:13px;
-  border:1px solid var(--border);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+:root { --ji-row: 32px; }
+/* ── Обёртка таблицы ── */
+.ji-wrap { overflow-x:auto; max-height:calc(100vh - 180px); border:1px solid var(--border); border-radius:8px; }
+/* ── Таблица ── */
+.ji-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+.ji-table th,
+.ji-table td {
+  padding:6px 8px; font-size:13px;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.notice-table th {
-  background:var(--surface2);
-  font-weight:700;
-  font-size:11px;
-  color:var(--text2);
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  text-align:left;
-  position:sticky; top:60px; z-index:1;
+.ji-table th { background:var(--surface2); font-weight:700; font-size:11px;
+  color:var(--text2); text-transform:uppercase; letter-spacing:.05em;
+  position:sticky; top:0; z-index:3; padding-bottom:2px; }
+/* строка фильтров */
+.ji-table tr.filter-row th {
+  background:var(--surface2); top:31px; padding:3px 4px; z-index:3;
 }
-.notice-table tbody tr:nth-child(even) td { background:var(--surface2); }
-.notice-table tbody tr:nth-child(odd)  td { background:var(--surface); }
-.notice-table tbody tr:hover td { background:var(--accent-light) !important; }
-/* Бейдж статуса */
-.badge-active { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
-  background:#dcfce7; color:#166534; }
-.badge-closed { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
-  background:#f1f5f9; color:#64748b; }
-/* Tooltip для обрезанного текста */
-.notice-table td[title] { cursor:default; }
+/* мультифильтр */
+.mf-wrap { position:relative; width:100%; }
+.mf-trigger {
+  width:100%; padding:2px 16px 2px 4px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:4px; color:var(--text);
+  font-family:var(--font); font-size:11px; outline:none; cursor:pointer;
+  text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:border-color .15s; box-sizing:border-box; position:relative;
+}
+.mf-trigger.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
+.mf-trigger::after { content:"\25BE"; position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  font-size:10px; color:var(--muted); pointer-events:none; }
+.mf-dropdown {
+  position:fixed; z-index:9999; min-width:160px; max-width:260px;
+  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12); padding:6px 0; display:none;
+  max-height:260px; overflow-y:auto;
+}
+.mf-dropdown.open { display:block; }
+.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-size:12px; padding:3px 6px; outline:none;
+  font-family:var(--font); box-sizing:border-box; }
+.mf-option { display:flex; align-items:center; gap:6px; padding:4px 10px; cursor:pointer;
+  font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mf-option:hover { background:var(--accent-light); }
+.mf-actions { display:flex; gap:6px; padding:4px 10px 6px; border-bottom:1px solid var(--border); }
+.mf-btn { flex:1; padding:2px 4px; border:1px solid var(--border); border-radius:4px;
+  background:var(--surface2); color:var(--text2); font-size:11px; cursor:pointer; }
+.mf-btn:hover { background:var(--accent-light); }
+/* строки данных */
+.ji-table tbody tr:nth-child(even) td { background:var(--surface2); }
+.ji-table tbody tr:nth-child(odd)  td { background:var(--surface); }
+.ji-table tbody tr:hover td { background:var(--accent-light) !important; }
+/* бейджи */
+.badge-active    { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:#dcfce7; color:#166534; white-space:nowrap; }
+.badge-expired   { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:#fee2e2; color:#991b1b; white-space:nowrap; }
+.badge-closed-no { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:#fee2e2; color:#991b1b; white-space:nowrap; }
+.badge-closed-yes{ display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:#f1f5f9; color:#64748b; white-space:nowrap; }
+.badge-auto, .badge-manual { display:inline-block; padding:1px 4px; border-radius:4px; font-size:9px;
+  font-weight:600; margin-left:4px; vertical-align:middle; cursor:default; }
+.badge-auto { background:#e0e7ff; color:#4338ca; }
+.badge-manual { background:#fef3c7; color:#92400e; }
+.ji-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; }
+.ji-tooltip.visible { opacity:1; }
+.ji-tooltip.auto { background:#4338ca; color:#e0e7ff; }
+.ji-tooltip.manual { background:#92400e; color:#fef3c7; }
+.ji-tooltip::after { content:''; position:absolute; left:50%; top:100%;
+  transform:translateX(-50%); border:5px solid transparent; }
+.ji-tooltip.auto::after { border-top-color:#4338ca; }
+.ji-tooltip.manual::after { border-top-color:#92400e; }
+/* строка итогов */
+.ji-footer { padding:8px 4px; font-size:12px; color:var(--text2); }
+/* sticky-колонка действий */
+.ji-table th.col-actions,
+.ji-table td.col-actions {
+  position:sticky; right:0; z-index:2;
+  background:var(--surface); border-left:2px solid var(--border);
+  overflow:visible !important;
+}
+.ji-table thead th.col-actions { z-index:4; background:var(--surface2); }
+.ji-table tr.filter-row th.col-actions { z-index:5; background:var(--surface2); }
+.ji-table tbody tr:nth-child(even) td.col-actions { background:var(--surface2); }
+.ji-table tbody tr:hover td.col-actions { background:var(--accent-light) !important; }
+/* кнопки действий */
+.ji-btn { padding:3px 8px; border-radius:4px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer; font-size:12px; font-family:var(--font); }
+.ji-btn:hover { background:var(--accent-light); }
+.ji-btn-del { border-color:rgba(239,68,68,.3); color:var(--danger); }
+.ji-btn-del:hover { background:rgba(239,68,68,.07); }
+.ji-btn-close { border-color:rgba(234,179,8,.4); color:#92400e; font-size:11px; }
+.ji-btn-close:hover { background:rgba(234,179,8,.08); }
+/* модал */
+.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45);
+  backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--surface); border-radius:12px; padding:24px;
+  width:100%; box-shadow:0 8px 32px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-header h2 { font-size:18px; font-weight:700; margin:0; }
+.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text2); padding:4px; }
+.modal-footer { margin-top:16px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text2);
+  text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+.form-input { width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border);
+  border-radius:6px; background:var(--surface); color:var(--text); font-family:var(--font);
+  font-size:14px; outline:none; }
+.form-input:focus { border-color:var(--accent); }
+.form-input:disabled { background:#e9ecef; color:#adb5bd; cursor:not-allowed; }
 </style>
 {% endblock %}
 
@@ -48,113 +130,699 @@
 
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <a href="{% url 'works:notice_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+  <button class="btn btn-primary" onclick="openAddModal()">+ Добавить</button>
 {% endif %}
+<span id="exportBtnContainer"></span>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" style="margin-bottom:12px;">
   <h1>Журнал извещений</h1>
 </div>
 
-<form method="get" class="filter-bar">
-  <select name="status" class="filter-select">
-    <option value="">Все статусы</option>
-    <option value="active"  {% if request.GET.status == "active"  %}selected{% endif %}>Активные</option>
-    <option value="closed"  {% if request.GET.status == "closed"  %}selected{% endif %}>Закрытые</option>
-  </select>
-  <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-  <a href="{% url 'works:notice_list' %}" class="btn btn-outline">Сброс</a>
-</form>
-
-{% if notices %}
-<table class="notice-table">
-  <colgroup>
-    <col style="width:46px;">
-    <col style="width:46px;">
-    <col style="width:115px;">
-    <col style="width:11%;">
-    <col style="width:100px;">
-    <col style="width:100px;">
-    <col style="width:7%;">
-    <col style="width:9%;">
-    <col style="width:9%;">
-    <col>
-    <col style="width:76px;">
-    {% if request.user|is_writer %}<col style="width:46px;">{% endif %}
-  </colgroup>
-  <thead>
-    <tr>
-      <th>№ стр.</th>
-      <th>№</th>
-      <th>ПИ</th>
-      <th>Группа</th>
-      <th>Дата выпуска</th>
-      <th>Срок действия</th>
-      <th>Отдел</th>
-      <th>Сектор</th>
-      <th>Разработчик</th>
-      <th>Описание</th>
-      <th>Статус</th>
-      {% if request.user|is_writer %}<th></th>{% endif %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for n in notices %}
-    <tr>
-      <td style="color:var(--muted);font-size:12px;text-align:center;">{{ forloop.counter }}</td>
-      <td style="text-align:center;"><a href="{% url 'works:notice_detail' n.pk %}" title="Открыть извещение #{{ n.pk }}">{{ n.pk }}</a></td>
-      <td title="{{ n.notice_number }}">{{ n.notice_number|default:"—" }}</td>
-      <td title="{{ n.group }}">{{ n.group|default:"—" }}</td>
-      <td>{{ n.date_issued|default:"—" }}</td>
-      <td>{{ n.date_expires|default:"—" }}</td>
-      <td title="{{ n.department }}">{{ n.department|default:"—" }}</td>
-      <td title="{{ n.sector }}">{{ n.sector|default:"—" }}</td>
-      <td title="{{ n.executor.full_name }}">{{ n.executor.short_name|default:"—" }}</td>
-      <td title="{{ n.description }}">{{ n.description|truncatechars:60|default:"—" }}</td>
-      <td>
-        {% if n.status == 'active' %}
-          <span class="badge-active">Активно</span>
-        {% else %}
-          <span class="badge-closed">Закрыто</span>
-        {% endif %}
-      </td>
-      {% if request.user|is_writer %}
-      <td style="text-align:center;">
-        <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline" title="Редактировать"><i class="fas fa-edit"></i></a>
-      </td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% if is_paginated %}
-<div class="pagination">
-  {% if page_obj.has_previous %}
-    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
-  {% endif %}
-  {% for num in page_obj.paginator.page_range %}
-    {% if page_obj.number == num %}
-      <span class="page-link active">{{ num }}</span>
-    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-      <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
-    {% endif %}
-  {% endfor %}
-  {% if page_obj.has_next %}
-    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
-  {% endif %}
-  <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+<div class="ji-wrap">
+  <table class="ji-table">
+    <colgroup>
+      <col style="width:30px;">  <!-- № -->
+      <col style="width:62px;">  <!-- ИИ/ПИ -->
+      <col style="width:78px;">  <!-- Номер изв. -->
+      <col style="width:110px;"> <!-- Наименование (под Группой) -->
+      <col style="width:110px;"> <!-- Обозначение (под Группой) -->
+      <col style="width:82px;">  <!-- Дата выпуска -->
+      <col style="width:82px;">  <!-- Срок действия -->
+      <col style="width:40px;">  <!-- Отдел -->
+      <col style="width:56px;">  <!-- Сектор -->
+      <col style="width:100px;"> <!-- Разработчик -->
+      <col style="width:90px;">  <!-- Описание -->
+      <col style="width:80px;">  <!-- Статус -->
+      <col style="width:110px;"> <!-- Действия -->
+    </colgroup>
+    <thead>
+      <tr>
+        <th rowspan="2">&#8470;</th>
+        <th rowspan="2">ИИ/ПИ</th>
+        <th rowspan="2">Номер изв.</th>
+        <th colspan="2" style="text-align:center;">Группа</th>
+        <th rowspan="2">Дата выпуска</th>
+        <th rowspan="2">Срок действия</th>
+        <th rowspan="2">Отдел</th>
+        <th rowspan="2">Сектор</th>
+        <th rowspan="2">Разработчик</th>
+        <th rowspan="2">Описание</th>
+        <th rowspan="2">Статус</th>
+        <th rowspan="2" class="col-actions"></th>
+      </tr>
+      <tr>
+        <th>Наименование</th>
+        <th>Обозначение</th>
+      </tr>
+      <tr class="filter-row">
+        <th></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="ii_pi" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="notice_number" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="subject" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="doc_designation" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_issued" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_expires" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="status" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th class="col-actions"></th>
+      </tr>
+    </thead>
+    <tbody id="jiBody">
+      <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Загрузка...</td></tr>
+    </tbody>
+  </table>
 </div>
-{% endif %}
+<div class="ji-footer" id="jiFooter"></div>
 
-{% else %}
-<div class="empty-state">
-  <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
-  <p>Извещений не найдено</p>
-  {% if request.user|is_writer %}
-    <a href="{% url 'works:notice_add' %}" class="btn btn-primary">Добавить первое извещение</a>
-  {% endif %}
+<!-- ── Модал добавления/редактирования (ручной ввод) ── -->
+<div id="jiModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 id="jiModalTitle">Добавить извещение</h2>
+      <button class="modal-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <label class="form-label">ИИ/ПИ</label>
+        <select id="mf_ii_pi" class="form-input">
+          <option value="">--</option>
+          <option value="ИИ">ИИ</option>
+          <option value="ПИ">ПИ</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Номер изв.</label>
+        <input id="mf_notice_number" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Дата выпуска</label>
+        <input id="mf_date_issued" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Срок действия</label>
+        <input id="mf_date_expires" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Отдел</label>
+        <input id="mf_dept" class="form-input" type="text" placeholder="код отдела">
+      </div>
+      <div>
+        <label class="form-label">Сектор</label>
+        <input id="mf_sector" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Разработчик</label>
+        <input id="mf_executor" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Статус</label>
+        <select id="mf_status" class="form-input">
+          <option value="active">Действует</option>
+          <option value="expired">Просрочено</option>
+          <option value="closed_no">Погашено без внесения</option>
+          <option value="closed_yes">Погашено с внесением</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Наименование</label>
+        <input id="mf_subject" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Обозначение</label>
+        <input id="mf_doc_designation" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Описание</label>
+        <textarea id="mf_description" class="form-input" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveModal()">Сохранить</button>
+    </div>
+  </div>
 </div>
-{% endif %}
+
+<!-- ── Модал редактирования описания ── -->
+<div id="jiDescModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h2>Редактировать описание</h2>
+      <button class="modal-close" onclick="closeDescModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Описание</label>
+      <textarea id="desc_text" class="form-input" rows="5"></textarea>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeDescModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveDescModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал погашения ── -->
+<div id="jiCloseModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <h2>Погашение извещения</h2>
+      <button class="modal-close" onclick="closeCloseModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Тип погашения</label>
+        <select id="cl_status" class="form-input">
+          <option value="closed_yes">Погашено с внесением</option>
+          <option value="closed_no">Погашено без внесения</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">&#8470; документа погашения *</label>
+        <input id="cl_notice_number" class="form-input" type="text" required>
+      </div>
+      <div>
+        <label class="form-label">Дата документа *</label>
+        <input id="cl_date_issued" class="form-input" type="date" required>
+      </div>
+      <div>
+        <label class="form-label">Исполнитель *</label>
+        <select id="cl_executor" class="form-input" required>
+          <option value="">— выберите —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeCloseModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCloseModal()">Погасить</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script>
+const IS_WRITER = {% if request.user|is_writer %}true{% else %}false{% endif %};
+const IS_ADMIN    = {% if request.user|is_admin_role %}true{% else %}false{% endif %};
+const USER_ROLE   = "{{ request.user.employee.role|default:'' }}";
+const USER_DEPT   = "{{ request.user.employee.department.code|default:'' }}";
+const USER_SECTOR = "{{ request.user.employee.sector.code|default:'' }}";
+
+// Может ли текущий пользователь редактировать строку с данным dept/sector
+function _canModify(rowDept, rowSector) {
+  if (!IS_WRITER) return false;
+  if (IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy') return true;
+  if (USER_ROLE === 'sector_head') return !!rowSector && rowSector === USER_SECTOR;
+  // dept_head, dept_deputy — только свой отдел
+  return !!rowDept && rowDept === USER_DEPT;
+}
+
+// «Полный доступ» — admin/ntc_head/ntc_deputy (может удалять)
+function _isFullAccess() {
+  return IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy';
+}
+
+let jiData = [];           // все загруженные записи
+let jiMfSelections = {};   // выбранные значения мультифильтров {col: Set}
+let jiMfFilters = {};      // активные фильтры {col: Set}
+let jiActiveDrop = null;   // активный дропдаун
+let jiActiveBtn = null;    // кнопка активного дропдауна
+let editingId = null;      // id редактируемой записи (null = новая)
+let closingId = null;      // id записи для погашения
+
+// ── Мультифильтры ────────────────────────────────────────────────────────────
+const JI_COLS = ['ii_pi','notice_number','subject','doc_designation',
+                 'date_issued','date_expires','dept','sector','executor','description','status'];
+
+function jiGetValues(col) {
+  const vals = new Set();
+  jiData.forEach(n => {
+    const v = col === 'status' ? (n.status || '') : (n[col] || '');
+    if (v) vals.add(v);
+  });
+  return [...vals].sort((a,b) => String(a).localeCompare(String(b), 'ru'));
+}
+
+function jiBuildDrop(btn, col) {
+  if (jiActiveDrop) jiActiveDrop.remove();
+  const vals = jiGetValues(col);
+  const selected = jiMfSelections[col] || new Set();
+  const drop = document.createElement('div');
+  drop.className = 'mf-dropdown open';
+  drop.dataset.col = col;
+
+  const sw = document.createElement('div'); sw.className = 'mf-search';
+  const si = document.createElement('input'); si.placeholder = 'Поиск...'; si.autocomplete = 'off';
+  si.oninput = () => {
+    const q = si.value.toLowerCase();
+    drop.querySelectorAll('.mf-option').forEach(o => {
+      o.style.display = o.dataset.val.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+  sw.appendChild(si); drop.appendChild(sw);
+
+  const ac = document.createElement('div'); ac.className = 'mf-actions';
+  const selAll = document.createElement('button'); selAll.className = 'mf-btn'; selAll.textContent = 'Все';
+  selAll.onclick = e => { e.stopPropagation(); jiMfSelections[col] = new Set(vals);
+    drop.querySelectorAll('.mf-option input').forEach(c => c.checked = true); jiApplyMf(col, btn); };
+  const clr = document.createElement('button'); clr.className = 'mf-btn'; clr.textContent = 'Сброс';
+  clr.onclick = e => { e.stopPropagation(); jiMfSelections[col] = new Set();
+    drop.querySelectorAll('.mf-option input').forEach(c => c.checked = false); jiApplyMf(col, btn); };
+  ac.appendChild(selAll); ac.appendChild(clr); drop.appendChild(ac);
+
+  vals.forEach(val => {
+    const opt = document.createElement('div'); opt.className = 'mf-option'; opt.dataset.val = val;
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
+    const toggle = () => {
+      cb.checked = !cb.checked;
+      const s = jiMfSelections[col] || new Set();
+      cb.checked ? s.add(val) : s.delete(val);
+      jiMfSelections[col] = s; jiApplyMf(col, btn);
+    };
+    cb.onchange = () => {
+      const s = jiMfSelections[col] || new Set();
+      cb.checked ? s.add(val) : s.delete(val);
+      jiMfSelections[col] = s; jiApplyMf(col, btn);
+    };
+    opt.onclick = e => { if (e.target !== cb) toggle(); };
+    opt.appendChild(cb); opt.appendChild(document.createTextNode(val)); drop.appendChild(opt);
+  });
+
+  document.body.appendChild(drop);
+  const rect = btn.getBoundingClientRect();
+  drop.style.top = (rect.bottom + 2) + 'px';
+  drop.style.left = Math.min(rect.left, window.innerWidth - 270) + 'px';
+  jiActiveDrop = drop; jiActiveBtn = btn;
+  setTimeout(() => si.focus(), 50);
+}
+
+function jiToggleMf(btn) {
+  if (jiActiveDrop && jiActiveBtn === btn) {
+    jiActiveDrop.remove(); jiActiveDrop = null; jiActiveBtn = null; return;
+  }
+  jiBuildDrop(btn, btn.dataset.col);
+}
+
+function jiApplyMf(col, btn) {
+  const sel = jiMfSelections[col] || new Set();
+  if (sel.size === 0) {
+    delete jiMfFilters[col]; btn.textContent = '\u25BC'; btn.classList.remove('active');
+  } else {
+    jiMfFilters[col] = sel;
+    btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
+    btn.classList.add('active');
+  }
+  renderTable();
+}
+
+document.addEventListener('click', e => {
+  if (jiActiveDrop && !jiActiveDrop.contains(e.target) && e.target !== jiActiveBtn) {
+    jiActiveDrop.remove(); jiActiveDrop = null; jiActiveBtn = null;
+  }
+}, true);
+
+// ── Загрузка данных ──────────────────────────────────────────────────────────
+async function loadJournal() {
+  try {
+    const r = await fetch('/api/journal/?per_page=100000');
+    jiData = await r.json();
+    renderTable();
+  } catch(e) {
+    document.getElementById('jiBody').innerHTML =
+      '<tr><td colspan="13" style="color:var(--danger);text-align:center;">Ошибка загрузки данных</td></tr>';
+  }
+}
+
+// ── Фильтрация ───────────────────────────────────────────────────────────────
+function applyFilters() {
+  return jiData.filter(n => {
+    for (const [col, sel] of Object.entries(jiMfFilters)) {
+      if (!sel || sel.size === 0) continue;
+      const cell = (n[col] || '');
+      if (!sel.has(cell)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Рендер таблицы ───────────────────────────────────────────────────────────
+function renderTable() {
+  const filtered = applyFilters();
+  const tbody = document.getElementById('jiBody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Нет данных</td></tr>';
+    document.getElementById('jiFooter').textContent = 'Записей: 0';
+    return;
+  }
+  const rows = filtered.map((n, idx) => {
+    const STATUS_LABELS = {
+      active:     ['badge-active',    'Действует'],
+      expired:    ['badge-expired',   'Просрочено'],
+      closed_no:  ['badge-closed-no', 'Погашено без внесения'],
+      closed_yes: ['badge-closed-yes','Погашено с внесением'],
+    };
+    const [badgeCls, badgeTxt] = STATUS_LABELS[n.status] || ['badge-closed-yes', n.status || '\u2014'];
+    const statusBadge = '<span class="' + badgeCls + '">' + badgeTxt + '</span>';
+    const autoTag = n.is_auto ? '<span class="badge-auto" data-tip="Запись создана на основании отчёта о выполненной работе">Авто</span>' : '<span class="badge-manual" data-tip="Запись создана вручную">Ручное</span>';
+    // dept_head/sector_head — только свой отдел/сектор; удалять — только admin/ntc
+    const rowMod = _canModify(n.dept, n.sector);
+    const canClose = rowMod && (n.status === 'active' || n.status === 'expired');
+    const canEdit = rowMod && !n.is_auto;
+    const canDel = _isFullAccess() && !n.is_auto;
+    let actions = '<td class="col-actions" style="text-align:center;white-space:nowrap;">';
+    if (canEdit) {
+      actions += '<button class="ji-btn" onclick="openEditModal(' + n.id + ')" title="Редактировать">&#9998;</button> ';
+    }
+    actions += '<button class="ji-btn" onclick="openDescModal(' + n.id + ')" title="Описание">&#128221;</button> ';
+    if (canClose) {
+      actions += '<button class="ji-btn ji-btn-close" onclick="openCloseModal(' + n.id + ')" title="Погасить">&#9745;</button> ';
+    }
+    if (canDel) {
+      actions += '<button class="ji-btn ji-btn-del" onclick="deleteRow(' + n.id + ')" title="Удалить">&#10005;</button>';
+    }
+    actions += '</td>';
+    return '<tr>' +
+      '<td style="color:var(--muted);font-size:12px;text-align:center;">' + (idx + 1) + '</td>' +
+      '<td title="' + esc(n.ii_pi) + '">' + (esc(n.ii_pi) || '\u2014') + autoTag + '</td>' +
+      '<td title="' + esc(n.notice_number) + '">' + (esc(n.notice_number) || '\u2014') + '</td>' +
+      '<td title="' + esc(n.subject) + '">' + (esc(n.subject) || '\u2014') + '</td>' +
+      '<td title="' + esc(n.doc_designation) + '">' + (esc(n.doc_designation) || '\u2014') + '</td>' +
+      '<td>' + (n.date_issued || '\u2014') + '</td>' +
+      '<td>' + (n.date_expires || '\u2014') + '</td>' +
+      '<td title="' + esc(n.dept_name) + '">' + (esc(n.dept) || '\u2014') + '</td>' +
+      '<td title="' + esc(n.sector) + '">' + (esc(n.sector) || '\u2014') + '</td>' +
+      '<td title="' + esc(n.executor) + '">' + (esc(n.executor) || '\u2014') + '</td>' +
+      '<td title="' + esc(n.description) + '">' + (esc(n.description) || '\u2014') + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      actions +
+    '</tr>';
+  }).join('');
+  tbody.innerHTML = rows;
+  document.getElementById('jiFooter').textContent =
+    'Записей: ' + filtered.length + (filtered.length < jiData.length ? ' (из ' + jiData.length + ')' : '');
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+const esc = escapeHtml;
+
+
+// ── Модал добавления/редактирования (ручной ввод) ─────────────────────────
+function _fillModal(n) {
+  document.getElementById('mf_ii_pi').value = n.ii_pi || '';
+  document.getElementById('mf_notice_number').value = n.notice_number || '';
+  document.getElementById('mf_date_issued').value = n.date_issued || '';
+  document.getElementById('mf_date_expires').value = n.date_expires || '';
+  document.getElementById('mf_dept').value = n.dept || '';
+  document.getElementById('mf_sector').value = n.sector || '';
+  document.getElementById('mf_executor').value = n.executor || '';
+  document.getElementById('mf_subject').value = n.subject || '';
+  document.getElementById('mf_doc_designation').value = n.doc_designation || '';
+  document.getElementById('mf_description').value = n.description || '';
+  document.getElementById('mf_status').value = n.status_raw || n.status || 'active';
+  _updateExpiresDisabled();
+}
+
+function _updateExpiresDisabled() {
+  const iipi = document.getElementById('mf_ii_pi').value;
+  const exp = document.getElementById('mf_date_expires');
+  exp.disabled = (iipi === 'ИИ');
+  if (iipi === 'ИИ') exp.value = '';
+}
+
+document.getElementById('mf_ii_pi').addEventListener('change', _updateExpiresDisabled);
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('jiModalTitle').textContent = 'Добавить извещение';
+  _fillModal({status: 'active'});
+  document.getElementById('jiModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const n = jiData.find(x => x.id === id);
+  if (!n || n.is_auto) return;
+  editingId = id;
+  document.getElementById('jiModalTitle').textContent = 'Редактировать извещение';
+  _fillModal(n);
+  document.getElementById('jiModal').classList.add('open');
+}
+
+let descEditingId = null;
+
+function openDescModal(id) {
+  const n = jiData.find(x => x.id === id);
+  if (!n) return;
+  descEditingId = id;
+  document.getElementById('desc_text').value = n.description || '';
+  document.getElementById('jiDescModal').classList.add('open');
+}
+
+function closeDescModal() {
+  document.getElementById('jiDescModal').classList.remove('open');
+  descEditingId = null;
+}
+
+async function saveDescModal() {
+  if (!descEditingId) return;
+  const desc = document.getElementById('desc_text').value;
+  try {
+    const r = await fetch('/api/journal/' + descEditingId + '/', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      body: JSON.stringify({description: desc}),
+    });
+    if (r.ok) {
+      const n = jiData.find(x => x.id === descEditingId);
+      if (n) n.description = desc;
+      closeDescModal();
+      renderTable();
+    } else {
+      let d = {};
+      try { d = await r.json(); } catch(_) {}
+      showToast(d.error || 'Ошибка сохранения', 'error');
+    }
+  } catch(e) {
+    showToast('Ошибка сети: ' + e.message, 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('jiModal').classList.remove('open');
+}
+
+async function saveModal() {
+  const payload = {
+    ii_pi: document.getElementById('mf_ii_pi').value,
+    notice_number: document.getElementById('mf_notice_number').value,
+    date_issued: document.getElementById('mf_date_issued').value || null,
+    date_expires: document.getElementById('mf_date_expires').value || null,
+    dept: document.getElementById('mf_dept').value,
+    sector: document.getElementById('mf_sector').value,
+    executor: document.getElementById('mf_executor').value,
+    subject: document.getElementById('mf_subject').value,
+    doc_designation: document.getElementById('mf_doc_designation').value,
+    description: document.getElementById('mf_description').value,
+    status: document.getElementById('mf_status').value,
+  };
+
+  let url, method;
+  if (editingId) {
+    url = '/api/journal/' + editingId + '/';
+    method = 'PUT';
+  } else {
+    url = '/api/journal/create/';
+    method = 'POST';
+  }
+
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      body: JSON.stringify(payload),
+    });
+    let d = {};
+    try { d = await r.json(); } catch(_) {}
+    if (!r.ok) { showToast(d.error || 'Ошибка сохранения', 'error'); return; }
+
+    closeModal();
+    await loadJournal();
+  } catch(e) {
+    showToast('Ошибка сети: ' + e.message, 'error');
+  }
+}
+
+// ── Модал погашения ──────────────────────────────────────────────────────────
+async function openCloseModal(id) {
+  closingId = id;
+  document.getElementById('cl_status').value = 'closed_yes';
+  document.getElementById('cl_notice_number').value = '';
+  document.getElementById('cl_date_issued').value = '';
+  // Загружаем сотрудников отдела извещения
+  const sel = document.getElementById('cl_executor');
+  sel.innerHTML = '<option value="">Загрузка...</option>';
+  const notice = jiData.find(x => x.id === id);
+  const deptCode = notice ? notice.dept : '';
+  if (deptCode) {
+    try {
+      const r = await fetch('/api/dept_employees/?dept=' + encodeURIComponent(deptCode));
+      const emps = await r.json();
+      sel.innerHTML = '<option value="">— выберите —</option>';
+      emps.forEach(function(emp) {
+        const opt = document.createElement('option');
+        opt.value = emp.short_name;
+        opt.textContent = emp.short_name;
+        sel.appendChild(opt);
+      });
+    } catch(e) {
+      sel.innerHTML = '<option value="">Ошибка загрузки</option>';
+    }
+  } else {
+    sel.innerHTML = '<option value="">— нет отдела —</option>';
+  }
+  document.getElementById('jiCloseModal').classList.add('open');
+}
+
+function closeCloseModal() {
+  document.getElementById('jiCloseModal').classList.remove('open');
+  closingId = null;
+}
+
+async function saveCloseModal() {
+  const cn = document.getElementById('cl_notice_number').value.trim();
+  const cd = document.getElementById('cl_date_issued').value;
+  const ce = document.getElementById('cl_executor').value.trim();
+  if (!cn || !cd || !ce) {
+    showToast('Заполните все обязательные поля', 'warning');
+    return;
+  }
+  const payload = {
+    status: document.getElementById('cl_status').value,
+    closure_notice_number: cn,
+    closure_date_issued: cd,
+    closure_executor: ce,
+  };
+  try {
+    const r = await fetch('/api/journal/' + closingId + '/', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      body: JSON.stringify(payload),
+    });
+    let d = {};
+    try { d = await r.json(); } catch(_) {}
+    if (!r.ok) { showToast(d.error || 'Ошибка погашения', 'error'); return; }
+    closeCloseModal();
+    await loadJournal();
+  } catch(e) {
+    showToast('Ошибка сети: ' + e.message, 'error');
+  }
+}
+
+// ── Удаление (только ручные записи) ─────────────────────────────────────────
+async function deleteRow(id) {
+  const n = jiData.find(x => x.id === id);
+  if (n && n.is_auto) { showToast('Автоматические записи нельзя удалить', 'warning'); return; }
+  if (!await confirmDialog('Удалить запись?', 'Подтверждение')) return;
+  try {
+    const r = await fetch('/api/journal/' + id + '/', {
+      method: 'DELETE',
+      headers: {'X-CSRFToken': getCsrf()},
+    });
+    if (r.ok) {
+      jiData = jiData.filter(n => n.id !== id);
+      renderTable();
+    } else {
+      let d = {};
+      try { d = await r.json(); } catch(_) {}
+      showToast(d.error || 'Ошибка удаления', 'error');
+    }
+  } catch(e) {
+    showToast('Ошибка сети: ' + e.message, 'error');
+  }
+}
+
+function getCsrf() {
+  return document.cookie.split(';').map(c => c.trim())
+    .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+// Закрытие модалов по клику на оверлей
+document.getElementById('jiModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById('jiCloseModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeCloseModal();
+});
+document.getElementById('jiDescModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDescModal();
+});
+
+loadJournal();
+
+const JI_STATUS_LABELS = {active:'Действует', expired:'Просрочено', closed_no:'Погашено без внесения', closed_yes:'Погашено с внесением'};
+buildExportDropdown('exportBtnContainer', {
+  pageName: 'ЖИ',
+  columns: [
+    { key: 'ii_pi',           header: 'ИИ/ПИ',          width: 60 },
+    { key: 'notice_number',   header: 'Номер изв.',      width: 120 },
+    { key: 'subject',         header: 'Наименование',    width: 180 },
+    { key: 'doc_designation', header: 'Обозначение',     width: 140 },
+    { key: 'date_issued',     header: 'Дата выпуска',    width: 100 },
+    { key: 'date_expires',    header: 'Срок действия',   width: 100 },
+    { key: 'dept',            header: 'Отдел',           width: 70 },
+    { key: 'sector',          header: 'Сектор',          width: 100 },
+    { key: 'executor',        header: 'Разработчик',     width: 130 },
+    { key: 'description',     header: 'Описание',        width: 200 },
+    { key: 'status',          header: 'Статус',          width: 140, format: r => JI_STATUS_LABELS[r.status] || r.status },
+  ],
+  getAllData:      () => jiData,
+  getFilteredData: () => applyFilters(),
+});
+
+/* ── Кастомный тултип для бейджей Авто/Ручное ──────────────────────── */
+(function() {
+  const tip = document.createElement('div');
+  tip.className = 'ji-tooltip';
+  document.body.appendChild(tip);
+
+  document.addEventListener('mouseenter', function(e) {
+    const badge = e.target.closest('.badge-auto, .badge-manual');
+    if (!badge) return;
+    const text = badge.getAttribute('data-tip');
+    if (!text) return;
+    const isAuto = badge.classList.contains('badge-auto');
+    tip.textContent = text;
+    tip.className = 'ji-tooltip ' + (isAuto ? 'auto' : 'manual');
+    tip.style.left = '-9999px';
+    tip.style.top = '0px';
+    // Форсируем reflow для расчёта размеров
+    void tip.offsetWidth;
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    const rect = badge.getBoundingClientRect();
+    var left = rect.left + rect.width / 2 - tw / 2;
+    // Не дать вылететь за края viewport
+    if (left < 4) left = 4;
+    if (left + tw > window.innerWidth - 4) left = window.innerWidth - tw - 4;
+    tip.style.left = left + 'px';
+    tip.style.top  = (rect.top - th - 8) + 'px';
+    tip.classList.add('visible');
+  }, true);
+
+  document.addEventListener('mouseleave', function(e) {
+    if (e.target.closest('.badge-auto, .badge-manual')) {
+      tip.classList.remove('visible');
+    }
+  }, true);
+})();
+</script>
 {% endblock %}

@@ -14,7 +14,7 @@ class WorkForm(forms.ModelForm):
         fields = [
             'show_in_pp', 'show_in_plan', 'task_type', 'work_name', 'work_num',
             'work_designation', 'ntc_center', 'department', 'sector', 'project',
-            'executor', 'executor_name_raw',
+            'executor',
             'date_start', 'date_end', 'deadline',
             'plan_hours',
         ]
@@ -59,11 +59,15 @@ class NoticeForm(forms.ModelForm):
         model  = Notice
         # Редактируемые поля (created_at и updated_at заполняются автоматически)
         fields = [
-            'notice_number', 'notice_type', 'group', 'department', 'sector', 'executor',
-            'date_issued', 'date_expires', 'subject', 'description', 'status',
+            'notice_number', 'ii_pi', 'notice_type', 'group',
+            'department', 'sector', 'executor',
+            'date_issued', 'date_expires', 'subject',
+            'doc_designation', 'description', 'status',
+            'closure_notice_number', 'closure_date_issued', 'closure_executor',
         ]
         widgets = {
             'date_issued':  forms.DateInput(attrs={'type': 'date'}),
             'date_expires': forms.DateInput(attrs={'type': 'date'}),
+            'closure_date_issued': forms.DateInput(attrs={'type': 'date'}),
             'description':  forms.Textarea(attrs={'rows': 4}),
         }
