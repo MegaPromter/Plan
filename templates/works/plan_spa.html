@@ -2211,7 +2211,13 @@ function buildMfDropdown(btn, col) {
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll(".mf-option").forEach(opt => {
-      opt.style.display = opt.dataset.val.toLowerCase().includes(q) ? "" : "none";
+      const rawVal = opt.dataset.val.toLowerCase();
+      let displayVal = rawVal;
+      if (col === 'sector') {
+        const sh = (dirs['_ids_sector'] || []).find(s => s.value === opt.dataset.val);
+        if (sh && sh.head_name) displayVal = (opt.dataset.val + ' ' + sh.head_name).toLowerCase();
+      }
+      opt.style.display = (rawVal.includes(q) || displayVal.includes(q)) ? "" : "none";
     });
   };
   searchWrap.appendChild(searchInp);
@@ -2266,7 +2272,13 @@ function buildMfDropdown(btn, col) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     };
     opt.appendChild(cb);
-    opt.appendChild(document.createTextNode(val));
+    // Для сектора — показываем код + ФИО начальника
+    let displayText = val;
+    if (col === 'sector') {
+      const sh = (dirs['_ids_sector'] || []).find(s => s.value === val);
+      if (sh && sh.head_name) displayText = val + ' — ' + sh.head_name;
+    }
+    opt.appendChild(document.createTextNode(displayText));
     drop.appendChild(opt);
   });
 
@@ -2872,7 +2884,8 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   }
   items.forEach(item => {
     const o = document.createElement("option");
-    o.value = item.value; o.textContent = item.value;
+    o.value = item.value;
+    o.textContent = (dirKey === 'sector' && item.head_name) ? item.value + ' — ' + item.head_name : item.value;
     if (item.value === selectedVal) o.selected = true;
     // Ограничения по роли: dept_head/sect_head/dept_deputy могут выбрать только свой отдел
     if (dirKey === 'dept' && !IS_ADMIN && USER_DEPT && item.value !== USER_DEPT &&

@@ -22,7 +22,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, get_visibility_filter
+from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, get_visibility_filter, validate_task_type
 from apps.works.models import Work, PPProject, AuditLog
 from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
@@ -219,11 +219,17 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
         elif d.get('dept'):
             dept_obj = Department.objects.filter(code=d['dept']).first()
 
+        _validated_tt, tt_err = validate_task_type(d.get('task_type', ''))
+        if tt_err:
+            return JsonResponse({'error': tt_err}, status=400)
+        if not _validated_tt:
+            _validated_tt = 'Выпуск нового документа'
+
         with transaction.atomic():
             work = Work.objects.create(
                 show_in_pp=True,
                 work_name=d.get('work_name', '') or '',
-                task_type=d.get('task_type', '') or 'Выпуск нового документа',
+                task_type=_validated_tt,
                 pp_project_id=project_id,
                 ntc_center=ntc_center,
                 department=dept_obj,
@@ -320,8 +326,12 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         if field not in PRODUCTION_ALLOWED_FIELDS:
             return JsonResponse({'error': f'Недопустимое поле: {field}'}, status=400)
 
-        if field == 'task_type' and not str(value).strip():
-            value = 'Выпуск нового документа'
+        if field == 'task_type':
+            value, tt_err = validate_task_type(value)
+            if tt_err:
+                return JsonResponse({'error': tt_err}, status=400)
+            if not value:
+                value = 'Выпуск нового документа'
 
         work = Work.objects.filter(pk=pk, show_in_pp=True).select_related(
             'department', 'ntc_center', 'executor', 'sector',

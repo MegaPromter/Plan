@@ -340,6 +340,22 @@ def validate_actions(actions) -> tuple[dict, str | None]:
     return actions, None
 
 
+def validate_task_type(value):
+    """
+    Проверяет что task_type входит в справочник Directory(dir_type='task_type').
+    Возвращает (value, None) если валидно, ('', error_msg) если нет.
+    Пустая строка допускается.
+    """
+    if not value or not str(value).strip():
+        return '', None
+    value = str(value).strip()
+    from apps.works.models import Directory
+    valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
+    if value not in valid:
+        return '', f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}'
+    return value, None
+
+
 def norm_plan_hours(ph):
     """
     Нормализация plan_hours. Аналог Flask _norm_plan_hours().

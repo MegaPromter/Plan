@@ -1239,7 +1239,7 @@ function buildSelectHtml(col, row) {
     if (val && !filtered.find(h => h.value === val)) {
       // Ищем ФИО нач. сектора среди всех секторов
       const anyMatch = allHeads.find(h => h.value === val);
-      const phantomLabel = val;
+      const phantomLabel = anyMatch && anyMatch.head_name ? val + ' — ' + anyMatch.head_name : val;
       options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(phantomLabel)}</option>`;
     }
     filtered.forEach(h => {
@@ -1248,8 +1248,8 @@ function buildSelectHtml(col, row) {
       const isOwnSector = IS_ADMIN || USER_ROLE === 'dept_head' || USER_ROLE === 'dept_deputy'
                           || !USER_SECTOR || h.value === USER_SECTOR;
       const disabledAttr = isOwnSector ? '' : ' disabled style="color:var(--muted)"';
-      // Текст опции: только код сектора (ФИО отображается под селектом)
-      const label = h.value;
+      // Текст опции: код сектора + ФИО начальника
+      const label = h.head_name ? h.value + ' — ' + h.head_name : h.value;
       options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(label)}</option>`;
     });
   } else if (col === 'task_type') {
@@ -1499,11 +1499,23 @@ async function handleCellChange(e) {
     }
   }
 
-  // При смене сектора: пересобираем список исполнителей
+  // При смене сектора: обновляем ФИО под селектом и пересобираем список исполнителей
   if (field === 'sector_head') {
     const rowObj = rows.find(r => String(r.id) === String(id));
     if (rowObj) {
       rowObj.sector_head = value;
+      // Обновляем div с ФИО начальника сектора
+      const headDiv = input.closest('td').querySelector('div');
+      const sh = (dirs.sector_head || []).find(h => h.value === value);
+      const headName = sh ? (sh.head_name || '') : '';
+      if (headDiv) {
+        headDiv.textContent = headName;
+        headDiv.style.display = headName ? '' : 'none';
+      } else if (headName) {
+        input.closest('td').insertAdjacentHTML('beforeend',
+          `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>`);
+      }
+      // Пересобираем исполнителей
       const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
       if (execSel) {
         execSel.outerHTML = buildSelectHtml('executor', rowObj);
@@ -1919,13 +1931,27 @@ const MONTH_NAMES_RU = [
 // Для date_end — группирует по году-месяцу (YYYY-MM), остальные — как есть.
 function getMfValues(col) {
   const vals = new Set();
+  // Для сектора: если выбран фильтр по отделу — показываем только секторы этих отделов
+  let sourceRows = rows;
+  if (col === 'sector_head') {
+    const deptFilter = colFilters['mf_dept'];
+    if (deptFilter && deptFilter.size > 0) {
+      // Находим id выбранных отделов
+      const deptIds = new Set();
+      (dirs.dept || []).forEach(d => { if (deptFilter.has(d.value)) deptIds.add(d.id); });
+      // Берём только секторы, входящие в эти отделы (из справочника)
+      const validSectors = new Set();
+      (dirs.sector_head || []).forEach(s => { if (deptIds.has(s.parent_id)) validSectors.add(s.value); });
+      sourceRows = rows.filter(r => validSectors.has(r[col]));
+    }
+  }
   if (col === 'date_end') {
     // Срок выполнения: берём только год-месяц (первые 7 символов «YYYY-MM»)
-    rows.forEach(r => {
+    sourceRows.forEach(r => {
       if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
     });
   } else {
-    rows.forEach(r => { if (r[col]) vals.add(r[col]); });
+    sourceRows.forEach(r => { if (r[col]) vals.add(r[col]); });
   }
   return [...vals].sort((a, b) => String(a).localeCompare(String(b), 'ru'));
 }
@@ -1953,12 +1979,17 @@ function buildMfDropdown(btn, col) {
   const searchInp = document.createElement('input');
   searchInp.placeholder = 'Поиск...';
   searchInp.autocomplete = 'off';
-  // Фильтрация опций при наборе текста (для date_end ищем и по «YYYY-MM», и по «Март 2026»)
+  // Фильтрация опций при наборе текста (ищем и по коду, и по отображаемому тексту)
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll('.mf-option').forEach(opt => {
       const rawVal = opt.dataset.val.toLowerCase();
-      const displayVal = (col === 'date_end') ? formatYearMonth(opt.dataset.val).toLowerCase() : rawVal;
+      let displayVal = rawVal;
+      if (col === 'date_end') displayVal = formatYearMonth(opt.dataset.val).toLowerCase();
+      else if (col === 'sector_head') {
+        const sh = (dirs.sector_head || []).find(h => h.value === opt.dataset.val);
+        if (sh && sh.head_name) displayVal = (opt.dataset.val + ' ' + sh.head_name).toLowerCase();
+      }
       opt.style.display = (rawVal.includes(q) || displayVal.includes(q)) ? '' : 'none';
     });
   };
@@ -2016,8 +2047,14 @@ function buildMfDropdown(btn, col) {
     };
     opt.onclick = (e) => { if (e.target !== cb) toggle(); };
     opt.appendChild(cb);
-    // Для date_end отображаем «Март 2026» вместо «2026-03»
-    const displayText = (col === 'date_end') ? formatYearMonth(val) : val;
+    // Для date_end отображаем «Март 2026»; для sector_head — код + ФИО
+    let displayText = val;
+    if (col === 'date_end') {
+      displayText = formatYearMonth(val);
+    } else if (col === 'sector_head') {
+      const sh = (dirs.sector_head || []).find(h => h.value === val);
+      if (sh && sh.head_name) displayText = val + ' — ' + sh.head_name;
+    }
     opt.appendChild(document.createTextNode(displayText));
     drop.appendChild(opt);
   });

@@ -32,6 +32,7 @@ from apps.api.utils import (
     validate_plan_hours,
     validate_executors_list,
     validate_actions,
+    validate_task_type,
 )
 from apps.works.models import (
     Work, TaskExecutor, WorkReport, Project, AuditLog,
@@ -361,6 +362,12 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
                 created_by=employee,
             )
 
+            if 'task_type' in d:
+                tt_val, tt_err = validate_task_type(d['task_type'])
+                if tt_err:
+                    return JsonResponse({'error': tt_err}, status=400)
+                d['task_type'] = tt_val
+
             _set_work_fk_fields(work, d, request)
             _set_date_fields(work, d)
             work.save()
@@ -495,6 +502,12 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.work_num = d.get('work_number', work.work_num)
                     work.work_designation = d.get('description', work.work_designation)
                 work.plan_hours = ph
+
+                if 'task_type' in d:
+                    tt_val, tt_err = validate_task_type(d['task_type'])
+                    if tt_err:
+                        return JsonResponse({'error': tt_err}, status=400)
+                    d['task_type'] = tt_val
 
                 _set_work_fk_fields(work, d, request)
                 _set_date_fields(work, d)
