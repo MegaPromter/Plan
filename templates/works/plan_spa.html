@@ -210,14 +210,11 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); font
 /* Широкая таблица с горизонтальной прокруткой */
 table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
 /* Липкие заголовки колонок (не прокручиваются вместе с телом) */
-thead th { position:sticky; z-index:10; background:#eef1f7;
+thead th { z-index:10; background:#eef1f7;
   border-bottom:2px solid var(--border2); border-right:1px solid var(--border2); padding:0; white-space:nowrap;
   box-shadow:0 1px 0 var(--border2); }
-/* Sticky top для каждой строки шапки:
-   row1 = 21px (Группа без rowspan), row2 = 37px (обозначение/наименование),
-   rowspan=2 ячейки растягиваются на 58px (row1+row2) */
-thead tr:first-child th { top:0; }
-thead tr:nth-child(2) th { top:21px; }
+/* Sticky на <tr> — position:sticky на <th> ненадёжно в ряде браузеров */
+thead tr:first-child { position:sticky; top:0; z-index:10; }
 .th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:#4a5568;
   letter-spacing:0.05em; text-transform:uppercase;
   display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
@@ -599,8 +596,8 @@ tr.pp-locked .pp-lock-badge {
 /* Подпись «Фев 2025 · 42 зап.» под числом */
 .plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
 /* ── Строка фильтров под заголовками колонок ────────────────── */
-/* sticky на <tr> — браузер не липит <th> третьей строки thead корректно */
-.filter-row { position:sticky; top:58px; z-index:10; }
+/* sticky на <tr> — браузер не липит <th> второй строки thead корректно */
+.filter-row { position:sticky; top:52px; z-index:10; }
 .filter-row th { padding:4px 4px 6px; background:#e8ecf2; border-bottom:1px solid var(--border); }
 /* Поле текстового фильтра в каждой колонке */
 .col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
@@ -940,32 +937,28 @@ tr.pp-locked .pp-lock-badge {
 <thead>
 <tr>
   <!-- Колонка порядкового номера -->
-  <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
+  <th class="th-num"><div class="th-inner" style="justify-content:center;">№</div></th>
   <!-- Каждый th содержит .col-resize — ручку изменения ширины (drag-resize) -->
-  <th id="th-type" rowspan="2"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-project" rowspan="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-stage" rowspan="2"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
-  <!-- Группа: Обозначение + Наименование -->
-  <th colspan="2" style="text-align:center;">Группа</th>
+  <th id="th-type"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-dept"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-stage"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-desc"><div class="th-inner">Обозначение<div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname"><div class="th-inner">Наименование<div class="col-resize" data-col="wname"></div></div></th>
   <!-- Колонка исполнителей: показывает список ФИО с часами -->
-  <th id="th-exec" rowspan="2"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
-  <th id="th-ds" rowspan="2"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
-  <th id="th-de" rowspan="2"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
-  <th id="th-dead" rowspan="2"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
+  <th id="th-exec"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-ds"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
+  <th id="th-de"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
+  <th id="th-dead"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
   <!-- Колонка зависимостей (предшественники) -->
-  <th id="th-deps" rowspan="2"><div class="th-inner">Предш.<div class="col-resize" data-col="deps"></div></div></th>
+  <th id="th-deps"><div class="th-inner">Предш.<div class="col-resize" data-col="deps"></div></div></th>
   <!-- Колонка кнопок действий (редактировать, отчёт, удалить) -->
-  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
+  <th id="th-rep" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
 </tr>
-<tr>
-  <th id="th-desc"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
-</tr>
-<!-- Строка фильтрации (третья строка thead) -->
+<!-- Строка фильтрации (вторая строка thead) -->
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
   <!-- Мульти-фильтры (выпадающие чекбоксы) для категориальных колонок -->
