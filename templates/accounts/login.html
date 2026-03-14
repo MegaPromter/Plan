@@ -289,6 +289,18 @@ select option{background:var(--surface);}
 </div>
 
 <script>
+/* ── При входе на страницу логина — сбросить незавершённый тур ────────── */
+/* Если тур не был полностью пройден, сбрасываем состояние,
+   чтобы после логина welcome-модал показался на дашборде */
+(function() {
+  try {
+    var raw = localStorage.getItem('tour_state');
+    if (!raw) return; // нет состояния — покажется welcome
+    var st = JSON.parse(raw);
+    if (!st.completed) localStorage.removeItem('tour_state');
+  } catch(e) { localStorage.removeItem('tour_state'); }
+})();
+
 /* ── Регистрация ──────────────────────────────────────────────────────── */
 
 // Кэш справочника (список должностей, НТЦ, отделов, секторов)
