@@ -120,6 +120,8 @@ class DelegationListView(LoginRequiredJsonMixin, View):
             )
 
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         delegate_id = data.get('delegate_id')
         scope_type = data.get('scope_type', '')

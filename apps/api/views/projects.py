@@ -112,6 +112,8 @@ class ProjectCreateView(AdminRequiredJsonMixin, View):
         try:
             # Парсим JSON-тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Обязательное поле: полное наименование
             name_full  = (d.get('name_full') or '').strip()
             # Необязательное: краткое наименование
@@ -146,6 +148,8 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
         try:
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Ищем проект по PK
             proj = Project.objects.filter(pk=pk).first()
             if not proj:
@@ -216,6 +220,8 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Наименование изделия (обязательное)
             name = (d.get('name') or '').strip()
             # Код/обозначение изделия (необязательное)
@@ -246,6 +252,8 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
                 return JsonResponse({'error': 'Изделие не найдено'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Новое наименование (обязательное)
             name = (d.get('name') or '').strip()
             # Новый код (необязательный)

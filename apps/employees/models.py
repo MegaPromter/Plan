@@ -230,6 +230,10 @@ class Employee(models.Model):
         verbose_name_plural = 'Сотрудники'
         # Сортировка по алфавиту: фамилия, затем имя
         ordering = ['last_name', 'first_name']
+        indexes = [
+            models.Index(fields=['department', 'role']),
+            models.Index(fields=['role']),
+        ]
 
     def __str__(self):
         # Строковое представление — полное ФИО сотрудника
@@ -322,6 +326,9 @@ class Vacation(models.Model):
         verbose_name_plural = 'Отпуска'
         # Сортировка по дате начала (ближайшие первыми)
         ordering = ['date_start']
+        indexes = [
+            models.Index(fields=['employee', 'date_start']),
+        ]
 
     def __str__(self):
         # Строковое представление: «Фамилия И.О.: дата_начала – дата_конца»

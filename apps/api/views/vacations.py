@@ -108,6 +108,8 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Определяем сотрудника: по employee_id или по имени (executor)
         employee = None
@@ -187,6 +189,8 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse({'error': 'Пустой запрос'}, status=400)
 
@@ -291,6 +295,8 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         executors_raw = data.get('executors', [])
         date_start_str = data.get('date_start')

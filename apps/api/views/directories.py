@@ -10,7 +10,7 @@ DELETE  /api/directories/<id>     -- удаление записи (admin)
 # Стандартный логгер Python
 import logging
 # defaultdict — словарь с дефолтным значением (используется для группировки)
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
@@ -161,6 +161,8 @@ class DirectoryCreateView(AdminRequiredJsonMixin, View):
     def post(self, request):
         # Парсим JSON-тело
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Тип справочника (например: 'project', 'task_type', 'position' и т.д.)
         dir_type = data.get('type', '').strip()
@@ -222,6 +224,8 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
     def put(self, request, pk):
         # Парсим тело запроса
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         # Новое значение записи (обязательное)
         value = data.get('value', '').strip()
 
@@ -266,9 +270,9 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
 
         # Рекурсивный сбор всех потомков (BFS — обход в ширину)
         to_delete_ids = [entry.pk]  # начинаем с самой записи
-        queue = [entry.pk]          # очередь для BFS
-        while queue:
-            pid = queue.pop(0)  # берём первый элемент очереди
+        bfs_queue = deque([entry.pk])  # очередь для BFS
+        while bfs_queue:
+            pid = bfs_queue.popleft()  # берём первый элемент очереди
             # Получаем ID всех дочерних записей данного родителя
             children_ids = list(
                 Directory.objects
@@ -278,7 +282,7 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
             # Добавляем дочерние ID в список на удаление
             to_delete_ids.extend(children_ids)
             # И в очередь для поиска их дочерних записей
-            queue.extend(children_ids)
+            bfs_queue.extend(children_ids)
 
         # Удаляем все найденные записи одним запросом
         Directory.objects.filter(pk__in=to_delete_ids).delete()

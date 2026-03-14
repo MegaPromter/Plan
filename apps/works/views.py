@@ -22,8 +22,8 @@ from .models import Work, WorkReport, Notice
 from .forms  import WorkForm, WorkReportForm, NoticeForm
 # Общий миксин для SPA-страниц
 from .mixins import SPAContextMixin
-# Стандартная библиотека для работы с датами
-import datetime
+# timezone — работа со временем с учётом часового пояса
+from django.utils import timezone
 
 
 # ── Миксин writer ─────────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ class WorkListView(LoginRequiredMixin, ListView):
         # Список всех отделов (для фильтра по отделу)
         ctx['departments'] = Department.objects.order_by('code')
         # Диапазон годов для фильтра (3 прошлых + текущий + 2 будущих)
-        current_year = datetime.date.today().year
+        current_year = timezone.now().date().year
         ctx['years'] = list(range(current_year - 3, current_year + 3))
         return ctx
 
@@ -306,7 +306,7 @@ class WorkCalendarSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        current_year = datetime.date.today().year
+        current_year = timezone.now().date().year
         ctx['current_year'] = current_year
         ctx['years'] = list(range(current_year - 3, current_year + 4))
         return ctx

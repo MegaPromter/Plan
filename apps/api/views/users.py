@@ -72,6 +72,8 @@ class UserListView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         username = data.get('username', '').strip()
         password = data.get('password', '')
@@ -142,6 +144,8 @@ class UserDetailView(AdminRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse(
                 {'error': 'Нет допустимых полей для обновления'}, status=400
@@ -273,6 +277,8 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         new_pw = data.get('password', '')
 
         # Валидация пароля через Django password validators

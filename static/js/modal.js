@@ -83,6 +83,9 @@ function openModal(options = {}) {
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
 
+    // Блокируем прокрутку страницы за модалкой
+    document.body.style.overflow = 'hidden';
+
     // Закрытие
     let closed = false;
     const close = () => {
@@ -92,6 +95,10 @@ function openModal(options = {}) {
         backdrop.style.animation = 'modalFadeOut 0.15s ease-in forwards';
         setTimeout(() => {
             backdrop.remove();
+            // Восстанавливаем прокрутку если все модалки закрыты
+            if (!document.querySelector('.modal-backdrop')) {
+                document.body.style.overflow = '';
+            }
             if (onClose) onClose();
         }, 150);
     };
@@ -131,7 +138,12 @@ function closeModal(idOrEl) {
     }
     if (el) {
         el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
-        setTimeout(() => el.remove(), 150);
+        setTimeout(() => {
+            el.remove();
+            if (!document.querySelector('.modal-backdrop')) {
+                document.body.style.overflow = '';
+            }
+        }, 150);
     }
 }
 
@@ -140,6 +152,7 @@ function closeAllModals() {
         el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
         setTimeout(() => el.remove(), 150);
     });
+    setTimeout(() => { document.body.style.overflow = ''; }, 150);
 }
 
 /* ── CSS-анимации для модалок ──────────────────────────────────────────── */

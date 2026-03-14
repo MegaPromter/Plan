@@ -8,6 +8,7 @@ from django.views.generic import (
 from django.urls import reverse_lazy
 # Получение объекта или автоматический возврат 404 при его отсутствии
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 # Модели приложения employees
 from .models import Employee, Vacation, KPI
@@ -140,14 +141,12 @@ class VacationPlanView(LoginRequiredMixin, ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        # Локальный импорт date для получения текущей даты
-        from datetime import date
         # Получаем базовый контекст
         ctx = super().get_context_data(**kwargs)
         # Список всех отделов для фильтра (используем динамический импорт)
         ctx['departments'] = __import__('apps.employees.models', fromlist=['Department']).Department.objects.all()
         # Текущий год для инициализации фильтра
-        ctx['current_year'] = date.today().year
+        ctx['current_year'] = timezone.now().date().year
         # Диапазон годов для переключателя (2 прошлых + текущий + 2 будущих)
         ctx['years'] = list(range(ctx['current_year'] - 2, ctx['current_year'] + 3))
         return ctx

@@ -10,7 +10,7 @@ Endpoints:
   POST   /api/tasks/<id>/align_dates/    — выравнивание дат по зависимостям
 """
 import logging
-from collections import deque
+from collections import defaultdict, deque
 from datetime import timedelta
 
 from django.db import transaction
@@ -25,7 +25,7 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import get_visibility_filter
-from apps.works.models import AuditLog, TaskDependency, Work
+from apps.works.models import AuditLog, Holiday, TaskDependency, Work
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,13 @@ def _detect_cycle(successor_id, predecessor_id):
     """
     Определяет, создаст ли связь predecessor→successor цикл.
     BFS от successor_id через successor_links: если достигнем predecessor_id — цикл.
+    Все рёбра загружаются одним запросом для O(1) доступа.
     """
+    # Предзагрузка всего графа зависимостей одним запросом
+    graph = defaultdict(list)
+    for pred_id, succ_id in TaskDependency.objects.values_list('predecessor_id', 'successor_id'):
+        graph[pred_id].append(succ_id)
+
     visited = set()
     queue = deque([successor_id])
     while queue:
@@ -46,10 +52,7 @@ def _detect_cycle(successor_id, predecessor_id):
         if current in visited:
             continue
         visited.add(current)
-        next_ids = TaskDependency.objects.filter(
-            predecessor_id=current,
-        ).values_list('successor_id', flat=True)
-        queue.extend(next_ids)
+        queue.extend(graph.get(current, []))
     return False
 
 
@@ -114,22 +117,39 @@ def _get_reference_date(dep, pred):
     return pred.date_end
 
 
+_holiday_cache = None
+
+
+def _get_holidays():
+    """Возвращает set дат-праздников (кешируется на запрос)."""
+    global _holiday_cache
+    if _holiday_cache is None:
+        _holiday_cache = set(Holiday.objects.values_list('date', flat=True))
+    return _holiday_cache
+
+
+def invalidate_holiday_cache():
+    """Сбросить кеш праздников (вызывать при изменении Holiday)."""
+    global _holiday_cache
+    _holiday_cache = None
+
+
 def _add_work_days(start_date, days):
     """
-    Прибавляет N рабочих дней (пн-пт) к дате.
-    Если WorkCalendar заполнен — в будущем можно подключить его.
-    Сейчас: суббота и воскресенье считаются выходными.
+    Прибавляет N рабочих дней к дате.
+    Рабочий день = пн-пт и не праздник (из таблицы work_holiday).
     Положительные days — вперёд, отрицательные — назад, 0 — та же дата.
     """
     if days == 0:
         return start_date
+    holidays = _get_holidays()
     direction = 1 if days > 0 else -1
     remaining = abs(days)
     current = start_date
     while remaining > 0:
         current += timedelta(days=direction)
-        # Пн=0 .. Вс=6; рабочие дни = 0..4
-        if current.weekday() < 5:
+        # Пн=0 .. Вс=6; рабочие дни = 0..4 и не праздник
+        if current.weekday() < 5 and current not in holidays:
             remaining -= 1
     return current
 
@@ -220,6 +240,8 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
 
         try:
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             if not d:
                 return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
@@ -285,6 +307,8 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
         """Обновление зависимости (тип связи, лаг)."""
         try:
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             dep = TaskDependency.objects.filter(pk=pk).first()
             if not dep:
                 return JsonResponse({'error': 'Зависимость не найдена'}, status=404)

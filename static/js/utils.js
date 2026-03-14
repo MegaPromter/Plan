@@ -90,10 +90,23 @@ function showToast(message, type = 'info', duration = 4000) {
     toast.textContent = message;
     container.appendChild(toast);
 
-    setTimeout(() => {
+    let remaining = duration;
+    let startTime = Date.now();
+    let timerId = setTimeout(dismissToast, remaining);
+
+    function dismissToast() {
         toast.style.animation = 'toastOut 0.3s ease-in forwards';
         setTimeout(() => toast.remove(), 300);
-    }, duration);
+    }
+
+    toast.addEventListener('mouseenter', () => {
+        clearTimeout(timerId);
+        remaining -= (Date.now() - startTime);
+    });
+    toast.addEventListener('mouseleave', () => {
+        startTime = Date.now();
+        timerId = setTimeout(dismissToast, remaining);
+    });
 }
 
 // CSS-анимации для тостов
@@ -108,6 +121,23 @@ function showToast(message, type = 'info', duration = 4000) {
     document.head.appendChild(style);
 })();
 
+
+/* ── Кнопка-загрузка ────────────────────────────────────────────────────── */
+
+function setButtonLoading(btn, loading) {
+    if (loading) {
+        btn._origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        btn.prepend(spinner);
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        if (btn._origHTML !== undefined) btn.innerHTML = btn._origHTML;
+    }
+}
 
 /* ── Debounce ────────────────────────────────────────────────────────────── */
 
@@ -187,4 +217,40 @@ function monthLabel(dateStr) {
 function currentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/* ── Scroll-loader для infinite scroll ─────────────────────────────────── */
+
+/**
+ * Создаёт слушатель прокрутки, вызывающий callback при приближении к низу.
+ * @param {HTMLElement|Window} container — элемент с overflow-y или window
+ * @param {Function} onNearBottom — callback при достижении порога
+ * @param {number} threshold — пикселей до низа для срабатывания (по умолчанию 200)
+ * @returns {Function} dispose — удаляет слушатель
+ */
+function createScrollLoader(container, onNearBottom, threshold = 200) {
+    let _ticking = false;
+    const target = container === window ? window : container;
+
+    function onScroll() {
+        if (_ticking) return;
+        _ticking = true;
+        requestAnimationFrame(() => {
+            _ticking = false;
+            let distToBottom;
+            if (container === window) {
+                distToBottom = document.documentElement.scrollHeight
+                    - window.scrollY - window.innerHeight;
+            } else {
+                distToBottom = container.scrollHeight
+                    - container.scrollTop - container.clientHeight;
+            }
+            if (distToBottom < threshold) onNearBottom();
+        });
+    }
+
+    target.addEventListener('scroll', onScroll, { passive: true });
+    return function dispose() {
+        target.removeEventListener('scroll', onScroll);
+    };
 }

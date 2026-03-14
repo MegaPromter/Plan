@@ -26,8 +26,8 @@ class TestVisibilityFilter:
         emp = regular_user.employee
         q = get_visibility_filter(regular_user)
         q_str = str(q)
-        # Должен содержать фильтр по исполнителю
-        assert 'executor' in q_str.lower() or str(emp.pk) in q_str
+        # Пользователь с отделом видит задачи отдела; без отдела — свои (executor/created_by)
+        assert 'department' in q_str.lower() or 'executor' in q_str.lower() or str(emp.pk) in q_str
 
     def test_dept_head_sees_dept(self, dept_head_user, dept):
         q = get_visibility_filter(dept_head_user)

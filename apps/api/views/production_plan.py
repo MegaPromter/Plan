@@ -22,7 +22,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, get_visibility_filter, validate_task_type
+from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, validate_task_type
 from apps.works.models import Work, PPProject, AuditLog
 from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
@@ -142,8 +142,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         except (ValueError, TypeError):
             project_id = None
 
-        # ПП доступен для просмотра всем авторизованным пользователям;
-        # фильтрация по отделу — на клиенте (дефолт: свой отдел)
+        # ПП — общий документ проекта, видимый всем авторизованным пользователям
         qs = Work.objects.filter(show_in_pp=True)
 
         if project_id:
@@ -179,6 +178,8 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
 
     def _create(self, request):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         project_id = d.get('project_id') or None
         if not project_id:
             return JsonResponse(
@@ -319,6 +320,8 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         """Inline single-field update."""
         field = request.GET.get('field')
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         value = d.get('value', '')
 
         if not field:
@@ -445,6 +448,8 @@ class ProductionPlanSyncView(LoginRequiredJsonMixin, View):
 
     def _sync(self, request):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         filter_project_id = d.get('project_id') or None
         if not filter_project_id:
             return JsonResponse(

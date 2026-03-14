@@ -94,6 +94,8 @@ DATABASES = {
         default='postgres://postgres:postgres@localhost:5432/planapp_django',  # значение по умолчанию для локальной разработки
     )
 }
+# Переиспользование DB-соединений (10 мин) — без этого каждый запрос открывает новое
+DATABASES['default']['CONN_MAX_AGE'] = 600
 # Django 3.2: явно указываем тип первичного ключа по умолчанию
 # BigAutoField — 64-битное целое (вместо 32-битного AutoField), предотвращает переполнение ID
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -186,3 +188,34 @@ if not DEBUG:
     SESSION_COOKIE_SECURE          = True
     # Передавать CSRF cookie только по HTTPS (защита от перехвата)
     CSRF_COOKIE_SECURE             = True
+
+# --- Redis-сессии (если доступен Redis) ------------------------------------
+if _CACHE_BACKEND == 'redis':
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+
+# --- Логирование -----------------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {'level': 'WARNING'},
+        'apps': {'level': 'INFO'},
+    },
+}

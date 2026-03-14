@@ -43,9 +43,10 @@ from .views.vacations import (
 )
 # Вьюхи журнала извещений
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
-# Вьюхи производственного календаря (WorkCalendar)
+# Вьюхи производственного календаря (WorkCalendar + Holiday)
 from .views.work_calendar import (
     WorkCalendarListView, WorkCalendarCreateView, WorkCalendarDetailView,
+    HolidayListView, HolidayDetailView,
 )
 # Вьюхи для заполнения тестовыми данными (seed)
 from .views.seed import (
@@ -57,9 +58,14 @@ from .views.dependencies import (
     TaskDependencyListView, TaskDependencyDetailView,
     AllDependenciesView, AlignDatesView,
 )
+# Health check
+from .views.health import HealthCheckView
 
 # ── Основные URL-паттерны API ─────────────────────────────────────────────────
 urlpatterns = [
+    # ── Health check ──────────────────────────────────────────────────────
+    path('health/', HealthCheckView.as_view()),
+
     # ── Справочники ──────────────────────────────────────────────────────
     # GET /api/directories/ — список всех записей справочника
     path('directories/',        DirectoryListView.as_view()),
@@ -181,6 +187,12 @@ urlpatterns = [
     path('work_calendar/create/',   WorkCalendarCreateView.as_view()),
     # PUT/DELETE /api/work_calendar/<pk>/ — операции с записью календаря (admin)
     path('work_calendar/<int:pk>/', WorkCalendarDetailView.as_view()),
+
+    # ── Нерабочие дни (Holiday) ────────────────────────────────────────
+    # GET/POST /api/holidays/ — список и создание нерабочих дней
+    path('holidays/',          HolidayListView.as_view()),
+    # DELETE /api/holidays/<pk>/ — удаление нерабочего дня (admin)
+    path('holidays/<int:pk>/', HolidayDetailView.as_view()),
 
 ]
 

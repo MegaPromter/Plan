@@ -204,6 +204,8 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
 
     def _create(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
@@ -287,6 +289,8 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
     def _update(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse({'ok': True})
 

@@ -189,6 +189,8 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
 
     def _create(self, request):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
@@ -274,6 +276,8 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
 
     def _update(self, request, pk):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 

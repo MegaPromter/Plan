@@ -15,6 +15,7 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 
 from apps.employees.models import Employee, Department, Sector, NTCCenter
 
@@ -261,6 +262,8 @@ class Work(models.Model):
             models.Index(fields=['show_in_plan', 'deadline']),
             models.Index(fields=['deadline']),
             models.Index(fields=['pp_project']),
+            models.Index(fields=['show_in_pp', 'department']),
+            models.Index(fields=['show_in_plan', 'department']),
         ]
         constraints = [
             # show_in_pp=True → pp_project обязан быть заполнен
@@ -320,6 +323,7 @@ class TaskExecutor(models.Model):
         verbose_name_plural = 'Исполнители задач'
         indexes = [
             models.Index(fields=['work']),
+            models.Index(fields=['executor']),
         ]
 
     def __str__(self):
@@ -544,8 +548,7 @@ class Notice(models.Model):
             ii_pi = self.ii_pi
             expires = self.date_expires
         if ii_pi == 'ПИ' and expires:
-            from datetime import date
-            if expires < date.today():
+            if expires < timezone.now().date():
                 return self.STATUS_EXPIRED
         return self.STATUS_ACTIVE
 
@@ -577,6 +580,21 @@ class WorkCalendar(models.Model):
     @property
     def month_key(self) -> str:
         return f'{self.year}-{self.month:02d}'
+
+
+class Holiday(models.Model):
+    """Нерабочий/праздничный день производственного календаря."""
+    date = models.DateField('Дата', unique=True)
+    name = models.CharField('Название', max_length=200, blank=True, default='')
+
+    class Meta:
+        db_table = 'work_holiday'
+        verbose_name = 'Нерабочий день'
+        verbose_name_plural = 'Нерабочие дни'
+        ordering = ['date']
+
+    def __str__(self):
+        return f'{self.date} — {self.name}' if self.name else str(self.date)
 
 
 # ── Журнал действий пользователей ────────────────────────────────────────────

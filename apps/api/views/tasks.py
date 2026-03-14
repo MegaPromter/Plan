@@ -14,6 +14,7 @@ import logging
 from datetime import date as dt_date
 
 from django.db import transaction
+from django.utils import timezone
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views import View
@@ -137,7 +138,7 @@ def _serialize_task(work, executors_data=None):
     d['predecessors_count'] = getattr(work, '_pred_count', 0) or 0
 
     # Индикатор просроченности: deadline (или date_end) < сегодня
-    today = dt_date.today()
+    today = timezone.now().date()
     effective_deadline = (work.date_end if is_from_pp else work.deadline) or work.date_end
     d['is_overdue'] = bool(
         effective_deadline and effective_deadline < today
@@ -183,10 +184,8 @@ class TaskListView(LoginRequiredJsonMixin, View):
         search = request.GET.get('search', '').strip().lower()
 
         # Только задачи (не строки ПП)
+        # СП — общий документ, видимый всем (аналогично ПП)
         qs = Work.objects.filter(show_in_plan=True)
-
-        vis_q = get_visibility_filter(request.user)
-        qs = qs.filter(vis_q)
 
         # Фильтр по периоду
         if year and month:
@@ -310,6 +309,8 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
 
     def _create(self, request):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
@@ -427,6 +428,8 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
 
     def _update(self, request, pk):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 

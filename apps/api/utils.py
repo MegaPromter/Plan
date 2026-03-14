@@ -349,8 +349,13 @@ def validate_task_type(value):
     if not value or not str(value).strip():
         return '', None
     value = str(value).strip()
-    from apps.works.models import Directory
-    valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
+    from django.core.cache import cache
+    cache_key = 'valid_task_types'
+    valid = cache.get(cache_key)
+    if valid is None:
+        from apps.works.models import Directory
+        valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
+        cache.set(cache_key, valid, timeout=60)
     if value not in valid:
         return '', f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}'
     return value, None
@@ -401,7 +406,7 @@ def mcc_finish_data():
     Аналог Flask _mcc_finish логики.
     """
     # Сегодняшняя дата
-    today = date.today()
+    today = timezone.now().date()
     if today.month == 1:
         # Январь — предыдущий месяц это декабрь прошлого года
         last_day = date(today.year - 1, 12, 31)

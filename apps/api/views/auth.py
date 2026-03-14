@@ -130,6 +130,8 @@ class RegisterPublicView(View):
     def post(self, request):
         # Парсим JSON-тело запроса
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Извлекаем и очищаем поля из запроса
         username = data.get('username', '').strip()     # логин

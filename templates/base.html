@@ -412,6 +412,16 @@ textarea { resize:vertical; min-height:80px; }
 /* Вспомогательный класс для приглушённого текста */
 .text-muted { color:var(--muted); font-size:13px; }
 
+/* ── Skeleton loader ────────────────────────────────────────────────── */
+.skeleton{background:linear-gradient(90deg,#e2e6ed 25%,#f0f2f5 50%,#e2e6ed 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-row{height:40px;margin-bottom:2px}
+.btn-loading .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Спиннер бесконечной прокрутки */
+.scroll-spinner{text-align:center;padding:16px;color:var(--muted);font-size:13px}
+.scroll-spinner i{animation:spin 1s linear infinite}
+
 /* ── Page header actions ─────────────────────────────────────────────── */
 /* Блок кнопок в заголовке страницы */
 .page-header-actions { display:flex; gap:8px; align-items:center; }
@@ -440,6 +450,10 @@ textarea { resize:vertical; min-height:80px; }
 .page-link.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 /* Текстовая информация о текущей странице */
 .page-info { font-size:13px; color:var(--muted); margin-left:8px; }
+
+/* ── Skip link (accessibility) ───────────────────────────────────────── */
+.skip-link{position:absolute;left:-9999px;top:auto;z-index:10001;padding:8px 16px;background:var(--accent);color:#fff;border-radius:0 0 8px 0;font-size:14px;text-decoration:none}
+.skip-link:focus{left:0;top:0}
 
 /* ── Responsive ──────────────────────────────────────────────────────── */
 /* Адаптивность: на мобильных устройствах сайдбар скрыт, появляется по кнопке */
@@ -483,6 +497,7 @@ textarea { resize:vertical; min-height:80px; }
 <link rel="stylesheet" href="{% static 'css/tour.css' %}?v=3">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
+<a href="#main-content" class="skip-link">Перейти к основному содержанию</a>
 
 <!-- ── Боковая навигация (Sidebar) ────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
@@ -560,7 +575,7 @@ textarea { resize:vertical; min-height:80px; }
     <!-- 6. Справочники -->
     <div class="nav-section">
       <div class="nav-dropdown">
-        <button class="nav-item nav-section-btn nav-dropdown-toggle {% block nav_directories %}{% endblock %}" onclick="toggleNavDropdown(this)">
+        <button class="nav-item nav-section-btn nav-dropdown-toggle {% block nav_directories %}{% endblock %}" onclick="toggleNavDropdown(this)" aria-label="Справочники" aria-expanded="false">
           <i class="fas fa-book"></i>
           <span>6. Справочники</span>
           <i class="fas fa-chevron-down nav-chevron"></i>
@@ -584,7 +599,7 @@ textarea { resize:vertical; min-height:80px; }
       <!-- Раскрывающийся пункт «Сотрудники» с подпунктами -->
       <div class="nav-dropdown">
         <!-- Кнопка-тоггл дропдауна; onclick вызывает toggleNavDropdown() -->
-        <button class="nav-item nav-dropdown-toggle {% block nav_employees %}{% endblock %}" onclick="toggleNavDropdown(this)">
+        <button class="nav-item nav-dropdown-toggle {% block nav_employees %}{% endblock %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false">
           <i class="fas fa-users"></i>
           <span>Сотрудники</span>
           <i class="fas fa-chevron-down nav-chevron"></i>
@@ -690,7 +705,7 @@ textarea { resize:vertical; min-height:80px; }
   </header>
 
   <!-- Основной контент страницы -->
-  <div class="page-content">
+  <div class="page-content" id="main-content">
     <!-- Django-сообщения (например, «Запись сохранена»); скрыты, выводятся через Toast -->
     {% if messages %}
       {% for message in messages %}
@@ -762,6 +777,7 @@ function showToast(message, type) {
 // ── Функция переключения раскрывающегося пункта меню (дропдаун) ─────────
 function toggleNavDropdown(btn) {
   btn.classList.toggle('open');
+  btn.setAttribute('aria-expanded', btn.classList.contains('open'));
   var menu = btn.nextElementSibling;
   if (menu) menu.classList.toggle('open');
   _saveNavDropdownState();
@@ -794,6 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var span = btn.querySelector('span');
     if (span && saved.indexOf(span.textContent.trim()) >= 0) {
       btn.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
       var menu = btn.nextElementSibling;
       if (menu) menu.classList.add('open');
     }
@@ -802,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.nav-dropdown-menu .nav-item.active').forEach(function(el) {
     var menu = el.closest('.nav-dropdown-menu');
     var toggle = menu && menu.previousElementSibling;
-    if (menu) { menu.classList.add('open'); toggle.classList.add('open'); }
+    if (menu) { menu.classList.add('open'); toggle.classList.add('open'); toggle.setAttribute('aria-expanded', 'true'); }
   });
 });
 

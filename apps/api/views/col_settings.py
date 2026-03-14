@@ -29,6 +29,8 @@ class ColSettingsView(LoginRequiredJsonMixin, View):
 
         # Парсим JSON-тело запроса (получаем словарь настроек)
         incoming = parse_json_body(request)
+        if incoming is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Специальный флаг: сброс ширин колонок
         # Сохраняем только «не-ширинные» ключи (show_all_depts и т.п.)

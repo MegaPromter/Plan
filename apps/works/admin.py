@@ -2,7 +2,7 @@
 from django.contrib import admin
 # Импорт моделей, которые будут зарегистрированы в Admin
 from .models import (
-    Project, Work, WorkReport, Notice,
+    Project, Work, WorkReport, Notice, Holiday,
 )
 
 
@@ -74,6 +74,14 @@ class WorkAdmin(admin.ModelAdmin):
 
 
 # ── Регистрация модели Notice (журнал извещений) ──────────────────────────────
+
+@admin.register(Holiday)
+class HolidayAdmin(admin.ModelAdmin):
+    list_display = ('date', 'name')
+    list_filter = ('date',)
+    search_fields = ('name',)
+    ordering = ('date',)
+
 
 @admin.register(Notice)
 class NoticeAdmin(admin.ModelAdmin):

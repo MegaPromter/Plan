@@ -166,6 +166,8 @@ class SeedDataView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         count = min(int(data.get('count', 1000)), 10_000)
 
         employee = getattr(request.user, 'employee', None)
@@ -269,6 +271,8 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         executors_input = data.get('executors', _SEED_EXECUTORS)
 
         with transaction.atomic():

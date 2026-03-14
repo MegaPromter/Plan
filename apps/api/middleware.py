@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 _RATE_RULES = [
     ('rl_login',    '/accounts/login/',       10,  60,  False),  # страница входа
     ('rl_reg',      '/api/register_public/',   5, 300,  True),   # регистрация
-    ('rl_api',      '/api/',                3000,  60,  True),   # весь API
+    ('rl_api',      '/api/',                 300,  60,  True),   # весь API
 ]
 
 
