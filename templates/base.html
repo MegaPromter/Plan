@@ -480,8 +480,9 @@ textarea { resize:vertical; min-height:80px; }
 .base-user-dropdown .ud-danger { color:#ef4444; }
 </style>
 {% block styles %}{% endblock %}
+<link rel="stylesheet" href="{% static 'css/tour.css' %}">
 </head>
-<body>
+<body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 
 <!-- ── Боковая навигация (Sidebar) ────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
