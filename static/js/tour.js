@@ -499,11 +499,9 @@
     migrateOldState();
     var state = getState();
 
-    // Первый вход — welcome только на дашборде (после логина)
+    // Первый вход — показать welcome на любой странице
     if (!state) {
-      if (currentPage().indexOf('/accounts/dashboard') === 0 || currentPage() === '/') {
-        setTimeout(showWelcomeModal, 1200);
-      }
+      setTimeout(showWelcomeModal, 1200);
       return;
     }
 
