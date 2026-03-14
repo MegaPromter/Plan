@@ -209,12 +209,18 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); font
 .table-wrap.sidebar-collapsed { margin-left:0; }
 /* Широкая таблица с горизонтальной прокруткой */
 table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
-/* Липкие заголовки колонок (не прокручиваются вместе с телом) */
-thead th { z-index:10; background:#eef1f7;
-  border-bottom:2px solid var(--border2); border-right:1px solid var(--border2); padding:0; white-space:nowrap;
-  box-shadow:0 1px 0 var(--border2); }
-/* Sticky на <tr> — position:sticky на <th> ненадёжно в ряде браузеров.
-   Три строки: row1 (заголовки + Группа), row2 (обозначение/наименование), row3 (фильтры) */
+/* Липкие заголовки колонок */
+thead th {
+  z-index: 10;
+  background: #eef1f7;
+  border-bottom: 2px solid var(--border2);
+  border-right: 1px solid var(--border2);
+  padding: 0;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border2);
+}
+/* Sticky на <tr>: каждая строка thead прилипает на своём уровне.
+   row1=37px (Группа + rowspan-заголовки), row2=37px (обозначение/наименование) */
 thead tr:nth-child(1) { position:sticky; top:0; z-index:12; }
 thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
 .th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:#4a5568;
@@ -598,7 +604,6 @@ tr.pp-locked .pp-lock-badge {
 /* Подпись «Фев 2025 · 42 зап.» под числом */
 .plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
 /* ── Строка фильтров под заголовками колонок ────────────────── */
-/* sticky на <tr> для строки фильтров */
 .filter-row { position:sticky; top:73px; z-index:10; }
 .filter-row th { padding:4px 4px 6px; background:#e8ecf2; border-bottom:1px solid var(--border); }
 /* Поле текстового фильтра в каждой колонке */
