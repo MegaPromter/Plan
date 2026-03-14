@@ -11,7 +11,7 @@ from .models import (
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display  = ('name', 'code', 'created_at')
-    search_fields = ('name', 'code')
+    search_fields = ('name_full', 'name_short', 'code')
 
 
 # ── Инлайн-редактор WorkReport (отчётные документы) ──────────────────────────

@@ -28,7 +28,6 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px;
-  cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   display: flex;
@@ -183,7 +182,7 @@ function renderProjects() {
       </div>` : '';
 
     return `
-      <div class="project-card" onclick="IS_ADMIN && openEditProjectModal(${p.id})">
+      <div class="project-card" ${IS_ADMIN ? `onclick="openEditProjectModal(${p.id})" style="cursor:pointer"` : ''}>
         <!-- Краткое наименование (если задано) -->
         ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
         <!-- Полное наименование проекта -->

@@ -95,10 +95,12 @@
           <td style="color:var(--muted);font-size:12px;">{{ forloop.counter }}</td>
           <!-- Бейдж типа: ПО (task) — синий, ПП (pp) — зелёный -->
           <td>
-            {% if work.source_type == 'task' %}
+            {% if work.show_in_plan %}
               <span class="badge badge-blue">ПО</span>
-            {% else %}
+            {% elif work.show_in_pp %}
               <span class="badge badge-green">ПП</span>
+            {% else %}
+              <span class="badge">—</span>
             {% endif %}
           </td>
           <!-- Код отдела: берём из FK department -->
@@ -107,14 +109,10 @@
           <td style="font-size:13px;">{% if work.sector %}{{ work.sector.code }}{% else %}—{% endif %}</td>
           <!-- Название проекта (усечено до 30 символов) -->
           <td style="font-size:13px;">{% if work.project %}{{ work.project.name|truncatechars:30 }}{% else %}—{% endif %}</td>
-          <!-- Этап задачи: доступен только для работ типа task через OneToOne task_detail -->
-          <td style="font-size:13px;">
-            {% if work.source_type == 'task' %}{% with td=work.task_detail %}{% if td %}{{ td.stage_num|default:"—" }}{% else %}—{% endif %}{% endwith %}{% else %}—{% endif %}
-          </td>
-          <!-- Обоснование задачи (усечено до 40 символов): только для task -->
-          <td style="font-size:13px;max-width:160px;">
-            {% if work.source_type == 'task' %}{% with td=work.task_detail %}{% if td %}{{ td.justification|default:"—"|truncatechars:40 }}{% else %}—{% endif %}{% endwith %}{% else %}—{% endif %}
-          </td>
+          <!-- Этап задачи -->
+          <td style="font-size:13px;">{{ work.stage|default:"—" }}</td>
+          <!-- Обоснование задачи (усечено до 40 символов) -->
+          <td style="font-size:13px;max-width:160px;">{{ work.justification|default:"—"|truncatechars:40 }}</td>
           <!-- Обозначение / номер работы -->
           <td style="font-size:13px;">{{ work.work_num|default:"—" }}</td>
           <!-- Наименование работы — ссылка на детальную страницу -->

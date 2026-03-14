@@ -245,7 +245,6 @@ select.cell-edit option {
 .deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
 .deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
   font-size:14px; font-family:var(--font); }
-/* Searchable dropdown */
 .search-dropdown { position:relative; }
 .search-dropdown-input { width:100%; padding:6px 30px 6px 10px; border:1px solid var(--border); border-radius:6px;
   font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); box-sizing:border-box; }
@@ -265,7 +264,7 @@ select.cell-edit option {
 .deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
   border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
 
-/* Модальное окно-оверлей (зависимости ПП) */
+/* Модальное окно-оверлей */
 .modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
   display:none; align-items:center; justify-content:center; }
 .modal-overlay.open { display:flex; }
@@ -498,7 +497,6 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
       <button class="gantt-scale-btn active" data-scale="month" onclick="ppSetGanttScale('month')">Месяцы</button>
       <button class="gantt-scale-btn" data-scale="year" onclick="ppSetGanttScale('year')">Годы</button>
     </span>
-    <button class="gantt-filter-btn" id="ppGanttFilterDeps" onclick="ppToggleGanttDepsFilter()" style="display:none;" title="Показать только задачи с зависимостями">🔗 Только зависимые</button>
   </div>
 
   <div class="pp-table-wrap" id="ppTableView">
@@ -535,8 +533,6 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
           <th style="width:140px;" rowspan="2">Разработчик</th>
           <!-- Тип задачи (выпуск нового/корректировка и т.д.) -->
           <th style="width:120px;" rowspan="2">Тип задачи</th>
-          <!-- Зависимости (предшественники) -->
-          <th style="width:70px;" rowspan="2">Предш.</th>
           <!-- Столбец действий -->
           <th style="width:70px;" rowspan="2">Действия</th>
         </tr>
@@ -587,8 +583,6 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по типу задачи -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
-          <!-- Мультифильтр по зависимостям -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="has_deps" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Столбец удаления — без фильтра -->
           <th></th>
         </tr>
@@ -641,8 +635,6 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     </div>
     <div class="deps-section-title" style="margin-top:24px;">➡ Последователи <span id="ppDepsSuccCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
     <div id="ppDepsSuccBody"></div>
-
-    <!-- Форма добавления последователя -->
     <div class="deps-add-form" id="ppDepsAddSuccForm" style="display:none;">
       <div style="flex:1;min-width:200px;">
         <label>Задача-последователь</label>
@@ -1267,10 +1259,6 @@ function buildSelectHtml(col, row) {
     taskTypes.forEach(d => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
-    // Если текущего значения нет в справочнике — добавляем фантомную опцию
-    if (!taskTypes.find(d => d.value === taskVal)) {
-      options += `<option value="${escapeHtml(taskVal)}" selected>${escapeHtml(taskVal)}</option>`;
-    }
   }
   return `<select class="cell-edit" data-col="${col}" data-id="${row.id}">${options}</select>`;
 }
@@ -1287,16 +1275,11 @@ function renderPPTable() {
         // Мультифильтр: проверяем входит ли значение в выбранное множество
         const field = col.slice(3);
         if (val.size > 0) {
-          if (field === 'has_deps') {
-            const label = (row.predecessors_count || 0) > 0 ? 'Со связями' : 'Без связей';
-            if (!val.has(label)) return false;
-          } else {
             // Для date_end сравниваем по году-месяцу (первые 7 символов)
             const cellVal = (field === 'date_end')
               ? (row[field] || '').slice(0, 7)
               : (row[field] || '');
             if (!val.has(cellVal)) return false;
-          }
         }
         continue;
       }
@@ -1379,11 +1362,8 @@ function renderPPTable() {
       }
     }
 
-    // Столбец зависимостей
-    const pc = row.predecessors_count || 0;
-    html += `<td style="text-align:center;"><span class="dep-badge${pc === 0 ? ' zero' : ''}" style="cursor:pointer;" onclick="openPPDepsModal(${row.id})" title="${pc > 0 ? pc + ' предш.' : 'Нет зависимостей'}">${pc}</span></td>`;
-
     // Последний столбец: кнопки действий
+    const pc = row.predecessors_count || 0;
     html += '<td style="text-align:center;white-space:nowrap;">';
     html += `<span class="dep-badge action-dep${pc === 0 ? ' zero' : ''}" style="cursor:pointer;margin-right:4px;" onclick="openPPDepsModal(${row.id})" title="Зависимости">🔗</span>`;
     if (rowEditable) {
@@ -1436,6 +1416,9 @@ function renderPPTable() {
       }
     });
   });
+
+  // Инициализируем drag-resize хэндлы после перерисовки таблицы
+  initColumnResize();
 }
 
 /* ── Визуальная подсветка ячейки (успех/ошибка) ─────────────────────── */
@@ -1941,10 +1924,6 @@ function getMfValues(col) {
     rows.forEach(r => {
       if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
     });
-  } else if (col === 'has_deps') {
-    rows.forEach(r => {
-      vals.add((r.predecessors_count || 0) > 0 ? 'Со связями' : 'Без связей');
-    });
   } else {
     rows.forEach(r => { if (r[col]) vals.add(r[col]); });
   }
@@ -2183,8 +2162,7 @@ window.addEventListener('popstate', async () => {
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
   // Параллельно загружаем справочники и список ПП-проектов
-  await loadDirs();
-  await loadProjects();
+  await Promise.all([loadDirs(), loadProjects()]);
 
   // Если в URL есть project_id — открываем план напрямую (прямая ссылка)
   const urlProjectId = readProjectFromUrl();
@@ -2237,15 +2215,10 @@ function ppGetFilteredRows() {
       if (col.startsWith('mf_')) {
         const field = col.slice(3);
         if (val.size > 0) {
-          if (field === 'has_deps') {
-            const label = (row.predecessors_count || 0) > 0 ? 'Со связями' : 'Без связей';
-            if (!val.has(label)) return false;
-          } else {
             const cellVal = (field === 'date_end')
               ? (row[field] || '').slice(0, 7)
               : (row[field] || '');
             if (!val.has(cellVal)) return false;
-          }
         }
         continue;
       }
@@ -2255,6 +2228,7 @@ function ppGetFilteredRows() {
     return true;
   });
 }
+
 
 // ── PP DEPENDENCIES ────────────────────────────────────────────────────
 let ppCurrentDepsTaskId = null;
@@ -2561,7 +2535,8 @@ async function ppAddPredecessor() {
 }
 
 async function ppDeleteDep(depId) {
-  if (!confirm('Удалить эту зависимость?')) return;
+  const ok = await confirmDialog('Удалить эту зависимость?', 'Удаление');
+  if (!ok) return;
   try {
     const res = await fetch(`/api/dependencies/${depId}/`, {
       method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() },
@@ -2601,10 +2576,9 @@ document.getElementById('ppDepsModal').addEventListener('click', function(e) {
   if (e.target === this) closePPDepsModal();
 });
 
+
 // ── PP Gantt View ──────────────────────────────────────────────────────
 let ppGanttLoaded = false;
-let ppGanttDepsFilterActive = false;
-let _ppGanttDepsSet = new Set();
 
 function ppSwitchView(view) {
   document.querySelectorAll('.pp-view-tab').forEach(tab => {
@@ -2612,17 +2586,14 @@ function ppSwitchView(view) {
   });
   const tableEl = document.getElementById('ppTableView');
   const ganttEl = document.getElementById('ppGanttContainer');
-  const filterBtn = document.getElementById('ppGanttFilterDeps');
   const scaleGroup = document.getElementById('ppGanttScaleGroup');
   if (view === 'table') {
     tableEl.style.display = '';
     ganttEl.style.display = 'none';
-    if (filterBtn) filterBtn.style.display = 'none';
     if (scaleGroup) scaleGroup.style.display = 'none';
   } else {
     tableEl.style.display = 'none';
     ganttEl.style.display = 'block';
-    if (filterBtn) filterBtn.style.display = '';
     if (scaleGroup) scaleGroup.style.display = '';
     if (!ppGanttLoaded) {
       ppLoadGantt();
@@ -2631,12 +2602,6 @@ function ppSwitchView(view) {
       ppRenderGantt();
     }
   }
-}
-
-function ppToggleGanttDepsFilter() {
-  ppGanttDepsFilterActive = !ppGanttDepsFilterActive;
-  document.getElementById('ppGanttFilterDeps').classList.toggle('active', ppGanttDepsFilterActive);
-  ppRenderGantt();
 }
 
 function ppSetGanttScale(scale) {
@@ -2743,7 +2708,7 @@ function ppSetupGantt() {
     { name: "end_date", label: "Окончание", align: "center", width: 90 },
   ];
   gantt.config.readonly = true;
-  gantt.config.show_links = true;
+  gantt.config.show_links = false;
   gantt.config.drag_links = false;
   gantt.config.drag_move = false;
   gantt.config.drag_resize = false;
@@ -2753,20 +2718,7 @@ function ppSetupGantt() {
 async function ppRenderGantt() {
   if (typeof gantt === 'undefined' || !currentProjectId) return;
   try {
-    const depsRes = await fetch(`/api/dependencies/?context=pp&project_id=${currentProjectId}`, { headers: { 'X-CSRFToken': getCsrfToken() } });
-    const deps = depsRes.ok ? await depsRes.json() : [];
-
-    // Собрать ID задач с зависимостями
-    _ppGanttDepsSet = new Set();
-    deps.forEach(d => { _ppGanttDepsSet.add(d.source); _ppGanttDepsSet.add(d.target); });
-
-    const typeMap = { 'FS': '0', 'SS': '1', 'FF': '2', 'SF': '3' };
-
-    let filteredRows = rows.filter(r => r.date_end);
-    if (ppGanttDepsFilterActive) {
-      filteredRows = filteredRows.filter(r => _ppGanttDepsSet.has(r.id));
-    }
-
+    const filteredRows = rows.filter(r => r.date_end);
     const ganttData = {
       data: filteredRows.map(r => ({
         id: r.id,
@@ -2776,10 +2728,7 @@ async function ppRenderGantt() {
         start_date: r.date_start || r.date_end,
         end_date: r.date_end,
       })),
-      links: deps.map(d => ({
-        id: d.id, source: d.source, target: d.target,
-        type: typeMap[d.type] || '0', lag: d.lag || 0,
-      })),
+      links: [],
     };
     gantt.clearAll();
     gantt.parse(ganttData);

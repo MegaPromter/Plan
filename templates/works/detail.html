@@ -6,8 +6,8 @@
 {% block breadcrumb %}
 <span>/</span>
 <!-- Ссылка назад на список с учётом типа работы (pp или task) -->
-<a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}">
-  {% if object.source_type == 'pp' %}Производственный план{% else %}План/отчёт{% endif %}
+<a href="{% url 'works:list' %}{% if object.show_in_pp %}?source=pp{% elif object.show_in_plan %}?source=task{% endif %}">
+  {% if object.show_in_pp %}Производственный план{% else %}План/отчёт{% endif %}
 </a>
 <span>/</span>
 <!-- Название работы (обрезано до 40 символов) -->
@@ -15,8 +15,8 @@
 {% endblock %}
 
 <!-- Пометить нужный пункт сайдбара активным в зависимости от типа источника -->
-{% block nav_tasks %}{% if object.source_type != 'pp' %}active{% endif %}{% endblock %}
-{% block nav_pp %}{% if object.source_type == 'pp' %}active{% endif %}{% endblock %}
+{% block nav_tasks %}{% if not object.show_in_pp %}active{% endif %}{% endblock %}
+{% block nav_pp %}{% if object.show_in_pp %}active{% endif %}{% endblock %}
 
 <!-- Кнопки редактирования и удаления в topbar (только для редакторов) -->
 {% block topbar_actions %}
@@ -39,9 +39,9 @@
     <div class="section-header">
       <h2 class="section-title">
         <!-- Бейдж типа работы: ПП (производственный план) или ПО (план/отчёт) -->
-        {% if object.source_type == 'pp' %}
+        {% if object.show_in_pp %}
           <span class="badge badge-green" style="margin-right:8px;">ПП</span>
-        {% else %}
+        {% elif object.show_in_plan %}
           <span class="badge badge-blue" style="margin-right:8px;">ПО</span>
         {% endif %}
         {{ object.work_name|default:"—" }}
@@ -74,39 +74,34 @@
     </table>
   </div>
 
-  <!-- Детали задачи (только для работ типа task — план/отчёт) -->
-  {% if object.source_type == 'task' %}{% with td=object.task_detail %}{% if td %}
+  <!-- Детали задачи (для работ в плане) -->
+  {% if object.show_in_plan and object.stage or object.justification %}
   <div class="section">
     <div class="section-header"><h2 class="section-title">Детали задачи (ПО)</h2></div>
     <table class="info-table">
-      <!-- Этап задачи -->
-      <tr><th>Этап</th><td>{{ td.stage_num|default:"—" }}</td></tr>
-      <!-- Обоснование выполнения работы -->
-      <tr><th>Обоснование</th><td>{{ td.justification|default:"—" }}</td></tr>
+      <tr><th>Этап</th><td>{{ object.stage|default:"—" }}</td></tr>
+      <tr><th>Обоснование</th><td>{{ object.justification|default:"—" }}</td></tr>
     </table>
   </div>
-  {% endif %}{% endwith %}{% endif %}
+  {% endif %}
 
-  <!-- Детали ПП (только для работ типа pp — производственный план) -->
-  {% if object.source_type == 'pp' %}{% with pd=object.pp_detail %}{% if pd %}
+  <!-- Детали ПП (для работ в производственном плане) -->
+  {% if object.show_in_pp %}
   <div class="section">
     <div class="section-header"><h2 class="section-title">Детали производственного плана</h2></div>
     <table class="info-table">
-      <tr><th>Код строки</th><td>{{ pd.row_code|default:"—" }}</td></tr>
-      <tr><th>Заказ</th><td>{{ pd.work_order|default:"—" }}</td></tr>
-      <!-- Иерархия: Этап / Веха / Работа -->
-      <tr><th>Этап / Веха / Работа</th><td>{{ pd.stage_num|default:"—" }} / {{ pd.milestone_num|default:"—" }} / {{ pd.work_num|default:"—" }}</td></tr>
-      <tr><th>Обозначение</th><td>{{ pd.work_designation|default:"—" }}</td></tr>
-      <tr><th>Листов A4</th><td>{{ pd.sheets_a4|default:"—" }}</td></tr>
-      <!-- Норма и коэффициент для расчёта трудоёмкости -->
-      <tr><th>Норма / Коэф</th><td>{{ pd.norm|default:"—" }} / {{ pd.coeff|default:"—" }}</td></tr>
-      <!-- Итоговая трудоёмкость по 2D и 3D моделям -->
-      <tr><th>Итого 2D / 3D</th><td>{{ pd.total_2d|default:"—" }} / {{ pd.total_3d|default:"—" }}</td></tr>
-      <tr><th>Трудоёмкость</th><td>{{ pd.labor|default:"—" }}</td></tr>
-      <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.name }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Код строки</th><td>{{ object.row_code|default:"—" }}</td></tr>
+      <tr><th>Заказ</th><td>{{ object.work_order|default:"—" }}</td></tr>
+      <tr><th>Этап / Веха / Работа</th><td>{{ object.stage_num|default:"—" }} / {{ object.milestone_num|default:"—" }} / {{ object.work_num|default:"—" }}</td></tr>
+      <tr><th>Обозначение</th><td>{{ object.work_designation|default:"—" }}</td></tr>
+      <tr><th>Листов A4</th><td>{{ object.sheets_a4|default:"—" }}</td></tr>
+      <tr><th>Норма / Коэф</th><td>{{ object.norm|default:"—" }} / {{ object.coeff|default:"—" }}</td></tr>
+      <tr><th>Итого 2D / 3D</th><td>{{ object.total_2d|default:"—" }} / {{ object.total_3d|default:"—" }}</td></tr>
+      <tr><th>Трудоёмкость</th><td>{{ object.labor|default:"—" }}</td></tr>
+      <tr><th>Сектор</th><td>{% if object.sector %}{{ object.sector.code }}{% else %}—{% endif %}</td></tr>
     </table>
   </div>
-  {% endif %}{% endwith %}{% endif %}
+  {% endif %}
 
   <!-- Отчётные документы по работе -->
   <div class="section">
@@ -171,7 +166,7 @@
 
   <!-- Кнопка возврата на список -->
   <div>
-    <a href="{% url 'works:list' %}{% if object.source_type %}?source={{ object.source_type }}{% endif %}" class="btn btn-outline">
+    <a href="{% url 'works:list' %}{% if object.show_in_pp %}?source=pp{% elif object.show_in_plan %}?source=task{% endif %}" class="btn btn-outline">
       <i class="fas fa-arrow-left"></i> Назад к списку
     </a>
   </div>

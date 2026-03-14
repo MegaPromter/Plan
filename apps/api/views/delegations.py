@@ -133,7 +133,13 @@ class DelegationListView(LoginRequiredJsonMixin, View):
                 {'error': 'Не указан получатель делегирования'}, status=400
             )
 
-        if int(delegate_id) == employee.pk:
+        try:
+            delegate_id = int(delegate_id)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {'error': 'Некорректный ID получателя'}, status=400
+            )
+        if delegate_id == employee.pk:
             return JsonResponse(
                 {'error': 'Нельзя делегировать самому себе'}, status=400
             )

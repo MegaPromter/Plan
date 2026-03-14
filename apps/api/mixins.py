@@ -96,11 +96,11 @@ class AdminRequiredJsonMixin(LoginRequiredJsonMixin):
 
 def parse_json_body(request):
     """Парсит JSON из тела запроса.
-    Возвращает dict, пустой dict (если тело пустое) или None (при невалидном JSON)."""
+    Возвращает dict или пустой dict (если тело пустое / невалидный JSON)."""
     if not request.body:
         return {}
     try:
-        return json.loads(request.body)
+        data = json.loads(request.body)
+        return data if isinstance(data, dict) else {}
     except (json.JSONDecodeError, ValueError):
-        # Невалидный JSON — возвращаем None, чтобы caller мог вернуть 400
-        return None
+        return {}
