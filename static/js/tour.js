@@ -166,11 +166,11 @@
   }
 
   function migrateOldState() {
-    if (localStorage.getItem('tour_seen') && !localStorage.getItem(LS_KEY)) {
-      var s = { step: TOTAL, completed: true, version: 2 };
-      setState(s);
+    // Старый tour_seen → удалить, показать новый тур заново
+    if (localStorage.getItem('tour_seen')) {
       localStorage.removeItem('tour_seen');
-      return s;
+      localStorage.removeItem(LS_KEY);
+      return null;
     }
     return null;
   }
