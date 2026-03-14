@@ -741,7 +741,7 @@ tr.pp-locked .pp-lock-badge {
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
 .nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
 </style>
-<link rel="stylesheet" href="/static/css/tour.css">
+<link rel="stylesheet" href="/static/css/tour.css?v=3">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 
@@ -5043,7 +5043,7 @@ function spGetFilteredRows() {
   });
 }
 </script>
-<script src="/static/js/tour.js"></script>
+<script src="/static/js/tour.js?v=3"></script>
 
 </body>
 </html>
