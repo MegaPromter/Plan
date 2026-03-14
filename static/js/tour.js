@@ -203,7 +203,7 @@
     var sels = step.selector.split(',');
     for (var i = 0; i < sels.length; i++) {
       var el = document.querySelector(sels[i].trim());
-      if (el) return el;
+      if (el && el.offsetParent !== null) return el; // только видимые
     }
     return null;
   }
