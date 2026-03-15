@@ -45,19 +45,20 @@ class TestDirectoryCreate:
         c = Client()
         c.force_login(admin_user)
         resp = c.post('/api/directories/create/',
-            json.dumps({'type': 'task_type', 'value': 'Новый тип'}),
+            json.dumps({'type': 'milestone', 'value': 'Новая веха'}),
             content_type='application/json')
         assert resp.status_code == 201
-        assert Directory.objects.filter(dir_type='task_type', value='Новый тип').exists()
+        assert Directory.objects.filter(dir_type='milestone', value='Новая веха').exists()
 
-    def test_rejects_center_type(self, admin_user):
-        """center/dept/sector управляются через реальные модели."""
+    def test_rejects_reserved_type(self, admin_user):
+        """center/dept/sector/task_type управляются виртуально."""
         c = Client()
         c.force_login(admin_user)
-        resp = c.post('/api/directories/create/',
-            json.dumps({'type': 'center', 'value': 'Хак'}),
-            content_type='application/json')
-        assert resp.status_code == 400
+        for reserved in ('center', 'task_type'):
+            resp = c.post('/api/directories/create/',
+                json.dumps({'type': reserved, 'value': 'Хак'}),
+                content_type='application/json')
+            assert resp.status_code == 400
 
     def test_requires_admin(self, regular_user):
         c = Client()

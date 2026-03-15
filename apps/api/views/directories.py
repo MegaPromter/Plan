@@ -44,7 +44,7 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
 
     # Типы, которые заменены реальными моделями — не читаем из Directory
     # Для этих типов используются модели NTCCenter, Department, Sector
-    _REAL_MODEL_TYPES = {'center', 'dept', 'sector'}
+    _REAL_MODEL_TYPES = {'center', 'dept', 'sector', 'task_type'}
 
     def get(self, request):
         # Исключаем типы, дублирующие реальные модели (NTCCenter, Department, Sector)
@@ -141,6 +141,18 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
         result['stage'] = [
             {'id': idx, 'value': v, 'parent_id': None}
             for idx, v in enumerate(stage_vals, start=1)
+        ]
+
+        # Виртуальный справочник типов задач (не зависит от seed-данных в Directory)
+        _TASK_TYPES = [
+            'Выпуск нового документа',
+            'Корректировка документа',
+            'Разработка',
+            'Сопровождение (ОКАН)',
+        ]
+        result['task_type'] = [
+            {'id': idx, 'value': v, 'parent_id': None}
+            for idx, v in enumerate(_TASK_TYPES, start=1)
         ]
 
         # Добавляем виртуальный справочник сотрудников
