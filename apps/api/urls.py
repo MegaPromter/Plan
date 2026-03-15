@@ -41,6 +41,8 @@ from .views.vacations import (
     VacationListView, VacationCreateView,
     VacationDetailView, VacationConflictView,
 )
+# Вьюхи командировок
+from .views.business_trips import BusinessTripListView, BusinessTripDetailView
 # Вьюхи журнала извещений
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
 # Вьюхи производственного календаря (WorkCalendar + Holiday)
@@ -171,6 +173,10 @@ urlpatterns = [
     path('vacations/<int:pk>/', VacationDetailView.as_view()),
     # GET /api/check_vacation_conflict/ — проверка пересечений отпусков
     path('check_vacation_conflict/', VacationConflictView.as_view()),
+
+    # ── Командировки ──────────────────────────────────────────────────
+    path('business_trips/',          BusinessTripListView.as_view()),
+    path('business_trips/<int:pk>/', BusinessTripDetailView.as_view()),
 
     # ── Журнал извещений ────────────────────────────────────────────────
     # GET /api/journal/ — список записей журнала

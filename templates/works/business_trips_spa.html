@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+{% block title %}План командировок — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">План командировок</span>
+{% endblock %}
+
+{% block topbar_actions %}
+{% if request.user|is_writer %}
+  <button class="btn btn-primary btn-sm" onclick="openAddTripModal()">
+    <i class="fas fa-plus"></i> Добавить
+  </button>
+{% endif %}
+<span id="exportBtnContainer"></span>
+<span id="tripStats" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ── Тулбар ── */
+.bt-toolbar {
+  display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;
+}
+.bt-toolbar select,
+.bt-toolbar input {
+  padding:6px 12px; border:1px solid var(--border); border-radius:6px;
+  font-size:13px; background:var(--surface); color:var(--text);
+  font-family:var(--font); outline:none;
+}
+.bt-toolbar select:focus,
+.bt-toolbar input:focus { border-color:var(--accent); }
+
+/* ── Переключатель вида ── */
+.view-tabs {
+  display:flex; gap:4px; background:var(--surface); border-radius:8px;
+  padding:3px; box-shadow:0 1px 3px rgba(0,0,0,.06); width:fit-content;
+  margin-bottom:14px;
+}
+.view-tab {
+  padding:7px 18px; border-radius:6px; font-size:13px; font-weight:600;
+  cursor:pointer; border:none; background:none; color:var(--text2);
+  transition:all .15s; font-family:var(--font);
+}
+.view-tab.active { background:var(--accent); color:#fff; box-shadow:0 2px 4px rgba(37,99,235,.3); }
+.view-tab:hover:not(.active) { background:var(--surface2); }
+
+/* ── Месяц-кнопки ── */
+#monthBar {
+  display:flex; gap:4px; margin-bottom:14px; flex-wrap:wrap;
+}
+.month-btn {
+  padding:5px 12px; border:1px solid var(--border); border-radius:6px;
+  background:var(--surface); font-size:12px; cursor:pointer; font-weight:500;
+  color:var(--text2); font-family:var(--font); transition:all .15s;
+}
+.month-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.month-btn:hover:not(.active) { background:var(--surface2); }
+
+/* ── Gantt ── */
+.gantt-wrap { overflow-x:auto; background:var(--surface); border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid var(--border); }
+.gantt-grid { display:grid; min-width:900px; }
+.g-hdr {
+  background:var(--surface2); font-size:10px; color:var(--text2); font-weight:700;
+  text-transform:uppercase; padding:8px 4px; text-align:center;
+  border-bottom:2px solid var(--border); position:sticky; top:0; z-index:2;
+}
+.g-hdr.g-we { color:var(--danger, #ef4444); }
+.g-name {
+  padding:8px 12px; font-size:13px; font-weight:600; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px; white-space:nowrap;
+}
+.g-name-text { overflow:hidden; text-overflow:ellipsis; }
+.g-dept { font-size:11px; color:var(--text2); font-weight:400; }
+.g-cell {
+  border-bottom:1px solid var(--border); border-left:1px solid var(--surface2);
+  position:relative; min-height:38px;
+}
+.g-cell.g-we { background:rgba(239,68,68,.04); }
+.g-bar {
+  position:absolute; top:7px; height:22px; border-radius:6px;
+  display:flex; align-items:center; padding:0 6px; font-size:9px;
+  font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; z-index:1;
+  cursor:pointer; transition:filter .15s;
+}
+.g-bar:hover { filter:brightness(1.1); }
+
+/* ── Матрица ── */
+.matrix-wrap { overflow-x:auto; background:var(--surface); border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid var(--border); }
+.matrix-table { width:100%; border-collapse:collapse; min-width:800px; }
+.matrix-table th {
+  background:var(--surface2); font-size:10px; color:var(--text2); font-weight:700;
+  text-transform:uppercase; padding:8px 6px; text-align:center;
+  border-bottom:2px solid var(--border);
+}
+.matrix-table th.th-emp { text-align:left; padding-left:12px; min-width:180px; }
+.matrix-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); text-align:center;
+  font-size:13px; vertical-align:middle;
+}
+.matrix-table td.td-emp { text-align:left; padding-left:12px; }
+.matrix-table td.td-total { font-weight:700; color:var(--accent); }
+.matrix-table .row-total td { background:var(--surface2); font-weight:700; }
+
+.emp-cell { display:flex; align-items:center; gap:8px; }
+.emp-ava {
+  width:28px; height:28px; border-radius:50%; background:var(--accent);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; flex-shrink:0;
+}
+.emp-name { font-weight:600; font-size:13px; }
+.emp-dept { font-size:11px; color:var(--text2); }
+
+/* ── Чипы статусов ── */
+.trip-chip {
+  display:inline-block; padding:2px 7px; border-radius:8px;
+  font-size:11px; font-weight:600; cursor:pointer;
+  transition:filter .15s;
+}
+.trip-chip:hover { filter:brightness(.92); }
+.chip-plan   { background:#ede9fe; color:#6d28d9; }
+.chip-active { background:#dbeafe; color:#1d4ed8; }
+.chip-done   { background:#e2e8f0; color:#475569; }
+.chip-cancel { background:#fee2e2; color:#b91c1c; text-decoration:line-through; }
+
+/* ── Легенда ── */
+.bt-legend {
+  display:flex; gap:14px; margin-top:12px; font-size:12px; color:var(--text2); flex-wrap:wrap;
+}
+.bt-legend-item { display:flex; align-items:center; gap:5px; }
+.bt-legend-sw { width:18px; height:12px; border-radius:4px; display:inline-block; }
+
+/* ── Пустое состояние ── */
+.bt-empty {
+  text-align:center; padding:48px 20px; color:var(--text2);
+}
+.bt-empty i { font-size:32px; margin-bottom:8px; display:block; opacity:.4; }
+.bt-empty p { font-size:14px; }
+
+/* ── Модалка ── */
+.modal-overlay {
+  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45);
+  backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--surface); border-radius:12px; padding:24px; width:100%;
+  max-width:520px; box-shadow:0 8px 32px rgba(0,0,0,.18);
+  max-height:90vh; overflow-y:auto;
+}
+.modal-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+}
+.modal-header h2 { font-size:18px; font-weight:700; margin:0; }
+.modal-close {
+  background:none; border:none; font-size:18px; cursor:pointer; color:var(--text2); padding:4px;
+}
+.modal-footer { margin-top:16px; }
+.form-group { margin-bottom:12px; }
+.form-label {
+  display:block; font-size:12px; font-weight:600; color:var(--text2);
+  text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;
+}
+.form-input {
+  width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border);
+  border-radius:6px; background:var(--surface); color:var(--text);
+  font-family:var(--font); font-size:14px; outline:none;
+}
+.form-input:focus { border-color:var(--accent); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-error {
+  background:rgba(239,68,68,.08); color:var(--danger, #ef4444); border-radius:6px;
+  padding:8px 12px; font-size:13px; margin-bottom:8px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:12px;">
+  <h1>План командировок</h1>
+</div>
+
+<!-- Тулбар -->
+<div class="bt-toolbar">
+  <select id="yearSel" onchange="changeYear()">
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <select id="deptFilter" onchange="applyDeptFilter()">
+    <option value="">Все отделы</option>
+  </select>
+  <select id="statusFilter" onchange="applyStatusFilter()">
+    <option value="">Все статусы</option>
+    <option value="plan">Запланирована</option>
+    <option value="active">В процессе</option>
+    <option value="done">Завершена</option>
+    <option value="cancel">Отменена</option>
+  </select>
+  <input type="text" id="searchInput" placeholder="🔍 Поиск сотрудника..." oninput="applySearch()">
+</div>
+
+<!-- Переключатель вида -->
+<div class="view-tabs">
+  <button class="view-tab active" data-view="gantt" onclick="switchView('gantt')">📅 Календарная лента</button>
+  <button class="view-tab" data-view="matrix" onclick="switchView('matrix')">📊 Годовая матрица</button>
+</div>
+
+<!-- Месяц-кнопки (для Gantt) -->
+<div id="monthBar"></div>
+
+<!-- Gantt-вид -->
+<div id="ganttView"></div>
+
+<!-- Матрица-вид (скрыт по умолчанию) -->
+<div id="matrixView" style="display:none"></div>
+
+<!-- Легенда -->
+<div class="bt-legend">
+  <div class="bt-legend-item"><span class="bt-legend-sw" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa)"></span> Запланирована</div>
+  <div class="bt-legend-item"><span class="bt-legend-sw" style="background:linear-gradient(135deg,#2563eb,#60a5fa)"></span> В процессе</div>
+  <div class="bt-legend-item"><span class="bt-legend-sw" style="background:linear-gradient(135deg,#64748b,#94a3b8)"></span> Завершена</div>
+  <div class="bt-legend-item"><span class="bt-legend-sw" style="background:linear-gradient(135deg,#ef4444,#f87171)"></span> Отменена</div>
+</div>
+
+<!-- Модалка создания/редактирования -->
+<div class="modal-overlay" id="tripModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="tripModalTitle">Новая командировка</h2>
+      <button class="modal-close" onclick="closeTripModal()">&times;</button>
+    </div>
+    <div id="tripModalError" class="form-error" style="display:none"></div>
+    <form id="tripForm" onsubmit="event.preventDefault(); saveTrip();">
+      <div class="form-group">
+        <label class="form-label">Сотрудник *</label>
+        <input class="form-input" id="fieldEmployee" placeholder="Фамилия И.О." required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Место назначения *</label>
+        <input class="form-input" id="fieldLocation" placeholder="Город, объект" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Цель командировки</label>
+        <input class="form-input" id="fieldPurpose" placeholder="Авторский надзор, согласование КД...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала *</label>
+          <input type="date" class="form-input" id="fieldDateStart" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания *</label>
+          <input type="date" class="form-input" id="fieldDateEnd" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Статус</label>
+        <select class="form-input" id="fieldStatus">
+          <option value="plan">Запланирована</option>
+          <option value="active">В процессе</option>
+          <option value="done">Завершена</option>
+          <option value="cancel">Отменена</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Примечания</label>
+        <textarea class="form-input" id="fieldNotes" rows="2"></textarea>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;">
+        <button type="button" class="btn btn-outline btn-sm" id="tripDeleteBtn" style="display:none;color:var(--danger,#ef4444);" onclick="deleteTrip()">
+          <i class="fas fa-trash"></i> Удалить
+        </button>
+        <div style="display:flex;gap:8px;margin-left:auto;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeTripModal()">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="tripSaveBtn">Сохранить</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
+<script id="bt-config" type="application/json">{
+  "is_writer": {% if request.user|is_writer %}true{% else %}false{% endif %},
+  "current_year": {{ current_year }}
+}</script>
+<script src="{% static 'js/business_trips.js' %}"></script>
+{% endblock %}

@@ -11,6 +11,7 @@ def active_nav(request):
         ('/works/production-plan/', 'pp'),
         ('/works/plan/', 'plan'),
         ('/works/notices/', 'notices'),
+        ('/works/business-trips/', 'business_trips'),
         ('/works/work-calendar/', 'work_calendar'),
         ('/employees/vacations/', 'vacation_plan'),
         ('/employees/', 'employees'),

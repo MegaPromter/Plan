@@ -341,6 +341,57 @@ class Vacation(models.Model):
         return (self.date_end - self.date_start).days + 1
 
 
+# ── Командировка сотрудника ───────────────────────────────────────────────────
+
+class BusinessTrip(models.Model):
+    """Плановая/фактическая командировка сотрудника."""
+
+    STATUS_PLAN = 'plan'
+    STATUS_ACTIVE = 'active'
+    STATUS_DONE = 'done'
+    STATUS_CANCEL = 'cancel'
+
+    STATUS_CHOICES = [
+        (STATUS_PLAN, 'Запланирована'),
+        (STATUS_ACTIVE, 'В процессе'),
+        (STATUS_DONE, 'Завершена'),
+        (STATUS_CANCEL, 'Отменена'),
+    ]
+
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE,
+        related_name='business_trips', verbose_name='Сотрудник',
+    )
+    location = models.CharField('Место назначения', max_length=300)
+    purpose = models.CharField('Цель командировки', max_length=500, blank=True)
+    date_start = models.DateField('Дата начала')
+    date_end = models.DateField('Дата окончания')
+    status = models.CharField(
+        'Статус', max_length=10,
+        choices=STATUS_CHOICES, default=STATUS_PLAN,
+    )
+    notes = models.TextField('Примечания', blank=True)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        db_table = 'emp_business_trip'
+        verbose_name = 'Командировка'
+        verbose_name_plural = 'Командировки'
+        ordering = ['date_start']
+        indexes = [
+            models.Index(fields=['employee', 'date_start']),
+        ]
+
+    def __str__(self):
+        return (f'{self.employee.short_name}: '
+                f'{self.location} ({self.date_start} – {self.date_end})')
+
+    @property
+    def duration_days(self) -> int:
+        return (self.date_end - self.date_start).days + 1
+
+
 # ── KPI сотрудника ────────────────────────────────────────────────────────────
 
 class KPI(models.Model):

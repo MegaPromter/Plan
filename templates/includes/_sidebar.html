@@ -94,7 +94,7 @@
     <div class="nav-section">
       <div class="nav-section-title">7. Администрирование</div>
       <div class="nav-dropdown">
-        <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false">
+        <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' or active_nav == 'business_trips' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false">
           <i class="fas fa-users"></i>
           <span>Сотрудники</span>
           <i class="fas fa-chevron-down nav-chevron"></i>
@@ -108,7 +108,7 @@
             <i class="fas fa-calendar-alt"></i>
             <span>План отпусков</span>
           </a>
-          <a href="{% url 'accounts:stub' 'business-trips' %}" class="nav-item nav-subitem">
+          <a href="{% url 'works:business_trips' %}" class="nav-item nav-subitem{% if active_nav == 'business_trips' %} active{% endif %}">
             <i class="fas fa-plane"></i>
             <span>План командировок</span>
           </a>

@@ -303,9 +303,28 @@ class ProductionPlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     include_col_settings = True
 
 
+class BusinessTripsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «План командировок»."""
+    template_name = 'works/business_trips_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        return ctx
+
+
 class WorkCalendarSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Производственный календарь»."""
     template_name = 'works/work_calendar_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        return ctx
 
 
 # ── Демо-страницы (только DEBUG) ────────────────────────────────────────────
@@ -327,3 +346,10 @@ class DemoSlideoutView(TemplateView):
         ctx['current_year'] = current_year
         ctx['years'] = list(range(current_year - 3, current_year + 4))
         return ctx
+
+
+class DemoTripsView(TemplateView):
+    """Демо: варианты оформления плана командировок."""
+    def get_template_names(self):
+        n = self.kwargs.get('num', 1)
+        return [f'works/demo_trips_{n}.html']
