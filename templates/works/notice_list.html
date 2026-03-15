@@ -59,27 +59,27 @@
 .ji-table tbody tr:hover td { background:var(--accent-light) !important; }
 /* бейджи */
 .badge-active    { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:#dcfce7; color:#166534; white-space:nowrap; }
+  font-weight:600; background:rgba(22,163,74,0.12); color:var(--success); white-space:nowrap; }
 .badge-expired   { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:#fee2e2; color:#991b1b; white-space:nowrap; }
+  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
 .badge-closed-no { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:#fee2e2; color:#991b1b; white-space:nowrap; }
+  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
 .badge-closed-yes{ display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:#f1f5f9; color:#64748b; white-space:nowrap; }
+  font-weight:600; background:var(--surface2); color:var(--muted2); white-space:nowrap; }
 .badge-auto, .badge-manual { display:inline-block; padding:1px 4px; border-radius:4px; font-size:9px;
   font-weight:600; margin-left:4px; vertical-align:middle; cursor:default; }
-.badge-auto { background:#e0e7ff; color:#4338ca; }
-.badge-manual { background:#fef3c7; color:#92400e; }
+.badge-auto { background:rgba(67,56,202,0.1); color:#6366f1; }
+.badge-manual { background:rgba(217,119,6,0.1); color:var(--warning); }
 .ji-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
   font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
   opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; }
 .ji-tooltip.visible { opacity:1; }
-.ji-tooltip.auto { background:#4338ca; color:#e0e7ff; }
-.ji-tooltip.manual { background:#92400e; color:#fef3c7; }
+.ji-tooltip.auto { background:rgba(67,56,202,0.55); color:#fff; }
+.ji-tooltip.manual { background:rgba(146,64,14,0.55); color:#fff; }
 .ji-tooltip::after { content:''; position:absolute; left:50%; top:100%;
   transform:translateX(-50%); border:5px solid transparent; }
-.ji-tooltip.auto::after { border-top-color:#4338ca; }
-.ji-tooltip.manual::after { border-top-color:#92400e; }
+.ji-tooltip.auto::after { border-top-color:rgba(67,56,202,0.55); }
+.ji-tooltip.manual::after { border-top-color:rgba(146,64,14,0.55); }
 /* строка итогов */
 .ji-footer { padding:8px 4px; font-size:12px; color:var(--text2); }
 /* sticky-колонка действий */
@@ -117,7 +117,7 @@
   border-radius:6px; background:var(--surface); color:var(--text); font-family:var(--font);
   font-size:14px; outline:none; }
 .form-input:focus { border-color:var(--accent); }
-.form-input:disabled { background:#e9ecef; color:#adb5bd; cursor:not-allowed; }
+.form-input:disabled { background:var(--surface2); color:var(--muted); cursor:not-allowed; }
 </style>
 {% endblock %}
 
@@ -136,8 +136,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom:12px;">
+<div class="page-header" style="margin-bottom:12px;display:flex;align-items:center;gap:16px;">
   <h1>Журнал извещений</h1>
+  <!-- Переключатель плотности таблицы -->
+  <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
+    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  </div>
 </div>
 
 <div class="ji-wrap">
@@ -331,7 +337,8 @@
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
   "userRole": "{{ request.user.employee.role|default:'' }}",
   "userDept": "{{ request.user.employee.department.code|default:'' }}",
-  "userSector": "{{ request.user.employee.sector.code|default:'' }}"
+  "userSector": "{{ request.user.employee.sector.code|default:'' }}",
+  "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/notices.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Демо: Переключатель плотности таблицы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --border: #e2e6ed;
+    --border2: #c8d0dc;
+    --accent: #2563eb;
+    --accent2: #1d4ed8;
+    --accent-light: #eff6ff;
+    --text: #1e293b;
+    --text2: #475569;
+    --muted: #94a3b8;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --font: 'Inter', sans-serif;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px;
+  }
+
+  .demo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .demo-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .demo-header p {
+    color: var(--text2);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* ========== Переключатель плотности ========== */
+  .density-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .density-toggle button {
+    border: none;
+    background: none;
+    padding: 8px 16px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .density-toggle button:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+  .density-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .density-toggle button:hover:not(.active) {
+    background: var(--accent-light);
+  }
+
+  /* ========== Таблица ========== */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    background: #eef1f7;
+    color: #4a5568;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    border-bottom: 2px solid var(--border2);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+  }
+  tbody tr {
+    transition: background 0.1s;
+  }
+  tbody tr:nth-child(even) { background: #f6f8fb; }
+  tbody tr:hover { background: #edf2ff; }
+  td, th { border-right: 1px solid var(--border); }
+  td:last-child, th:last-child { border-right: none; }
+  tbody td { border-bottom: 1px solid #eef1f5; }
+
+  /* Статусные бейджи */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-active { background: #dcfce7; color: var(--success); }
+  .badge-warning { background: #fef3c7; color: var(--warning); }
+  .badge-danger { background: #fee2e2; color: var(--danger); }
+  .badge-info { background: #dbeafe; color: var(--accent); }
+
+  /* Числовые столбцы — моноширинный */
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* ========== COMFORTABLE (по умолчанию) ========== */
+  .density-comfortable th { padding: 14px 16px; }
+  .density-comfortable td { padding: 12px 16px; line-height: 1.5; }
+  .density-comfortable table { font-size: 14px; }
+
+  /* ========== COMPACT ========== */
+  .density-compact th { padding: 8px 10px; }
+  .density-compact td { padding: 5px 10px; line-height: 1.3; }
+  .density-compact table { font-size: 13px; }
+  .density-compact .badge { padding: 1px 8px; font-size: 11px; }
+
+  /* ========== SPACIOUS ========== */
+  .density-spacious th { padding: 18px 20px; }
+  .density-spacious td { padding: 16px 20px; line-height: 1.6; }
+  .density-spacious table { font-size: 15px; }
+  .density-spacious .badge { padding: 3px 12px; font-size: 13px; }
+
+  /* Подпись */
+  .info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fb;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .rows-info { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <div>
+    <h1>Переключатель плотности таблицы</h1>
+    <p>Пользователь выбирает удобный режим отображения. Настройка сохраняется в col_settings.</p>
+  </div>
+  <div class="density-toggle" id="densityToggle">
+    <button data-density="compact" title="Больше строк на экране">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="5.5" width="14" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="9" width="14" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="12.5" width="14" height="1.5" rx=".75" fill="currentColor"/></svg>
+      Компакт
+    </button>
+    <button data-density="comfortable" class="active" title="Рекомендуемый по умолчанию">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="2" rx="1" fill="currentColor"/><rect x="1" y="5" width="14" height="2" rx="1" fill="currentColor"/><rect x="1" y="9" width="14" height="2" rx="1" fill="currentColor"/><rect x="1" y="13" width="14" height="2" rx="1" fill="currentColor"/></svg>
+      Стандарт
+    </button>
+    <button data-density="spacious" title="Максимальная читаемость">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="0" width="14" height="3" rx="1" fill="currentColor"/><rect x="1" y="6" width="14" height="3" rx="1" fill="currentColor"/><rect x="1" y="12" width="14" height="3" rx="1" fill="currentColor"/></svg>
+      Просторно
+    </button>
+  </div>
+</div>
+
+<div class="table-wrap density-comfortable" id="tableWrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50px">№</th>
+        <th>Наименование работы</th>
+        <th>Проект</th>
+        <th>Исполнитель</th>
+        <th>Этап</th>
+        <th class="num">Трудоёмкость</th>
+        <th>Начало</th>
+        <th>Окончание</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="info-bar">
+    <span class="rows-info" id="rowsInfo"></span>
+    <span id="densityLabel">Режим: Стандарт</span>
+  </div>
+</div>
+
+<script>
+const data = [
+  {n:1, name:'Разработка ТЗ на систему', proj:'НИР-11', exec:'Иванов И.И.', stage:'Этап 1', labor:120, start:'01.03.2026', end:'15.03.2026', status:'active'},
+  {n:2, name:'Анализ существующих решений', proj:'НИР-11', exec:'Петров П.П.', stage:'Этап 1', labor:80, start:'01.03.2026', end:'10.03.2026', status:'info'},
+  {n:3, name:'Проектирование архитектуры', proj:'ОКР-5', exec:'Сидоров С.С.', stage:'Этап 2', labor:200, start:'10.03.2026', end:'30.03.2026', status:'warning'},
+  {n:4, name:'Разработка модуля авторизации', proj:'ОКР-5', exec:'Козлов А.В.', stage:'Этап 2', labor:160, start:'15.03.2026', end:'28.03.2026', status:'active'},
+  {n:5, name:'Тестирование прототипа', proj:'НИР-11', exec:'Иванов И.И.', stage:'Этап 3', labor:40, start:'25.03.2026', end:'31.03.2026', status:'danger'},
+  {n:6, name:'Подготовка документации', proj:'ОКР-5', exec:'Новикова Е.А.', stage:'Этап 1', labor:60, start:'05.03.2026', end:'20.03.2026', status:'active'},
+  {n:7, name:'Согласование с заказчиком', proj:'НИР-11', exec:'Петров П.П.', stage:'Этап 3', labor:24, start:'28.03.2026', end:'31.03.2026', status:'info'},
+  {n:8, name:'Корректировка по замечаниям', proj:'ОКР-5', exec:'Сидоров С.С.', stage:'Этап 3', labor:90, start:'01.04.2026', end:'15.04.2026', status:'warning'},
+  {n:9, name:'Интеграционное тестирование', proj:'НИР-11', exec:'Козлов А.В.', stage:'Этап 4', labor:110, start:'10.04.2026', end:'25.04.2026', status:'active'},
+  {n:10, name:'Подготовка отчётных материалов', proj:'ОКР-5', exec:'Новикова Е.А.', stage:'Этап 4', labor:45, start:'20.04.2026', end:'30.04.2026', status:'info'},
+  {n:11, name:'Макетирование интерфейса', proj:'НИР-11', exec:'Иванов И.И.', stage:'Этап 2', labor:75, start:'12.03.2026', end:'22.03.2026', status:'active'},
+  {n:12, name:'Оптимизация БД', proj:'ОКР-5', exec:'Петров П.П.', stage:'Этап 3', labor:95, start:'18.03.2026', end:'05.04.2026', status:'warning'},
+];
+
+const statusMap = {active:'В работе',info:'Завершено',warning:'Просрочено',danger:'Критично'};
+const statusClass = {active:'badge-active',info:'badge-info',warning:'badge-warning',danger:'badge-danger'};
+const densityLabels = {compact:'Компакт', comfortable:'Стандарт', spacious:'Просторно'};
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = data.map(r => `<tr>
+    <td class="num">${r.n}</td>
+    <td>${r.name}</td>
+    <td>${r.proj}</td>
+    <td>${r.exec}</td>
+    <td>${r.stage}</td>
+    <td class="num">${r.labor}</td>
+    <td>${r.start}</td>
+    <td>${r.end}</td>
+    <td><span class="badge ${statusClass[r.status]}">${statusMap[r.status]}</span></td>
+  </tr>`).join('');
+  document.getElementById('rowsInfo').textContent = `Показано ${data.length} записей`;
+}
+
+document.getElementById('densityToggle').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const d = btn.dataset.density;
+  document.querySelectorAll('#densityToggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const wrap = document.getElementById('tableWrap');
+  wrap.className = 'table-wrap density-' + d;
+  document.getElementById('densityLabel').textContent = 'Режим: ' + densityLabels[d];
+});
+
+render();
+</script>
+</body>
+</html>

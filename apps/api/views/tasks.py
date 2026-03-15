@@ -15,7 +15,7 @@ from datetime import date as dt_date
 
 from django.db import transaction
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import JsonResponse
 from django.views import View
 
@@ -34,6 +34,7 @@ from apps.api.utils import (
     validate_executors_list,
     validate_actions,
     validate_task_type,
+    generate_row_code,
 )
 from apps.works.models import (
     Work, TaskExecutor, WorkReport, Project, AuditLog,
@@ -64,12 +65,13 @@ def _build_pp_justification(work):
     return '; '.join(parts)
 
 
-def _serialize_task(work, executors_data=None):
+def _serialize_task(work, executors_data=None, sector_heads=None):
     """
     Сериализует Work (show_in_plan=True) в плоский dict для JSON-ответа.
     Поля stage_num, work_num, work_designation — единые для ПП и СП.
     Для ПП-записей проект берётся из pp_project.up_project,
     обоснование формируется из ПП-полей, deadline = date_end.
+    sector_heads — словарь {sector_code: short_name} для ФИО начальников секторов.
     """
     is_from_pp = work.show_in_pp
 
@@ -90,6 +92,7 @@ def _serialize_task(work, executors_data=None):
 
     d = {
         'id': work.id,
+        'row_code': work.row_code or '',     # код строки (автогенерация)
         'task_type': (work.task_type or 'Выпуск нового документа') if is_from_pp
                      else (work.task_type or ''),
         'dept': (work.department.code if work.department else '') or '',
@@ -115,7 +118,7 @@ def _serialize_task(work, executors_data=None):
         'justification': _build_pp_justification(work) if is_from_pp
                          else (work.justification or ''),
         'actions': work.actions or {},
-        'sector_head': (work.sector.name or work.sector.code if work.sector else '') or '',
+        'sector_head': (sector_heads or {}).get(work.sector.code, '') if work.sector else '',
         'norm': float(work.norm) if work.norm is not None else None,
     }
 
@@ -136,6 +139,7 @@ def _serialize_task(work, executors_data=None):
     d['pp_labor'] = pp_labor_val
     d['from_pp'] = is_from_pp
     d['predecessors_count'] = getattr(work, '_pred_count', 0) or 0
+    d['has_reports'] = bool(getattr(work, '_has_reports', False))
 
     # Индикатор просроченности: deadline (или date_end) < сегодня
     today = timezone.now().date()
@@ -251,6 +255,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         qs = qs.annotate(
             _pred_count=Count('predecessor_links'),
+            _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
             'department', 'sector', 'project',
             'executor', 'ntc_center', 'created_by',
@@ -282,10 +287,23 @@ class TaskListView(LoginRequiredJsonMixin, View):
             except (ValueError, TypeError):
                 month_key = None
 
+        # Словарь ФИО начальников секторов: {sector_code: "Фамилия И.О."}
+        sector_heads = {}
+        for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
+            if emp.sector:
+                parts = (emp.full_name or '').split()
+                if len(parts) >= 3:
+                    short = f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
+                elif len(parts) == 2:
+                    short = f'{parts[0]} {parts[1][0]}.'
+                else:
+                    short = emp.full_name or ''
+                sector_heads[emp.sector.code] = short
+
         result = []
         for w in works:
             execs = executors_data.get(w.id, [])
-            d = _serialize_task(w, executors_data=execs)
+            d = _serialize_task(w, executors_data=execs, sector_heads=sector_heads)
             d['plan_hours_month'] = d['plan_hours_all'].get(month_key, '') if month_key else ''
             result.append(d)
 
@@ -372,6 +390,11 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             _set_work_fk_fields(work, d, request)
             _set_date_fields(work, d)
             work.save()
+
+            # Автогенерация row_code
+            if work.project and not work.row_code:
+                work.row_code = generate_row_code(work.project)
+                work.save(update_fields=['row_code'])
 
             if executors_list:
                 _save_executors(work, executors_list)
@@ -501,9 +524,9 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 else:
                     ph = work.plan_hours
                 if not is_from_pp:
-                    work.work_name = d.get('work_name', work.work_name)
-                    work.work_num = d.get('work_number', work.work_num)
-                    work.work_designation = d.get('description', work.work_designation)
+                    work.work_name = d.get('work_name', work.work_name) or ''
+                    work.work_num = d.get('work_number', work.work_num) or ''
+                    work.work_designation = d.get('description', work.work_designation) or ''
                 work.plan_hours = ph
 
                 if 'task_type' in d:
@@ -526,6 +549,11 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.actions = actions
 
                 work.save()
+
+                # Автогенерация row_code при назначении/смене проекта
+                if 'project' in d and work.project:
+                    work.row_code = generate_row_code(work.project)
+                    work.save(update_fields=['row_code'])
 
                 # Синхронизация ЖИ при смене task_type
                 if 'task_type' in d:

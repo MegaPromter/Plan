@@ -22,7 +22,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, validate_task_type
+from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, validate_task_type, generate_row_code
 from apps.works.models import Work, PPProject, AuditLog
 from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
@@ -236,6 +236,13 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 department=dept_obj,
                 created_by=employee,
             )
+
+            # Автогенерация row_code
+            up_project = work.pp_project.up_project if work.pp_project else None
+            if up_project:
+                work.row_code = generate_row_code(up_project)
+                if work.row_code:
+                    work.save(update_fields=['row_code'])
 
             # Применяем остальные поля без промежуточных save()
             detail_view = ProductionPlanDetailView()

@@ -142,13 +142,13 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #eef1f7;
+  background: var(--th-bg);
   border-bottom: 2px solid var(--border2);
   border-right: 1px solid var(--border2);
   padding: 9px 6px;
   font-size: 11px;
   font-weight: 700;
-  color: #4a5568;
+  color: var(--th-color);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -158,10 +158,10 @@
 /* Строки тела таблицы */
 .pp-table tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.12s; }
 /* Чередование фонов: чётные строки чуть темнее */
-.pp-table tbody tr:nth-child(even) { background: #f6f8fb; }
-.pp-table tbody tr:nth-child(odd)  { background: #ffffff; }
+.pp-table tbody tr:nth-child(even) { background: var(--row-even); }
+.pp-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
 /* Строка при наведении — акцентный фон */
-.pp-table tbody tr:hover { background: #edf2ff !important; }
+.pp-table tbody tr:hover { background: var(--row-hover) !important; }
 /* Ячейки таблицы */
 .pp-table td {
   border-right: 1px solid var(--border2);
@@ -174,10 +174,12 @@
   text-align: center;
   color: var(--muted);
   font-size: 11px;
-  background: #f0f3f8;
+  background: var(--row-num-bg);
   font-variant-numeric: tabular-nums;
   border-right: 2px solid var(--border2);
+  position: sticky; left: 0; z-index: 2;
 }
+.pp-table thead th:first-child { position:sticky; left:0; z-index:13; }
 
 /* Инлайн-поле редактирования ячейки: прозрачный фон, без рамки */
 .cell-edit {
@@ -323,7 +325,7 @@ select.cell-edit option {
 /* Строка фильтров под заголовком таблицы */
 .filter-row th {
   padding: 3px;
-  background: #e4e9f2;
+  background: color-mix(in srgb, var(--th-bg), var(--border) 20%);
   border-bottom: 2px solid var(--border2);
 }
 /* Обёртка мультифильтра (относительное позиционирование для dropdown) */
@@ -537,6 +539,13 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     <div id="ppDeptChips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
   </div>
 
+  <!-- Переключатель плотности таблицы -->
+  <div class="density-toggle" id="densityToggle" title="Плотность таблицы" style="margin-bottom:6px;">
+    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  </div>
+
   <!-- Переключатель вида: Таблица / Ганта -->
   <div class="pp-view-tabs" id="ppViewTabs">
     <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')">📋 Таблица</button>
@@ -737,7 +746,8 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   "userDept": "{{ request.user.employee.department.code|default:'' }}",
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "userSectorName": "{{ request.user.employee.sector.name|default:'' }}",
-  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}"
+  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}",
+  "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/production_plan.js' %}"></script>
 {% endblock %}

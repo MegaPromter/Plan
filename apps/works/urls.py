@@ -53,3 +53,12 @@ urlpatterns = [
     # Редактирование извещения
     path('notices/<int:pk>/edit/', views.NoticeUpdateView.as_view(), name='notice_edit'),
 ]
+
+# ── Демо-страницы для показа улучшений дизайна (только DEBUG) ────────────
+from django.conf import settings as django_settings
+if django_settings.DEBUG:
+    urlpatterns += [
+        path('demo/density/',  views.DemoDensityView.as_view(),  name='demo_density'),
+        path('demo/skeleton/', views.DemoSkeletonView.as_view(), name='demo_skeleton'),
+        path('demo/slideout/', views.DemoSlideoutView.as_view(), name='demo_slideout'),
+    ]

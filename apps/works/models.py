@@ -102,6 +102,7 @@ class Project(models.Model):
     name_full  = models.CharField('Полное наименование', max_length=500)
     name_short = models.CharField('Краткое наименование', max_length=100, blank=True)
     code       = models.CharField('Шифр / код', max_length=100, blank=True)
+    row_code_seq = models.PositiveIntegerField('Счётчик row_code', default=0)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлён', auto_now=True)
 
@@ -127,6 +128,7 @@ class ProjectProduct(models.Model):
         related_name='products', verbose_name='Проект',
     )
     name       = models.CharField('Наименование изделия', max_length=255)
+    name_short = models.CharField('Краткое наименование', max_length=100, blank=True)
     code       = models.CharField('Шифр', max_length=100, blank=True)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 

@@ -219,7 +219,7 @@ class ReportDeleteView(WriterRequiredMixin, DeleteView):
 
 # ── Журнал извещений ──────────────────────────────────────────────────────────
 
-class NoticeListView(LoginRequiredMixin, ListView):
+class NoticeListView(LoginRequiredMixin, SPAContextMixin, ListView):
     # Модель журнала извещений
     model               = Notice
     # Шаблон списка извещений
@@ -228,6 +228,7 @@ class NoticeListView(LoginRequiredMixin, ListView):
     context_object_name = 'notices'
     # Количество записей на странице
     paginate_by         = 30
+    include_col_settings = True
 
     def get_queryset(self):
         # Загружаем извещения с JOIN'ами по отделу и исполнителю
@@ -279,16 +280,6 @@ class PlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     include_col_settings = True
 
 
-class ProjectsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
-    """SPA-страница «Управление проектами»."""
-    template_name = 'works/projects_spa.html'
-
-
-class ProductionPlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
-    """SPA-страница «Производственный план»."""
-    template_name = 'works/production_plan_spa.html'
-
-
 class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     # Разрешает доступ только администраторам (роль 'admin') и суперпользователям
     def test_func(self):
@@ -300,9 +291,34 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             return self.request.user.is_superuser
 
 
+class ProjectsSPAView(AdminRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Управление проектами» (только для админов)."""
+    template_name = 'works/projects_spa.html'
+
+
+class ProductionPlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Производственный план»."""
+    template_name = 'works/production_plan_spa.html'
+    include_col_settings = True
+
+
 class WorkCalendarSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Производственный календарь»."""
     template_name = 'works/work_calendar_spa.html'
+
+
+# ── Демо-страницы (только DEBUG) ────────────────────────────────────────────
+class DemoDensityView(TemplateView):
+    """Демо: переключатель плотности таблицы."""
+    template_name = 'works/demo_density.html'
+
+class DemoSkeletonView(TemplateView):
+    """Демо: skeleton-загрузка."""
+    template_name = 'works/demo_skeleton.html'
+
+class DemoSlideoutView(TemplateView):
+    """Демо: slideout-панель vs. модальное окно."""
+    template_name = 'works/demo_slideout.html'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

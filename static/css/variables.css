@@ -1,0 +1,117 @@
+/* ══════════════════════════════════════════════════════════════════════
+   variables.css — Дизайн-токены (CSS-переменные)
+   Подключается первым во всех шаблонах.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Светлая тема (по умолчанию) ───────────────────────────────────── */
+:root {
+  /* Фоновые и поверхностные цвета */
+  --bg:       #f0f2f5;
+  --surface:  #ffffff;
+  --surface2: #f8f9fb;
+  --border:   #e2e6ed;
+  --border2:  #c8d0dc;
+
+  /* Сайдбар / навигация */
+  --nav-bg:       #1a2744;
+  --nav-border:   #243358;
+  --nav-text:     #a8bbd4;
+  --nav-text2:    #cddaeb;
+  --nav-active-bg: rgba(255,255,255,0.10);
+  --nav-active-color: #ffffff;
+  --nav-hover-bg: rgba(255,255,255,0.06);
+  --topbar-bg:    #1e2e50;
+
+  /* Акцент (синий) */
+  --accent:       #2563eb;
+  --accent2:      #1d4ed8;
+  --accent-glow:  rgba(37,99,235,0.12);
+  --accent-light: #eff6ff;
+
+  /* Текст */
+  --text:  #1e293b;
+  --text2: #475569;
+  --muted: #94a3b8;
+  --muted2:#64748b;
+
+  /* Статусы */
+  --danger:  #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+
+  /* Геометрия */
+  --radius: 12px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Плотность таблиц (comfortable по умолчанию) */
+  --td-pad-y: 10px;
+  --td-pad-x: 12px;
+  --td-font:  14px;
+  --td-lh:    1.5;
+  --th-pad-y: 12px;
+  --th-pad-x: 12px;
+  --th-font:  11px;
+
+  /* Таблица-заголовок */
+  --th-bg:       #eef1f7;
+  --th-color:    #4a5568;
+  --row-even:    #f6f8fb;
+  --row-odd:     #ffffff;
+  --row-hover:   #edf2ff;
+  --row-num-bg:  #f0f3f8;
+}
+
+/* ── Тёмная тема ───────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:       #0f1117;
+  --surface:  #1a1d27;
+  --surface2: #22252f;
+  --border:   #2d3140;
+  --border2:  #3a3f50;
+
+  /* Сайдбар — чуть темнее */
+  --nav-bg:     #0d1017;
+  --nav-border: #1a1e2a;
+  --topbar-bg:  #141722;
+
+  /* Акцент — чуть ярче на тёмном фоне */
+  --accent:       #3b82f6;
+  --accent2:      #2563eb;
+  --accent-glow:  rgba(59,130,246,0.15);
+  --accent-light: rgba(59,130,246,0.10);
+
+  /* Текст инвертирован */
+  --text:  #e2e8f0;
+  --text2: #94a3b8;
+  --muted: #64748b;
+  --muted2:#94a3b8;
+
+  /* Таблица-заголовок */
+  --th-bg:       #1e2130;
+  --th-color:    #94a3b8;
+  --row-even:    #15171f;
+  --row-odd:     #1a1d27;
+  --row-hover:   rgba(59,130,246,0.08);
+  --row-num-bg:  #15171f;
+}
+
+/* ── Плотность: compact ──────────────────────────────────────────── */
+.density-compact {
+  --td-pad-y: 4px;
+  --td-pad-x: 6px;
+  --td-font:  13px;
+  --td-lh:    1.3;
+  --th-pad-y: 8px;
+  --th-pad-x: 8px;
+}
+
+/* ── Плотность: spacious ─────────────────────────────────────────── */
+.density-spacious {
+  --td-pad-y: 14px;
+  --td-pad-x: 16px;
+  --td-font:  15px;
+  --td-lh:    1.6;
+  --th-pad-y: 16px;
+  --th-pad-x: 16px;
+}

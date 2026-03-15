@@ -54,6 +54,46 @@ function _isFullAccess() {
 
 let tasks = [];
 let colSettings = _spCfg.colSettings;
+
+/* ── Skeleton-загрузка ─────────────────────────────────────────────── */
+function _spSkeletonRows(count, cols) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
+      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
+    }
+    html += '</tr>';
+  }
+  return html;
+}
+
+/* ── Переключатель плотности ───────────────────────────────────────── */
+function _initDensity() {
+  const wrap = document.querySelector('.table-wrap');
+  if (!wrap) return;
+  const saved = (colSettings && colSettings.density) || 'comfortable';
+  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
+  // Кнопки переключателя в тулбаре
+  const toggle = document.getElementById('densityToggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('button').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.density === saved);
+    btn.addEventListener('click', function() {
+      const d = this.dataset.density;
+      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
+      if (d !== 'comfortable') wrap.classList.add('density-' + d);
+      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
+      // Сохраняем на сервер
+      fetch('/api/col_settings/', {
+        method: 'POST', headers: apiHeaders(),
+        body: JSON.stringify({ density: d })
+      }).catch(function() {});
+    });
+  });
+}
+
 let currentTaskId = null;
 let currentTask = null;
 let reportRows = [];
@@ -205,6 +245,38 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (e.target === this) closeDepsModal();
   });
 
+  // ── Tooltip для бейджей типа задачи (стиль ЖИ) ──
+  (function() {
+    var tip = document.createElement('div');
+    tip.className = 'rc-tooltip';
+    document.body.appendChild(tip);
+    document.addEventListener('mouseenter', function(e) {
+      var badge = e.target.closest('.rc-type-badge');
+      if (!badge) return;
+      var text = badge.getAttribute('data-tip');
+      if (!text) return;
+      tip.textContent = text;
+      tip.className = 'rc-tooltip';
+      var label = badge.textContent.trim().toLowerCase();
+      tip.classList.add('tip-' + label);
+      tip.style.left = '-9999px';
+      tip.style.top = '0px';
+      void tip.offsetWidth;
+      var tw = tip.offsetWidth;
+      var th = tip.offsetHeight;
+      var rect = badge.getBoundingClientRect();
+      var left = rect.left + rect.width / 2 - tw / 2;
+      if (left < 4) left = 4;
+      if (left + tw > window.innerWidth - 4) left = window.innerWidth - tw - 4;
+      tip.style.left = left + 'px';
+      tip.style.top  = (rect.top - th - 8) + 'px';
+      tip.classList.add('visible');
+    }, true);
+    document.addEventListener('mouseleave', function(e) {
+      if (e.target.closest('.rc-type-badge')) { tip.classList.remove('visible'); }
+    }, true);
+  })();
+
   document.getElementById("yearDisplay").textContent = selectedYear;
   if (selectedMonth) {
     const el = document.querySelector(`.cal-month[data-m="${selectedMonth}"]`);
@@ -214,9 +286,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   si.value = "";
   setTimeout(() => { si.value = ""; }, 50);
   setTimeout(() => { si.value = ""; }, 200);
-  si.addEventListener("input", () => loadTasks());
+  _initDensity();
   await loadDirs();
   await loadTasks();
+  // Listener после первого loadTasks, чтобы setTimeout-очистки не вызвали повторную загрузку
+  si.addEventListener("input", debounce(() => loadTasks(), 300));
   initColResize();
   applyColSettings();
   initFilterMode();
@@ -236,7 +310,7 @@ async function loadTasks() {
   }
   if (search) url += `&search=${encodeURIComponent(search)}`;
 
-  document.getElementById("taskBody").innerHTML = "";
+  document.getElementById("taskBody").innerHTML = _spSkeletonRows(10, 20);
   document.getElementById("searchCount").textContent = "...";
 
   try {
@@ -308,25 +382,13 @@ async function calcPlanningErrors() {
   } catch {}
 
   // ── 1. Просроченные задачи (срок прошёл, отчёт не заполнен) ──────────────
-  const overdueResults = await Promise.allSettled(
-    allTasks
-      .filter(t => {
-        const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
-        const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
-        return (de && de < todayStr) || (dead && dead < todayStr);
-      })
-      .map(async t => {
-        try {
-          const reports = await fetch(`/api/reports/${t.id}/`).then(r=>r.ok?r.json():[]);
-          return { task: t, hasReport: reports.length > 0 };
-        } catch { return { task: t, hasReport: false }; }
-      })
-  );
-  const overdueChecks = overdueResults
-    .filter(r => r.status === 'fulfilled').map(r => r.value);
-  const overdue = overdueChecks
-    .filter(c => !c.hasReport && !peIsIgnored(`overdue_${c.task.id}`))
-    .map(c => c.task);
+  // has_reports приходит из API задач (annotate), N+1 fetch не нужен
+  const overdue = allTasks.filter(t => {
+    const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
+    const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
+    const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
+    return isOverdue && !t.has_reports && !peIsIgnored(`overdue_${t.id}`);
+  });
 
   // ── 2. Задачи с датами уже просроченными при создании ────────────────────
   // date_start > date_end ИЛИ date_start > deadline
@@ -633,18 +695,10 @@ async function checkMonthStart() {
   } catch(e) { console.error('checkMonthStart: fetch error', e); return; }
   if (!monthTasks.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
 
-  const results = await Promise.allSettled(monthTasks.map(async t => {
-    try {
-      const r = await fetch(`/api/reports/${t.id}/`);
-      const reports = r.ok ? await r.json() : [];
-      return { task: t, hasReport: reports.length > 0 };
-    } catch { return { task: t, hasReport: false }; }
-  }));
-  const checks = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-
-  const missing = checks.filter(c => !c.hasReport);
+  // has_reports приходит из API задач — N+1 fetch не нужен
+  const missing = monthTasks.filter(t => !t.has_reports);
   if (!missing.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
-  openMonthCheckModal(missing.map(c => c.task), prevYear, prevMonth, todayKey);
+  openMonthCheckModal(missing, prevYear, prevMonth, todayKey);
 }
 
 const mccDecisions = {};
@@ -839,7 +893,7 @@ const mfSelections = {};
 let activeMfBtn = null;
 let activeMfDropdown = null;
 const MF_DEFAULTS = {
-  task_type: "▼", dept: "▼", sector: "▼",
+  dept: "▼", sector: "▼",
   project: "▼", stage: "▼", executor: "▼"
 };
 
@@ -1017,7 +1071,7 @@ function toggleFilterMode(cb) {
   localStorage.setItem("filterInstant", instant ? "1" : "0");
   document.querySelectorAll(".col-filter").forEach(inp => {
     if (instant) {
-      inp.oninput = () => applyColFilters(inp);
+      inp.oninput = debounce(() => applyColFilters(inp), 150);
       inp.onkeydown = null;
     } else {
       inp.oninput = null;
@@ -1226,44 +1280,55 @@ function makeRow(t, num) {
   if (isFromPP) {
     const lockBadge = document.createElement("span");
     lockBadge.className = "pp-lock-badge";
-    lockBadge.title = "Перенесено из Производственного плана — редактирование заблокировано";
-    lockBadge.textContent = "🔒 ПП";
+    lockBadge.setAttribute("data-tip", "Перенесено из ПП — редактирование заблокировано");
+    lockBadge.textContent = "🔒 пп";
     numTd.appendChild(lockBadge);
   }
   tr.appendChild(numTd);
 
-  // ── Колонка «Тип задачи» — цветной бейдж ──
-  const typeTd = document.createElement("td");
-  typeTd.style.cssText = "padding:6px 8px;vertical-align:middle";
-  if (t.task_type) {
-    const badge = document.createElement("span");
-    // CSS-класс бейджа определяется первым словом типа задачи (нижний регистр)
-    badge.className = `type-badge ${t.task_type.toLowerCase().split(" ")[0]}`;
-    badge.textContent = t.task_type;
-    typeTd.appendChild(badge);
+  // ── Колонка «Код строки» — бейдж типа задачи + row_code ──
+  const rcTd = document.createElement("td");
+  rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
+  const _ttMap = {'Выпуск нового документа':'нов','Корректировка документа':'корр','Разработка':'разр','Сопровождение (ОКАН)':'ОКАН'};
+  const _ttLabel = _ttMap[t.task_type] || '';
+  if (t.row_code) {
+    const rcSpan = document.createElement("div");
+    rcSpan.style.cssText = "font-family:var(--mono);font-size:12px;color:var(--text2);";
+    rcSpan.textContent = t.row_code;
+    rcTd.appendChild(rcSpan);
   }
-  tr.appendChild(typeTd);
+  if (_ttLabel) {
+    const ttWrap = document.createElement("div");
+    ttWrap.style.cssText = "text-align:right;";
+    const ttBadge = document.createElement("span");
+    ttBadge.className = "rc-type-badge rc-type-" + _ttLabel.toLowerCase();
+    ttBadge.textContent = _ttLabel;
+    ttBadge.setAttribute('data-tip', t.task_type);
+    ttWrap.appendChild(ttBadge);
+    rcTd.appendChild(ttWrap);
+  }
+  tr.appendChild(rcTd);
 
   // ── Определение колонок данных ──
   // Каждая колонка: field — поле в объекте задачи, type — тип ячейки,
   // dirKey — ключ справочника для select, parentField/parentDirKey — каскадная фильтрация,
   // extraField — дополнительное отображение (напр. ФИО руководителя сектора)
   const cols = [
-    {field:"dept",         type:"select", dirKey:"dept"},
-    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head"},
     {field:"project",      type:"select", dirKey:"project"},
     {field:"stage",        type:"select", dirKey:"stage"},
     {field:"work_number",  type:"text"},
     {field:"justification",type:"text"},
     {field:"description",  type:"text"},
     {field:"work_name",    type:"text"},
+    {field:"dept",         type:"select", dirKey:"dept"},
+    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head"},
     {field:"executor",     type:"select", dirKey:"executor"},
     {field:"date_start",   type:"date"},
     {field:"date_end",     type:"date"},
     {field:"deadline",     type:"date"},
   ];
   // Сокращённые ключи колонок — для привязки ширин через th-элементы
-  const colKeys = ["dept","sector","project","stage","wnum","just","desc","wname","exec","ds","de","dead"];
+  const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ds","de","dead"];
 
   // ── Цикл по колонкам: создание ячеек данных ──
   cols.forEach((col, idx) => {
@@ -1520,20 +1585,6 @@ function makeRow(t, num) {
     tr.appendChild(td);
   });
 
-  // ── Колонка «Зависимости» — бейдж с количеством предшественников ──
-  const depsTd = document.createElement("td");
-  depsTd.style.cssText = "padding:6px 8px;vertical-align:middle;text-align:center;";
-  const pc = t.predecessors_count || 0;
-  const depBadge = document.createElement("span");
-  depBadge.className = "dep-badge" + (pc === 0 ? " zero" : "");
-  depBadge.textContent = pc;
-  depBadge.title = pc > 0 ? `${pc} предш.` : "Нет зависимостей";
-  depBadge.style.cursor = "pointer";
-  // Клик — открывает модал управления зависимостями
-  depBadge.onclick = () => openDepsModal(t);
-  depsTd.appendChild(depBadge);
-  tr.appendChild(depsTd);
-
   // ── Колонка «Действия» — кнопки в зависимости от роли ──
   // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
   // User:   📄 отчёт, 🔗 зависимости (только просмотр)
@@ -1602,6 +1653,16 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   } else if (parentVal && parentDirKey) {
     const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
     if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
+    // Фантомная опция для текущего значения из другого родителя
+    if (selectedVal && !items.find(i => i.value === selectedVal)) {
+      const ghost = allItems.find(i => i.value === selectedVal);
+      const o = document.createElement("option");
+      o.value = selectedVal;
+      o.textContent = ghost ? (ghost.head_name ? selectedVal + ' — ' + ghost.head_name : selectedVal) : selectedVal;
+      o.selected = true;
+      o.style.color = 'var(--muted)';
+      sel.appendChild(o);
+    }
   }
   items.forEach(item => {
     const o = document.createElement("option");
@@ -1728,13 +1789,14 @@ function openInlineNewRow() {
   numTd.innerHTML = '<span style="color:var(--accent);font-weight:700;">+</span>';
   tr.appendChild(numTd);
 
-  // Тип задачи
+  // Код строки — неактивная ячейка (генерируется на сервере)
   const typeTd = document.createElement('td');
-  typeTd.style.cssText = 'padding:6px 8px;vertical-align:middle;';
+  typeTd.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
+  typeTd.textContent = '(авто)';
+  // Hidden select для task_type — используется при отправке
   const typeSel = document.createElement('select');
   typeSel.id = 'inr-task_type';
-  typeSel.className = 'cell-select';
-  typeSel.style.cssText = 'min-width:160px;';
+  typeSel.style.display = 'none';
   TASK_TYPES.forEach(t => {
     const o = document.createElement('option');
     o.value = t; o.textContent = t;
@@ -1743,16 +1805,16 @@ function openInlineNewRow() {
   typeTd.appendChild(typeSel);
   tr.appendChild(typeTd);
 
-  // Колонки: dept, sector, project, stage, work_number, justification, description, work_name
+  // Колонки: project, stage, work_number, justification, description, work_name, dept, sector
   const colDefs = [
-    {id:'inr-dept',          type:'select', dirKey:'dept'},
-    {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept'},
     {id:'inr-project',       type:'select', dirKey:'project'},
     {id:'inr-stage',         type:'select', dirKey:'stage'},
     {id:'inr-work_number',   type:'text',   placeholder:'№ работы'},
     {id:'inr-justification', type:'text',   placeholder:'Обоснование'},
     {id:'inr-description',   type:'text',   placeholder:'Обозначение'},
     {id:'inr-work_name',     type:'text',   placeholder:'Наименование'},
+    {id:'inr-dept',          type:'select', dirKey:'dept'},
+    {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept'},
   ];
 
   // Авто-значения из профиля пользователя для dept/sector
@@ -1820,19 +1882,19 @@ function openInlineNewRow() {
   // Дата начала
   const dsTd = document.createElement('td');
   const dsInp = document.createElement('input');
-  dsInp.id = 'inr-date_start'; dsInp.type = 'date'; dsInp.className = 'cell-edit date';
+  dsInp.id = 'inr-date_start'; dsInp.type = 'date'; dsInp.className = 'cell-edit date date-pick';
   dsTd.appendChild(dsInp); tr.appendChild(dsTd);
 
   // Дата окончания
   const deTd = document.createElement('td');
   const deInp = document.createElement('input');
-  deInp.id = 'inr-date_end'; deInp.type = 'date'; deInp.className = 'cell-edit date';
+  deInp.id = 'inr-date_end'; deInp.type = 'date'; deInp.className = 'cell-edit date date-pick';
   deTd.appendChild(deInp); tr.appendChild(deTd);
 
   // Срок ПП/ПГ/ТР
   const deadTd = document.createElement('td');
   const deadInp = document.createElement('input');
-  deadInp.id = 'inr-deadline'; deadInp.type = 'date'; deadInp.className = 'cell-edit date';
+  deadInp.id = 'inr-deadline'; deadInp.type = 'date'; deadInp.className = 'cell-edit date date-pick';
   deadTd.appendChild(deadInp); tr.appendChild(deadTd);
 
   // Кнопки ✓ / ✕
@@ -1844,11 +1906,12 @@ function openInlineNewRow() {
   `;
   tr.appendChild(actTd);
 
-  tbody.appendChild(tr);
-
-  // Фокус на первый элемент
-  typeSel.focus();
-  tr.scrollIntoView({behavior:'smooth', block:'center'});
+  // Сначала прокручиваем вверх, потом вставляем строку — без рывка
+  const wrap = document.getElementById('tableView');
+  if (wrap) wrap.scrollTop = 0;
+  tbody.prepend(tr);
+  const firstInput = tr.querySelector('select:not([style*="display: none"]), textarea, input');
+  if (firstInput) firstInput.focus();
 
   // Сохранение
   async function doSaveNewTaskRow() {
@@ -1889,11 +1952,7 @@ function openInlineNewRow() {
       _addingTaskRow = false;
       tr.remove();
       await loadTasks();
-      renderTable();
       notify('✓ Задача создана', 'ok');
-      // Прокрутка к последней строке
-      const allRows = document.querySelectorAll('#taskBody tr');
-      if (allRows.length) allRows[allRows.length - 1].scrollIntoView({behavior:'smooth', block:'center'});
     } catch (e) {
       notify('Ошибка создания задачи', 'err');
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
@@ -1931,6 +1990,8 @@ function openNewTaskModal(taskType, prefill) {
   document.getElementById("newTaskTypeBadgeWrap").innerHTML =
     `<span class="type-badge ${cls}">${taskType}</span>`;
   document.getElementById("newTaskModalTitle").textContent = "Новая задача";
+  const rcEl2 = document.getElementById("newTaskRowCode");
+  if (rcEl2) { rcEl2.textContent = ''; rcEl2.style.display = 'none'; }
   document.getElementById("newTaskSubmitBtn").textContent = "✓ Создать задачу";
 
   // Авто-значение отдела/сектора: из prefill (редактирование) или из профиля (новая задача)
@@ -1968,6 +2029,8 @@ function openEditTaskModal(t) {
   document.getElementById("newTaskTypeBadgeWrap").innerHTML =
     `<span class="type-badge ${cls}">${t.task_type || ""}</span>`;
   document.getElementById("newTaskModalTitle").textContent = `Редактирование задачи #${t.id}`;
+  const rcEl = document.getElementById("newTaskRowCode");
+  if (rcEl) { rcEl.textContent = t.row_code ? `Код строки: ${t.row_code}` : ''; rcEl.style.display = t.row_code ? '' : 'none'; }
   document.getElementById("newTaskSubmitBtn").textContent = "💾 Сохранить изменения";
 
   populateFormSelect(document.getElementById("nt-dept"),     "dept",     t.dept     || null, null, null);
@@ -1999,7 +2062,9 @@ function openEditTaskModal(t) {
   if (isPP && ppLabor) { ppLaborWrap.style.display = ""; ppLaborEl.textContent = ppLabor + " ч"; }
   else { ppLaborWrap.style.display = "none"; ppLaborEl.textContent = "—"; }
 
-  document.getElementById("newTaskModal").classList.add("open");
+  var modal = document.getElementById("newTaskModal");
+  modal.classList.add("slideout-mode");
+  modal.classList.add("open");
 }
 
 // Блокирует ПП-поля в модале (isPP=true: запись из Производственного плана)
@@ -2027,7 +2092,9 @@ function _applyPPLock(isPP) {
 
 // Закрывает модал создания/редактирования и сбрасывает состояние
 function closeNewTaskModal() {
-  document.getElementById("newTaskModal").classList.remove("open");
+  var modal = document.getElementById("newTaskModal");
+  modal.classList.remove("open");
+  modal.classList.remove("slideout-mode");
   editingTaskId = null; _editingTaskOriginal = null;
   _applyPPLock(false);
   document.getElementById("nt-actions-wrap").style.display = "";
@@ -2151,6 +2218,13 @@ function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   } else if (parentVal && parentDirKey) {
     const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
     if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
+    // Фантомная опция для текущего значения из другого родителя
+    if (selectedVal && !items.find(i => i.value === selectedVal)) {
+      const ghost = document.createElement("option");
+      ghost.value = selectedVal; ghost.textContent = selectedVal; ghost.selected = true;
+      ghost.style.color = 'var(--muted)';
+      sel.appendChild(ghost);
+    }
   }
   let found = false;
   items.forEach(item => {
@@ -2265,7 +2339,23 @@ async function submitNewTask() {
       try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
       notify(msg, "err"); return;
     }
-    closeNewTaskModal(); await loadTasks(); notify("✓ Задача создана", "ok");
+    closeNewTaskModal();
+    // Сбрасываем фильтры чтобы новая задача была видна (без лишнего renderTable)
+    colFilters = {};
+    document.querySelectorAll(".col-filter").forEach(inp => { inp.value = ""; inp.classList.remove("active"); inp.nextElementSibling.classList.remove("visible"); });
+    Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
+    document.querySelectorAll(".mf-trigger").forEach(btn => { btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼"; btn.classList.remove("active"); });
+    if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
+    document.getElementById("filtersActiveBadge").classList.remove("visible");
+    selectedDept = null; localStorage.removeItem('sp_selected_dept');
+    document.querySelectorAll('.dept-chip').forEach(c => c.classList.toggle('active', !c.dataset.dept));
+    await loadTasks();
+    notify("✓ Задача создана", "ok");
+    // Прокрутка к первой строке (новая задача — вверху, API сортирует по -id)
+    const wrap = document.getElementById('tableView');
+    if (wrap) wrap.scrollTop = 0;
+    const firstRow = document.querySelector('#taskBody tr');
+    if (firstRow) firstRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -2351,6 +2441,10 @@ async function openReportModal(taskOrId) {
   const addRowBtn = document.getElementById("btnAddReportRow");
   if (addRowBtn) addRowBtn.style.display = IS_WRITER ? "" : "none";
   document.getElementById("reportModal").classList.add("open");
+  // Пересчитать высоту textarea после показа модала (scrollHeight=0 пока display:none)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#reportBody .r-cell').forEach(c => { c.style.height = 'auto'; c.style.height = c.scrollHeight + 'px'; });
+  });
 }
 
 // Создаёт объект пустой строки отчёта с дефолтными полями
@@ -2411,6 +2505,7 @@ function renderReportTable() {
 // currentVal — текущее значение, isDisabled — блокировка ввода
 function _makeSelectCell(field, options, currentVal, isDisabled) {
   const td = document.createElement("td");
+  td.dataset.col = field;
   const sel = document.createElement("select");
   sel.className = "r-cell r-cell-select"; sel.dataset.field = field;
   // Пустой вариант «—» по умолчанию
@@ -2432,6 +2527,7 @@ function _makeSelectCell(field, options, currentVal, isDisabled) {
 // field — имя поля, value — начальное значение, isDisabled — блокировка
 function _makeTextCell(field, value, isDisabled) {
   const td = document.createElement("td");
+  td.dataset.col = field;
   const inp = document.createElement("textarea");
   inp.className = "r-cell"; inp.rows = 1;
   inp.value = value != null ? String(value) : "";  // null/undefined → пустая строка
@@ -2450,6 +2546,7 @@ function _makeTextCell(field, value, isDisabled) {
 // field — имя поля, value — дата ISO (YYYY-MM-DD), isDisabled — блокировка
 function _makeDateCell(field, value, isDisabled) {
   const td = document.createElement("td");
+  td.dataset.col = field;
   const inp = document.createElement("input");
   inp.type = "date"; inp.className = "r-cell r-cell-date"; inp.dataset.field = field;
   inp.value = value || "";                          // Пустая строка если дата не задана
@@ -2643,11 +2740,11 @@ async function _syncNoticeFromReport(data, reportId) {
   };
   try {
     if (noticeData.notice_number) {
-      // Проверяем: нет ли уже записи в ЖИ с таким же номером и типом ПИ (защита от дублей)
-      const existing = await fetchJson(`/api/journal/?per_page=100000`);
-      const list = Array.isArray(existing) ? existing : (existing.results || []);
-      const already = list.some(n => n.notice_number === noticeData.notice_number && n.ii_pi === 'ПИ');
-      if (!already) {
+      // Проверяем дубликат через серверный фильтр (вместо загрузки всего журнала)
+      const check = await fetchJson(
+        `/api/journal/?check_number=${encodeURIComponent(noticeData.notice_number)}&check_ii_pi=${encodeURIComponent('ПИ')}`
+      );
+      if (!check.exists) {
         await fetchJson('/api/journal/create/', {method: 'POST', body: JSON.stringify(noticeData)});
       }
     }
@@ -2768,17 +2865,20 @@ function initColResize() {
     const th=handle.closest("th"); let startX,startW;
     handle.addEventListener("mousedown",e=>{
       e.preventDefault(); startX=e.clientX; startW=th.offsetWidth;
-      // mousemove — изменяем ширину колонки в реальном времени
+      let _rafResize=null;
+      // mousemove — изменяем ширину колонки (с rAF throttle)
       const onMove=ev=>{
-        const w=Math.max(60,startW+ev.clientX-startX); th.style.width=w+"px";
-        const idx=th.cellIndex;
-        // Синхронизируем ширину ячеек в теле таблицы
-        document.querySelectorAll("#mainTable tbody tr").forEach(tr=>{if(tr.cells[idx])tr.cells[idx].style.width=w+"px";});
-        colSettings[handle.dataset.col]={width:w};   // Запоминаем в настройках
-        _resizeTextareas(document.getElementById("taskBody")); // Подгоняем высоту textarea
+        if(_rafResize) return;
+        _rafResize=requestAnimationFrame(()=>{
+          _rafResize=null;
+          const w=Math.max(60,startW+ev.clientX-startX); th.style.width=w+"px";
+          const idx=th.cellIndex;
+          document.querySelectorAll("#mainTable tbody tr").forEach(tr=>{if(tr.cells[idx])tr.cells[idx].style.width=w+"px";});
+          colSettings[handle.dataset.col]={width:w};
+        });
       };
-      // mouseup — завершаем drag, сохраняем настройки на сервер
-      const onUp=()=>{document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);saveColSettings();};
+      // mouseup — завершаем drag, ресайзим textarea, сохраняем настройки
+      const onUp=()=>{document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);_resizeTextareas(document.getElementById("taskBody"));saveColSettings();};
       document.addEventListener("mousemove",onMove); document.addEventListener("mouseup",onUp);
     });
   });
@@ -3705,7 +3805,7 @@ if (sidebarToggle) {
 buildExportDropdown('exportBtnContainer', {
   pageName: 'СП',
   columns: [
-    { key: 'task_type',    header: 'Тип задачи',     width: 120 },
+    { key: 'row_code',     header: 'Код строки',      width: 120 },
     { key: 'dept',         header: 'Отдел',           width: 80,  forceText: true },
     { key: 'sector',       header: 'Сектор',          width: 100, forceText: true },
     { key: 'project',      header: 'Проект',          width: 140 },
@@ -3757,3 +3857,34 @@ function spGetFilteredRows() {
     return true;
   });
 }
+
+/* ── Кастомный тултип для PP-бейджа (аналог ЖИ) ──────────────────────── */
+(function() {
+  const tip = document.createElement('div');
+  tip.className = 'pp-tooltip';
+  document.body.appendChild(tip);
+
+  document.addEventListener('mouseenter', function(e) {
+    const badge = e.target.closest('.pp-lock-badge');
+    if (!badge) return;
+    const text = badge.getAttribute('data-tip');
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.left = '-9999px';
+    tip.style.top = '0px';
+    void tip.offsetWidth;
+    const th = tip.offsetHeight;
+    const rect = badge.getBoundingClientRect();
+    // Позиционируем справа от бейджа, чтобы не перекрывать сайдбар
+    let left = rect.right + 8;
+    tip.style.left = left + 'px';
+    tip.style.top  = (rect.top + rect.height / 2 - th / 2) + 'px';
+    tip.classList.add('visible');
+  }, true);
+
+  document.addEventListener('mouseleave', function(e) {
+    if (e.target.closest('.pp-lock-badge')) {
+      tip.classList.remove('visible');
+    }
+  }, true);
+})();

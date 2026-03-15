@@ -9,10 +9,18 @@
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>План/отчёт — Система управления</title>
-<!-- Google Fonts: IBM Plex Sans (основной интерфейс) + IBM Plex Mono (числа, коды) -->
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Google Fonts: Inter (основной интерфейс) + IBM Plex Mono (числа, коды) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- CSS: дизайн-токены, таблицы, компоненты -->
+<link rel="stylesheet" href="/static/css/variables.css">
+<link rel="stylesheet" href="/static/css/tables.css">
+<link rel="stylesheet" href="/static/css/components.css">
 <!-- Font Awesome 6 — иконки кнопок и пунктов меню -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Anti-flicker: тема устанавливается до рендера -->
+<script>!function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t)}()</script>
 <style>
 /* Сброс отступов и box-sizing для всех элементов */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +43,7 @@
   /* Семантические цвета состояний */
   --danger: #dc2626; --success: #16a34a; --warning: #d97706;
   /* Шрифты */
-  --font: 'IBM Plex Sans', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; --mono: 'IBM Plex Mono', monospace;
   /* Высоты фиксированных полос (для расчёта отступов) */
   --header-h: 56px; --toolbar-h: 100px; --search-h: 42px;
   /* Ширина сайдбара */
@@ -218,7 +226,7 @@ table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%
 /* Липкие заголовки колонок */
 thead th {
   z-index: 10;
-  background: #eef1f7;
+  background: var(--th-bg);
   border-bottom: 2px solid var(--border2);
   border-right: 1px solid var(--border2);
   padding: 0;
@@ -229,11 +237,11 @@ thead th {
    row1=37px (Группа + rowspan-заголовки), row2=37px (обозначение/наименование) */
 thead tr:nth-child(1) { position:sticky; top:0; z-index:12; }
 thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
-.th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:#4a5568;
+.th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:var(--th-color);
   letter-spacing:0.05em; text-transform:uppercase;
   display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
 /* Колонка «№» с другим оттенком серого фона */
-.th-num { background:#e0e5ef; min-width:40px; width:40px; }
+.th-num { background:color-mix(in srgb, var(--th-bg), var(--border2) 30%); min-width:40px; width:40px; }
 /* Ручка изменения ширины колонки (drag-resize), позиционирована на правой границе th */
 .col-resize { width:10px; cursor:col-resize; flex-shrink:0;
   border-right:2px solid transparent; transition:border-color 0.15s;
@@ -241,9 +249,9 @@ thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
 .col-resize:hover { border-color:var(--accent); }
 /* Строки тела таблицы: чередующийся фон, hover-подсветка */
 tbody tr { border-bottom:1px solid var(--border2); transition:background 0.12s; }
-tbody tr:nth-child(even) { background:#f6f8fb; }
-tbody tr:nth-child(odd)  { background:#ffffff; }
-tbody tr:hover { background:#edf2ff !important; }
+tbody tr:nth-child(even) { background:var(--row-even); }
+tbody tr:nth-child(odd)  { background:var(--row-odd); }
+tbody tr:hover { background:var(--row-hover) !important; }
 /* Новая строка (inline-добавление задачи) с анимацией появления */
 tbody tr.new-row { background:rgba(22,163,74,0.06) !important; animation:fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1} }
@@ -252,22 +260,26 @@ td:not(.actions-cell):not(.td-date) { contain:paint; }
 /* Ячейки дат: без обрезания чтобы текст даты был виден полностью */
 td.td-date { overflow:visible; contain:none; }
 /* Ячейка порядкового номера строки */
-td.num-cell { text-align:center; color:var(--muted); font-family:var(--mono);
-  font-size:12px; padding:8px 4px; width:40px; min-width:40px; background:#eaeff6;
-  border-right:2px solid var(--border2); font-variant-numeric:tabular-nums; }
+td.num-cell { text-align:center; color:var(--text2); font-family:var(--mono);
+  font-size:var(--td-font); font-weight:600; padding:var(--td-pad-y) 4px; width:44px; min-width:44px; background:var(--row-num-bg);
+  border-right:2px solid var(--border2); font-variant-numeric:tabular-nums;
+  position:sticky; left:0; z-index:2; }
+thead th:first-child { position:sticky; left:0; z-index:13; }
 /* Редактируемая ячейка (textarea): без рамки, авторастяжение высоты */
-.cell-edit { width:100%; min-height:36px; padding:7px 8px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:14px; resize:none; overflow:hidden; display:block; text-align:center; }
+.cell-edit { width:100%; min-height:36px; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:var(--td-font); resize:none; overflow:hidden; display:block; text-align:center; }
 .cell-edit:focus { background:rgba(59,130,246,0.06); }
 /* Ячейка с датой: моноширинный шрифт для выравнивания цифр */
 .cell-edit.date { font-family:var(--mono); font-size:13px; min-width:130px; }
 /* Скрыть иконку календаря — освобождает место под текст даты */
 .cell-edit.date::-webkit-calendar-picker-indicator { display:none; }
+/* Показать календарь в инлайн-форме новой задачи */
+.cell-edit.date-pick::-webkit-calendar-picker-indicator { display:inline-block; cursor:pointer; }
 /* Отображение даты как текста */
-.date-display { font-family:var(--mono); font-size:13px; color:var(--text); display:block; padding:7px 8px; white-space:nowrap; }
+.date-display { font-family:var(--mono); font-size:var(--td-font); color:var(--text); display:block; padding:var(--td-pad-y) var(--td-pad-x); white-space:nowrap; }
 /* Встроенный select в ячейке: кастомная стрелочка через data-URI SVG */
-.cell-select { width:100%; padding:7px 8px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:14px; cursor:pointer; text-align:center;
+.cell-select { width:100%; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:var(--td-font); cursor:pointer; text-align:center;
   -webkit-appearance:none; appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
@@ -286,6 +298,28 @@ td.num-cell { text-align:center; color:var(--muted); font-family:var(--mono);
 .btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(220,38,38,0.3);
   background:transparent; color:var(--danger); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
 .btn-del:hover { background:rgba(220,38,38,0.08); }
+/* Бейджи типа задачи в колонке «Код строки» (стиль как в ЖИ) */
+.rc-type-badge { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; white-space:nowrap; cursor:default; }
+.rc-type-нов  { background:rgba(22,163,74,0.1); color:#16a34a; }
+.rc-type-корр { background:rgba(217,119,6,0.1); color:#b45309; }
+.rc-type-разр { background:rgba(67,56,202,0.1); color:#6366f1; }
+.rc-type-окан { background:rgba(139,92,246,0.1); color:#7c3aed; }
+/* Tooltip для бейджей типа задачи (стиль ЖИ) */
+.rc-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; color:#fff; }
+.rc-tooltip.visible { opacity:1; }
+.rc-tooltip::after { content:''; position:absolute; left:50%; top:100%;
+  transform:translateX(-50%); border:5px solid transparent; }
+.rc-tooltip.tip-нов  { background:rgba(22,101,52,0.55); }
+.rc-tooltip.tip-нов::after  { border-top-color:rgba(22,101,52,0.55); }
+.rc-tooltip.tip-корр { background:rgba(146,64,14,0.55); }
+.rc-tooltip.tip-корр::after { border-top-color:rgba(146,64,14,0.55); }
+.rc-tooltip.tip-разр { background:rgba(67,56,202,0.55); }
+.rc-tooltip.tip-разр::after { border-top-color:rgba(67,56,202,0.55); }
+.rc-tooltip.tip-окан { background:rgba(109,40,217,0.55); }
+.rc-tooltip.tip-окан::after { border-top-color:rgba(109,40,217,0.55); }
 /* Кнопка и бейдж зависимостей */
 .btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);
   background:transparent; color:#7c3aed; font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
@@ -371,10 +405,17 @@ tr.pp-locked .cell-select:disabled {
 }
 /* Значок «🔒 ПП» под номером строки для PP-задач */
 tr.pp-locked .pp-lock-badge {
-  font-size: 9px; color: var(--accent); opacity: 0.7;
-  display: block; text-align: center; line-height: 1;
-  margin-top: 2px; letter-spacing: 0.02em;
+  font-size: 14px; color: var(--accent); opacity: 0.9;
+  display: block; text-align: center; line-height: 1.2;
+  margin-top: 4px; letter-spacing: 0.02em; cursor: default; font-weight: 600;
 }
+/* Кастомный тултип для PP-бейджа (стиль ЖИ) */
+.pp-tooltip { position:fixed; padding:6px 14px; border-radius:6px; font-size:13px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; background:rgba(67,56,202,0.55); color:#fff; }
+.pp-tooltip.visible { opacity:1; }
+.pp-tooltip::after { content:''; position:absolute; left:-10px; top:50%;
+  transform:translateY(-50%); border:5px solid transparent; border-right-color:rgba(67,56,202,0.55); }
 /* Фиксированная нижняя панель с кнопкой добавления задачи */
 .add-row-wrap { padding:12px 20px; background:var(--surface2); border-top:1px solid var(--border);
   position:fixed; bottom:0; left:var(--sidebar-width); right:0; z-index:10000; }
@@ -407,25 +448,26 @@ tr.pp-locked .pp-lock-badge {
 .modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
 /* ── Таблица отчёта ──────────────────────────────────────────── */
 .report-table-wrap { overflow-x:auto; }
-/* Широкая таблица отчётных строк (горизонтальная прокрутка) */
-.report-table { border-collapse:collapse; min-width:1100px; width:100%; font-size:14px; }
-.report-table th { background:var(--surface2); border:1px solid var(--border); padding:6px 8px;
-  font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
-.report-table td { border:1px solid var(--border); padding:0; vertical-align:top; }
+/* Таблица отчётных строк — фиксированная раскладка, ширина по контейнеру */
+.report-table { border-collapse:collapse; min-width:0; font-size:13px; }
+.report-table th { background:var(--surface2); border:1px solid var(--border); padding:6px 4px;
+  font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.02em;
+  text-align:center; word-break:break-word; }
+.report-table td { border:1px solid var(--border); padding:0; vertical-align:middle; overflow:hidden; text-align:center; }
 /* Редактируемая ячейка таблицы отчёта */
-.report-table .r-cell { width:100%; padding:5px 7px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:14px; min-height:30px; resize:none; overflow:visible; display:block; word-break:break-word; }
+.report-table .r-cell { width:100%; padding:8px 6px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:13px; min-height:34px; resize:none; overflow:hidden; display:block; word-break:break-word; box-sizing:border-box; text-align:center; }
 .report-table .r-cell:focus { background:var(--accent-light); }
-.report-table .r-cell-date { min-height:30px; height:30px; cursor:pointer; }
-.report-table .r-cell-select { height:30px; appearance:auto; cursor:pointer; }
+.report-table .r-cell-date { min-height:34px; height:34px; cursor:pointer; }
+.report-table .r-cell-select { height:34px; appearance:auto; cursor:pointer; }
 /* Неактивная ячейка отчёта (поле заблокировано для данного типа задачи) */
 .report-table td.r-td-disabled {
-  background:#dde1e7 !important;
+  background:var(--surface2) !important;
   padding:0;
 }
 .report-table .r-cell-disabled {
-  background:#dde1e7 !important;
-  color:#8a929e !important;
+  background:var(--surface2) !important;
+  color:var(--muted) !important;
   border-color:transparent !important;
   cursor:not-allowed !important;
   pointer-events:none;
@@ -611,7 +653,7 @@ tr.pp-locked .pp-lock-badge {
 .plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
 /* ── Строка фильтров под заголовками колонок ────────────────── */
 .filter-row { position:sticky; top:73px; z-index:10; }
-.filter-row th { padding:4px 4px 6px; background:#e8ecf2; border-bottom:1px solid var(--border); }
+.filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
 /* Поле текстового фильтра в каждой колонке */
 .col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
   border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;
@@ -642,8 +684,8 @@ tr.pp-locked .pp-lock-badge {
 /* Анимация появления нотификации снизу */
 @keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1} }
 /* Варианты цвета нотификации: успех / ошибка */
-.notif.ok { border-color:var(--success); color:var(--success); }
-.notif.err { border-color:var(--danger); color:var(--danger); }
+.notif.ok { background:#16a34a; border-color:#16a34a; color:#fff; }
+.notif.err { background:#dc2626; border-color:#dc2626; color:#fff; }
 /* ── Модал выбора типа задачи ────────────────────────────────── */
 .type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
   display:none; align-items:center; justify-content:center; }
@@ -710,10 +752,14 @@ tr.pp-locked .pp-lock-badge {
   border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
   resize:vertical; min-height:60px; }
 .form-textarea:focus { border-color:var(--accent); }
+/* Незаблокированные поля — белый фон для визуального отличия */
+.form-input:not(:disabled), .form-select:not(:disabled), .form-textarea:not(:disabled) {
+  background:var(--surface);
+}
 /* Заблокированные поля в режиме PP (from_pp=true) */
 .form-input:disabled, .form-select:disabled, .form-textarea:disabled {
-  opacity:0.5; cursor:not-allowed; background:rgba(30,37,54,0.6);
-  border-color:var(--border); color:var(--muted);
+  opacity:1; cursor:not-allowed; background:rgba(30,37,54,0.15);
+  border-color:var(--border); color:var(--text);
 }
 /* Информационный блок «задача из ПП» в начале модала редактирования */
 .pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
@@ -746,6 +792,17 @@ tr.pp-locked .pp-lock-badge {
 .nt-executor-remove { padding:3px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
 .nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
+
+/* ── Slideout-режим модала редактирования ───────────────────────── */
+.new-task-modal.slideout-mode {
+  justify-content:flex-end; align-items:stretch;
+}
+.new-task-modal.slideout-mode .new-task-box {
+  max-width:min(560px, 90vw); width:min(560px, 90vw); max-height:100vh;
+  border-radius:16px 0 0 16px; margin:0;
+  animation:slideInRight 0.25s ease;
+}
+@keyframes slideInRight { from{transform:translateX(100%)}to{transform:translateX(0)} }
 </style>
 <link rel="stylesheet" href="/static/css/tour.css?v=3">
 </head>
@@ -903,6 +960,12 @@ tr.pp-locked .pp-lock-badge {
   </div>
   <!-- Ссылка «Показать все»: сбрасывает фильтр по месяцу, показывает весь год -->
   <span class="cal-clear" onclick="clearFilter()">Показать все</span>
+  <!-- Переключатель плотности таблицы -->
+  <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
+    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  </div>
   <!-- Блок суммарной трудоёмкости: обновляется при каждом renderTable() -->
   <div class="plan-summary">
     <div>
@@ -958,22 +1021,20 @@ tr.pp-locked .pp-lock-badge {
   <!-- Колонка порядкового номера -->
   <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
   <!-- Каждый th содержит .col-resize — ручку изменения ширины (drag-resize) -->
-  <th id="th-type" rowspan="2"><div class="th-inner">Тип задачи<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
   <th id="th-project" rowspan="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
   <th id="th-stage" rowspan="2"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
   <th id="th-wnum" rowspan="2"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
   <th id="th-just" rowspan="2"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
   <!-- Группа: двухуровневый заголовок -->
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
+  <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
   <!-- Колонка исполнителей: показывает список ФИО с часами -->
   <th id="th-exec" rowspan="2"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
   <th id="th-ds" rowspan="2"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
   <th id="th-de" rowspan="2"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
   <th id="th-dead" rowspan="2"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
-  <!-- Колонка зависимостей (предшественники) -->
-  <th id="th-deps" rowspan="2"><div class="th-inner">Предш.<div class="col-resize" data-col="deps"></div></div></th>
   <!-- Колонка кнопок действий (редактировать, отчёт, удалить) -->
   <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
 </tr>
@@ -985,9 +1046,7 @@ tr.pp-locked .pp-lock-badge {
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
   <!-- Мульти-фильтры (выпадающие чекбоксы) для категориальных колонок -->
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="filter-cell"><input class="col-filter" data-col="row_code" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
   <!-- Текстовые фильтры (Enter — применить; × — сбросить) -->
@@ -995,12 +1054,13 @@ tr.pp-locked .pp-lock-badge {
   <th><div class="filter-cell"><input class="col-filter" data-col="justification" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="description" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="work_name" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
   <!-- Мульти-фильтр исполнителей -->
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="date_start" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="date_end" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="deadline" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="has_deps" onclick="toggleMf(this)">▼</button></div></th>
   <th></th>
 </tr>
 </thead>
@@ -1047,6 +1107,7 @@ tr.pp-locked .pp-lock-badge {
   <div class="new-task-header">
     <div>
       <div class="new-task-title" id="newTaskModalTitle">Новая задача</div>
+      <div id="newTaskRowCode" style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:2px;display:none;"></div>
       <div id="newTaskTypeBadgeWrap" style="margin-top:6px"></div>
     </div>
     <button class="modal-close" onclick="closeNewTaskModal()">✕</button>
@@ -1113,11 +1174,11 @@ tr.pp-locked .pp-lock-badge {
       <div class="form-field full" id="nt-labor-row" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;">
           <div id="nt-total-wrap">
-            <label class="form-label">Распланированная трудоёмкость (ч)</label>
+            <label class="form-label" style="font-size:11px;">Распланированная трудоёмкость (ч)</label>
             <div id="nt-total-hours" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--accent);min-height:38px;display:flex;align-items:center;margin-top:6px;">0</div>
           </div>
           <div id="nt-pp-labor-wrap" style="display:none">
-            <label class="form-label">Плановая трудоемкость (ч)</label>
+            <label class="form-label" style="font-size:11px;">Плановая трудоемкость (ч)</label>
             <div id="nt-pp-labor" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--success);min-height:38px;display:flex;align-items:center;margin-top:6px;">—</div>
           </div>
         </div>
@@ -1137,7 +1198,7 @@ tr.pp-locked .pp-lock-badge {
 
 <!-- REPORT MODAL -->
 <div class="modal-overlay" id="reportModal">
-<div class="modal" style="max-width:min(1700px,98vw);width:98vw;min-height:0;">
+<div class="modal" style="max-width:98vw;width:auto;min-width:900px;min-height:0;">
   <div class="modal-header">
     <div>
       <div class="modal-title">📄 Отчёт по задаче</div>
@@ -1150,24 +1211,21 @@ tr.pp-locked .pp-lock-badge {
     <table class="report-table">
       <thead id="reportThead">
         <tr>
-          <th id="rh_ii_pi" rowspan="2" style="display:none;">ИИ/ПИ</th>
-          <th colspan="2" style="text-align:center;">Отчётный документ</th>
-          <th rowspan="2" id="rh_inventory">Инвентарный №</th>
-          <th rowspan="2">Дата выпуска</th>
-          <th id="rh_date_expires" rowspan="2" style="display:none;">Срок действия</th>
-          <th rowspan="2">Вид doc</th>
-          <th rowspan="2">Класс doc</th>
-          <th rowspan="2">Листов А4 (факт)</th>
-          <th rowspan="2">Норматив</th>
-          <th rowspan="2">Коэфф. сл./новизны</th>
-          <th rowspan="2">БВД (ч)</th>
-          <th rowspan="2">Нормоконтроль</th>
-          <th rowspan="2">Ссылка</th>
-          <th rowspan="2"></th>
-        </tr>
-        <tr>
-          <th>Наименование</th>
-          <th>Обозначение</th>
+          <th id="rh_ii_pi" style="display:none;width:60px;">ИИ/ПИ</th>
+          <th id="rh_doc_title" style="width:170px;">Наименование</th>
+          <th style="width:170px;">Обозначение</th>
+          <th id="rh_inventory" style="width:100px;">Инвентарный №</th>
+          <th style="width:110px;">Дата выпуска</th>
+          <th id="rh_date_expires" style="display:none;width:110px;">Срок действия</th>
+          <th style="width:70px;">Вид doc</th>
+          <th style="width:70px;">Класс doc</th>
+          <th style="width:65px;">Листов А4</th>
+          <th style="width:80px;">Норматив</th>
+          <th style="width:65px;">Коэфф.</th>
+          <th style="width:60px;">БВД (ч)</th>
+          <th style="width:100px;">Нормо-контроль</th>
+          <th style="width:80px;">Ссылка</th>
+          <th style="width:44px;"></th>
         </tr>
       </thead>
       <tbody id="reportBody"></tbody>

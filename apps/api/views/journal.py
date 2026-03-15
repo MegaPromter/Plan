@@ -147,6 +147,15 @@ class JournalListView(LoginRequiredJsonMixin, View):
 
         status_filter = request.GET.get('status', '').strip()
 
+        # Быстрая проверка существования по номеру и типу (для защиты от дублей)
+        check_number = request.GET.get('check_number', '').strip()
+        check_ii_pi = request.GET.get('check_ii_pi', '').strip()
+        if check_number and check_ii_pi:
+            exists = qs.filter(
+                notice_number=check_number, ii_pi=check_ii_pi,
+            ).exists()
+            return JsonResponse({'exists': exists})
+
         dept = request.GET.get('dept', '').strip()
         if dept:
             from django.db.models import Q

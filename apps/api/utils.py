@@ -47,8 +47,9 @@ ROLE_LABELS = {
 
 # Поля, разрешённые для inline-обновления (production_plan)
 # Только эти поля можно обновлять через PUT ?field=... в ПП
+# NB: row_code НЕ входит — генерируется автоматически (generate_row_code)
 PRODUCTION_ALLOWED_FIELDS = {
-    'row_code', 'work_order', 'stage_num', 'milestone_num',
+    'work_order', 'stage_num', 'milestone_num',
     'work_num', 'work_designation', 'work_name',
     'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
     'total_2d', 'total_3d', 'labor', 'center', 'dept',
@@ -60,6 +61,29 @@ PRODUCTION_ALLOWED_FIELDS = {
 VACATION_ALLOWED_FIELDS = {
     'executor', 'date_start', 'date_end', 'notes',
 }
+
+
+# ── Автогенерация row_code ────────────────────────────────────────────────────
+
+def generate_row_code(project):
+    """Атомарно генерирует следующий row_code для проекта.
+    Вызывать внутри transaction.atomic().
+    Формат: «краткое_название_проекта.N» (НИР-11.1, НИР-11.2, …).
+    Удалённые номера не переиспользуются."""
+    if not project:
+        return ''
+    from apps.works.models import Project as ProjectModel
+    try:
+        locked = ProjectModel.objects.select_for_update().get(pk=project.pk)
+    except ProjectModel.DoesNotExist:
+        return ''
+    # Проверяем prefix ДО инкремента — чтобы не тратить seq впустую
+    prefix = (locked.name_short or locked.name_full or '').strip()
+    if not prefix:
+        return ''
+    locked.row_code_seq += 1
+    locked.save(update_fields=['row_code_seq'])
+    return f'{prefix}.{locked.row_code_seq}'
 
 
 # ── IP-адрес клиента ──────────────────────────────────────────────────────────

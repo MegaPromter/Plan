@@ -29,6 +29,43 @@ function _canModify(rowDept, rowSector) {
   return !!rowDept && rowDept === USER_DEPT;
 }
 
+/* ── Skeleton-загрузка ─────────────────────────────────────────────── */
+function _ppSkeletonRows(count, cols) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
+      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
+    }
+    html += '</tr>';
+  }
+  return html;
+}
+
+/* ── Переключатель плотности ───────────────────────────────────────── */
+function _initPPDensity() {
+  const wrap = document.querySelector('.pp-table-wrap');
+  if (!wrap) return;
+  const saved = (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable';
+  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
+  const toggle = document.getElementById('densityToggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('button').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.density === saved);
+    btn.addEventListener('click', function() {
+      const d = this.dataset.density;
+      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
+      if (d !== 'comfortable') wrap.classList.add('density-' + d);
+      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
+      fetch('/api/col_settings/', {
+        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':getCSRF()},
+        body: JSON.stringify({ density: d })
+      }).catch(function() {});
+    });
+  });
+}
+
 /** Формирует стандартное название ПП:
  *  "Производственный план подразделения НТЦ-XX по проекту/изделию ..."
  *  @param {object|null} upProj — объект проекта УП (с name_short/name_full)
@@ -489,6 +526,9 @@ async function openProject(id, name) {
   }
   document.getElementById('breadcrumbTitle').textContent = headerTitle;
 
+  // Показываем skeleton-загрузку в таблице
+  const _ppTbody = document.getElementById('ppTableBody');
+  if (_ppTbody) _ppTbody.innerHTML = _ppSkeletonRows(10, 19);
   // Загружаем строки плана и рендерим таблицу
   await loadPPRows(id);
 
@@ -644,7 +684,7 @@ function renderPPTable() {
 
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="20" style="padding:40px;text-align:center;color:var(--muted);">
+    tbody.innerHTML = `<tr><td colspan="19" style="padding:40px;text-align:center;color:var(--muted);">
       <i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>
       Нет записей
     </td></tr>`;
@@ -684,8 +724,8 @@ function _ppAppendBatch(count) {
       const isTextCol = ['work_name', 'work_order', 'work_designation'].includes(col);
       const isDateCol = col === 'date_end';
 
-      if (!IS_WRITER || !rowEditable) {
-        // Режим только для чтения: статичный текст
+      if (!IS_WRITER || !rowEditable || col === 'row_code') {
+        // Режим только для чтения: статичный текст (row_code всегда read-only — автогенерация)
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
@@ -768,12 +808,10 @@ function _ppAppendBatch(count) {
   if (_ppRenderedCount < _ppFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'ppScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="20" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+    spinnerTr.innerHTML = '<td colspan="19" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
     tbody.appendChild(spinnerTr);
   }
 
-  // Инициализируем drag-resize хэндлы
-  initColumnResize();
 }
 
 /* ── Слушатель прокрутки для ленивой подгрузки строк ПП ───────────── */
@@ -1031,11 +1069,13 @@ function openAddRowModal() {
     const isTextCol   = ['work_name', 'work_order', 'work_designation'].includes(col);
     const isDateCol   = col === 'date_end';
 
-    if (isSelectCol) {
+    if (col === 'row_code') {
+      // row_code — автогенерация на сервере, read-only
+      html += `<td style="font-size:11px;color:var(--muted);padding:4px 6px;">авто</td>`;
+    } else if (isSelectCol) {
       html += `<td>${buildSelectHtml(col, newRow)}</td>`;
     } else if (isTextCol) {
-      // Плейсхолдер для наименования и кода строки
-      html += `<td><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : col === 'row_code' ? 'Код' : ''}"></td>`;
+      html += `<td><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : ''}"></td>`;
     } else if (isDateCol) {
       html += `<td><input type="date" class="cell-edit" data-col="${col}" data-id="_new_" value=""></td>`;
     } else {
@@ -1043,11 +1083,8 @@ function openAddRowModal() {
     }
   }
 
-  // Столбец зависимостей (пустой для новой строки)
-  html += '<td></td>';
-
-  // Последний столбец: кнопки «Сохранить» (✓) и «Отмена» (✕)
-  html += `<td style="white-space:nowrap;">
+  // Последний столбец: кнопки «Сохранить» (✓) и «Отмена» (✕) — в колонке «Действия»
+  html += `<td style="text-align:center;white-space:nowrap;">
     <button id="ppNewRowSave" title="Сохранить строку" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
     <button id="ppNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
   </td>`;
@@ -1055,8 +1092,8 @@ function openAddRowModal() {
   tr.innerHTML = html;
   tbody.prepend(tr);
 
-  // Автофокус на первое поле (код строки)
-  const firstInput = tr.querySelector('input[data-col="row_code"], input');
+  // Автофокус на первое редактируемое поле
+  const firstInput = tr.querySelector('input, select');
   if (firstInput) {
     firstInput.focus();
     tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1692,20 +1729,24 @@ function initColumnResize() {
       const colIndex = th.cellIndex;
       const tblRows = th.closest('table').querySelectorAll('tbody tr');
 
-      // Перемещение мыши: меняем ширину колонки
+      // Перемещение мыши: меняем ширину колонки (с rAF throttle)
+      let _rafResize = null;
       const onMouseMove = (ev) => {
-        const width = startWidth + (ev.pageX - startX);
-        if (width > 30) {
-          th.style.width = width + 'px';
-          th.style.minWidth = width + 'px';
-          // Синхронизируем ширину ячеек в body
-          tblRows.forEach(row => {
-            if (row.cells[colIndex]) {
-              row.cells[colIndex].style.width = width + 'px';
-              row.cells[colIndex].style.minWidth = width + 'px';
-            }
-          });
-        }
+        if (_rafResize) return;
+        _rafResize = requestAnimationFrame(() => {
+          _rafResize = null;
+          const width = startWidth + (ev.pageX - startX);
+          if (width > 30) {
+            th.style.width = width + 'px';
+            th.style.minWidth = width + 'px';
+            tblRows.forEach(row => {
+              if (row.cells[colIndex]) {
+                row.cells[colIndex].style.width = width + 'px';
+                row.cells[colIndex].style.minWidth = width + 'px';
+              }
+            });
+          }
+        });
       };
       // Отпустили кнопку мыши: снимаем визуальные классы
       const onMouseUp = () => {
@@ -1736,6 +1777,7 @@ window.addEventListener('popstate', async () => {
 
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
+  _initPPDensity();
   // Параллельно загружаем справочники и список ПП-проектов
   await Promise.all([loadDirs(), loadProjects()]);
 

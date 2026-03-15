@@ -45,6 +45,20 @@ class TestJournalList:
         assert resp.status_code == 200
         assert all(n['status'] == 'active' for n in resp.json())
 
+    def test_check_number_exists(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/?check_number=ИИ-001&check_ii_pi=ИИ')
+        assert resp.status_code == 200
+        assert resp.json()['exists'] is True
+
+    def test_check_number_not_exists(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/?check_number=НЕСУЩЕСТВ&check_ii_pi=ПИ')
+        assert resp.status_code == 200
+        assert resp.json()['exists'] is False
+
 
 @pytest.mark.django_db
 class TestJournalCreate:

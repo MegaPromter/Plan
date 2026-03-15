@@ -25,6 +25,44 @@ function _isFullAccess() {
   return IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy';
 }
 
+/* ── Skeleton-загрузка ─────────────────────────────────────────────── */
+function _jiSkeletonRows(count, cols) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
+      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
+    }
+    html += '</tr>';
+  }
+  return html;
+}
+
+/* ── Переключатель плотности ───────────────────────────────────────── */
+function _initJiDensity() {
+  const wrap = document.querySelector('.ji-wrap');
+  if (!wrap) return;
+  const saved = (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable';
+  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
+  const toggle = document.getElementById('densityToggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('button').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.density === saved);
+    btn.addEventListener('click', function() {
+      const d = this.dataset.density;
+      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
+      if (d !== 'comfortable') wrap.classList.add('density-' + d);
+      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
+      fetch('/api/col_settings/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || ''},
+        body: JSON.stringify({ density: d })
+      }).catch(function() {});
+    });
+  });
+}
+
 /* ── Состояние ───────────────────────────────────────────────────────────── */
 
 let jiData = [];
@@ -131,6 +169,7 @@ document.addEventListener('click', e => {
 
 async function loadJournal() {
   try {
+    document.getElementById('jiBody').innerHTML = _jiSkeletonRows(8, 13);
     const r = await fetch('/api/journal/?per_page=100000');
     jiData = await r.json();
     renderTable();
@@ -503,6 +542,7 @@ document.getElementById('jiDescModal').addEventListener('click', e => {
 
 /* ── Инициализация ───────────────────────────────────────────────────────── */
 
+_initJiDensity();
 loadJournal();
 
 const JI_STATUS_LABELS = {active:'Действует', expired:'Просрочено', closed_no:'Погашено без внесения', closed_yes:'Погашено с внесением'};
