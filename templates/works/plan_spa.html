@@ -19,6 +19,8 @@
 <link rel="stylesheet" href="/static/css/components.css">
 <!-- Font Awesome 6 — иконки кнопок и пунктов меню -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Стили сайдбара (единый источник) -->
+<link rel="stylesheet" href="/static/css/sidebar.css">
 <!-- Anti-flicker: тема устанавливается до рендера -->
 <script>!function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t)}()</script>
 <style>
@@ -49,62 +51,7 @@
   /* Ширина сайдбара */
   --sidebar-width: 260px;
 }
-/* ── Сайдбар (боковая навигационная панель) ─────────────────── */
-/* Фиксированная левая колонка высотой 100vh; скрывается translateX при .collapsed */
-.sidebar { position:fixed; top:0; left:0; width:var(--sidebar-width); height:100vh; min-height:100vh;
-  background:var(--nav-bg); border-right:1px solid var(--nav-border);
-  display:flex; flex-direction:column; z-index:200; transition:transform 0.3s ease; overflow:hidden; }
-/* Свёрнутый сайдбар: уходит влево за экран */
-.sidebar.collapsed { transform:translateX(-100%); }
-/* Шапка сайдбара с логотипом */
-.sidebar-header { padding:20px; border-bottom:1px solid var(--nav-border); }
-/* Логотип (ссылка на дашборд) */
-.sidebar-logo { display:flex; align-items:center; gap:12px; font-size:22px; font-weight:700; color:#fff; text-decoration:none; }
-/* Иконка-квадрат логотипа */
-.sidebar-logo-icon { width:36px; height:36px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:22px; }
-/* Прокручиваемая зона навигационных секций */
-.sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; }
-/* Одна секция навигации (группа ссылок) */
-.nav-section { margin-bottom:24px; }
-/* Заголовок секции навигации (капслок, полупрозрачный) */
-.nav-section-title { font-size:11px; font-weight:600; color:var(--nav-text); opacity:0.7; text-transform:uppercase; letter-spacing:0.08em; padding:0 12px; margin-bottom:8px; }
-/* Пункт навигации: строка с иконкой и текстом */
-.nav-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; color:var(--nav-text); text-decoration:none; font-size:14px; font-weight:500; transition:all 0.15s ease; margin-bottom:2px; border-left:3px solid transparent; }
-.nav-item:hover { background:var(--nav-hover-bg); color:var(--nav-text2); }
-/* Активный пункт: белая левая полоска */
-.nav-item.active { background:var(--nav-active-bg); color:#fff; border-left:3px solid #fff; }
-.nav-item i { width:20px; text-align:center; font-size:15px; opacity:0.8; }
-.nav-item.active i { opacity:1; }
-/* Пункт-заголовок раздела (кнопка уровня секции) */
-.nav-section-btn { font-size:13px; font-weight:600; color:var(--nav-text); }
-.nav-section-btn:hover { background:var(--nav-hover-bg); color:var(--nav-text2); }
-.nav-section-btn.active { background:var(--nav-active-bg); color:#fff; border-left:3px solid #fff; }
-/* Дочерний пункт (с отступом) */
-.nav-subitem { padding-left:28px; font-size:13px; }
-/* Выпадающий пункт меню */
-.nav-dropdown { margin-bottom:4px; }
-.nav-dropdown-toggle { width:100%; background:none; border:none; cursor:pointer; font-family:inherit; justify-content:flex-start; }
-/* Шеврон-индикатор раскрытия дропдауна */
-.nav-chevron { margin-left:auto !important; width:auto !important; font-size:11px !important; transition:transform 0.2s; }
-.nav-dropdown-toggle.open .nav-chevron { transform:rotate(180deg); }
-.nav-dropdown-menu { display:none; }
-.nav-dropdown-menu.open { display:block; }
-/* Подвал сайдбара: карточка пользователя */
-.sidebar-footer { padding:16px; border-top:1px solid var(--nav-border); }
-/* Карточка текущего пользователя с аватаром, именем и кнопкой выхода */
-.user-card { display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.06); border-radius:10px; }
-/* Квадратный аватар с первой буквой имени */
-.user-avatar { width:40px; height:40px; background:var(--accent); border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px; color:#fff; }
-.user-info { flex:1; min-width:0; }
-/* Имя пользователя с ellipsis при переполнении */
-.user-name { font-weight:600; font-size:14px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.user-role { font-size:12px; color:var(--nav-text); }
-/* Кнопка выхода (иконка) — при наведении краснеет */
-.logout-btn { width:36px; height:36px; border:none; background:transparent; color:var(--nav-text); border-radius:8px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
-.logout-btn:hover { background:rgba(239,68,68,0.15); color:#f87171; }
-/* Кнопка переключения видимости сайдбара (гамбургер) */
-.sidebar-toggle { display:flex; width:36px; height:36px; border:none; background:rgba(255,255,255,0.08); color:var(--nav-text2); border-radius:8px; cursor:pointer; font-size:16px; align-items:center; justify-content:center; transition:background 0.15s; }
-.sidebar-toggle:hover { background:rgba(255,255,255,0.16); color:#fff; }
+/* Сайдбар: стили в static/css/sidebar.css */
 
 /* ── Основное тело страницы, топбар, тулбар ─────────────────── */
 /* Фон страницы, шрифт, размер текста по умолчанию */
@@ -824,10 +771,12 @@ tr.pp-locked .pp-lock-badge {
       <div class="nav-section-title">Обзор</div>
       <a href="/accounts/dashboard/" class="nav-item"><i class="fas fa-th-large"></i><span>Стартовая страница</span></a>
     </div>
-    <!-- Секция «1. Управление проектами» -->
+    <!-- Секция «1. Управление проектами» (только для админов) -->
+    {% if role == 'admin' %}
     <div class="nav-section">
       <a href="/works/projects/" class="nav-item nav-section-btn"><i class="fas fa-project-diagram"></i><span>1. Управление проектами</span></a>
     </div>
+    {% endif %}
     <!-- Секция «2. Производственный план» -->
     <div class="nav-section">
       <a href="/works/production-plan/" class="nav-item nav-section-btn"><i class="fas fa-industry"></i><span>2. Производственный план</span></a>
@@ -835,8 +784,10 @@ tr.pp-locked .pp-lock-badge {
     <!-- Секция «3. Сводное планирование» — текущая страница (active) -->
     <div class="nav-section">
       <a href="/works/plan/" class="nav-item nav-section-btn active"><i class="fas fa-tasks"></i><span>3. Сводное планирование (План/отчёт)</span></a>
-      <!-- Дочерний пункт «Журнал извещений» -->
-      <a href="/works/notices/" class="nav-item nav-subitem"><i class="fas fa-envelope"></i><span>Журнал извещений</span></a>
+    </div>
+    <!-- Секция «4. Журнал извещений» -->
+    <div class="nav-section">
+      <a href="/works/notices/" class="nav-item nav-section-btn"><i class="fas fa-envelope"></i><span>4. Журнал извещений</span></a>
     </div>
     <!-- Секция «4. Аналитика» (заглушки) -->
     <div class="nav-section">
