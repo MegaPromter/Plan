@@ -55,6 +55,47 @@ function _isFullAccess() {
 let tasks = [];
 let colSettings = _spCfg.colSettings;
 
+// Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
+let _spStatusFilter = 'all';
+
+/* ── Статус-панель (прогресс-бар + фильтры) для СП ───────────────────── */
+function _spGetStatus(t) {
+  if (t.has_reports) return 'done';
+  // is_overdue уже приходит из API, но проверим и вручную
+  const dl = t.deadline || t.date_end || '';
+  if (dl && dl.slice(0,10) < new Date().toISOString().slice(0,10)) return 'overdue';
+  return 'inwork';
+}
+
+function spUpdateStatusPanel() {
+  const panel = document.getElementById('spStatusPanel');
+  if (!panel || tasks.length === 0) { if (panel) panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  let done = 0, overdue = 0, inwork = 0;
+  tasks.forEach(t => { const s = _spGetStatus(t); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
+  const total = tasks.length;
+
+  document.getElementById('spCountAll').textContent = total;
+  document.getElementById('spCountDone').textContent = done;
+  document.getElementById('spCountOverdue').textContent = overdue;
+  document.getElementById('spCountInWork').textContent = inwork;
+
+  document.getElementById('spBarDone').style.width    = (done / total * 100) + '%';
+  document.getElementById('spBarOverdue').style.width  = (overdue / total * 100) + '%';
+  document.getElementById('spBarInWork').style.width   = (inwork / total * 100) + '%';
+
+  panel.querySelectorAll('.status-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.status === _spStatusFilter);
+  });
+}
+
+function spFilterStatus(status) {
+  _spStatusFilter = (_spStatusFilter === status) ? 'all' : status;
+  spUpdateStatusPanel();
+  renderTable();
+}
+
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
 function _spSkeletonRows(count, cols) {
   let html = '';
@@ -911,12 +952,17 @@ let activeMfDropdown = null;
 const MF_DEFAULTS = {
   dept: "▼", sector: "▼",
   project: "▼", stage: "▼", executor: "▼",
-  task_type: "▼"
+  task_type: "▼", work_number: "▼", justification: "▼",
+  description: "▼", work_name: "▼",
+  date_start: "▼", date_end: "▼", deadline: "▼"
 };
 
 function getMfValues(col) {
   const vals = new Set();
+  // Для сектора — показываем только секторы выбранного отдела
+  const deptFilter = (col === 'sector') ? (mfSelections['dept'] || new Set()) : null;
   tasks.forEach(t => {
+    if (deptFilter && deptFilter.size > 0 && !deptFilter.has(t.dept)) return;
     if (col === "executor") {
       if (t.executor) vals.add(t.executor);
       (t.executors_list || []).forEach(ex => { if (ex.name) vals.add(ex.name); });
@@ -948,12 +994,7 @@ function buildMfDropdown(btn, col) {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll(".mf-option").forEach(opt => {
       const rawVal = opt.dataset.val.toLowerCase();
-      let displayVal = rawVal;
-      if (col === 'sector') {
-        const sh = (dirs['_ids_sector'] || []).find(s => s.value === opt.dataset.val);
-        if (sh && sh.head_name) displayVal = (opt.dataset.val + ' ' + sh.head_name).toLowerCase();
-      }
-      opt.style.display = (rawVal.includes(q) || displayVal.includes(q)) ? "" : "none";
+      opt.style.display = rawVal.includes(q) ? "" : "none";
     });
   };
   searchWrap.appendChild(searchInp);
@@ -1009,12 +1050,7 @@ function buildMfDropdown(btn, col) {
     };
     opt.appendChild(cb);
     // Для сектора — показываем код + ФИО начальника
-    let displayText = val;
-    if (col === 'sector') {
-      const sh = (dirs['_ids_sector'] || []).find(s => s.value === val);
-      if (sh && sh.head_name) displayText = val + ' — ' + sh.head_name;
-    }
-    opt.appendChild(document.createTextNode(displayText));
+    opt.appendChild(document.createTextNode(val));
     drop.appendChild(opt);
   });
 
@@ -1060,6 +1096,13 @@ function applyMfFilter(col, btn) {
     document.querySelectorAll('.dept-chip').forEach(c => {
       c.classList.toggle('active', selectedDept ? c.dataset.dept === selectedDept : !c.dataset.dept);
     });
+    // Сбрасываем фильтр секторов при смене отдела
+    if (mfSelections['sector'] && mfSelections['sector'].size > 0) {
+      mfSelections['sector'] = new Set();
+      delete colFilters['mf_sector'];
+      const sectorBtn = document.querySelector('.mf-btn-trigger[data-col="sector"]');
+      if (sectorBtn) { sectorBtn.textContent = MF_DEFAULTS['sector'] || '▼'; sectorBtn.classList.remove('active'); }
+    }
   }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById("filtersActiveBadge").classList.toggle("visible", hasFilters);
@@ -1166,7 +1209,13 @@ function renderTable() {
   _spRenderedCount = 0;
   if (_spScrollDispose) { _spScrollDispose(); _spScrollDispose = null; }
 
+  // Обновляем панель статусов
+  spUpdateStatusPanel();
+
   _spFiltered = tasks.filter(t => {
+    // Фильтр по статусу (прогресс-панель)
+    if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
+
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith("mf_")) {
         const field = col.slice(3);
@@ -1291,6 +1340,11 @@ function makeRow(t, num) {
   // Создаём строку и привязываем ID задачи
   const tr = document.createElement("tr");
   tr.dataset.id = t.id;
+  // Подсветка строки по статусу
+  const _st = _spGetStatus(t);
+  if (_st === 'done') tr.classList.add('row-done');
+  else if (_st === 'overdue') tr.classList.add('row-overdue');
+  else tr.classList.add('row-inwork');
   // Флаг: задача перенесена из Производственного плана
   const isFromPP = !!t.from_pp;
   if (isFromPP) tr.classList.add('pp-locked');
@@ -1409,7 +1463,7 @@ function makeRow(t, num) {
         // Даты: преобразуем YYYY-MM-DD → DD.MM.YYYY
         td.textContent = t[col.field] ? t[col.field].split('-').reverse().join('.') : '';
       } else if (col.type === "select" && col.extraField) {
-        // Сектор: код + ФИО руководителя сектора под ним
+        // Сектор: код + ФИО начальника серым под ним
         td.textContent = t[col.field] || '';
         const sectorCode = t[col.field] || '';
         const sectorEntry = (dirs['_ids_sector'] || []).find(s => s.value === sectorCode);
@@ -1515,7 +1569,7 @@ function makeRow(t, num) {
       }
       td.appendChild(sel);
       }
-      // Если у колонки есть extraField — ищем head_name сектора из dirs
+      // ФИО нач. сектора серым под select
       if (col.extraField) {
         const sectorCode = t[col.field] || '';
         const sectorEntry = (dirs['_ids_sector'] || []).find(s => s.value === sectorCode);
@@ -1627,7 +1681,7 @@ function makeRow(t, num) {
   editBtn.onclick = () => openEditTaskModal(t);
   // Кнопка «Отчёт» — открывает модал отчётных документов (для всех ролей)
   const repBtn = document.createElement("button");
-  repBtn.className = "btn-report"; repBtn.textContent = "📄 Отчёт";
+  repBtn.className = "btn-report" + (t.has_reports ? " has-report" : ""); repBtn.textContent = "📄 Отчёт";
   repBtn.style.display = "inline-block";
   repBtn.onclick = () => openReportModal(t);
   // Кнопка «Удалить» — удаляет задачу с подтверждением
@@ -1685,7 +1739,7 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
       const ghost = allItems.find(i => i.value === selectedVal);
       const o = document.createElement("option");
       o.value = selectedVal;
-      o.textContent = ghost ? (ghost.head_name ? selectedVal + ' — ' + ghost.head_name : selectedVal) : selectedVal;
+      o.textContent = selectedVal;
       o.selected = true;
       o.style.color = 'var(--muted)';
       sel.appendChild(o);
@@ -1694,7 +1748,7 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   items.forEach(item => {
     const o = document.createElement("option");
     o.value = item.value;
-    o.textContent = (dirKey === 'sector' && item.head_name) ? item.value + ' — ' + item.head_name : item.value;
+    o.textContent = item.value;
     if (item.value === selectedVal) o.selected = true;
     // Ограничения по роли: dept_head/sect_head/dept_deputy могут выбрать только свой отдел
     if (dirKey === 'dept' && !IS_ADMIN && USER_DEPT && item.value !== USER_DEPT &&
@@ -2459,14 +2513,16 @@ async function openReportModal(taskOrId) {
   document.getElementById("reportTaskRef").textContent = currentTask.work_name || `Задача #${currentTaskId}`;
   const res = await fetch(`/api/reports/${currentTaskId}/`);
   reportRows = await res.json();
-  // Если отчётов нет — для writer сразу одна пустая строка, не нужно нажимать «Добавить»
-  if (reportRows.length === 0 && IS_WRITER) {
+  // Проверка прав на редактирование отчётов этой задачи
+  const canEditThisReport = _canModify(currentTask.dept, currentTask.sector);
+  // Если отчётов нет — для writer своего отдела сразу одна пустая строка
+  if (reportRows.length === 0 && canEditThisReport) {
     reportRows.push(_makeNewReportRow());
   }
   renderReportTable();
-  // Кнопка «Добавить строку» — только для writer
+  // Кнопка «Добавить строку» — только для writer своего отдела
   const addRowBtn = document.getElementById("btnAddReportRow");
-  if (addRowBtn) addRowBtn.style.display = IS_WRITER ? "" : "none";
+  if (addRowBtn) addRowBtn.style.display = canEditThisReport ? "" : "none";
   document.getElementById("reportModal").classList.add("open");
   // Пересчитать высоту textarea после показа модала (scrollHeight=0 пока display:none)
   requestAnimationFrame(() => {
@@ -2639,10 +2695,11 @@ function makeReportRow(r, idx, cfg) {
   // Ссылка
   tr.appendChild(_makeTextCell('doc_link', r.doc_link, cfg.disabled.has('doc_link')));
 
-  // Кнопки ✓ сохранить / ✕ удалить — только для writer
+  // Кнопки ✓ сохранить / ✕ удалить — только для writer своего отдела
   const actTd = document.createElement("td"); actTd.style.cssText = "padding:4px 6px;white-space:nowrap;";
+  const _canEditReport = _canModify(currentTask?.dept, currentTask?.sector);
 
-  if (IS_WRITER) {
+  if (_canEditReport) {
     const saveBtn = document.createElement("button"); saveBtn.className = "r-save"; saveBtn.title = "Сохранить строку";
     saveBtn.textContent = "✓";
     saveBtn.onclick = async () => {
@@ -2663,8 +2720,8 @@ function makeReportRow(r, idx, cfg) {
     actTd.appendChild(saveBtn); actTd.appendChild(delBtn);
   }
 
-  // Для role=user: все поля read-only
-  if (!IS_WRITER) {
+  // Для role=user или чужого отдела: все поля read-only
+  if (!_canEditReport) {
     tr.querySelectorAll('textarea, input, select').forEach(el => { el.disabled = true; });
   }
 

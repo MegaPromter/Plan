@@ -74,7 +74,7 @@
   </div>
 </div>
 
-<!-- ══ Переключатель видов: Таблица / Диаграмма Ганта ═════════════════════ -->
+<!-- ══ Переключатель видов + статус-панель (fixed) ═════════════════════ -->
 <div class="view-tabs" id="viewTabs">
   <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
   <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
@@ -85,6 +85,26 @@
     <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
   </span>
   <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" title="Показать только задачи с зависимостями">🔗 Только зависимые</button>
+  <!-- Статус-панель (прогресс-бар + чипы) встроена в view-tabs справа -->
+  <div class="sp-status-inline" id="spStatusPanel" style="display:none;">
+    <div class="status-bar-mini" id="spStatusBar">
+      <div class="status-bar-done" id="spBarDone"></div>
+      <div class="status-bar-overdue" id="spBarOverdue"></div>
+      <div class="status-bar-inwork" id="spBarInWork"></div>
+    </div>
+    <button class="status-chip" data-status="all" onclick="spFilterStatus('all')">
+      Все <span class="status-chip-count" id="spCountAll"></span>
+    </button>
+    <button class="status-chip chip-done" data-status="done" onclick="spFilterStatus('done')">
+      <i class="fas fa-check"></i> Выполнено <span class="status-chip-count" id="spCountDone"></span>
+    </button>
+    <button class="status-chip chip-overdue" data-status="overdue" onclick="spFilterStatus('overdue')">
+      <i class="fas fa-exclamation-triangle"></i> Просрочено <span class="status-chip-count" id="spCountOverdue"></span>
+    </button>
+    <button class="status-chip chip-inwork" data-status="inwork" onclick="spFilterStatus('inwork')">
+      <i class="fas fa-spinner"></i> В работе <span class="status-chip-count" id="spCountInWork"></span>
+    </button>
+  </div>
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
@@ -113,19 +133,19 @@
 </tr>
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)" title="Фильтр по типу работ">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="work_number" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="justification" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="description" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="work_name" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="date_start" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="date_end" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
-  <th><div class="filter-cell"><input class="col-filter" data-col="deadline" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
+  <th><div class="mf-wrap"><button class="mf-trigger" data-col="deadline" onclick="toggleMf(this)">▼</button></div></th>
   <th></th>
 </tr>
 </thead>

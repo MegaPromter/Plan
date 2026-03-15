@@ -64,4 +64,5 @@ if django_settings.DEBUG:
         path('demo/skeleton/', views.DemoSkeletonView.as_view(), name='demo_skeleton'),
         path('demo/slideout/', views.DemoSlideoutView.as_view(), name='demo_slideout'),
         path('demo/trips/<int:num>/', views.DemoTripsView.as_view(), name='demo_trips'),
+        path('demo/pp-filter/<int:num>/', views.DemoPPFilterView.as_view(), name='demo_pp_filter'),
     ]

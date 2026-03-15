@@ -353,3 +353,10 @@ class DemoTripsView(TemplateView):
     def get_template_names(self):
         n = self.kwargs.get('num', 1)
         return [f'works/demo_trips_{n}.html']
+
+
+class DemoPPFilterView(TemplateView):
+    """Демо: варианты фильтра отчётов в ПП."""
+    def get_template_names(self):
+        n = self.kwargs.get('num', 1)
+        return [f'works/demo_pp_filter_{n}.html']

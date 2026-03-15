@@ -150,11 +150,10 @@ class ReportListView(LoginRequiredJsonMixin, View):
 
     def get(self, request, task_id):
         try:
-            # Проверка видимости задачи для текущего пользователя
-            vis_q = get_visibility_filter(request.user)
-            if not Work.objects.filter(pk=task_id).filter(vis_q).exists():
+            # Проверяем, что задача существует (чтение отчётов доступно всем авторизованным)
+            if not Work.objects.filter(pk=task_id).exists():
                 return JsonResponse(
-                    {'error': 'Задача не найдена или нет доступа'}, status=403,
+                    {'error': 'Задача не найдена'}, status=404,
                 )
             reports = WorkReport.objects.filter(
                 work_id=task_id,
@@ -200,10 +199,16 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
                 {'error': 'task_id обязателен'}, status=400,
             )
 
-        # Проверяем существование задачи и доступ
-        vis_q = get_visibility_filter(request.user)
-        if not Work.objects.filter(pk=task_id).filter(vis_q).exists():
-            return JsonResponse({'error': 'Задача не найдена или нет доступа'}, status=404)
+        # Проверяем существование задачи
+        work = Work.objects.filter(pk=task_id).first()
+        if not work:
+            return JsonResponse({'error': 'Задача не найдена'}, status=404)
+
+        # Проверка доступа по отделу (создавать отчёт — только свой отдел)
+        employee = getattr(request.user, 'employee', None)
+        if employee and employee.role not in ('admin', 'ntc_head', 'ntc_deputy'):
+            if employee.department_id and work.department_id and employee.department_id != work.department_id:
+                return JsonResponse({'error': 'Вы можете создавать отчёты только для задач своего отдела'}, status=403)
 
         url_err = _validate_url(d.get('doc_link'))
         if url_err:

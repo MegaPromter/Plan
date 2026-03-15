@@ -109,6 +109,45 @@ const PP_COLUMNS = [
   'center', 'dept', 'sector_head', 'executor', 'task_type'
 ];
 
+// Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
+let _ppStatusFilter = 'all';
+
+/* ── Статус-панель (прогресс-бар + фильтры) ──────────────────────────── */
+function _ppGetStatus(row) {
+  if (row.has_reports) return 'done';
+  if (row.is_overdue)  return 'overdue';
+  return 'inwork';
+}
+
+function ppUpdateStatusPanel() {
+  const panel = document.getElementById('ppStatusPanel');
+  if (!panel || rows.length === 0) { if (panel) panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  let done = 0, overdue = 0, inwork = 0;
+  rows.forEach(r => { const s = _ppGetStatus(r); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
+  const total = rows.length;
+
+  document.getElementById('ppCountAll').textContent = total;
+  document.getElementById('ppCountDone').textContent = done;
+  document.getElementById('ppCountOverdue').textContent = overdue;
+  document.getElementById('ppCountInWork').textContent = inwork;
+
+  document.getElementById('ppBarDone').style.width    = (done / total * 100) + '%';
+  document.getElementById('ppBarOverdue').style.width  = (overdue / total * 100) + '%';
+  document.getElementById('ppBarInWork').style.width   = (inwork / total * 100) + '%';
+
+  panel.querySelectorAll('.status-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.status === _ppStatusFilter);
+  });
+}
+
+function ppFilterStatus(status) {
+  _ppStatusFilter = (_ppStatusFilter === status) ? 'all' : status;
+  ppUpdateStatusPanel();
+  renderPPTable();
+}
+
 /* ── Работа с URL (project_id в query string) ─────────────────────────── */
 // Читает project_id из query string для поддержки прямых ссылок и навигации браузера
 function readProjectFromUrl() {
@@ -645,8 +684,14 @@ function renderPPTable() {
   _ppRenderedCount = 0;
   if (_ppScrollDispose) { _ppScrollDispose(); _ppScrollDispose = null; }
 
+  // Обновляем панель статусов
+  ppUpdateStatusPanel();
+
   // Применяем активные колоночные фильтры к массиву строк
   _ppFiltered = rows.filter(row => {
+    // Фильтр по статусу (прогресс-панель)
+    if (_ppStatusFilter !== 'all' && _ppGetStatus(row) !== _ppStatusFilter) return false;
+
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
         // Мультифильтр: проверяем входит ли значение в выбранное множество
@@ -710,6 +755,11 @@ function _ppAppendBatch(count) {
     const row = _ppFiltered[idx];
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    // Подсветка строки по статусу
+    const _st = _ppGetStatus(row);
+    if (_st === 'done') tr.classList.add('row-done');
+    else if (_st === 'overdue') tr.classList.add('row-overdue');
+    else tr.classList.add('row-inwork');
     // Первый столбец — порядковый номер (1-based)
     let html = `<td>${idx + 1}</td>`;
 

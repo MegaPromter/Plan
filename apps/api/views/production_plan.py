@@ -13,7 +13,8 @@ from datetime import date as dt_date
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
+from django.utils import timezone
 from django.http import JsonResponse
 from django.views import View
 
@@ -23,7 +24,7 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, validate_task_type, generate_row_code
-from apps.works.models import Work, PPProject, AuditLog
+from apps.works.models import Work, WorkReport, PPProject, AuditLog
 from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
 from apps.api.views.reports import _sync_notices_for_work
@@ -69,8 +70,12 @@ def _safe_date(val):
 #  Сериализация
 # ---------------------------------------------------------------------------
 
-def _serialize_pp(work):
+def _serialize_pp(work, today=None):
     """Сериализует Work (show_in_pp=True) в плоский dict для JSON-ответа."""
+    if today is None:
+        today = timezone.now().date()
+    has_reports = getattr(work, '_has_reports', False)
+    is_overdue = bool(work.date_end and work.date_end < today and not has_reports)
     return {
         'id': work.id,
         'work_name': work.work_name or '',
@@ -101,6 +106,8 @@ def _serialize_pp(work):
         'task_type': work.task_type or '',
         'project_id': work.pp_project_id,
         'predecessors_count': getattr(work, '_pred_count', 0) or 0,
+        'has_reports': has_reports,
+        'is_overdue': is_overdue,
     }
 
 
@@ -150,6 +157,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
 
         qs = qs.annotate(
             _pred_count=Count('predecessor_links'),
+            _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
             'department', 'department__ntc_center', 'ntc_center',
             'executor', 'sector', 'pp_project',
@@ -160,8 +168,9 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
 
         qs = qs[offset:offset + limit]
         works = list(qs)
+        today = timezone.now().date()
 
-        resp = JsonResponse([_serialize_pp(w) for w in works], safe=False)
+        resp = JsonResponse([_serialize_pp(w, today) for w in works], safe=False)
         resp['X-Total-Count'] = total_count
         return resp
 

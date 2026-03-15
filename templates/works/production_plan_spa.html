@@ -306,7 +306,7 @@ select.cell-edit option {
 .pp-dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
 /* Табы переключения Таблица/Ганта для ПП */
-.pp-view-tabs { display:flex; gap:0; margin-bottom:0; border-bottom:1px solid var(--border); }
+.pp-view-tabs { display:flex; align-items:center; gap:0; margin-bottom:0; border-bottom:1px solid var(--border); }
 .pp-view-tab { padding:8px 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
   background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
 .pp-view-tab:hover { color:var(--text); background:var(--surface2); }
@@ -494,6 +494,47 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 /* Фокус — синяя рамка */
 .modal-form-group input:focus,
 .modal-form-group select:focus { border-color: var(--accent); }
+
+/* ── Панель статусов (по центру, на уровне табов) ───────────────────── */
+.pp-status-center {
+  display:flex; align-items:center; gap:12px; margin:0 auto; padding:0 20px;
+}
+.pp-status-center .status-bar-mini {
+  width:600px; height:16px;
+}
+.status-bar-mini {
+  width:80px; height:6px; border-radius:4px; background:var(--border);
+  display:flex; overflow:hidden; flex-shrink:0;
+}
+.status-bar-done    { background:#22c55e; transition:width .3s; }
+.status-bar-overdue { background:#ef4444; transition:width .3s; }
+.status-bar-inwork  { background:#eab308; transition:width .3s; }
+.pp-status-center .status-chip {
+  padding:5px 14px; font-size:13px;
+}
+.status-chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 8px; border-radius:16px; font-size:12px; font-weight:500;
+  border:1px solid var(--border); background:var(--surface); color:var(--text);
+  cursor:pointer; transition:all .15s; user-select:none; white-space:nowrap;
+}
+.status-chip:hover { opacity:.85; }
+.status-chip.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+.status-chip.chip-done    { background:rgba(34,197,94,0.15); border-color:rgba(34,197,94,0.4); color:#16a34a; }
+.status-chip.chip-overdue { background:rgba(239,68,68,0.14); border-color:rgba(239,68,68,0.4); color:#dc2626; }
+.status-chip.chip-inwork  { background:rgba(234,179,8,0.10); border-color:rgba(234,179,8,0.4); color:#a16207; }
+.status-chip.chip-done.active    { background:#22c55e; border-color:#22c55e; color:#fff; }
+.status-chip.chip-overdue.active { background:#ef4444; border-color:#ef4444; color:#fff; }
+.status-chip.chip-inwork.active  { background:#eab308; border-color:#eab308; color:#fff; }
+.status-chip-count { font-weight:700; }
+
+/* ── Подсветка строк по статусу ──────────────────────────────────────── */
+.pp-table tbody tr.row-done    { background:rgba(34,197,94,0.15) !important; }
+.pp-table tbody tr.row-overdue { background:rgba(239,68,68,0.14) !important; }
+.pp-table tbody tr.row-inwork  { background:rgba(234,179,8,0.10) !important; }
+.pp-table tbody tr.row-done:hover    { background:rgba(34,197,94,0.25) !important; }
+.pp-table tbody tr.row-overdue:hover { background:rgba(239,68,68,0.24) !important; }
+.pp-table tbody tr.row-inwork:hover  { background:rgba(234,179,8,0.18) !important; }
 </style>
 {% endblock %}
 
@@ -546,10 +587,30 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
   </div>
 
-  <!-- Переключатель вида: Таблица / Ганта -->
+  <!-- Переключатель вида + статус-панель в одной строке -->
   <div class="pp-view-tabs" id="ppViewTabs">
     <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')">📋 Таблица</button>
     <button class="pp-view-tab" data-view="gantt" onclick="ppSwitchView('gantt')">📊 Диаграмма Ганта</button>
+    <!-- Статус-панель по центру окна -->
+    <div class="pp-status-center" id="ppStatusPanel" style="display:none;">
+      <div class="status-bar-mini" id="ppStatusBar">
+        <div class="status-bar-done" id="ppBarDone"></div>
+        <div class="status-bar-overdue" id="ppBarOverdue"></div>
+        <div class="status-bar-inwork" id="ppBarInWork"></div>
+      </div>
+      <button class="status-chip" data-status="all" onclick="ppFilterStatus('all')">
+        Все <span class="status-chip-count" id="ppCountAll"></span>
+      </button>
+      <button class="status-chip chip-done" data-status="done" onclick="ppFilterStatus('done')">
+        <i class="fas fa-check"></i> Выполнено <span class="status-chip-count" id="ppCountDone"></span>
+      </button>
+      <button class="status-chip chip-overdue" data-status="overdue" onclick="ppFilterStatus('overdue')">
+        <i class="fas fa-exclamation-triangle"></i> Просрочено <span class="status-chip-count" id="ppCountOverdue"></span>
+      </button>
+      <button class="status-chip chip-inwork" data-status="inwork" onclick="ppFilterStatus('inwork')">
+        <i class="fas fa-spinner"></i> В работе <span class="status-chip-count" id="ppCountInWork"></span>
+      </button>
+    </div>
     <span class="gantt-scale-group" id="ppGanttScaleGroup" style="display:none;">
       <button class="gantt-scale-btn" data-scale="day" onclick="ppSetGanttScale('day')">Дни</button>
       <button class="gantt-scale-btn" data-scale="week" onclick="ppSetGanttScale('week')">Недели</button>
