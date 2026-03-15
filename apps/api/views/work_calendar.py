@@ -1,12 +1,17 @@
 """
-API производственного календаря (WorkCalendar).
+API производственного календаря (WorkCalendar + Holiday).
 
 GET    /api/work_calendar/         — список записей (все авторизованные)
 POST   /api/work_calendar/create/  — создание / обновление записи (admin)
 PUT    /api/work_calendar/<id>/    — обновление нормы часов (admin)
 DELETE /api/work_calendar/<id>/    — удаление записи (admin)
+
+GET    /api/holidays/              — список праздников (все авторизованные)
+POST   /api/holidays/              — создание праздника (admin)
+DELETE /api/holidays/<id>/         — удаление праздника (admin)
 """
 import logging
+from datetime import date as dt_date
 
 from django.http import JsonResponse
 from django.views import View
@@ -16,7 +21,8 @@ from apps.api.mixins import (
     LoginRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import WorkCalendar
+from apps.api.views.dependencies import invalidate_holiday_cache
+from apps.works.models import Holiday, WorkCalendar
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +67,8 @@ class WorkCalendarCreateView(AdminRequiredJsonMixin, View):
     def post(self, request):
         try:
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             year = d.get('year')
             month = d.get('month')
             hours_norm = d.get('hours_norm')
@@ -101,6 +109,8 @@ class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
             if not cal:
                 return JsonResponse({'error': 'Запись не найдена'}, status=404)
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             try:
                 cal.hours_norm = float(d['hours_norm'])
             except (KeyError, TypeError, ValueError):
@@ -125,3 +135,57 @@ class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
         except Exception as e:
             logger.error('WorkCalendarDetailView.delete error: %s', e, exc_info=True)
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
+
+
+# ── Holiday API ──────────────────────────────────────────────────────────────
+
+
+def _serialize_holiday(h):
+    return {'id': h.id, 'date': str(h.date), 'name': h.name}
+
+
+class HolidayListView(LoginRequiredJsonMixin, View):
+    """GET — список праздников; POST — создание (admin)."""
+
+    def get(self, request):
+        qs = Holiday.objects.all()
+        year = request.GET.get('year')
+        if year:
+            try:
+                qs = qs.filter(date__year=int(year))
+            except (ValueError, TypeError):
+                pass
+        return JsonResponse([_serialize_holiday(h) for h in qs], safe=False)
+
+    def post(self, request):
+        if not (request.user.is_superuser
+                or getattr(getattr(request.user, 'employee', None), 'role', '') == 'admin'):
+            return JsonResponse({'error': 'Только для администраторов'}, status=403)
+        d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+        date_str = d.get('date', '')
+        name = d.get('name', '')
+        try:
+            holiday_date = dt_date.fromisoformat(date_str)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'date обязателен в формате YYYY-MM-DD'}, status=400)
+        h, created = Holiday.objects.get_or_create(
+            date=holiday_date, defaults={'name': name},
+        )
+        if not created:
+            return JsonResponse({'error': 'Эта дата уже добавлена'}, status=409)
+        invalidate_holiday_cache()
+        return JsonResponse(_serialize_holiday(h), status=201)
+
+
+class HolidayDetailView(AdminRequiredJsonMixin, View):
+    """DELETE /api/holidays/<id>/"""
+
+    def delete(self, request, pk):
+        h = Holiday.objects.filter(pk=pk).first()
+        if not h:
+            return JsonResponse({'error': 'Запись не найдена'}, status=404)
+        h.delete()
+        invalidate_holiday_cache()
+        return JsonResponse({'ok': True})

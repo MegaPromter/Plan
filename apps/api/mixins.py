@@ -51,17 +51,15 @@ class WriterRequiredJsonMixin(LoginRequiredJsonMixin):
                 request, *args, **kwargs
             )
 
-        # Проверяем делегирования с правом записи
+        # Проверяем делегирования с правом записи (кэш на запрос)
         if employee:
-            # Ищем активное делегирование: delegate=текущий сотрудник,
-            # can_write=True, срок действия ещё не истёк
-            has_write = RoleDelegation.objects.filter(
-                delegate=employee,
-                can_write=True,
-                valid_until__gt=timezone.now(),
-            ).exists()
-            if has_write:
-                # Найдено активное делегирование — допускаем запрос
+            if not hasattr(request, '_has_write_delegation'):
+                request._has_write_delegation = RoleDelegation.objects.filter(
+                    delegate=employee,
+                    can_write=True,
+                    valid_until__gt=timezone.now(),
+                ).exists()
+            if request._has_write_delegation:
                 return super(LoginRequiredJsonMixin, self).dispatch(
                     request, *args, **kwargs
                 )
@@ -96,11 +94,11 @@ class AdminRequiredJsonMixin(LoginRequiredJsonMixin):
 
 def parse_json_body(request):
     """Парсит JSON из тела запроса.
-    Возвращает dict, пустой dict (если тело пустое) или None (при невалидном JSON)."""
+    Возвращает dict, пустой dict (если тело пустое), или None (невалидный JSON)."""
     if not request.body:
         return {}
     try:
-        return json.loads(request.body)
+        data = json.loads(request.body)
+        return data if isinstance(data, dict) else None
     except (json.JSONDecodeError, ValueError):
-        # Невалидный JSON — возвращаем None, чтобы caller мог вернуть 400
         return None

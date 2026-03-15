@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+
+# Virtual environments
+venv/
+venv311/
+env/
+.venv/
+
+# Environment / secrets
+.env
+*.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.coveragerc
+pytest.ini
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs / misc
+*.docx
+*.md
+*.orig
+PLAN.md
+SIMULATOR_PROMPT.md
+
+# Dev files
+list_users.py
+test_render.py
+test_templates2.py
+templates/works/demo_*.html
+
+# Claude
+.claude/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd

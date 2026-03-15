@@ -13,6 +13,8 @@ import os
 from django.contrib.auth import get_user_model
 # ValidationError — исключение при нарушении бизнес-правил (model.clean)
 from django.core.exceptions import ValidationError
+# settings — доступ к DEBUG и другим настройкам проекта
+from django.conf import settings
 # IntegrityError — исключение при нарушении ограничений БД (уникальный login)
 from django.db import IntegrityError, transaction
 # JsonResponse — HTTP-ответ с JSON-телом
@@ -67,6 +69,18 @@ _POSITION_FIELD_RULES = {
     'Начальник сектора':                          'both',
     'Зам. начальника отдела – начальник сектора': 'both',
     'Руководитель направления':                   'both',
+}
+
+# Маппинг ключа должности → роль (только для продакшена, DEBUG=False).
+# На деплое регистрация сразу назначает соответствующую роль,
+# локально — всегда role='user', роли назначает администратор.
+_POSITION_TO_ROLE = {
+    'ntc_head':           Employee.ROLE_NTC_HEAD,
+    'ntc_deputy':         Employee.ROLE_NTC_DEPUTY,
+    'dept_head':          Employee.ROLE_DEPT_HEAD,
+    'dept_deputy':        Employee.ROLE_DEPT_DEPUTY,
+    'dept_deputy_sector': Employee.ROLE_SECTOR_HEAD,
+    'sector_head':        Employee.ROLE_SECTOR_HEAD,
 }
 
 
@@ -223,20 +237,23 @@ class RegisterPublicView(View):
                     password=password,
                 )
                 # Создаём связанный профиль Employee
-                emp = Employee(
+                # На продакшене роль определяется по должности,
+                # локально — всегда 'user' (роли назначает админ)
+                if not settings.DEBUG:
+                    role = _POSITION_TO_ROLE.get(position_key, Employee.ROLE_USER)
+                else:
+                    role = Employee.ROLE_USER
+                Employee.objects.create(
                     user=user,
-                    # Публичная регистрация всегда даёт роль 'user'
-                    role='user',
+                    role=role,
                     last_name=last_name,
                     first_name=first_name,
                     patronymic=patronymic,
-                    position=position_key,    # ключ choices (не display-строка)
-                    ntc_center=center_obj,    # FK на NTCCenter (None если не указан)
-                    department=dept_obj,      # FK на Department
-                    sector=sector_obj,        # FK на Sector
+                    position=position_key,
+                    ntc_center=center_obj,
+                    department=dept_obj,
+                    sector=sector_obj,
                 )
-                emp.full_clean()
-                emp.save()
         except ValidationError as e:
             return JsonResponse(
                 {'error': e.message if hasattr(e, 'message') else str(e)},
@@ -251,8 +268,8 @@ class RegisterPublicView(View):
 
         # Логируем успешную регистрацию
         logger.info(
-            "register_public: создан пользователь '%s' (%s, %s)",
-            username, dept, sector,
+            "register_public: создан пользователь '%s' (role=%s, %s, %s)",
+            username, role, dept, sector,
         )
         # Возвращаем успех с ID нового пользователя
         return JsonResponse({'ok': True, 'id': user.pk}, status=201)

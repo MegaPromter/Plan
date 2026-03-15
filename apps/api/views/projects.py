@@ -58,10 +58,11 @@ def _serialize_project(proj, extra=None):
 def _serialize_product(prod):
     """Сериализует ProjectProduct (изделие УП-проекта) в dict."""
     return {
-        'id':      prod.id,             # первичный ключ изделия
-        'name':    prod.name or '',     # наименование изделия
-        'code':    prod.code or '',     # обозначение/код изделия
-        'project': prod.project_id,    # FK на УП-проект (ID)
+        'id':         prod.id,                 # первичный ключ изделия
+        'name':       prod.name or '',         # наименование изделия
+        'name_short': prod.name_short or '',   # краткое наименование
+        'code':       prod.code or '',         # обозначение/код изделия
+        'project':    prod.project_id,         # FK на УП-проект (ID)
     }
 
 
@@ -112,6 +113,8 @@ class ProjectCreateView(AdminRequiredJsonMixin, View):
         try:
             # Парсим JSON-тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Обязательное поле: полное наименование
             name_full  = (d.get('name_full') or '').strip()
             # Необязательное: краткое наименование
@@ -146,6 +149,8 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
         try:
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Ищем проект по PK
             proj = Project.objects.filter(pk=pk).first()
             if not proj:
@@ -216,14 +221,20 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Наименование изделия (обязательное)
             name = (d.get('name') or '').strip()
+            # Краткое наименование изделия (необязательное)
+            name_short = (d.get('name_short') or '').strip()
             # Код/обозначение изделия (необязательное)
             code = (d.get('code') or '').strip()
             if not name:
                 return JsonResponse({'error': 'Наименование обязательно'}, status=400)
             # Создаём изделие, привязанное к проекту
-            prod = ProjectProduct.objects.create(project=proj, name=name, code=code)
+            prod = ProjectProduct.objects.create(
+                project=proj, name=name, name_short=name_short, code=code,
+            )
             # Возвращаем сериализованное изделие с кодом 201 Created
             return JsonResponse(_serialize_product(prod), status=201)
         except Exception as e:
@@ -246,17 +257,22 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
                 return JsonResponse({'error': 'Изделие не найдено'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
+            if d is None:
+                return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Новое наименование (обязательное)
             name = (d.get('name') or '').strip()
+            # Новое краткое наименование (необязательное)
+            name_short = (d.get('name_short') or '').strip()
             # Новый код (необязательный)
             code = (d.get('code') or '').strip()
             if not name:
                 return JsonResponse({'error': 'Наименование обязательно'}, status=400)
-            # Обновляем изделие
+            # Обновляем поля изделия
             prod.name = name
+            prod.name_short = name_short  # краткое наименование
             prod.code = code
             # Сохраняем только изменённые поля
-            prod.save(update_fields=['name', 'code'])
+            prod.save(update_fields=['name', 'name_short', 'code'])
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error('ProjectProductDetailView.put: %s', e, exc_info=True)

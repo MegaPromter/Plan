@@ -10,7 +10,7 @@ DELETE  /api/directories/<id>     -- удаление записи (admin)
 # Стандартный логгер Python
 import logging
 # defaultdict — словарь с дефолтным значением (используется для группировки)
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
@@ -27,7 +27,7 @@ from apps.api.mixins import (
 # Sector (сектор), NTCCenter (НТЦ-центр)
 from apps.employees.models import Employee, Department, Sector, NTCCenter
 # Модели работ: Directory (справочник), PPProject (проект ПП)
-from apps.works.models import Directory, PPProject
+from apps.works.models import Directory, PPProject, Project, Work
 
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
 
     # Типы, которые заменены реальными моделями — не читаем из Directory
     # Для этих типов используются модели NTCCenter, Department, Sector
-    _REAL_MODEL_TYPES = {'center', 'dept', 'sector'}
+    _REAL_MODEL_TYPES = {'center', 'dept', 'sector', 'task_type'}
 
     def get(self, request):
         # Исключаем типы, дублирующие реальные модели (NTCCenter, Department, Sector)
@@ -74,11 +74,20 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
             for d in Department.objects.order_by('code')
         ]
         # Секторы из модели Sector (с привязкой к отделу через parent_id)
-        # Собираем начальников секторов: role='sector_head' → словарь sector_code → full_name
+        def _short_name(full):
+            """«Иванов Иван Иванович» → «Иванов И.И.»"""
+            parts = (full or '').split()
+            if len(parts) >= 3:
+                return f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
+            if len(parts) == 2:
+                return f'{parts[0]} {parts[1][0]}.'
+            return full or ''
+
+        # Собираем начальников секторов: role='sector_head' → словарь sector_code → сокр. ФИО
         sector_heads = {}
         for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
             if emp.sector:
-                sector_heads[emp.sector.code] = emp.full_name
+                sector_heads[emp.sector.code] = _short_name(emp.full_name)
 
         result['sector'] = [
             {
@@ -118,6 +127,34 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
                 'position': position,
             })
 
+        # Виртуальный справочник проектов (из модели Project)
+        result['project'] = [
+            {'id': p.pk, 'value': p.name, 'parent_id': None}
+            for p in Project.objects.order_by('name_short', 'name_full')
+        ]
+
+        # Виртуальный справочник этапов (уникальные stage_num из Work)
+        stage_vals = sorted(set(
+            Work.objects.exclude(stage_num='')
+            .values_list('stage_num', flat=True)
+        ))
+        result['stage'] = [
+            {'id': idx, 'value': v, 'parent_id': None}
+            for idx, v in enumerate(stage_vals, start=1)
+        ]
+
+        # Виртуальный справочник типов задач (не зависит от seed-данных в Directory)
+        _TASK_TYPES = [
+            'Выпуск нового документа',
+            'Корректировка документа',
+            'Разработка',
+            'Сопровождение (ОКАН)',
+        ]
+        result['task_type'] = [
+            {'id': idx, 'value': v, 'parent_id': None}
+            for idx, v in enumerate(_TASK_TYPES, start=1)
+        ]
+
         # Добавляем виртуальный справочник сотрудников
         result['employees'] = employees
 
@@ -136,6 +173,8 @@ class DirectoryCreateView(AdminRequiredJsonMixin, View):
     def post(self, request):
         # Парсим JSON-тело
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Тип справочника (например: 'project', 'task_type', 'position' и т.д.)
         dir_type = data.get('type', '').strip()
@@ -197,6 +236,8 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
     def put(self, request, pk):
         # Парсим тело запроса
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         # Новое значение записи (обязательное)
         value = data.get('value', '').strip()
 
@@ -241,9 +282,9 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
 
         # Рекурсивный сбор всех потомков (BFS — обход в ширину)
         to_delete_ids = [entry.pk]  # начинаем с самой записи
-        queue = [entry.pk]          # очередь для BFS
-        while queue:
-            pid = queue.pop(0)  # берём первый элемент очереди
+        bfs_queue = deque([entry.pk])  # очередь для BFS
+        while bfs_queue:
+            pid = bfs_queue.popleft()  # берём первый элемент очереди
             # Получаем ID всех дочерних записей данного родителя
             children_ids = list(
                 Directory.objects
@@ -253,7 +294,7 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
             # Добавляем дочерние ID в список на удаление
             to_delete_ids.extend(children_ids)
             # И в очередь для поиска их дочерних записей
-            queue.extend(children_ids)
+            bfs_queue.extend(children_ids)
 
         # Каскадное удаление производственного плана при удалении проекта
         # (выполняем ДО удаления Directory, иначе FK directory_id уже NULL)

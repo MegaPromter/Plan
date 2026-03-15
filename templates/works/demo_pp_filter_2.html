@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Вариант 2 — Индикатор в строке + фильтр в шапке</title>
+<style>
+  :root { --font: 'Segoe UI', system-ui, sans-serif; --accent: #2563eb; --bg: #f8fafc; --card: #fff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; --green: #16a34a; --red: #dc2626; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--text); padding:24px; }
+  h2 { font-size:18px; margin-bottom:16px; }
+  .desc { color:var(--muted); font-size:13px; margin-bottom:20px; line-height:1.5; }
+
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th { background:#f1f5f9; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); padding:10px 12px; text-align:left; font-weight:600; }
+  td { padding:8px 12px; font-size:13px; border-top:1px solid var(--border); }
+
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .dot-green { background:var(--green); box-shadow:0 0 4px rgba(34,197,94,0.4); }
+  .dot-gray { background:#cbd5e1; }
+
+  th.filterable { cursor:pointer; user-select:none; position:relative; }
+  th.filterable:hover { color:var(--accent); }
+  th.filterable .filter-icon { font-size:10px; margin-left:4px; opacity:0.5; }
+  th.filterable.active-filter .filter-icon { opacity:1; color:var(--accent); }
+
+  .filter-popup { position:absolute; top:100%; left:0; background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.1); padding:8px; z-index:10; min-width:140px; display:none; }
+  .filter-popup.open { display:block; }
+  .filter-popup label { display:flex; align-items:center; gap:6px; padding:6px 8px; font-size:12px; font-weight:400; color:var(--text); cursor:pointer; border-radius:4px; text-transform:none; letter-spacing:0; }
+  .filter-popup label:hover { background:#f1f5f9; }
+</style>
+</head>
+<body>
+<h2>Вариант 2: Иконка-индикатор + фильтр в шапке колонки</h2>
+<p class="desc">Зелёный кружок в каждой строке если отчёт есть, серый если нет. Клик по заголовку колонки «Отчёт» открывает мини-попап с чекбоксами фильтра. Как в Excel.</p>
+
+<table>
+  <thead><tr>
+    <th>№</th><th>Код строки</th><th>Наименование</th><th>Отдел</th><th>Разработчик</th>
+    <th class="filterable" onclick="togglePopup()" style="position:relative">
+      ● ОТЧЁТ <span class="filter-icon">&#9660;</span>
+      <div class="filter-popup" id="filterPopup">
+        <label><input type="radio" name="rf" checked onchange="applyFilter('all')"> Все</label>
+        <label><input type="radio" name="rf" onchange="applyFilter('done')"> <span class="dot dot-green"></span> С отчётом</label>
+        <label><input type="radio" name="rf" onchange="applyFilter('none')"> <span class="dot dot-gray"></span> Без отчёта</label>
+      </div>
+    </th>
+  </tr></thead>
+  <tbody id="tbody">
+    <tr data-report="done"><td>1</td><td>Пр-20730.12</td><td>Чертёж корпуса 1А</td><td>021</td><td>Иванов И.А.</td><td style="text-align:center"><span class="dot dot-green" title="Отчёт заполнен"></span></td></tr>
+    <tr data-report="none"><td>2</td><td>Пр-20730.13</td><td>Сборочный чертёж</td><td>021</td><td>Петров П.С.</td><td style="text-align:center"><span class="dot dot-gray" title="Отчёт не заполнен"></span></td></tr>
+    <tr data-report="done"><td>3</td><td>Пр-20386.5</td><td>Спецификация насоса</td><td>022</td><td>Сидоров А.М.</td><td style="text-align:center"><span class="dot dot-green" title="Отчёт заполнен"></span></td></tr>
+    <tr data-report="none"><td>4</td><td>Пр-20386.6</td><td>Расчёт прочности</td><td>022</td><td>Козлов Д.Е.</td><td style="text-align:center"><span class="dot dot-gray" title="Отчёт не заполнен"></span></td></tr>
+    <tr data-report="none"><td>5</td><td>Пр-20730.14</td><td>Технологическая карта</td><td>024</td><td>Беляев А.А.</td><td style="text-align:center"><span class="dot dot-gray" title="Отчёт не заполнен"></span></td></tr>
+    <tr data-report="done"><td>6</td><td>Пр-20730.15</td><td>Программа испытаний</td><td>021</td><td>Иванов И.А.</td><td style="text-align:center"><span class="dot dot-green" title="Отчёт заполнен"></span></td></tr>
+  </tbody>
+</table>
+
+<script>
+function togglePopup() {
+  document.getElementById('filterPopup').classList.toggle('open');
+}
+function applyFilter(mode) {
+  document.querySelectorAll('#tbody tr').forEach(tr => {
+    tr.style.display = (mode === 'all' || tr.dataset.report === mode) ? '' : 'none';
+  });
+  document.getElementById('filterPopup').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.filterable')) document.getElementById('filterPopup').classList.remove('open');
+});
+</script>
+</body>
+</html>

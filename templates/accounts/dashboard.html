@@ -56,27 +56,34 @@
   <div class="modules-grid">
 
     <!-- 1. Управление проектами (УП) -->
-    <button onclick="window.location='{% url 'works:projects' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+    <a href="{% url 'works:projects' %}" class="module-card">
       <div class="module-icon blue"><i class="fas fa-project-diagram"></i></div>
       <div class="module-title">Управление проектами</div>
       <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </button>
+    </a>
 
     <!-- 2. Производственный план (ПП) -->
     <!-- Переход на SPA производственного плана -->
-    <button onclick="window.location='{% url 'works:production_plan' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+    <a href="{% url 'works:production_plan' %}" class="module-card">
       <div class="module-icon green"><i class="fas fa-industry"></i></div>
       <div class="module-title">Производственный план</div>
       <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </button>
+    </a>
 
     <!-- 3. Сводное планирование (План/отчёт) -->
     <!-- Переход на SPA план-задач -->
-    <button onclick="window.location='{% url 'works:plan' %}'" class="module-card" style="cursor:pointer; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);">
+    <a href="{% url 'works:plan' %}" class="module-card">
       <div class="module-icon yellow"><i class="fas fa-tasks"></i></div>
       <div class="module-title">Сводное планирование (План/отчёт)</div>
       <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </button>
+    </a>
+
+    <!-- 4. Журнал извещений (ЖИ) -->
+    <a href="{% url 'works:notice_list' %}" class="module-card">
+      <div class="module-icon" style="background:rgba(168,85,247,0.15);"><i class="fas fa-file-alt"></i></div>
+      <div class="module-title">Журнал извещений</div>
+      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
+    </a>
 
   </div>
 

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Макеты: связи между задачами</title>
+<style>
+:root {
+  --bg: #1a1b2e; --surface: #232438; --surface2: #2a2b42;
+  --border: #3a3b55; --text: #e0e0e8; --muted: #8888a0;
+  --accent: #5b8af5; --accent2: #7c5bf5; --green: #4caf50;
+  --orange: #ff9800; --red: #ef5350; --yellow: #ffd740;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; line-height: 1.5; }
+h1 { font-size: 28px; margin-bottom: 8px; }
+h2 { font-size: 22px; margin: 40px 0 16px; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+h3 { font-size: 17px; margin: 20px 0 10px; color: var(--yellow); }
+p, li { font-size: 14px; color: var(--muted); }
+ul { margin-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 4px; }
+.subtitle { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+
+/* ── Секция варианта ────────────────────────────── */
+.variant { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 32px; }
+.variant-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.variant-badge { background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+.variant-badge.b { background: var(--accent2); }
+.variant-badge.c { background: var(--green); }
+
+/* ── Mockup контейнер ───────────────────────────── */
+.mockup { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 16px 0; }
+.mockup-title { font-size: 12px; color: var(--muted); padding: 8px 12px; background: rgba(0,0,0,.2); border-bottom: 1px solid var(--border); }
+
+/* ── Таблица СП (mockup) ────────────────────────── */
+.sp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sp-table th { background: var(--surface); color: var(--muted); font-size: 11px; text-transform: uppercase; padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.sp-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.sp-table tr:hover { background: rgba(91,138,245,.06); }
+.sp-table .row-linked { background: rgba(91,138,245,.08); }
+.sp-table .dep-cell { white-space: nowrap; }
+
+/* ── Чипы связей ────────────────────────────────── */
+.dep-chip { display: inline-flex; align-items: center; gap: 4px; background: rgba(91,138,245,.15); border: 1px solid rgba(91,138,245,.3); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 12px; margin: 1px 2px; cursor: pointer; transition: .15s; }
+.dep-chip:hover { background: rgba(91,138,245,.25); }
+.dep-chip .dep-type { font-weight: 700; color: var(--yellow); font-size: 10px; }
+.dep-chip .dep-remove { color: var(--red); margin-left: 2px; cursor: pointer; font-size: 10px; }
+.dep-chip.ss .dep-type { color: var(--green); }
+.dep-chip.ff .dep-type { color: var(--orange); }
+.dep-chip.sf .dep-type { color: var(--red); }
+
+/* Иконка добавления связи */
+.dep-add { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1px dashed var(--border); color: var(--muted); font-size: 12px; cursor: pointer; transition: .15s; }
+.dep-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Модальное окно связи ───────────────────────── */
+.modal-mock { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 420px; margin: 16px auto; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+.modal-mock h4 { font-size: 16px; margin-bottom: 14px; }
+.modal-mock label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 10px; }
+.modal-mock select, .modal-mock input { width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
+.modal-mock .btn-row { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+.modal-mock .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; cursor: pointer; }
+.modal-mock .btn-primary { background: var(--accent); color: #fff; }
+.modal-mock .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+/* ── Диаграмма Ганта (mockup) ───────────────────── */
+.gantt-mock { padding: 16px; overflow-x: auto; }
+.gantt-row { display: flex; align-items: center; margin-bottom: 6px; height: 28px; }
+.gantt-label { width: 180px; flex-shrink: 0; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gantt-track { flex: 1; position: relative; height: 28px; }
+.gantt-bar { position: absolute; height: 18px; top: 5px; border-radius: 4px; font-size: 10px; display: flex; align-items: center; padding: 0 6px; color: #fff; font-weight: 600; }
+.gantt-bar.blue { background: var(--accent); }
+.gantt-bar.purple { background: var(--accent2); }
+.gantt-bar.green { background: var(--green); }
+.gantt-bar.orange { background: var(--orange); }
+.gantt-bar.red { background: var(--red); }
+
+/* Стрелка связи в Ганте */
+.gantt-arrow { position: absolute; }
+.gantt-arrow svg { overflow: visible; }
+.gantt-arrow path { fill: none; stroke: var(--yellow); stroke-width: 1.5; }
+.gantt-arrow polygon { fill: var(--yellow); }
+
+/* Сетка дат Ганта */
+.gantt-header { display: flex; height: 24px; margin-bottom: 4px; }
+.gantt-header-label { width: 180px; flex-shrink: 0; }
+.gantt-header-dates { flex: 1; display: flex; position: relative; }
+.gantt-date-mark { font-size: 10px; color: var(--muted); position: absolute; }
+.gantt-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.05); }
+
+/* ── Граф зависимостей (мини) ───────────────────── */
+.graph-mock { padding: 16px; min-height: 200px; position: relative; }
+.graph-node { position: absolute; background: var(--surface); border: 2px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: 12px; min-width: 120px; text-align: center; }
+.graph-node .node-id { font-weight: 700; color: var(--accent); }
+.graph-node .node-name { color: var(--muted); font-size: 11px; }
+
+/* ── Inline dep editor ──────────────────────────── */
+.inline-dep { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+.inline-dep select { padding: 3px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 11px; }
+.inline-dep input { width: 50px; padding: 3px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 11px; text-align: center; }
+.inline-dep .inline-save { color: var(--green); cursor: pointer; font-size: 14px; }
+.inline-dep .inline-cancel { color: var(--red); cursor: pointer; font-size: 14px; }
+
+/* ── Сравнительная таблица ──────────────────────── */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0; }
+.compare-table th { background: var(--surface); padding: 10px; text-align: left; border-bottom: 2px solid var(--border); font-size: 12px; color: var(--muted); text-transform: uppercase; }
+.compare-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.compare-table tr:hover { background: rgba(91,138,245,.04); }
+.check { color: var(--green); font-weight: 700; }
+.cross { color: var(--red); }
+.partial { color: var(--orange); }
+
+/* ── Pros / Cons ────────────────────────────────── */
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.pros, .cons { padding: 12px; border-radius: 8px; font-size: 13px; }
+.pros { background: rgba(76,175,80,.08); border: 1px solid rgba(76,175,80,.2); }
+.cons { background: rgba(239,83,80,.08); border: 1px solid rgba(239,83,80,.2); }
+.pros h4 { color: var(--green); font-size: 13px; margin-bottom: 6px; }
+.cons h4 { color: var(--red); font-size: 13px; margin-bottom: 6px; }
+
+/* ── Info block ─────────────────────────────────── */
+.info-block { background: rgba(91,138,245,.08); border: 1px solid rgba(91,138,245,.2); border-radius: 8px; padding: 14px 16px; margin: 12px 0; font-size: 13px; }
+.info-block strong { color: var(--accent); }
+
+/* ── Архитектура (код) ──────────────────────────── */
+pre { background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12px; overflow-x: auto; color: #c8c8d8; margin: 12px 0; line-height: 1.6; }
+.kw { color: var(--accent); }
+.str { color: var(--green); }
+.cmt { color: var(--muted); font-style: italic; }
+.cls { color: var(--yellow); }
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 900px) {
+  .pros-cons { grid-template-columns: 1fr; }
+  .gantt-label { width: 120px; }
+}
+</style>
+</head>
+<body>
+
+<h1>Связи между задачами (Dependencies)</h1>
+<p class="subtitle">Анализ вариантов реализации для Системы управления планированием</p>
+
+<!-- ================================================================ -->
+<h2>Типы связей (как в MS Project)</h2>
+<!-- ================================================================ -->
+
+<div class="mockup">
+<div class="mockup-title">4 типа связей между задачами</div>
+<div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+    <div style="font-weight:700;color:var(--yellow);margin-bottom:6px;">FS — Финиш-Старт</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Задача B начинается после окончания задачи A</div>
+    <svg width="260" height="50" viewBox="0 0 260 50">
+      <rect x="10" y="10" width="100" height="24" rx="4" fill="#5b8af5"/>
+      <text x="60" y="26" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача A</text>
+      <rect x="140" y="10" width="100" height="24" rx="4" fill="#7c5bf5"/>
+      <text x="190" y="26" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача B</text>
+      <path d="M110 22 L130 22 L130 22 L140 22" stroke="#ffd740" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+      <defs><marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ffd740"/></marker></defs>
+    </svg>
+    <div style="font-size:11px;color:var(--green);">Самый распространённый тип (~90% связей)</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+    <div style="font-weight:700;color:var(--green);margin-bottom:6px;">SS — Старт-Старт</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Задача B начинается одновременно с задачей A</div>
+    <svg width="260" height="50" viewBox="0 0 260 50">
+      <rect x="10" y="4" width="120" height="20" rx="4" fill="#5b8af5"/>
+      <text x="70" y="18" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача A</text>
+      <rect x="10" y="28" width="80" height="20" rx="4" fill="#7c5bf5"/>
+      <text x="50" y="42" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача B</text>
+      <path d="M10 24 L4 24 L4 38 L10 38" stroke="#4caf50" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+      <defs><marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4caf50"/></marker></defs>
+    </svg>
+    <div style="font-size:11px;color:var(--muted);">Параллельная работа с общим стартом</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+    <div style="font-weight:700;color:var(--orange);margin-bottom:6px;">FF — Финиш-Финиш</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Задача B заканчивается вместе с задачей A</div>
+    <svg width="260" height="50" viewBox="0 0 260 50">
+      <rect x="10" y="4" width="120" height="20" rx="4" fill="#5b8af5"/>
+      <text x="70" y="18" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача A</text>
+      <rect x="50" y="28" width="80" height="20" rx="4" fill="#7c5bf5"/>
+      <text x="90" y="42" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача B</text>
+      <path d="M130 24 L136 24 L136 38 L130 38" stroke="#ff9800" stroke-width="2" fill="none" marker-end="url(#arr3)"/>
+      <defs><marker id="arr3" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto-start-reverse"><polygon points="0 0, 8 3, 0 6" fill="#ff9800"/></marker></defs>
+    </svg>
+    <div style="font-size:11px;color:var(--muted);">Синхронное завершение работ</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+    <div style="font-weight:700;color:var(--red);margin-bottom:6px;">SF — Старт-Финиш</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Задача B заканчивается при старте задачи A</div>
+    <svg width="260" height="50" viewBox="0 0 260 50">
+      <rect x="80" y="4" width="100" height="20" rx="4" fill="#5b8af5"/>
+      <text x="130" y="18" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача A</text>
+      <rect x="10" y="28" width="80" height="20" rx="4" fill="#7c5bf5"/>
+      <text x="50" y="42" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Задача B</text>
+      <path d="M80 24 L74 24 L74 38 L90 38" stroke="#ef5350" stroke-width="2" fill="none" marker-end="url(#arr4)"/>
+      <defs><marker id="arr4" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto-start-reverse"><polygon points="0 0, 8 3, 0 6" fill="#ef5350"/></marker></defs>
+    </svg>
+    <div style="font-size:11px;color:var(--muted);">Редкий тип (сменная работа, замена)</div>
+  </div>
+</div>
+</div>
+
+<div class="info-block">
+  <strong>Lag (задержка)</strong> — положительное смещение: B начинается через N дней ПОСЛЕ связи.<br>
+  <strong>Lead (опережение)</strong> — отрицательное смещение: B начинается за N дней ДО окончания связи.<br>
+  Пример: FS + lag 3 дня = «B начинается через 3 дня после окончания A»
+</div>
+
+<!-- ================================================================ -->
+<h2>Вариант A: Колонка «Предшественники» в таблице</h2>
+<!-- ================================================================ -->
+
+<div class="variant">
+<div class="variant-header">
+  <span class="variant-badge">ВАРИАНТ A</span>
+  <span style="font-size:14px;font-weight:600;">Колонка в таблице + чипы связей</span>
+</div>
+
+<p>Как в MS Project: отдельная колонка «Предш.» в таблице СП/ПП. Связи отображаются чипами с типом и номером задачи-предшественника.</p>
+
+<div class="mockup">
+<div class="mockup-title">Таблица СП с колонкой «Предшественники»</div>
+<table class="sp-table">
+<thead>
+<tr>
+  <th style="width:36px">No</th>
+  <th>Наименование</th>
+  <th>Исполнитель</th>
+  <th>Начало</th>
+  <th>Окончание</th>
+  <th style="min-width:160px;">Предшественники</th>
+  <th style="width:60px"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Разработка ТЗ</td>
+  <td>Иванов А.С.</td>
+  <td>01.03</td>
+  <td>15.03</td>
+  <td class="dep-cell">—</td>
+  <td style="text-align:center"><span class="dep-add" title="Добавить связь">+</span></td>
+</tr>
+<tr class="row-linked">
+  <td>2</td>
+  <td>Эскизный проект</td>
+  <td>Петров В.Н.</td>
+  <td>16.03</td>
+  <td>30.03</td>
+  <td class="dep-cell">
+    <span class="dep-chip"><span class="dep-type">FS</span> #1 Разработка ТЗ<span class="dep-remove">×</span></span>
+  </td>
+  <td style="text-align:center"><span class="dep-add" title="Добавить связь">+</span></td>
+</tr>
+<tr class="row-linked">
+  <td>3</td>
+  <td>3D-моделирование</td>
+  <td>Сидоров К.М.</td>
+  <td>16.03</td>
+  <td>10.04</td>
+  <td class="dep-cell">
+    <span class="dep-chip ss"><span class="dep-type">SS</span> #2 Эскизный проект<span class="dep-remove">×</span></span>
+  </td>
+  <td style="text-align:center"><span class="dep-add" title="Добавить связь">+</span></td>
+</tr>
+<tr class="row-linked">
+  <td>4</td>
+  <td>Выпуск КД</td>
+  <td>Козлов Д.А.</td>
+  <td>01.04</td>
+  <td>15.04</td>
+  <td class="dep-cell">
+    <span class="dep-chip"><span class="dep-type">FS</span> #2<span class="dep-remove">×</span></span>
+    <span class="dep-chip ff"><span class="dep-type">FF</span> #3<span class="dep-remove">×</span></span>
+  </td>
+  <td style="text-align:center"><span class="dep-add" title="Добавить связь">+</span></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Проверка НК</td>
+  <td>Волков И.Р.</td>
+  <td>16.04</td>
+  <td>20.04</td>
+  <td class="dep-cell">
+    <span class="dep-chip"><span class="dep-type">FS</span> #4 Выпуск КД +3д<span class="dep-remove">×</span></span>
+  </td>
+  <td style="text-align:center"><span class="dep-add" title="Добавить связь">+</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>Модальное окно добавления связи</h3>
+<div class="modal-mock">
+  <h4>Добавить связь для задачи #2</h4>
+  <label>Предшественник</label>
+  <select>
+    <option>Поиск задачи...</option>
+    <option selected>#1 — Разработка ТЗ (Иванов А.С.)</option>
+    <option>#3 — 3D-моделирование (Сидоров К.М.)</option>
+    <option>#4 — Выпуск КД (Козлов Д.А.)</option>
+  </select>
+  <label>Тип связи</label>
+  <select>
+    <option selected>FS — Финиш → Старт</option>
+    <option>SS — Старт → Старт</option>
+    <option>FF — Финиш → Финиш</option>
+    <option>SF — Старт → Финиш</option>
+  </select>
+  <label>Задержка (дни)</label>
+  <input type="number" value="0" placeholder="0 = без задержки, -N = опережение">
+  <div class="btn-row">
+    <button class="btn btn-outline">Отмена</button>
+    <button class="btn btn-primary">Добавить</button>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>+ Плюсы</h4>
+    <ul>
+      <li>Знакомый UI для пользователей MS Project</li>
+      <li>Связи видны прямо в таблице</li>
+      <li>Легко добавлять/удалять чипами</li>
+      <li>Не требует отдельной страницы</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>− Минусы</h4>
+    <ul>
+      <li>Колонка занимает место в и без того широкой таблице</li>
+      <li>При множестве связей чипы переполняют ячейку</li>
+      <li>Нет визуализации цепочки зависимостей</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<h2>Вариант B: Панель связей в боковом drawer</h2>
+<!-- ================================================================ -->
+
+<div class="variant">
+<div class="variant-header">
+  <span class="variant-badge b">ВАРИАНТ B</span>
+  <span style="font-size:14px;font-weight:600;">Боковая панель + иконка-индикатор в строке</span>
+</div>
+
+<p>Вместо колонки — маленькая иконка 🔗 в строке. Клик по ней открывает боковой drawer с полным списком связей задачи.</p>
+
+<div class="mockup">
+<div class="mockup-title">Таблица СП — иконка связей в строке + боковая панель</div>
+<div style="display:flex;">
+  <!-- Таблица слева -->
+  <div style="flex:1; overflow:auto;">
+    <table class="sp-table">
+    <thead>
+    <tr>
+      <th style="width:36px">No</th>
+      <th style="width:24px"></th>
+      <th>Наименование</th>
+      <th>Исполнитель</th>
+      <th>Начало</th>
+      <th>Окончание</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td>1</td>
+      <td></td>
+      <td>Разработка ТЗ</td>
+      <td>Иванов А.С.</td>
+      <td>01.03</td>
+      <td>15.03</td>
+    </tr>
+    <tr style="background:rgba(91,138,245,.1);">
+      <td>2</td>
+      <td style="text-align:center;cursor:pointer;color:var(--accent);" title="2 связи">🔗</td>
+      <td><strong>Эскизный проект</strong></td>
+      <td>Петров В.Н.</td>
+      <td>16.03</td>
+      <td>30.03</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td style="text-align:center;cursor:pointer;color:var(--accent);">🔗</td>
+      <td>3D-моделирование</td>
+      <td>Сидоров К.М.</td>
+      <td>16.03</td>
+      <td>10.04</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td style="text-align:center;cursor:pointer;color:var(--accent);">🔗</td>
+      <td>Выпуск КД</td>
+      <td>Козлов Д.А.</td>
+      <td>01.04</td>
+      <td>15.04</td>
+    </tr>
+    </tbody>
+    </table>
+  </div>
+  <!-- Панель справа -->
+  <div style="width:320px; border-left:2px solid var(--accent); background:var(--surface); padding:16px; flex-shrink:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-weight:700;font-size:14px;">Связи задачи #2</span>
+      <span style="cursor:pointer;color:var(--muted);font-size:18px;">×</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Эскизный проект</div>
+
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Предшественники (от кого зависит)</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:13px;"><span style="color:var(--yellow);font-weight:700;">FS</span> #1 Разработка ТЗ</span>
+        <span style="font-size:11px;color:var(--muted);">lag: 0д</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">Иванов А.С. · 01.03 – 15.03</div>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Последователи (кто зависит)</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:13px;"><span style="color:var(--green);font-weight:700;">SS</span> #3 3D-моделирование</span>
+        <span style="font-size:11px;color:var(--muted);">lag: 0д</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">Сидоров К.М. · 16.03 – 10.04</div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;padding:8px;border:none;border-radius:6px;color:#fff;background:var(--accent);cursor:pointer;font-size:13px;">+ Добавить связь</button>
+  </div>
+</div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>+ Плюсы</h4>
+    <ul>
+      <li>Таблица остаётся компактной</li>
+      <li>В панели много места для деталей (lag, даты, исполнитель)</li>
+      <li>Видны и предшественники, и последователи</li>
+      <li>Легко масштабируется на любое кол-во связей</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>− Минусы</h4>
+    <ul>
+      <li>Требует клик для просмотра — не видно сразу</li>
+      <li>Панель закрывает часть таблицы</li>
+      <li>Сложнее в реализации (анимация, состояние)</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<h2>Вариант C: Диаграмма Ганта со стрелками</h2>
+<!-- ================================================================ -->
+
+<div class="variant">
+<div class="variant-header">
+  <span class="variant-badge c">ВАРИАНТ C</span>
+  <span style="font-size:14px;font-weight:600;">Встроенная диаграмма Ганта</span>
+</div>
+
+<p>Визуальная Ганта справа от таблицы (или на отдельной вкладке). Стрелки между барами показывают связи. Drag & drop для создания связей.</p>
+
+<div class="mockup">
+<div class="mockup-title">Мини-Ганта со стрелками зависимостей</div>
+<div class="gantt-mock">
+  <!-- Заголовок дат -->
+  <div class="gantt-header">
+    <div class="gantt-header-label" style="font-size:11px;color:var(--muted);">Задача</div>
+    <div class="gantt-header-dates" style="font-size:10px;color:var(--muted);">
+      <span class="gantt-date-mark" style="left:0%;">01.03</span>
+      <span class="gantt-date-mark" style="left:20%;">08.03</span>
+      <span class="gantt-date-mark" style="left:40%;">15.03</span>
+      <span class="gantt-date-mark" style="left:60%;">22.03</span>
+      <span class="gantt-date-mark" style="left:80%;">01.04</span>
+      <span class="gantt-date-mark" style="left:95%;">08.04</span>
+    </div>
+  </div>
+
+  <!-- Строка 1 -->
+  <div class="gantt-row">
+    <div class="gantt-label">1. Разработка ТЗ</div>
+    <div class="gantt-track">
+      <div class="gantt-bar blue" style="left:0%;width:28%;">ТЗ</div>
+      <div class="gantt-grid-line" style="left:20%;"></div>
+      <div class="gantt-grid-line" style="left:40%;"></div>
+      <div class="gantt-grid-line" style="left:60%;"></div>
+      <div class="gantt-grid-line" style="left:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Строка 2 -->
+  <div class="gantt-row">
+    <div class="gantt-label">2. Эскизный проект</div>
+    <div class="gantt-track">
+      <div class="gantt-bar purple" style="left:30%;width:28%;">ЭП</div>
+      <div class="gantt-grid-line" style="left:20%;"></div>
+      <div class="gantt-grid-line" style="left:40%;"></div>
+      <div class="gantt-grid-line" style="left:60%;"></div>
+      <div class="gantt-grid-line" style="left:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Строка 3 -->
+  <div class="gantt-row">
+    <div class="gantt-label">3. 3D-моделирование</div>
+    <div class="gantt-track">
+      <div class="gantt-bar green" style="left:30%;width:45%;">3D</div>
+      <div class="gantt-grid-line" style="left:20%;"></div>
+      <div class="gantt-grid-line" style="left:40%;"></div>
+      <div class="gantt-grid-line" style="left:60%;"></div>
+      <div class="gantt-grid-line" style="left:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Строка 4 -->
+  <div class="gantt-row">
+    <div class="gantt-label">4. Выпуск КД</div>
+    <div class="gantt-track">
+      <div class="gantt-bar orange" style="left:60%;width:28%;">КД</div>
+      <div class="gantt-grid-line" style="left:20%;"></div>
+      <div class="gantt-grid-line" style="left:40%;"></div>
+      <div class="gantt-grid-line" style="left:60%;"></div>
+      <div class="gantt-grid-line" style="left:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Строка 5 -->
+  <div class="gantt-row">
+    <div class="gantt-label">5. Проверка НК</div>
+    <div class="gantt-track">
+      <div class="gantt-bar red" style="left:90%;width:10%;">НК</div>
+      <div class="gantt-grid-line" style="left:20%;"></div>
+      <div class="gantt-grid-line" style="left:40%;"></div>
+      <div class="gantt-grid-line" style="left:60%;"></div>
+      <div class="gantt-grid-line" style="left:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Стрелки (SVG overlay) -->
+  <svg style="position:absolute;top:32px;left:180px;width:calc(100% - 180px);height:170px;pointer-events:none;" viewBox="0 0 600 170">
+    <!-- FS: 1→2 (конец бара 1 → начало бара 2) -->
+    <path d="M168 14 L168 28 L180 28 L180 42" stroke="#ffd740" stroke-width="1.5" fill="none"/>
+    <polygon points="176,42 180,50 184,42" fill="#ffd740"/>
+    <text x="172" y="36" font-size="9" fill="#ffd740" font-weight="700">FS</text>
+
+    <!-- SS: 2→3 (начало бара 2 → начало бара 3) -->
+    <path d="M180 56 L174 56 L174 76 L180 76" stroke="#4caf50" stroke-width="1.5" fill="none"/>
+    <polygon points="176,76 184,76 180,84" fill="#4caf50"/>
+    <text x="160" y="70" font-size="9" fill="#4caf50" font-weight="700">SS</text>
+
+    <!-- FS: 2→4 (конец бара 2 → начало бара 4) -->
+    <path d="M348 56 L360 56 L360 110" stroke="#ffd740" stroke-width="1.5" fill="none"/>
+    <polygon points="356,110 360,118 364,110" fill="#ffd740"/>
+    <text x="352" y="90" font-size="9" fill="#ffd740" font-weight="700">FS</text>
+
+    <!-- FF: 3→4 -->
+    <path d="M450 84 L460 84 L460 118 L528 118" stroke="#ff9800" stroke-width="1.5" fill="none"/>
+    <polygon points="524,114 532,118 524,122" fill="#ff9800"/>
+    <text x="462" y="106" font-size="9" fill="#ff9800" font-weight="700">FF</text>
+
+    <!-- FS: 4→5 (+3д lag) -->
+    <path d="M528 118 L540 118 L540 146" stroke="#ffd740" stroke-width="1.5" fill="none" stroke-dasharray="4 2"/>
+    <polygon points="536,146 540,154 544,146" fill="#ffd740"/>
+    <text x="544" y="138" font-size="9" fill="#ffd740" font-weight="700">FS+3</text>
+  </svg>
+</div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>+ Плюсы</h4>
+    <ul>
+      <li>Максимально наглядно — видны все цепочки</li>
+      <li>Drag & drop для создания связей — интуитивно</li>
+      <li>Критический путь можно подсветить цветом</li>
+      <li>Привычно для пользователей MS Project / GanttProject</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>− Минусы</h4>
+    <ul>
+      <li>Значительная сложность реализации (SVG, вычисления координат)</li>
+      <li>Тяжело с 200+ задачами — нужна виртуализация</li>
+      <li>Требует date_start и date_end у всех задач</li>
+      <li>Отдельная «страница/режим» — пользователь переключается</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<h2>Рекомендация: комбинированный подход (A + B)</h2>
+<!-- ================================================================ -->
+
+<div class="variant" style="border-color:var(--accent);">
+<div class="variant-header">
+  <span class="variant-badge" style="background:var(--green);">РЕКОМЕНДАЦИЯ</span>
+  <span style="font-size:14px;font-weight:600;">Чипы в таблице + drawer по клику + валидация</span>
+</div>
+
+<p>Совмещаем компактность варианта A с информативностью варианта B:</p>
+<ul style="margin-bottom:16px;">
+  <li><strong>В таблице:</strong> узкая колонка с компактными чипами (только «FS #1», «SS #3»)</li>
+  <li><strong>По клику на чип:</strong> боковая панель с полными деталями</li>
+  <li><strong>По клику +:</strong> модальное окно добавления связи с поиском</li>
+  <li><strong>Автоматическая валидация:</strong> предупреждение о циклах и нарушении дат</li>
+</ul>
+
+<div class="mockup">
+<div class="mockup-title">Предупреждение о нарушении связи</div>
+<div style="padding:16px;">
+  <div style="background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.3);border-radius:8px;padding:12px;display:flex;gap:10px;align-items:flex-start;">
+    <span style="font-size:20px;">⚠️</span>
+    <div>
+      <div style="font-weight:600;font-size:13px;color:var(--orange);margin-bottom:4px;">Нарушение связи FS</div>
+      <div style="font-size:12px;color:var(--muted);">
+        Задача <strong style="color:var(--text);">#3 «3D-моделирование»</strong> начинается <strong style="color:var(--text);">16.03</strong>,
+        но предшественник <strong style="color:var(--text);">#2 «Эскизный проект»</strong> заканчивается <strong style="color:var(--text);">30.03</strong>.
+        <br>По связи FS задача #3 должна начаться не ранее <strong style="color:var(--accent);">31.03</strong>.
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button class="btn btn-primary" style="font-size:12px;padding:5px 12px;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">Скорректировать дату</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);cursor:pointer;">Игнорировать</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+
+<!-- ================================================================ -->
+<h2>Архитектура (бэкенд)</h2>
+<!-- ================================================================ -->
+
+<div class="variant">
+<h3>Модель данных</h3>
+<pre>
+<span class="kw">class</span> <span class="cls">TaskDependency</span>(models.Model):
+    <span class="cmt">"""Связь между двумя задачами Work (predecessor → successor)."""</span>
+
+    <span class="cmt"># Типы связей (как в MS Project)</span>
+    LINK_TYPES = [
+        (<span class="str">'FS'</span>, <span class="str">'Финиш → Старт'</span>),
+        (<span class="str">'SS'</span>, <span class="str">'Старт → Старт'</span>),
+        (<span class="str">'FF'</span>, <span class="str">'Финиш → Финиш'</span>),
+        (<span class="str">'SF'</span>, <span class="str">'Старт → Финиш'</span>),
+    ]
+
+    predecessor = models.ForeignKey(
+        Work, on_delete=models.CASCADE,
+        related_name=<span class="str">'successor_links'</span>,  <span class="cmt"># work.successor_links.all() → кто зависит от меня</span>
+        verbose_name=<span class="str">'Предшественник'</span>,
+    )
+    successor = models.ForeignKey(
+        Work, on_delete=models.CASCADE,
+        related_name=<span class="str">'predecessor_links'</span>,  <span class="cmt"># work.predecessor_links.all() → от кого я завишу</span>
+        verbose_name=<span class="str">'Последователь'</span>,
+    )
+    link_type = models.CharField(
+        <span class="str">'Тип связи'</span>,
+        max_length=2,
+        choices=LINK_TYPES,
+        default=<span class="str">'FS'</span>,
+    )
+    lag_days = models.IntegerField(
+        <span class="str">'Задержка (дни)'</span>,
+        default=0,
+        help_text=<span class="str">'Положительное = задержка, отрицательное = опережение'</span>,
+    )
+
+    <span class="kw">class</span> <span class="cls">Meta</span>:
+        db_table = <span class="str">'work_task_dependency'</span>
+        unique_together = [(<span class="str">'predecessor'</span>, <span class="str">'successor'</span>)]
+        verbose_name = <span class="str">'Связь задач'</span>
+
+    <span class="kw">def</span> clean(self):
+        <span class="cmt"># Запрет связи на самого себя</span>
+        <span class="kw">if</span> self.predecessor_id == self.successor_id:
+            <span class="kw">raise</span> ValidationError(<span class="str">'Задача не может зависеть от самой себя'</span>)
+</pre>
+
+<h3>API endpoints</h3>
+<pre>
+<span class="cmt"># apps/api/urls.py</span>
+
+<span class="cmt"># Связи конкретной задачи</span>
+GET    /api/tasks/&lt;id&gt;/dependencies/       <span class="cmt"># список связей (predecessors + successors)</span>
+POST   /api/tasks/&lt;id&gt;/dependencies/       <span class="cmt"># создать связь {predecessor_id, link_type, lag_days}</span>
+DELETE /api/dependencies/&lt;dep_id&gt;/          <span class="cmt"># удалить связь</span>
+PUT    /api/dependencies/&lt;dep_id&gt;/          <span class="cmt"># изменить тип или lag</span>
+
+<span class="cmt"># Пакетные операции (для Ганта / массового ввода)</span>
+POST   /api/dependencies/bulk/              <span class="cmt"># [{predecessor, successor, type, lag}, ...]</span>
+
+<span class="cmt"># Валидация (проверка без сохранения)</span>
+POST   /api/dependencies/validate/          <span class="cmt"># проверка цикла + конфликтов дат</span>
+</pre>
+
+<h3>Валидация на сервере</h3>
+<pre>
+<span class="kw">def</span> <span class="cls">detect_cycle</span>(successor_id, predecessor_id):
+    <span class="cmt">"""BFS/DFS: проверяем, что добавление связи не создаёт цикл."""</span>
+    visited = set()
+    queue = [predecessor_id]
+    <span class="kw">while</span> queue:
+        current = queue.pop(0)
+        <span class="kw">if</span> current == successor_id:
+            <span class="kw">return True</span>  <span class="cmt"># Цикл найден!</span>
+        <span class="kw">if</span> current <span class="kw">in</span> visited:
+            <span class="kw">continue</span>
+        visited.add(current)
+        <span class="cmt"># Поднимаемся по цепочке предшественников</span>
+        preds = TaskDependency.objects.filter(
+            successor_id=current
+        ).values_list(<span class="str">'predecessor_id'</span>, flat=True)
+        queue.extend(preds)
+    <span class="kw">return False</span>
+</pre>
+</div>
+
+<!-- ================================================================ -->
+<h2>Сравнительная таблица вариантов</h2>
+<!-- ================================================================ -->
+
+<table class="compare-table">
+<thead>
+<tr>
+  <th>Характеристика</th>
+  <th>A: Колонка</th>
+  <th>B: Drawer</th>
+  <th>C: Ганта</th>
+  <th>A+B: Комбо</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Сложность реализации</td>
+  <td><span class="check">Низкая</span></td>
+  <td><span class="partial">Средняя</span></td>
+  <td><span class="cross">Высокая</span></td>
+  <td><span class="partial">Средняя</span></td>
+</tr>
+<tr>
+  <td>Видимость связей без клика</td>
+  <td><span class="check">Да</span></td>
+  <td><span class="cross">Нет (иконка)</span></td>
+  <td><span class="check">Да (стрелки)</span></td>
+  <td><span class="check">Да (чипы)</span></td>
+</tr>
+<tr>
+  <td>Масштабируемость (200+ задач)</td>
+  <td><span class="partial">Средне</span></td>
+  <td><span class="check">Хорошо</span></td>
+  <td><span class="cross">Плохо без виртуализации</span></td>
+  <td><span class="check">Хорошо</span></td>
+</tr>
+<tr>
+  <td>Детальность информации</td>
+  <td><span class="partial">Кратко</span></td>
+  <td><span class="check">Полно</span></td>
+  <td><span class="check">Визуально</span></td>
+  <td><span class="check">Кратко + полно по клику</span></td>
+</tr>
+<tr>
+  <td>Влияние на текущий UI</td>
+  <td><span class="partial">+1 колонка</span></td>
+  <td><span class="check">Минимальное</span></td>
+  <td><span class="cross">Новый режим</span></td>
+  <td><span class="partial">+1 узкая колонка</span></td>
+</tr>
+<tr>
+  <td>Интуитивность</td>
+  <td><span class="check">Высокая</span></td>
+  <td><span class="partial">Средняя</span></td>
+  <td><span class="check">Высокая</span></td>
+  <td><span class="check">Высокая</span></td>
+</tr>
+<tr>
+  <td>Валидация / предупреждения</td>
+  <td colspan="4" style="text-align:center"><span class="check">Одинаково для всех — серверная валидация циклов и дат</span></td>
+</tr>
+<tr>
+  <td>Время на реализацию (условно)</td>
+  <td><span class="check">2-3 дня</span></td>
+  <td><span class="partial">3-4 дня</span></td>
+  <td><span class="cross">7-10 дней</span></td>
+  <td><span class="partial">4-5 дней</span></td>
+</tr>
+</tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2>План поэтапной реализации</h2>
+<!-- ================================================================ -->
+
+<div class="variant">
+<h3>Этап 1 — Фундамент (бэкенд + миграция)</h3>
+<ul>
+  <li>Модель <code>TaskDependency</code> + миграция</li>
+  <li>API: CRUD для связей</li>
+  <li>Валидация: запрет циклов (BFS), запрет самоссылки, unique_together</li>
+  <li>Включение связей в сериализацию <code>_serialize_task()</code></li>
+</ul>
+
+<h3>Этап 2 — UI: колонка + чипы (вариант A)</h3>
+<ul>
+  <li>Колонка «Предш.» в таблице СП</li>
+  <li>Чипы с цветовой маркировкой типа связи</li>
+  <li>Кнопка «+» для добавления → модальное окно</li>
+  <li>Удаление по крестику на чипе</li>
+</ul>
+
+<h3>Этап 3 — Drawer + валидация дат (вариант B)</h3>
+<ul>
+  <li>Боковая панель по клику на чип</li>
+  <li>Предупреждения при нарушении дат (FS: successor.start < predecessor.end)</li>
+  <li>Кнопка «Скорректировать дату» — автоматическое выравнивание</li>
+</ul>
+
+<h3>Этап 4 (будущее) — Ганта (вариант C)</h3>
+<ul>
+  <li>Отдельная вкладка/режим с диаграммой Ганта</li>
+  <li>SVG-стрелки между барами</li>
+  <li>Критический путь</li>
+</ul>
+</div>
+
+</body>
+</html>

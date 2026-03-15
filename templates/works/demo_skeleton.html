@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Демо: Skeleton-загрузка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --border: #e2e6ed;
+    --border2: #c8d0dc;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --text: #1e293b;
+    --text2: #475569;
+    --muted: #94a3b8;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --font: 'Inter', sans-serif;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 32px; }
+
+  .demo-header { margin-bottom: 24px; }
+  .demo-header h1 { font-size: 22px; font-weight: 700; }
+  .demo-header p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+
+  /* Переключатель режима */
+  .mode-bar {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .mode-bar .label { font-size: 14px; font-weight: 600; color: var(--text2); }
+  .mode-toggle {
+    display: flex; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .mode-toggle button {
+    border: none; background: none; padding: 10px 20px; font-family: var(--font);
+    font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s;
+  }
+  .mode-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+  .mode-toggle button.active { background: var(--accent); color: #fff; }
+  .mode-toggle button:hover:not(.active) { background: var(--accent-light); }
+
+  .btn {
+    border: none; padding: 10px 24px; border-radius: 8px; font-family: var(--font);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+
+  /* Таблица */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    background: #eef1f7; color: #4a5568; font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em; text-align: left;
+    padding: 14px 16px; border-bottom: 2px solid var(--border2); white-space: nowrap;
+  }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid #eef1f5; }
+  td, th { border-right: 1px solid var(--border); }
+  td:last-child, th:last-child { border-right: none; }
+  tbody tr:nth-child(even) { background: #f6f8fb; }
+  tbody tr:hover { background: #edf2ff; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge-active { background: #dcfce7; color: var(--success); }
+  .badge-info { background: #dbeafe; color: var(--accent); }
+  .badge-warning { background: #fef3c7; color: var(--warning); }
+
+  /* ========== SKELETON ========== */
+  @keyframes shimmer {
+    0% { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%);
+    background-size: 1200px 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: 6px; display: inline-block;
+  }
+  .sk-text { height: 14px; width: 100%; }
+  .sk-text-sm { height: 14px; width: 55%; }
+  .sk-text-md { height: 14px; width: 75%; }
+  .sk-text-num { height: 14px; width: 36px; margin-left: auto; }
+  .sk-badge { height: 22px; width: 76px; border-radius: 12px; }
+  .sk-id { height: 14px; width: 20px; }
+  /* Волна — задержка для каждой строки */
+  tbody tr:nth-child(1) .skeleton { animation-delay: 0s; }
+  tbody tr:nth-child(2) .skeleton { animation-delay: 0.08s; }
+  tbody tr:nth-child(3) .skeleton { animation-delay: 0.16s; }
+  tbody tr:nth-child(4) .skeleton { animation-delay: 0.24s; }
+  tbody tr:nth-child(5) .skeleton { animation-delay: 0.32s; }
+  tbody tr:nth-child(6) .skeleton { animation-delay: 0.40s; }
+  tbody tr:nth-child(7) .skeleton { animation-delay: 0.48s; }
+  tbody tr:nth-child(8) .skeleton { animation-delay: 0.56s; }
+
+  /* Спиннер (текущий вариант) */
+  .old-spinner-wrap {
+    display: flex; align-items: center; justify-content: center;
+    padding: 120px 0; color: var(--muted); font-size: 14px; gap: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* Плавное появление данных */
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Статус-бар */
+  .status-bar {
+    margin-top: 16px; padding: 14px 18px; border-radius: 8px;
+    font-size: 14px; font-weight: 500; text-align: center;
+  }
+  .status-loading { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .status-done { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <h1>Skeleton-загрузка vs. Спиннер</h1>
+  <p>Нажмите «Загрузить» — увидите разницу. Skeleton повторяет структуру таблицы и снижает воспринимаемое время ожидания.</p>
+</div>
+
+<div class="mode-bar">
+  <span class="label">Режим загрузки:</span>
+  <div class="mode-toggle" id="modeToggle">
+    <button data-mode="skeleton" class="active">Skeleton (новый)</button>
+    <button data-mode="spinner">Спиннер (текущий)</button>
+  </div>
+  <button class="btn btn-primary" onclick="startLoading()">▶ Загрузить данные</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50px">№</th>
+        <th>Наименование работы</th>
+        <th>Проект</th>
+        <th>Исполнитель</th>
+        <th class="num">Трудоёмкость</th>
+        <th>Начало</th>
+        <th>Окончание</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="status-bar status-loading" id="statusBar" style="display:none"></div>
+
+<script>
+const realData = [
+  {n:1, name:'Разработка ТЗ на систему управления', proj:'НИР-11', exec:'Иванов И.И.', labor:120, start:'01.03.2026', end:'15.03.2026', status:'В работе', cls:'badge-active'},
+  {n:2, name:'Анализ существующих решений', proj:'НИР-11', exec:'Петров П.П.', labor:80, start:'01.03.2026', end:'10.03.2026', status:'Завершено', cls:'badge-info'},
+  {n:3, name:'Проектирование архитектуры модулей', proj:'ОКР-5', exec:'Сидоров С.С.', labor:200, start:'10.03.2026', end:'30.03.2026', status:'Просрочено', cls:'badge-warning'},
+  {n:4, name:'Разработка модуля авторизации', proj:'ОКР-5', exec:'Козлов А.В.', labor:160, start:'15.03.2026', end:'28.03.2026', status:'В работе', cls:'badge-active'},
+  {n:5, name:'Тестирование прототипа', proj:'НИР-11', exec:'Иванов И.И.', labor:40, start:'25.03.2026', end:'31.03.2026', status:'В работе', cls:'badge-active'},
+  {n:6, name:'Подготовка проектной документации', proj:'ОКР-5', exec:'Новикова Е.А.', labor:60, start:'05.03.2026', end:'20.03.2026', status:'Завершено', cls:'badge-info'},
+  {n:7, name:'Согласование с заказчиком', proj:'НИР-11', exec:'Петров П.П.', labor:24, start:'28.03.2026', end:'31.03.2026', status:'Просрочено', cls:'badge-warning'},
+  {n:8, name:'Корректировка по замечаниям ТК', proj:'ОКР-5', exec:'Сидоров С.С.', labor:90, start:'01.04.2026', end:'15.04.2026', status:'В работе', cls:'badge-active'},
+];
+
+let currentMode = 'skeleton';
+let loading = false;
+
+document.getElementById('modeToggle').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  currentMode = btn.dataset.mode;
+  document.querySelectorAll('#modeToggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+function skeletonRows() {
+  return Array(8).fill(0).map(() => `<tr>
+    <td><span class="skeleton sk-id"></span></td>
+    <td><span class="skeleton sk-text"></span></td>
+    <td><span class="skeleton sk-text-sm"></span></td>
+    <td><span class="skeleton sk-text-md"></span></td>
+    <td class="num"><span class="skeleton sk-text-num"></span></td>
+    <td><span class="skeleton sk-text-sm"></span></td>
+    <td><span class="skeleton sk-text-sm"></span></td>
+    <td><span class="skeleton sk-badge"></span></td>
+  </tr>`).join('');
+}
+
+function spinnerRow() {
+  return `<tr><td colspan="8"><div class="old-spinner-wrap"><div class="spinner"></div>Загрузка данных...</div></td></tr>`;
+}
+
+function dataRows() {
+  return realData.map(r => `<tr class="fade-in">
+    <td class="num">${r.n}</td>
+    <td>${r.name}</td>
+    <td>${r.proj}</td>
+    <td>${r.exec}</td>
+    <td class="num">${r.labor}</td>
+    <td>${r.start}</td>
+    <td>${r.end}</td>
+    <td><span class="badge ${r.cls}">${r.status}</span></td>
+  </tr>`).join('');
+}
+
+function startLoading() {
+  if (loading) return;
+  loading = true;
+  const tbody = document.getElementById('tbody');
+  const bar = document.getElementById('statusBar');
+
+  // Показываем загрузку
+  tbody.innerHTML = (currentMode === 'skeleton') ? skeletonRows() : spinnerRow();
+  bar.style.display = 'block';
+  bar.className = 'status-bar status-loading';
+  bar.textContent = 'Загрузка данных с сервера...';
+
+  // Через 3 секунды — показываем данные
+  setTimeout(() => {
+    tbody.innerHTML = dataRows();
+    bar.className = 'status-bar status-done';
+    bar.textContent = '✓ Загружено 8 записей';
+    loading = false;
+    // Скрыть статус через 2с
+    setTimeout(() => { bar.style.display = 'none'; }, 2000);
+  }, 3000);
+}
+
+// При загрузке страницы — сразу показываем skeleton
+startLoading();
+</script>
+</body>
+</html>

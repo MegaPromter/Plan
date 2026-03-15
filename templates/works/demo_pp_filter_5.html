@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Вариант 5 — Подсветка строк + toggle-кнопка</title>
+<style>
+  :root { --font: 'Segoe UI', system-ui, sans-serif; --accent: #2563eb; --bg: #f8fafc; --card: #fff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; --green: #16a34a; --green-bg: rgba(34,197,94,0.08); --red: #dc2626; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--text); padding:24px; }
+  h2 { font-size:18px; margin-bottom:16px; }
+  .desc { color:var(--muted); font-size:13px; margin-bottom:20px; line-height:1.5; }
+
+  .toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--card); border:1px solid var(--border); border-radius:8px; margin-bottom:16px; }
+  .toolbar label { font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+
+  .toggle-btn { display:flex; align-items:center; gap:8px; padding:7px 16px; border-radius:8px; border:1.5px solid var(--border); background:var(--card); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.2s; }
+  .toggle-btn:hover { border-color:var(--accent); background:rgba(37,99,235,0.04); }
+  .toggle-btn.active { border-color:var(--red); background:rgba(220,38,38,0.06); color:var(--red); }
+  .toggle-btn .icon { font-size:16px; }
+
+  .counter { display:flex; gap:16px; margin-left:auto; font-size:13px; }
+  .counter .c-done { padding:4px 12px; background:var(--green-bg); color:var(--green); border-radius:12px; font-weight:600; }
+  .counter .c-pending { padding:4px 12px; background:rgba(220,38,38,0.08); color:var(--red); border-radius:12px; font-weight:600; }
+
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th { background:#f1f5f9; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); padding:10px 12px; text-align:left; font-weight:600; }
+  td { padding:8px 12px; font-size:13px; border-top:1px solid var(--border); }
+
+  tr.row-done { background:var(--green-bg); }
+  tr.row-done td:first-child { box-shadow:inset 3px 0 0 var(--green); }
+
+  .status-icon { font-size:15px; }
+  .status-done { color:var(--green); }
+  .status-none { color:#cbd5e1; }
+
+  tr.hiding { opacity:0; max-height:0; transform:scaleY(0); transition:all 0.25s ease; }
+  tr { transition:opacity 0.25s ease; }
+</style>
+</head>
+<body>
+<h2>Вариант 5: Подсветка строк + toggle-кнопка</h2>
+<p class="desc">Строки с отчётом имеют зелёный фон и левую полоску. Кнопка-toggle «Скрыть выполненные» прячет их с анимацией, чтобы сосредоточиться на оставшейся работе.</p>
+
+<div class="toolbar">
+  <button class="toggle-btn" id="toggleBtn" onclick="toggleDone()">
+    <span class="icon" id="toggleIcon">&#128065;</span>
+    <span id="toggleText">Скрыть выполненные</span>
+  </button>
+  <div class="counter">
+    <span class="c-done" id="cDone">3 выполнено</span>
+    <span class="c-pending" id="cPending">3 в работе</span>
+  </div>
+</div>
+
+<table>
+  <thead><tr><th style="width:30px"></th><th>№</th><th>Код строки</th><th>Наименование</th><th>Отдел</th><th>Разработчик</th></tr></thead>
+  <tbody id="tbody">
+    <tr class="row-done" data-report="done"><td><span class="status-icon status-done">&#10004;</span></td><td>1</td><td>Пр-20730.12</td><td>Чертёж корпуса 1А</td><td>021</td><td>Иванов И.А.</td></tr>
+    <tr data-report="none"><td><span class="status-icon status-none">&#9711;</span></td><td>2</td><td>Пр-20730.13</td><td>Сборочный чертёж</td><td>021</td><td>Петров П.С.</td></tr>
+    <tr class="row-done" data-report="done"><td><span class="status-icon status-done">&#10004;</span></td><td>3</td><td>Пр-20386.5</td><td>Спецификация насоса</td><td>022</td><td>Сидоров А.М.</td></tr>
+    <tr data-report="none"><td><span class="status-icon status-none">&#9711;</span></td><td>4</td><td>Пр-20386.6</td><td>Расчёт прочности</td><td>022</td><td>Козлов Д.Е.</td></tr>
+    <tr data-report="none"><td><span class="status-icon status-none">&#9711;</span></td><td>5</td><td>Пр-20730.14</td><td>Технологическая карта</td><td>024</td><td>Беляев А.А.</td></tr>
+    <tr class="row-done" data-report="done"><td><span class="status-icon status-done">&#10004;</span></td><td>6</td><td>Пр-20730.15</td><td>Программа испытаний</td><td>021</td><td>Иванов И.А.</td></tr>
+  </tbody>
+</table>
+
+<script>
+let hidden = false;
+function toggleDone() {
+  hidden = !hidden;
+  const btn = document.getElementById('toggleBtn');
+  const icon = document.getElementById('toggleIcon');
+  const text = document.getElementById('toggleText');
+  btn.classList.toggle('active', hidden);
+  icon.innerHTML = hidden ? '&#128683;' : '&#128065;';
+  text.textContent = hidden ? 'Показать выполненные' : 'Скрыть выполненные';
+  document.querySelectorAll('#tbody tr[data-report="done"]').forEach(tr => {
+    if (hidden) {
+      tr.style.opacity = '0';
+      setTimeout(() => tr.style.display = 'none', 200);
+    } else {
+      tr.style.display = '';
+      requestAnimationFrame(() => tr.style.opacity = '1');
+    }
+  });
+}
+</script>
+</body>
+</html>

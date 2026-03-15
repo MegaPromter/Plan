@@ -100,6 +100,8 @@ class PPProjectCreateView(AdminRequiredJsonMixin, View):
     def _create(self, request):
         # Парсим JSON-тело запроса
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         # Получаем и очищаем название проекта
         name = (d.get('name') or '').strip()
         if not name:
@@ -156,6 +158,8 @@ class PPProjectDetailView(AdminRequiredJsonMixin, View):
     def _update(self, request, pk):
         # Парсим тело запроса
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         # Проверяем наличие названия
         name = (d.get('name') or '').strip()
         if not name:

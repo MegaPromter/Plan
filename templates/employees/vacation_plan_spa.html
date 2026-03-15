@@ -18,6 +18,7 @@
 <button class="btn btn-outline btn-sm" id="vacErrBtn" onclick="openVacErrModal()">
   <i class="fas fa-exclamation-triangle"></i> Ошибки отпусков
 </button>
+<span id="exportBtnContainer"></span>
 {% if request.user|is_writer %}
 <!-- Кнопка добавления нового отпуска (только для редакторов) -->
 <button class="btn btn-primary btn-sm" onclick="openAddVacationModal()">
@@ -497,6 +498,7 @@
 {% block scripts %}
 <!-- Вспомогательные JS-модули -->
 <script src="{% static 'js/utils.js' %}"></script>       <!-- fetchJson, escapeHtml, showToast, debounce -->
+<script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>       <!-- openModal, confirmDialog -->
 <script src="{% static 'js/inline_edit.js' %}"></script>  <!-- InlineEditor (не используется напрямую здесь) -->
 <script>
@@ -1184,6 +1186,43 @@ document.getElementById('vacErrOverlay').addEventListener('click', e => {
   updateSortHeaders();     // Отображаем начальные стрелки сортировки
   await loadDirs();        // Загружаем сотрудников и строим чипы отделов
   await loadVacations();   // Загружаем отпуска и рендерим таблицу
+
+  // Экспорт
+  buildExportDropdown('exportBtnContainer', {
+    pageName: 'Отпуска',
+    columns: [
+      { key: 'executor',   header: 'Сотрудник',       width: 160 },
+      { key: 'dept',       header: 'Отдел',           width: 80 },
+      { key: 'position',   header: 'Должность',       width: 140 },
+      { key: 'date_start', header: 'Дата начала',     width: 100 },
+      { key: 'date_end',   header: 'Дата окончания',  width: 100 },
+      { key: 'notes',      header: 'Примечание',      width: 200 },
+    ],
+    getAllData:      () => vacations.map(v => ({...v, dept: empDeptMap[v.executor]||'', position: empPositionMap[v.executor]||''})),
+    getFilteredData: vacGetFilteredRows,
+  });
 })();
+
+function vacGetFilteredRows() {
+  const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+  const yearF  = document.getElementById('filterYear').value || '';
+  const monthF = document.getElementById('filterMonth').value || '';
+  const errF   = document.getElementById('filterErrors').value || '';
+
+  let out = selectedDepts.size === 0
+    ? vacations.slice()
+    : vacations.filter(v => selectedDepts.has(empDeptMap[v.executor] || ''));
+  if (search) out = out.filter(v => (v.executor||'').toLowerCase().includes(search));
+  if (yearF) out = out.filter(v => (v.date_start||'').startsWith(yearF) || (v.date_end||'').startsWith(yearF));
+  if (monthF) out = out.filter(v => {
+    if (!v.date_start && !v.date_end) return false;
+    const ry = yearF || (v.date_start||v.date_end||'').slice(0,4);
+    const mS = `${ry}-${monthF}-01`, mE = `${ry}-${monthF}-31`;
+    return (v.date_start||'0000-00-00') <= mE && (v.date_end||'9999-99-99') >= mS;
+  });
+  if (errF === 'overlap') out = out.filter(v => !!findOverlap(v.id, v.executor, v.date_start, v.date_end));
+  if (errF === 'dateerr') out = out.filter(v => v.date_start && v.date_end && v.date_start > v.date_end);
+  return out.map(v => ({...v, dept: empDeptMap[v.executor]||'', position: empPositionMap[v.executor]||''}));
+}
 </script>
 {% endblock %}

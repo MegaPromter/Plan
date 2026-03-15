@@ -102,6 +102,29 @@
     {% endif %}
     {% endif %}
 
+    <!-- Настройка темы оформления -->
+    <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Тема оформления</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Светлая или тёмная тема интерфейса</div>
+      </div>
+      <div class="theme-toggle" id="themeToggle" title="Переключить тему" style="position:static;margin:0;">
+        <button data-theme="light" title="Светлая тема">☀</button>
+        <button data-theme="dark" title="Тёмная тема">🌙</button>
+      </div>
+    </div>
+
+    <!-- Кнопка перезапуска обучения -->
+    <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Интерактивное обучение</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Пройдите 12 шагов обучения по всем модулям системы</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="restartTour()">
+        <i class="fas fa-graduation-cap"></i> Пройти обучение
+      </button>
+    </div>
+
   </div>
 </div>
 

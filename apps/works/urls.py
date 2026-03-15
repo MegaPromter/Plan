@@ -19,6 +19,8 @@ urlpatterns = [
     path('production_plan/',    views.ProductionPlanSPAView.as_view(),  name='production_plan_alt'),
     # Производственный календарь (только admin)
     path('work-calendar/',      views.WorkCalendarSPAView.as_view(),    name='work_calendar'),
+    # План командировок
+    path('business-trips/',     views.BusinessTripsSPAView.as_view(),   name='business_trips'),
 
     # ── Стандартные CRUD-маршруты для работ ────────────────────────────────────
 
@@ -53,3 +55,14 @@ urlpatterns = [
     # Редактирование извещения
     path('notices/<int:pk>/edit/', views.NoticeUpdateView.as_view(), name='notice_edit'),
 ]
+
+# ── Демо-страницы для показа улучшений дизайна (только DEBUG) ────────────
+from django.conf import settings as django_settings
+if django_settings.DEBUG:
+    urlpatterns += [
+        path('demo/density/',  views.DemoDensityView.as_view(),  name='demo_density'),
+        path('demo/skeleton/', views.DemoSkeletonView.as_view(), name='demo_skeleton'),
+        path('demo/slideout/', views.DemoSlideoutView.as_view(), name='demo_slideout'),
+        path('demo/trips/<int:num>/', views.DemoTripsView.as_view(), name='demo_trips'),
+        path('demo/pp-filter/<int:num>/', views.DemoPPFilterView.as_view(), name='demo_pp_filter'),
+    ]

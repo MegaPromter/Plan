@@ -72,27 +72,41 @@ function showToast(message, type = 'info', duration = 4000) {
     const toast = document.createElement('div');
 
     const colors = {
-        info:    { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)', text: '#93c5fd' },
-        success: { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  text: '#86efac' },
-        warning: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: '#fcd34d' },
-        error:   { bg: 'rgba(220,38,38,0.92)',   border: 'rgba(255,100,100,0.9)', text: '#ffffff' },
+        info:    { bg: 'rgba(59,130,246,0.22)', border: 'rgba(59,130,246,0.6)', text: '#bfdbfe' },
+        success: { bg: 'rgba(34,197,94,0.22)',  border: 'rgba(34,197,94,0.6)',  text: '#a7f3d0' },
+        warning: { bg: 'rgba(245,158,11,0.92)', border: 'rgba(245,158,11,1)', text: '#ffffff' },
+        error:   { bg: 'rgba(220,38,38,0.95)',   border: 'rgba(255,100,100,1)', text: '#ffffff' },
     };
     const c = colors[type] || colors.info;
 
     toast.style.cssText = `
-        background: ${c.bg}; border: 1px solid ${c.border}; color: ${c.text};
-        padding: 10px 16px; border-radius: 8px; font-size: 13px;
-        backdrop-filter: blur(12px); pointer-events: auto;
+        background: ${c.bg}; border: 1.5px solid ${c.border}; color: ${c.text};
+        padding: 14px 22px; border-radius: 10px; font-size: 15px; font-weight: 500;
+        backdrop-filter: blur(14px); pointer-events: auto;
         animation: toastIn 0.3s ease-out;
-        max-width: 400px; word-wrap: break-word;
+        max-width: 480px; min-width: 240px; word-wrap: break-word;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     `;
     toast.textContent = message;
     container.appendChild(toast);
 
-    setTimeout(() => {
+    let remaining = duration;
+    let startTime = Date.now();
+    let timerId = setTimeout(dismissToast, remaining);
+
+    function dismissToast() {
         toast.style.animation = 'toastOut 0.3s ease-in forwards';
         setTimeout(() => toast.remove(), 300);
-    }, duration);
+    }
+
+    toast.addEventListener('mouseenter', () => {
+        clearTimeout(timerId);
+        remaining -= (Date.now() - startTime);
+    });
+    toast.addEventListener('mouseleave', () => {
+        startTime = Date.now();
+        timerId = setTimeout(dismissToast, remaining);
+    });
 }
 
 // CSS-анимации для тостов
@@ -106,6 +120,24 @@ function showToast(message, type = 'info', duration = 4000) {
     `;
     document.head.appendChild(style);
 })();
+
+
+/* ── Кнопка-загрузка ────────────────────────────────────────────────────── */
+
+function setButtonLoading(btn, loading) {
+    if (loading) {
+        btn._origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        btn.prepend(spinner);
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        if (btn._origHTML !== undefined) btn.innerHTML = btn._origHTML;
+    }
+}
 
 /* ── Debounce ────────────────────────────────────────────────────────────── */
 
@@ -185,4 +217,40 @@ function monthLabel(dateStr) {
 function currentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/* ── Scroll-loader для infinite scroll ─────────────────────────────────── */
+
+/**
+ * Создаёт слушатель прокрутки, вызывающий callback при приближении к низу.
+ * @param {HTMLElement|Window} container — элемент с overflow-y или window
+ * @param {Function} onNearBottom — callback при достижении порога
+ * @param {number} threshold — пикселей до низа для срабатывания (по умолчанию 200)
+ * @returns {Function} dispose — удаляет слушатель
+ */
+function createScrollLoader(container, onNearBottom, threshold = 200) {
+    let _ticking = false;
+    const target = container === window ? window : container;
+
+    function onScroll() {
+        if (_ticking) return;
+        _ticking = true;
+        requestAnimationFrame(() => {
+            _ticking = false;
+            let distToBottom;
+            if (container === window) {
+                distToBottom = document.documentElement.scrollHeight
+                    - window.scrollY - window.innerHeight;
+            } else {
+                distToBottom = container.scrollHeight
+                    - container.scrollTop - container.clientHeight;
+            }
+            if (distToBottom < threshold) onNearBottom();
+        });
+    }
+
+    target.addEventListener('scroll', onScroll, { passive: true });
+    return function dispose() {
+        target.removeEventListener('scroll', onScroll);
+    };
 }

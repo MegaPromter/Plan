@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',  # добавляет объект request в шаблон
                 'django.contrib.auth.context_processors.auth', # добавляет user и perms в шаблон
                 'django.contrib.messages.context_processors.messages',  # добавляет messages в шаблон
+                'apps.accounts.context_processors.active_nav',  # active_nav для подсветки сайдбара
             ],
         },
     },
@@ -94,6 +95,8 @@ DATABASES = {
         default='postgres://postgres:postgres@localhost:5432/planapp_django',  # значение по умолчанию для локальной разработки
     )
 }
+# Переиспользование DB-соединений (10 мин) — без этого каждый запрос открывает новое
+DATABASES['default']['CONN_MAX_AGE'] = 600
 # Django 3.2: явно указываем тип первичного ключа по умолчанию
 # BigAutoField — 64-битное целое (вместо 32-битного AutoField), предотвращает переполнение ID
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -122,13 +125,24 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'                    # куда collectstat
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # WhiteNoise: сжатие + хеш в имени файла
 
 # --- Кэш (используется rate-limiting middleware) -----------------------
-# Кэш в памяти процесса — быстро, но не разделяется между воркерами (достаточно для rate limiting)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # in-memory кэш (не персистентный)
-        'LOCATION': 'planapp-cache',  # уникальный идентификатор пространства имён кэша
+_CACHE_BACKEND = env('CACHE_BACKEND', default='locmem')
+if _CACHE_BACKEND == 'redis':
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': env('REDIS_URL', default='redis://127.0.0.1:6379/0'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'planapp-cache',
+        }
+    }
 
 # --- Безопасность -------------------------------------------------------
 SECURE_CONTENT_TYPE_NOSNIFF = True  # запрет MIME-sniffing: браузер не угадывает тип контента
@@ -175,3 +189,34 @@ if not DEBUG:
     SESSION_COOKIE_SECURE          = True
     # Передавать CSRF cookie только по HTTPS (защита от перехвата)
     CSRF_COOKIE_SECURE             = True
+
+# --- Redis-сессии (если доступен Redis) ------------------------------------
+if _CACHE_BACKEND == 'redis':
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+
+# --- Логирование -----------------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {'level': 'WARNING'},
+        'apps': {'level': 'INFO'},
+    },
+}

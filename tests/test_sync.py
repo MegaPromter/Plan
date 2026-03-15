@@ -149,7 +149,8 @@ class TestDeleteFromSP:
 @pytest.mark.django_db
 class TestPPFieldLocking:
     def test_pp_fields_locked_on_update(self, admin_user, synced_work):
-        """ПП-поля (work_name, description и т.д.) не меняются через СП API."""
+        """ПП-поля (work_name, description и т.д.) не меняются через СП API.
+        Если все переданные поля заблокированы — возвращается 403."""
         client = Client()
         client.force_login(admin_user)
 
@@ -158,6 +159,7 @@ class TestPPFieldLocking:
         original_stage = synced_work.stage_num
         original_task_type = synced_work.task_type
 
+        # Только заблокированные поля → 403
         resp = client.put(
             f'/api/tasks/{synced_work.id}/',
             data=json.dumps({
@@ -170,7 +172,9 @@ class TestPPFieldLocking:
             }),
             content_type='application/json',
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 403
+        data = json.loads(resp.content)
+        assert 'locked_fields' in data
 
         synced_work.refresh_from_db()
         # Заблокированные поля НЕ изменились
@@ -199,7 +203,8 @@ class TestPPFieldLocking:
         assert resp.status_code == 200
 
         synced_work.refresh_from_db()
-        assert synced_work.executor_name_raw == 'Новый Исполнитель'
+        # executor устанавливается через FK; если Employee не найден — None
+        assert synced_work.executor is None  # 'Новый Исполнитель' не существует в Employee
         assert synced_work.date_start == date(2026, 1, 15)
         assert synced_work.date_end == date(2026, 7, 31)
         assert synced_work.plan_hours == {'2026-01': 40, '2026-02': 80}
@@ -259,7 +264,7 @@ class TestSerialization:
         assert 'Персей' in task['justification']
         assert 'Этап 1' in task['justification']
         assert 'Веха 2' in task['justification']
-        assert 'Работа 001' in task['justification']
+        assert '№ работы 001' in task['justification']
 
     def test_sp_deadline_is_own(self, admin_user, pure_sp_work):
         """Для чистой СП-записи deadline = собственный deadline."""

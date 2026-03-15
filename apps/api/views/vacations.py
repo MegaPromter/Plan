@@ -189,6 +189,8 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse({'error': 'Пустой запрос'}, status=400)
 

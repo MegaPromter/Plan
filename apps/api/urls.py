@@ -10,7 +10,7 @@ from django.urls import path
 # Вьюхи справочников (Directory)
 from .views.directories import DirectoryListView, DirectoryCreateView, DirectoryDetailView
 # Вьюхи пользователей (User + Employee)
-from .views.users import UserListView, UserDetailView, UserPasswordResetView
+from .views.users import UserListView, UserDetailView, UserPasswordResetView, DeptEmployeesView
 # Вьюхи делегирований ролей
 from .views.delegations import DelegationListView, DelegationDetailView
 # Публичные вьюхи: справочники для регистрации и сама регистрация
@@ -41,20 +41,33 @@ from .views.vacations import (
     VacationListView, VacationCreateView,
     VacationDetailView, VacationConflictView,
 )
+# Вьюхи командировок
+from .views.business_trips import BusinessTripListView, BusinessTripDetailView
 # Вьюхи журнала извещений
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
-# Вьюхи производственного календаря (WorkCalendar)
+# Вьюхи производственного календаря (WorkCalendar + Holiday)
 from .views.work_calendar import (
     WorkCalendarListView, WorkCalendarCreateView, WorkCalendarDetailView,
+    HolidayListView, HolidayDetailView,
 )
 # Вьюхи для заполнения тестовыми данными (seed)
 from .views.seed import (
     SeedDataView, SeedExecutorsView, SeedVacationsView,
     FillAllView, FillDeptView,
 )
+# Вьюхи зависимостей задач (TaskDependency)
+from .views.dependencies import (
+    TaskDependencyListView, TaskDependencyDetailView,
+    AllDependenciesView, AlignDatesView,
+)
+# Health check
+from .views.health import HealthCheckView
 
 # ── Основные URL-паттерны API ─────────────────────────────────────────────────
 urlpatterns = [
+    # ── Health check ──────────────────────────────────────────────────────
+    path('health/', HealthCheckView.as_view()),
+
     # ── Справочники ──────────────────────────────────────────────────────
     # GET /api/directories/ — список всех записей справочника
     path('directories/',        DirectoryListView.as_view()),
@@ -70,6 +83,8 @@ urlpatterns = [
     path('users/<int:pk>/',     UserDetailView.as_view()),
     # POST /api/users/<pk>/password/ — сброс пароля (admin)
     path('users/<int:pk>/password/', UserPasswordResetView.as_view()),
+    # GET /api/dept_employees/?dept=CODE — сотрудники отдела (для всех авторизованных)
+    path('dept_employees/', DeptEmployeesView.as_view()),
 
     # ── Делегирования ────────────────────────────────────────────────────
     # GET/POST /api/delegations/ — список и создание делегирований
@@ -98,6 +113,16 @@ urlpatterns = [
     path('tasks/<int:pk>/',     TaskDetailView.as_view()),
     # GET /api/tasks/<pk>/executors/ — список исполнителей задачи
     path('tasks/<int:pk>/executors/', TaskExecutorsView.as_view()),
+
+    # ── Зависимости задач ─────────────────────────────────────────────
+    # GET/POST /api/tasks/<pk>/dependencies/ — список и создание зависимостей
+    path('tasks/<int:pk>/dependencies/', TaskDependencyListView.as_view()),
+    # POST /api/tasks/<pk>/align_dates/ — выравнивание дат по зависимостям
+    path('tasks/<int:pk>/align_dates/', AlignDatesView.as_view()),
+    # PUT/DELETE /api/dependencies/<pk>/ — обновление/удаление зависимости
+    path('dependencies/<int:pk>/', TaskDependencyDetailView.as_view()),
+    # GET /api/dependencies/ — все зависимости (для диаграммы Ганта)
+    path('dependencies/', AllDependenciesView.as_view()),
 
     # ── Отчётные документы ──────────────────────────────────────────────
     # GET /api/reports/<task_id>/ — список отчётов по задаче
@@ -149,6 +174,10 @@ urlpatterns = [
     # GET /api/check_vacation_conflict/ — проверка пересечений отпусков
     path('check_vacation_conflict/', VacationConflictView.as_view()),
 
+    # ── Командировки ──────────────────────────────────────────────────
+    path('business_trips/',          BusinessTripListView.as_view()),
+    path('business_trips/<int:pk>/', BusinessTripDetailView.as_view()),
+
     # ── Журнал извещений ────────────────────────────────────────────────
     # GET /api/journal/ — список записей журнала
     path('journal/',            JournalListView.as_view()),
@@ -165,12 +194,24 @@ urlpatterns = [
     # PUT/DELETE /api/work_calendar/<pk>/ — операции с записью календаря (admin)
     path('work_calendar/<int:pk>/', WorkCalendarDetailView.as_view()),
 
+    # ── Нерабочие дни (Holiday) ────────────────────────────────────────
+    # GET/POST /api/holidays/ — список и создание нерабочих дней
+    path('holidays/',          HolidayListView.as_view()),
+    # DELETE /api/holidays/<pk>/ — удаление нерабочего дня (admin)
+    path('holidays/<int:pk>/', HolidayDetailView.as_view()),
+
 ]
 
-# ── Seed-данные (только в DEBUG) ─────────────────────────────────────────────
+# ── Seed-данные и дамп (только в DEBUG) ────────────────────────────────────
 # Импортируем настройки Django для проверки режима DEBUG
 from django.conf import settings
 if settings.DEBUG:
+    # Загрузка дампа данных (только в DEBUG-режиме!)
+    from apps.api.views.load_dump import LoadDumpView
+    urlpatterns += [
+        path('load_dump/', LoadDumpView.as_view()),
+    ]
+
     # В режиме отладки добавляем вспомогательные маршруты для заполнения БД данными
     urlpatterns += [
         # POST /api/seed/ — заполнение базы тестовыми задачами/проектами

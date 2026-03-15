@@ -47,8 +47,9 @@ ROLE_LABELS = {
 
 # Поля, разрешённые для inline-обновления (production_plan)
 # Только эти поля можно обновлять через PUT ?field=... в ПП
+# NB: row_code НЕ входит — генерируется автоматически (generate_row_code)
 PRODUCTION_ALLOWED_FIELDS = {
-    'row_code', 'work_order', 'stage_num', 'milestone_num',
+    'work_order', 'stage_num', 'milestone_num',
     'work_num', 'work_designation', 'work_name',
     'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
     'total_2d', 'total_3d', 'labor', 'center', 'dept',
@@ -60,6 +61,37 @@ PRODUCTION_ALLOWED_FIELDS = {
 VACATION_ALLOWED_FIELDS = {
     'executor', 'date_start', 'date_end', 'notes',
 }
+
+
+# ── Автогенерация row_code ────────────────────────────────────────────────────
+
+def generate_row_code(project):
+    """Атомарно генерирует следующий row_code для проекта.
+    Вызывать внутри transaction.atomic().
+    Формат: «краткое_название_проекта.N» (НИР-11.1, НИР-11.2, …).
+    Удалённые номера не переиспользуются."""
+    if not project:
+        return ''
+    from apps.works.models import Project as ProjectModel
+    try:
+        locked = ProjectModel.objects.select_for_update().get(pk=project.pk)
+    except ProjectModel.DoesNotExist:
+        return ''
+    # Проверяем prefix ДО инкремента — чтобы не тратить seq впустую
+    prefix = (locked.name_short or locked.name_full or '').strip()
+    if not prefix:
+        return ''
+    locked.row_code_seq += 1
+    locked.save(update_fields=['row_code_seq'])
+    return f'{prefix}.{locked.row_code_seq}'
+
+
+# ── IP-адрес клиента ──────────────────────────────────────────────────────────
+
+def get_client_ip(request):
+    """Возвращает IP-адрес клиента из REMOTE_ADDR.
+    X-Forwarded-For не используется — легко подделать."""
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
 # ── Фильтрация по ролям (visibility) ──────────────────────────────────────────
@@ -109,21 +141,21 @@ def get_visibility_filter(user):
             # Отдел не назначен — ничего не показываем
             q = Q(pk__isnull=True)
     elif role == 'sector_head':
-        # Начальник сектора видит свой сектор (или весь отдел если сектор не назначен)
+        # Начальник сектора видит только свой сектор
         if employee.department and employee.sector:
             # Оба поля заполнены — фильтруем по отделу И сектору
             q = Q(department=employee.department, sector=employee.sector)
-        elif employee.department:
-            # Только отдел — видит весь отдел
-            q = Q(department=employee.department)
         else:
-            # Ничего не назначено — ничего не показываем
+            # Сектор или отдел не назначен — ничего не показываем
+            # (sector_head без привязки к сектору не должен видеть весь отдел)
             q = Q(pk__isnull=True)
     else:
-        # user — видит только свои задачи (где он исполнитель или создатель)
-        q = Q(executor=employee) | Q(created_by=employee)
-        # Также учитываем исполнителей, привязанных по фамилии (raw-строка)
-        q = q | Q(executor_name_raw__icontains=employee.last_name)
+        # user — видит задачи своего отдела (как dept_head)
+        if employee.department:
+            q = Q(department=employee.department)
+        else:
+            # Отдел не назначен — видит только свои задачи
+            q = Q(executor=employee) | Q(created_by=employee)
 
     # Добавляем делегирования: временно расширяем видимость на чужие данные
     delegations = RoleDelegation.objects.filter(
@@ -142,8 +174,8 @@ def get_visibility_filter(user):
             # Делегирование по сектору
             q = q | Q(sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            # Делегирование по конкретному исполнителю (по части ФИО)
-            q = q | Q(executor_name_raw__icontains=d.scope_value)
+            # Делегирование по конкретному исполнителю (по фамилии через FK)
+            q = q | Q(executor__last_name__icontains=d.scope_value)
 
     return q
 
@@ -183,17 +215,14 @@ def get_vacation_visibility_filter(user):
         else:
             q = Q(pk__isnull=True)
     elif role == 'sector_head':
-        # Начальник сектора — видит отпуска своего сектора
+        # Начальник сектора — видит отпуска только своего сектора
         if employee.department and employee.sector:
-            # Фильтруем и по отделу, и по сектору
             q = Q(
                 employee__department=employee.department,
                 employee__sector=employee.sector,
             )
-        elif employee.department:
-            # Только отдел
-            q = Q(employee__department=employee.department)
         else:
+            # Сектор или отдел не назначен — ничего не показываем
             q = Q(pk__isnull=True)
     else:
         # Обычный пользователь — видит только свои отпуска
@@ -270,9 +299,9 @@ def validate_plan_hours(ph) -> tuple[dict, str | None]:
         if fv < 0:
             # Отрицательные часы недопустимы
             return {}, f'plan_hours: отрицательное значение для ключа "{k}"'
-        if fv > 0:
-            # Записываем только ненулевые значения (0 часов — нет смысла хранить)
-            clean[k] = fv
+        # Сохраняем все значения включая 0 — явный 0 означает сброс часов;
+        # клиент может проверять наличие ключа в словаре
+        clean[k] = fv
     return clean, None
 
 
@@ -333,6 +362,27 @@ def validate_actions(actions) -> tuple[dict, str | None]:
         return {}, 'actions: ожидается объект'
     # actions валиден — возвращаем как есть
     return actions, None
+
+
+def validate_task_type(value):
+    """
+    Проверяет что task_type входит в справочник Directory(dir_type='task_type').
+    Возвращает (value, None) если валидно, ('', error_msg) если нет.
+    Пустая строка допускается.
+    """
+    if not value or not str(value).strip():
+        return '', None
+    value = str(value).strip()
+    from django.core.cache import cache
+    cache_key = 'valid_task_types'
+    valid = cache.get(cache_key)
+    if valid is None:
+        from apps.works.models import Directory
+        valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
+        cache.set(cache_key, valid, timeout=60)
+    if value not in valid:
+        return '', f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}'
+    return value, None
 
 
 def norm_plan_hours(ph):

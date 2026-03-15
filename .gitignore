@@ -12,6 +12,7 @@ build/
 
 # Virtual environment
 venv/
+venv311/
 env/
 .venv/
 .env.local
@@ -55,4 +56,5 @@ list_users.py
 test_render.py
 test_templates2.py
 planning_system_report.md
+*.docx
 .claude/

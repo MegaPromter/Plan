@@ -184,7 +184,7 @@ async function loadEntries() {
   // Читаем текущее значение фильтра статуса
   const status = document.getElementById('filterStatus').value;
   // Формируем URL с пагинацией и фильтрами
-  let url = `/api/journal/?page=${currentPage}&page_size=${PAGE_SIZE}`;
+  let url = `/api/journal/?page=${currentPage}&per_page=${PAGE_SIZE}`;
   if (status) url += `&status=${status}`;
 
   const data = await fetchJson(url);

@@ -28,7 +28,6 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px;
-  cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   display: flex;
@@ -183,7 +182,7 @@ function renderProjects() {
       </div>` : '';
 
     return `
-      <div class="project-card" onclick="IS_ADMIN && openEditProjectModal(${p.id})">
+      <div class="project-card" onclick="${IS_ADMIN ? `openEditProjectModal(${p.id})` : `showToast('Доступно только Админу','warning')`}" style="cursor:pointer">
         <!-- Краткое наименование (если задано) -->
         ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
         <!-- Полное наименование проекта -->
@@ -268,6 +267,7 @@ function openEditProjectModal(id) {
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);" data-prod-id="${pr.id}">
         <div style="flex:1;">
           <span style="font-size:13px;color:var(--text);">${escapeHtml(pr.name)}</span>
+          ${pr.name_short ? `<span style="font-size:11px;color:var(--accent);margin-left:6px;">${escapeHtml(pr.name_short)}</span>` : ''}
           ${pr.code ? `<span style="font-size:11px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
         </div>
         <!-- Кнопка редактирования изделия (inline-модал) -->
@@ -297,6 +297,7 @@ function openEditProjectModal(id) {
         <!-- Форма добавления нового изделия -->
         <div style="display:flex;gap:8px;margin-top:10px;">
           <input type="text" id="mNewProdName" placeholder="Наименование изделия" style="flex:2;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <input type="text" id="mNewProdShort" placeholder="Краткое" style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
           <input type="text" id="mNewProdCode" placeholder="Шифр" style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
           <button class="btn btn-secondary btn-sm" id="mAddProdBtn" title="Добавить изделие"><i class="fas fa-plus"></i></button>
         </div>
@@ -329,7 +330,7 @@ function openEditProjectModal(id) {
         const prodId = parseInt(btn.getAttribute('data-edit-prod'));
         const updated = projects.find(p => p.id === id);
         const pr = updated && updated.products ? updated.products.find(x => x.id === prodId) : null;
-        if (pr) editProductInline(id, prodId, pr.name, pr.code, refreshProdList);
+        if (pr) editProductInline(id, prodId, pr.name, pr.name_short, pr.code, refreshProdList);
       });
     });
     // Кнопки удаления изделий
@@ -350,8 +351,10 @@ function openEditProjectModal(id) {
   const addBtn = modal.dialog.querySelector('#mAddProdBtn');
   async function doAddProduct() {
     const nameInp = modal.dialog.querySelector('#mNewProdName');
+    const shortInp2 = modal.dialog.querySelector('#mNewProdShort');
     const codeInp = modal.dialog.querySelector('#mNewProdCode');
     const name = nameInp.value.trim();
+    const name_short = shortInp2.value.trim();
     const code = codeInp.value.trim();
     // Наименование обязательно
     if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
@@ -359,10 +362,10 @@ function openEditProjectModal(id) {
     // POST /api/projects/<id>/products/create/
     const resp = await fetchJson(`/api/projects/${id}/products/create/`, {
       method: 'POST',
-      body: JSON.stringify({ name, code }),
+      body: JSON.stringify({ name, name_short, code }),
     });
     if (!resp._error) {
-      nameInp.value = ''; codeInp.value = ''; nameInp.style.borderColor = '';
+      nameInp.value = ''; shortInp2.value = ''; codeInp.value = ''; nameInp.style.borderColor = '';
       await refreshProdList();
     }
     addBtn.disabled = false;
@@ -410,11 +413,12 @@ function openProductsModal(projId) {
       <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);" data-prod-id="${pr.id}">
         <div style="flex:1;">
           <span style="font-size:14px;color:var(--text);">${escapeHtml(pr.name)}</span>
+          ${pr.name_short ? `<span style="font-size:12px;color:var(--accent);margin-left:6px;">${escapeHtml(pr.name_short)}</span>` : ''}
           ${pr.code ? `<span style="font-size:12px;color:var(--muted);margin-left:6px;">${escapeHtml(pr.code)}</span>` : ''}
         </div>
         <!-- Кнопки редактирования и удаления изделия (только для admin) -->
         ${IS_ADMIN ? `
-        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeHtml(escapeJs(pr.name))}', '${escapeHtml(escapeJs(pr.code || ''))}')" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeHtml(escapeJs(pr.name))}', '${escapeHtml(escapeJs(pr.name_short || ''))}', '${escapeHtml(escapeJs(pr.code || ''))}')" title="Редактировать"><i class="fas fa-pen"></i></button>
         <button class="pc-btn danger" onclick="deleteProduct(${projId}, ${pr.id})" title="Удалить"><i class="fas fa-trash"></i></button>
         ` : ''}
       </div>`).join('');
@@ -432,6 +436,7 @@ function openProductsModal(projId) {
         <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Добавить изделие</div>
         <div style="display:flex;gap:8px;">
           <input type="text" id="newProdName" placeholder="Наименование" style="flex:2;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
+          <input type="text" id="newProdShort2" placeholder="Краткое" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
           <input type="text" id="newProdCode" placeholder="Шифр" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;">
           <button class="btn btn-primary btn-sm" id="addProdBtn"><i class="fas fa-plus"></i></button>
         </div>
@@ -446,17 +451,20 @@ function openProductsModal(projId) {
   if (addBtn) {
     async function doAddProduct() {
       const nameInp = modal.dialog.querySelector('#newProdName');
+      const shortInp2 = modal.dialog.querySelector('#newProdShort2');
       const codeInp = modal.dialog.querySelector('#newProdCode');
       const name = nameInp.value.trim();
+      const name_short = shortInp2.value.trim();
       const code = codeInp.value.trim();
       if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
       addBtn.disabled = true;
       const resp = await fetchJson(`/api/projects/${projId}/products/create/`, {
         method: 'POST',
-        body: JSON.stringify({ name, code }),
+        body: JSON.stringify({ name, name_short, code }),
       });
       if (!resp._error) {
         nameInp.value = '';
+        shortInp2.value = '';
         codeInp.value = '';
         nameInp.style.borderColor = '';
         // Перезагружаем проекты и обновляем список изделий в модале
@@ -478,7 +486,7 @@ function openProductsModal(projId) {
 }
 
 /* ── Редактирование изделия с колбэком (вызывается из openEditProjectModal) */
-async function editProductInline(projId, prodId, currentName, currentCode, onSaved) {
+async function editProductInline(projId, prodId, currentName, currentShort, currentCode, onSaved) {
   const modal = openModal({
     title: 'Редактировать изделие',
     width: '400px',
@@ -486,6 +494,10 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
       <div class="modal-form-group">
         <label>Наименование *</label>
         <input type="text" id="eProdNameI" value="${escapeHtml(currentName)}" autofocus>
+      </div>
+      <div class="modal-form-group">
+        <label>Краткое наименование</label>
+        <input type="text" id="eProdShortI" value="${escapeHtml(currentShort || '')}">
       </div>
       <div class="modal-form-group">
         <label>Шифр</label>
@@ -497,18 +509,20 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
   });
 
   const nameInp = modal.dialog.querySelector('#eProdNameI');
+  const shortInp = modal.dialog.querySelector('#eProdShortI');
   const codeInp = modal.dialog.querySelector('#eProdCodeI');
   const saveBtn = modal.dialog.querySelector('#eProdSaveI');
 
   // PUT /api/projects/<projId>/products/<prodId>/
   async function doSave() {
     const name = nameInp.value.trim();
+    const name_short = shortInp.value.trim();
     const code = codeInp.value.trim();
     if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
     saveBtn.disabled = true;
     const resp = await fetchJson(`/api/projects/${projId}/products/${prodId}/`, {
       method: 'PUT',
-      body: JSON.stringify({ name, code }),
+      body: JSON.stringify({ name, name_short, code }),
     });
     if (!resp._error) {
       modal.close();
@@ -523,7 +537,7 @@ async function editProductInline(projId, prodId, currentName, currentCode, onSav
 }
 
 /* ── Редактирование изделия без колбэка (вызывается из openProductsModal) ─ */
-async function editProduct(projId, prodId, currentName, currentCode) {
+async function editProduct(projId, prodId, currentName, currentShort, currentCode) {
   const modal = openModal({
     title: 'Редактировать изделие',
     width: '400px',
@@ -531,6 +545,10 @@ async function editProduct(projId, prodId, currentName, currentCode) {
       <div class="modal-form-group">
         <label>Наименование *</label>
         <input type="text" id="eProdName" value="${escapeHtml(currentName)}">
+      </div>
+      <div class="modal-form-group">
+        <label>Краткое наименование</label>
+        <input type="text" id="eProdShort" value="${escapeHtml(currentShort || '')}">
       </div>
       <div class="modal-form-group">
         <label>Шифр</label>
@@ -542,17 +560,19 @@ async function editProduct(projId, prodId, currentName, currentCode) {
   });
 
   const nameInp = modal.dialog.querySelector('#eProdName');
+  const shortInp = modal.dialog.querySelector('#eProdShort');
   const codeInp = modal.dialog.querySelector('#eProdCode');
   const saveBtn = modal.dialog.querySelector('#eProdSave');
 
   async function doSave() {
     const name = nameInp.value.trim();
+    const name_short = shortInp.value.trim();
     const code = codeInp.value.trim();
     if (!name) { nameInp.style.borderColor = 'var(--danger)'; return; }
     saveBtn.disabled = true;
     const resp = await fetchJson(`/api/projects/${projId}/products/${prodId}/`, {
       method: 'PUT',
-      body: JSON.stringify({ name, code }),
+      body: JSON.stringify({ name, name_short, code }),
     });
     if (!resp._error) {
       modal.close();

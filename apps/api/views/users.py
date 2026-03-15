@@ -16,10 +16,10 @@ from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views import View
 
-from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
+from apps.api.mixins import AdminRequiredJsonMixin, LoginRequiredJsonMixin, parse_json_body
 from apps.api.utils import VALID_ROLES
 from apps.api.audit import log_action
-from apps.employees.models import Employee
+from apps.employees.models import Employee, Department
 from apps.works.models import AuditLog
 
 User = get_user_model()
@@ -73,6 +73,8 @@ class UserListView(AdminRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         username = data.get('username', '').strip()
         password = data.get('password', '')
@@ -149,6 +151,8 @@ class UserDetailView(AdminRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         if not data:
             return JsonResponse(
                 {'error': 'Нет допустимых полей для обновления'}, status=400
@@ -288,6 +292,8 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
 
     def put(self, request, pk):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         new_pw = data.get('password', '')
 
         # Валидация пароля через Django password validators
@@ -321,3 +327,33 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
             request.user.pk, pk,
         )
         return JsonResponse({'ok': True})
+
+
+# ── GET /api/dept_employees/?dept=CODE ───────────────────────────────────────
+
+class DeptEmployeesView(LoginRequiredJsonMixin, View):
+    """
+    GET -- список сотрудников отдела (для выпадающих списков).
+    Доступен всем авторизованным пользователям.
+    Параметр: ?dept=CODE (код отдела).
+    """
+
+    def get(self, request):
+        dept_code = request.GET.get('dept', '').strip()
+        if not dept_code:
+            return JsonResponse([], safe=False)
+
+        employees = (
+            Employee.objects
+            .filter(department__code=dept_code, is_active=True)
+            .select_related('user')
+            .order_by('last_name', 'first_name')
+        )
+        result = []
+        for emp in employees:
+            result.append({
+                'id': emp.user_id,
+                'full_name': emp.full_name,
+                'short_name': emp.short_name,
+            })
+        return JsonResponse(result, safe=False)

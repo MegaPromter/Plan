@@ -32,7 +32,7 @@ function openModal(options = {}) {
     const dialog = document.createElement('div');
     dialog.className = 'modal-dialog';
     dialog.style.cssText = `
-        background: var(--surface, #161b27); border: 1px solid rgba(255,255,255,0.08);
+        background: var(--surface, #ffffff); border: 1px solid var(--border, #e2e6ed);
         border-radius: 12px; width: ${width}; max-width: 95vw;
         box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         animation: modalSlideIn 0.2s ease-out;
@@ -43,10 +43,10 @@ function openModal(options = {}) {
     const header = document.createElement('div');
     header.style.cssText = `
         display: flex; align-items: center; justify-content: space-between;
-        padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 16px 20px; border-bottom: 1px solid var(--border, #e2e6ed);
     `;
     header.innerHTML = `
-        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text,#e2e8f0);"></h3>
+        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text,#1e293b);"></h3>
         <button class="modal-close-btn" style="
             background:none;border:none;color:var(--muted,#64748b);
             font-size:20px;cursor:pointer;padding:4px 8px;
@@ -73,7 +73,7 @@ function openModal(options = {}) {
         const footerDiv = document.createElement('div');
         footerDiv.className = 'modal-footer';
         footerDiv.style.cssText = `
-            padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 12px 20px; border-top: 1px solid var(--border, #e2e6ed);
             display: flex; justify-content: flex-end; gap: 8px;
         `;
         footerDiv.innerHTML = footer;
@@ -82,6 +82,9 @@ function openModal(options = {}) {
 
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
+
+    // Блокируем прокрутку страницы за модалкой
+    document.body.style.overflow = 'hidden';
 
     // Закрытие
     let closed = false;
@@ -92,6 +95,10 @@ function openModal(options = {}) {
         backdrop.style.animation = 'modalFadeOut 0.15s ease-in forwards';
         setTimeout(() => {
             backdrop.remove();
+            // Восстанавливаем прокрутку если все модалки закрыты
+            if (!document.querySelector('.modal-backdrop')) {
+                document.body.style.overflow = '';
+            }
             if (onClose) onClose();
         }, 150);
     };
@@ -131,7 +138,12 @@ function closeModal(idOrEl) {
     }
     if (el) {
         el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
-        setTimeout(() => el.remove(), 150);
+        setTimeout(() => {
+            el.remove();
+            if (!document.querySelector('.modal-backdrop')) {
+                document.body.style.overflow = '';
+            }
+        }, 150);
     }
 }
 
@@ -140,6 +152,7 @@ function closeAllModals() {
         el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
         setTimeout(() => el.remove(), 150);
     });
+    setTimeout(() => { document.body.style.overflow = ''; }, 150);
 }
 
 /* ── CSS-анимации для модалок ──────────────────────────────────────────── */
@@ -152,7 +165,7 @@ function closeAllModals() {
         @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalFadeOut { from { opacity: 1; } to { opacity: 0; } }
         @keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-close-btn:hover { background: rgba(255,255,255,0.1) !important; color: var(--text,#e2e8f0) !important; }
+        .modal-close-btn:hover { background: var(--surface2, #f8f9fb) !important; color: var(--text, #1e293b) !important; }
     `;
     document.head.appendChild(style);
 })();
@@ -177,7 +190,7 @@ function confirmDialog(message, title = 'Подтверждение') {
         }
 
         const msgEl = document.createElement('p');
-        msgEl.style.cssText = 'color:var(--text,#e2e8f0);margin:0;';
+        msgEl.style.cssText = 'color:var(--text,#1e293b);margin:0;';
         msgEl.textContent = message;
 
         const modal = openModal({
@@ -187,8 +200,8 @@ function confirmDialog(message, title = 'Подтверждение') {
             footer: `
                 <button class="btn btn-outline modal-cancel" style="
                     padding:7px 16px;border-radius:6px;font-size:14px;cursor:pointer;
-                    background:transparent;color:var(--text,#e2e8f0);
-                    border:1px solid var(--border2,#3a4a63);font-family:inherit;
+                    background:transparent;color:var(--text,#1e293b);
+                    border:1px solid var(--border2,#c8d0dc);font-family:inherit;
                     transition:all 0.15s;
                 ">Отмена</button>
                 <button class="btn btn-primary modal-confirm" style="

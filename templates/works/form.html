@@ -25,17 +25,16 @@
       <div class="alert alert-error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
     {% endif %}
 
-    <!-- Тип источника (task — план/отчёт, pp — производственный план) и вид работы -->
+    <!-- Тип задачи и флаги видимости -->
     <div class="form-row">
       <div class="form-group">
-        <label>{{ form.source_type.label }}</label>
-        {{ form.source_type }}
-        {% if form.source_type.errors %}<span class="field-error">{{ form.source_type.errors|join:", " }}</span>{% endif %}
+        <label>{{ form.task_type.label }}</label>
+        {{ form.task_type }}
+        {% if form.task_type.errors %}<span class="field-error">{{ form.task_type.errors|join:", " }}</span>{% endif %}
       </div>
-      <div class="form-group">
-        <label>{{ form.work_type.label }}</label>
-        {{ form.work_type }}
-        {% if form.work_type.errors %}<span class="field-error">{{ form.work_type.errors|join:", " }}</span>{% endif %}
+      <div class="form-group" style="display:flex;gap:16px;align-items:center;padding-top:24px;">
+        <label><input type="checkbox" name="show_in_plan" {% if form.show_in_plan.value %}checked{% endif %}> План (СП)</label>
+        <label><input type="checkbox" name="show_in_pp" {% if form.show_in_pp.value %}checked{% endif %}> Производственный план (ПП)</label>
       </div>
     </div>
 
@@ -89,13 +88,6 @@
       </div>
     </div>
 
-    <!-- Имя исполнителя вручную (если не зарегистрирован в системе) -->
-    <div class="form-group">
-      <label>{{ form.executor_name_raw.label }}</label>
-      {{ form.executor_name_raw }}
-      <!-- Подсказка: используется когда исполнитель не в базе сотрудников -->
-      <small style="color:var(--muted);font-size:12px;">Если исполнитель не зарегистрирован в системе</small>
-    </div>
 
     <!-- Дата начала и дата окончания работы -->
     <div class="form-row">

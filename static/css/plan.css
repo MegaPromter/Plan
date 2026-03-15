@@ -1,0 +1,653 @@
+/* ══════════════════════════════════════════════════════════════════════
+   plan.css — Стили страницы «Сводное планирование» (План/отчёт)
+   Подключается через {% block styles %} в plan_spa.html
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── План-специфичные CSS-переменные ──────────────────────────────────── */
+:root {
+  --header-h: 56px;
+  --toolbar-h: 100px;
+  --search-h: 42px;
+  --tabs-h: 38px;
+  --sidebar-width: 260px;
+  --muted2: #64748b;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── Сброс page-content padding и main-content margin ── */
+/* План использует fixed-позиционирование для topbar/toolbar/searchbar,
+   поэтому main-content margin-left не нужен (fixed элементы используют left:var(--sidebar-width)).
+   Для table-wrap/view-tabs/gantt внутри main-content — margin-left:0, т.к. родитель уже смещён. */
+.page-content { padding:0; }
+.main-content { margin-left:0; }
+.main-content.sidebar-collapsed { margin-left:0; }
+
+/* ── Топбар: фиксированное позиционирование (план-специфичное) ─────── */
+.topbar { position:fixed; top:0; left:var(--sidebar-width); right:0; z-index:100; height:var(--header-h);
+  background:var(--topbar-bg); border-bottom:1px solid var(--nav-border);
+  display:flex; align-items:center; padding:0 20px; gap:16px; transition:left 0.3s ease; }
+.main-content.sidebar-collapsed .topbar { left:0; }
+
+/* Распорка между левой и правой частями топбара */
+.topbar-sep { flex:1; }
+
+/* ── Кнопки топбара (план-специфичные) ────────────────────────────────── */
+.topbar-btn { padding:6px 14px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);
+  background:transparent; color:var(--nav-text2); font-family:var(--font);
+  font-size:14px; cursor:pointer; transition:all 0.15s; }
+.topbar-btn:hover { border-color:rgba(255,255,255,0.45); color:#fff; }
+.topbar-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.topbar-btn.primary:hover { background:var(--accent2); }
+.topbar-btn.danger { border-color:rgba(220,38,38,0.5); color:#f87171; }
+
+/* ── Тулбар: фильтр по году/месяцу и сводка плана ─────────────────── */
+.toolbar { position:fixed; top:var(--header-h); left:var(--sidebar-width); right:0; z-index:90;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; transition:left 0.3s ease; }
+.main-content.sidebar-collapsed .toolbar { left:0; }
+.cal-block { display:flex; align-items:center; gap:8px; }
+.cal-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; font-weight:600; }
+.cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
+.cal-nav:hover { border-color:var(--accent); color:var(--accent); }
+.cal-display { min-width:130px; text-align:center; font-size:16px; font-weight:600;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 14px; color:var(--text); }
+.cal-months { display:flex; gap:4px; flex-wrap:wrap; }
+.cal-month { padding:4px 10px; border-radius:5px; font-size:13px; cursor:pointer;
+  border:1px solid transparent; color:var(--text2); transition:all 0.15s; }
+.cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
+.cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-top:4px; }
+.dept-chip { padding:3px 10px; border-radius:5px; font-size:12px; cursor:pointer;
+  border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap; }
+.dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
+.dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.cal-clear { font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
+.cal-clear:hover { color:var(--accent); }
+
+/* ── Строка поиска ────────────────────────────────────────────────────── */
+.searchbar { position:fixed; top:calc(var(--header-h) + var(--toolbar-h)); left:var(--sidebar-width); right:0; z-index:80;
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:6px 20px; display:flex; align-items:center; gap:10px; height:var(--search-h); transition:left 0.3s ease; }
+.main-content.sidebar-collapsed .searchbar { left:0; }
+.search-icon { color:var(--muted); font-size:16px; }
+.search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
+.search-input::placeholder { color:var(--muted); }
+.search-count { font-size:13px; color:var(--muted); font-family:var(--mono); }
+
+/* ── Таблица задач ────────────────────────────────────────────────────── */
+.table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + var(--tabs-h)); margin-left:var(--sidebar-width);
+  overflow-x:auto; overflow-y:auto; padding-bottom:52px;
+  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - var(--tabs-h)); transition:margin-left 0.3s ease; }
+.main-content.sidebar-collapsed .table-wrap { margin-left:0; }
+table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
+thead th {
+  z-index: 10;
+  background: var(--th-bg);
+  border-bottom: 2px solid var(--border2);
+  border-right: 1px solid var(--border2);
+  padding: 0;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border2);
+}
+thead tr:nth-child(1) { position:sticky; top:0; z-index:12; }
+thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
+.th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:var(--th-color);
+  letter-spacing:0.05em; text-transform:uppercase;
+  display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
+.th-num { background:color-mix(in srgb, var(--th-bg), var(--border2) 30%); min-width:40px; width:40px; }
+
+/* ── Ручка изменения ширины колонки ───────────────────────────────────── */
+.col-resize { width:10px; cursor:col-resize; flex-shrink:0;
+  border-right:2px solid transparent; transition:border-color 0.15s;
+  position:absolute; right:-5px; top:0; bottom:0; z-index:20; }
+.col-resize:hover { border-color:var(--accent); }
+
+/* ── Строки тела таблицы ──────────────────────────────────────────────── */
+tbody tr { border-bottom:1px solid var(--border2); transition:background 0.12s; }
+tbody tr:nth-child(even) { background:var(--row-even); }
+tbody tr:nth-child(odd)  { background:var(--row-odd); }
+tbody tr:hover { background:var(--row-hover) !important; }
+tbody tr.new-row { background:rgba(22,163,74,0.06) !important; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1} }
+td { border-right:1px solid var(--border2); padding:0; vertical-align:middle; text-align:center; overflow:hidden; }
+td:not(.actions-cell):not(.td-date) { contain:paint; }
+td.td-date { overflow:visible; contain:none; }
+
+/* ── Ячейка номера строки (sticky) ────────────────────────────────────── */
+td.num-cell { text-align:center; color:var(--text2); font-family:var(--mono);
+  font-size:var(--td-font); font-weight:600; padding:var(--td-pad-y) 4px; width:44px; min-width:44px; background:var(--row-num-bg);
+  border-right:2px solid var(--border2); font-variant-numeric:tabular-nums;
+  position:sticky; left:0; z-index:2; }
+thead th:first-child { position:sticky; left:0; z-index:13; }
+
+/* ── Редактируемые ячейки ─────────────────────────────────────────────── */
+.cell-edit { width:100%; min-height:36px; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:var(--td-font); resize:none; overflow:hidden; display:block; text-align:center; }
+.cell-edit:focus { background:rgba(59,130,246,0.06); }
+.cell-edit.date { font-family:var(--mono); font-size:13px; min-width:130px; }
+.cell-edit.date::-webkit-calendar-picker-indicator { display:none; }
+.cell-edit.date-pick::-webkit-calendar-picker-indicator { display:inline-block; cursor:pointer; }
+.date-display { font-family:var(--mono); font-size:var(--td-font); color:var(--text); display:block; padding:var(--td-pad-y) var(--td-pad-x); white-space:nowrap; }
+
+/* ── Select в ячейке ──────────────────────────────────────────────────── */
+.cell-select { width:100%; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:var(--td-font); cursor:pointer; text-align:center;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
+.cell-select:focus { background-color:rgba(59,130,246,0.06); }
+.cell-select option { background:var(--surface); color:var(--text); }
+
+/* ── Кнопки действий в строке таблицы ─────────────────────────────────── */
+.btn-edit-row { padding:4px 8px; border-radius:5px; border:1px solid var(--border2);
+  background:transparent; color:var(--text2); font-size:14px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.btn-edit-row:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+.btn-report { padding:4px 10px; border-radius:5px; border:1px solid var(--accent);
+  background:var(--accent-glow); color:var(--accent); font-size:13px;
+  cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
+.btn-report:hover { background:var(--accent); color:#fff; }
+.btn-report.has-report { background:rgba(34,197,94,0.35); border-color:rgba(22,163,74,0.7); color:#15803d; font-weight:600; }
+.btn-report.has-report:hover { background:rgba(34,197,94,0.5); }
+.btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(220,38,38,0.3);
+  background:transparent; color:var(--danger); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.btn-del:hover { background:rgba(220,38,38,0.08); }
+.btn-reset-pw { padding:4px 8px; border-radius:5px; border:1px solid rgba(217,119,6,0.3);
+  background:transparent; color:var(--warning); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; margin-right:4px; }
+.btn-reset-pw:hover { background:rgba(217,119,6,0.08); }
+.actions-cell { padding:6px 6px; display:flex; gap:3px; align-items:center; flex-wrap:nowrap; width:190px; min-width:190px; }
+
+/* ── Бейджи типа задачи (rc = row code) ───────────────────────────────── */
+.rc-type-badge { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; white-space:nowrap; cursor:default; }
+.rc-type-нов  { background:rgba(22,163,74,0.1); color:#16a34a; }
+.rc-type-корр { background:rgba(217,119,6,0.1); color:#b45309; }
+.rc-type-разр { background:rgba(67,56,202,0.1); color:#6366f1; }
+.rc-type-окан { background:rgba(139,92,246,0.1); color:#7c3aed; }
+
+/* ── Tooltip бейджей типа задачи ──────────────────────────────────────── */
+.rc-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; color:#fff; }
+.rc-tooltip.visible { opacity:1; }
+.rc-tooltip::after { content:''; position:absolute; left:50%; top:100%;
+  transform:translateX(-50%); border:5px solid transparent; }
+.rc-tooltip.tip-нов  { background:rgba(22,101,52,0.55); }
+.rc-tooltip.tip-нов::after  { border-top-color:rgba(22,101,52,0.55); }
+.rc-tooltip.tip-корр { background:rgba(146,64,14,0.55); }
+.rc-tooltip.tip-корр::after { border-top-color:rgba(146,64,14,0.55); }
+.rc-tooltip.tip-разр { background:rgba(67,56,202,0.55); }
+.rc-tooltip.tip-разр::after { border-top-color:rgba(67,56,202,0.55); }
+.rc-tooltip.tip-окан { background:rgba(109,40,217,0.55); }
+.rc-tooltip.tip-окан::after { border-top-color:rgba(109,40,217,0.55); }
+
+/* ── Зависимости (dep) ────────────────────────────────────────────────── */
+.btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);
+  background:transparent; color:#7c3aed; font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
+.btn-deps:hover { background:rgba(139,92,246,0.1); }
+.dep-badge { display:inline-block; background:rgba(139,92,246,0.12); color:#7c3aed; font-size:13px;
+  font-weight:600; padding:2px 8px; border-radius:10px; font-family:var(--mono); min-width:22px; text-align:center; }
+.dep-badge.zero { background:transparent; color:var(--muted); font-weight:400; }
+.deps-modal { max-width:700px; width:95vw; }
+.deps-table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
+.deps-table th, .deps-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.deps-table th { background:var(--surface2); font-weight:600; color:var(--text2); font-size:13px; }
+.deps-table td { color:var(--text); }
+.deps-table .dep-type-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:12px;
+  font-weight:600; font-family:var(--mono); background:rgba(37,99,235,0.1); color:var(--accent); }
+.deps-add-form { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; padding:12px; background:var(--surface2); border-radius:8px; margin-top:12px; }
+.deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
+.deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
+  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); }
+.deps-section-title { font-size:15px; font-weight:600; color:var(--text); margin:16px 0 8px; display:flex; align-items:center; gap:6px; }
+.deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
+  border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
+.deps-align-bar .warn-icon { font-size:20px; }
+.deps-align-bar .warn-text { flex:1; font-size:14px; color:var(--text2); }
+
+/* ── Searchable dropdown ──────────────────────────────────────────────── */
+.search-dropdown { position:relative; }
+.search-dropdown-input { width:100%; padding:6px 30px 6px 10px; border:1px solid var(--border); border-radius:6px;
+  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); box-sizing:border-box; }
+.search-dropdown-input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 2px rgba(37,99,235,0.15); }
+.search-dropdown-arrow { position:absolute; right:8px; top:50%; transform:translateY(-50%); pointer-events:none;
+  font-size:10px; color:var(--muted); }
+.search-dropdown-list { position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto;
+  background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 6px 6px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12); z-index:300; display:none; }
+.search-dropdown-list.open { display:block; }
+.search-dropdown-item { padding:6px 10px; font-size:14px; cursor:pointer; color:var(--text); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.search-dropdown-item:hover, .search-dropdown-item.highlighted { background:rgba(37,99,235,0.08); }
+.search-dropdown-item.selected { background:rgba(37,99,235,0.12); font-weight:600; }
+.search-dropdown-empty { padding:8px 10px; font-size:13px; color:var(--muted); font-style:italic; }
+
+/* ── Табы Таблица/Гант ────────────────────────────────────────────────── */
+.view-tabs { display:flex; gap:0; margin-left:var(--sidebar-width); padding:0 20px; background:var(--surface);
+  border-bottom:1px solid var(--border); position:fixed; top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h));
+  left:0; right:0; z-index:89; height:38px; align-items:center; }
+.main-content.sidebar-collapsed .view-tabs { margin-left:0; }
+.view-tab { padding:0 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
+  background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
+.view-tab:hover { color:var(--text); background:var(--surface2); }
+.view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ── Гант ─────────────────────────────────────────────────────────────── */
+.gantt-scale-group { display:inline-flex; gap:0; margin-left:auto; align-items:stretch; }
+.gantt-scale-btn { padding:0 12px; font-size:12px; font-weight:500; color:var(--text2); cursor:pointer;
+  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
+.gantt-scale-btn:hover { color:var(--text); background:var(--surface2); }
+.gantt-scale-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.gantt-filter-btn { padding:0 14px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer;
+  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
+.gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
+.gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
+#ganttContainer { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + var(--tabs-h)); margin-left:var(--sidebar-width);
+  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - var(--tabs-h)); display:none; }
+.main-content.sidebar-collapsed #ganttContainer { margin-left:0; }
+
+/* ── PP-locked (задачи из Производственного плана) ─────────────────── */
+tr.pp-locked .actions-cell { background:rgba(59,130,246,0.03) !important; }
+tr.pp-locked:hover .actions-cell { background:rgba(59,130,246,0.07) !important; }
+tr.pp-locked { background: rgba(59,130,246,0.03); }
+tr.pp-locked .cell-edit[readonly],
+tr.pp-locked .cell-edit:disabled {
+  background: transparent; border-color: transparent;
+  color: var(--text); cursor: default; resize: none; pointer-events: none;
+}
+tr.pp-locked .cell-select:disabled {
+  background: transparent; border-color: transparent;
+  color: var(--text); cursor: default; pointer-events: none; opacity: 1;
+  appearance: none; -webkit-appearance: none;
+}
+tr.pp-locked .pp-lock-badge {
+  font-size: 14px; color: var(--accent); opacity: 0.9;
+  display: block; text-align: center; line-height: 1.2;
+  margin-top: 4px; letter-spacing: 0.02em; cursor: default; font-weight: 600;
+}
+.pp-tooltip { position:fixed; padding:6px 14px; border-radius:6px; font-size:13px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; background:rgba(67,56,202,0.55); color:#fff; }
+.pp-tooltip.visible { opacity:1; }
+.pp-tooltip::after { content:''; position:absolute; left:-10px; top:50%;
+  transform:translateY(-50%); border:5px solid transparent; border-right-color:rgba(67,56,202,0.55); }
+.pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
+  border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
+.pp-edit-hint b { color:var(--accent); }
+
+/* ── Фиксированная нижняя панель добавления задачи ────────────────────── */
+.add-row-wrap { padding:12px 20px; background:var(--surface2); border-top:1px solid var(--border);
+  position:fixed; bottom:0; left:var(--sidebar-width); right:0; z-index:10000; }
+.main-content.sidebar-collapsed .add-row-wrap { left:0; }
+.btn-add { padding:7px 18px; border-radius:6px; border:1px dashed var(--border2);
+  background:transparent; color:var(--muted2); font-family:var(--font); font-size:16px; cursor:pointer; transition:all 0.15s; }
+.btn-add:hover { border-color:var(--success); color:var(--success); }
+
+/* ── Модальные окна (общие стили для план-модалов) ─────────────────── */
+.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  width:95vw; max-width:1100px; max-height:90vh; display:flex; flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,0.15); }
+.modal-header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-title { font-size:19px; font-weight:600; }
+.modal-task-ref { font-size:15px; color:var(--muted); font-family:var(--mono); }
+.modal-close { width:30px; height:30px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--muted2); cursor:pointer; font-size:20px;
+  display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.modal-close:hover { border-color:var(--danger); color:var(--danger); }
+.modal-body { flex:1; overflow:auto; padding:16px 24px; }
+.modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+
+/* ── Таблица отчёта ───────────────────────────────────────────────────── */
+.report-table-wrap { overflow-x:auto; }
+.report-table { border-collapse:collapse; min-width:0; font-size:13px; }
+.report-table th { background:var(--surface2); border:1px solid var(--border); padding:6px 4px;
+  font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.02em;
+  text-align:center; word-break:break-word; }
+.report-table td { border:1px solid var(--border); padding:0; vertical-align:middle; overflow:hidden; text-align:center; }
+.report-table .r-cell { width:100%; padding:8px 6px; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:13px; min-height:34px; resize:none; overflow:hidden; display:block; word-break:break-word; box-sizing:border-box; text-align:center; }
+.report-table .r-cell:focus { background:var(--accent-light); }
+.report-table .r-cell-date { min-height:34px; height:34px; cursor:pointer; }
+.report-table .r-cell-select { height:34px; appearance:auto; cursor:pointer; }
+.report-table td.r-td-disabled {
+  background:var(--surface2) !important;
+  padding:0;
+}
+.report-table .r-cell-disabled {
+  background:var(--surface2) !important;
+  color:var(--muted) !important;
+  border-color:transparent !important;
+  cursor:not-allowed !important;
+  pointer-events:none;
+  width:100%; box-sizing:border-box;
+  opacity:1 !important;
+}
+.r-save { padding:3px 9px; border-radius:4px; border:none;
+  background:var(--success); color:#fff; font-size:14px; cursor:pointer; font-family:var(--font); font-weight:700; margin-right:2px; }
+.r-save:hover { opacity:0.85; }
+.r-save:disabled { opacity:0.5; cursor:default; }
+.r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
+.r-del:hover { background:rgba(239,68,68,0.1); }
+
+/* ── Таблица пользователей (модал управления аккаунтами) ──────────────── */
+.users-table { width:100%; border-collapse:collapse; font-size:17px; min-width:unset; }
+.users-table th { padding:8px 12px; text-align:left; font-size:15px; color:var(--muted);
+  border-bottom:1px solid var(--border); text-transform:uppercase; }
+.users-table td { padding:8px 12px; border-bottom:1px solid var(--border); }
+
+/* ── Кнопка «Ошибки планирования» (topbar) ────────────────────────────── */
+.topbar-btn.errors { border-color:#f59e0b; color:#f59e0b; position:relative; }
+.topbar-btn.errors:hover { background:#f59e0b22; }
+.topbar-btn.errors.has-errors { border-color:var(--danger); color:var(--danger); animation:pulse-err 2s infinite; }
+.topbar-btn.errors.no-errors { border-color:#22c55e; color:#22c55e; }
+@keyframes pulse-err {
+  0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); }
+  50%      { box-shadow:0 0 0 4px rgba(239,68,68,0.25); }
+}
+.err-badge { display:inline-block; background:var(--danger); color:#fff;
+  border-radius:10px; font-size:14px; padding:1px 5px; margin-left:4px; font-weight:700; }
+
+/* ── Модал «Ошибки планирования» (pe = Planning Errors) ───────────────── */
+.pe-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.pe-overlay.open { opacity:1; pointer-events:all; }
+.pe-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  width:780px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
+.pe-header { padding:18px 24px 12px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; }
+.pe-title { font-size:20px; font-weight:700; color:var(--text); }
+.pe-meta { font-size:16px; color:var(--muted); margin-top:3px; }
+.pe-body { overflow-y:auto; flex:1; }
+.pe-section { border-bottom:1px solid var(--border); }
+.pe-section-hdr { padding:12px 20px; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; user-select:none; background:var(--surface2); }
+.pe-section-hdr:hover { background:var(--accent-light); }
+.pe-section-title { font-size:17px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+.pe-count-badge { background:var(--danger); color:#fff; border-radius:8px;
+  font-size:14px; padding:2px 7px; font-weight:700; }
+.pe-count-badge.warn { background:#f59e0b; }
+.pe-count-badge.ok { background:#22c55e; }
+.pe-section-body { display:none; }
+.pe-section-body.open { display:block; }
+.pe-item { padding:10px 24px; border-bottom:1px solid var(--border); display:flex;
+  align-items:flex-start; gap:12px; }
+.pe-item:last-child { border-bottom:none; }
+.pe-item-info { flex:1; }
+.pe-item-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.pe-item-meta { font-size:15px; color:var(--muted); }
+.pe-item-meta span { color:#f87171; font-weight:600; }
+.pe-item-actions { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.pe-btn { padding:4px 10px; border-radius:5px; font-size:15px; font-family:var(--font);
+  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
+  color:var(--text); transition:all 0.15s; }
+.pe-btn:hover { border-color:var(--accent); color:var(--accent); }
+.pe-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.pe-btn.primary:hover { background:var(--accent2); }
+.pe-footer { padding:12px 24px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; }
+.pe-last-check { font-size:15px; color:var(--muted); }
+
+/* ── Модал проверки начала месяца (month check) ───────────────────────── */
+.month-check-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
+  display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.month-check-overlay.open { opacity:1; pointer-events:all; }
+.month-check-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  width:700px; max-width:95vw; max-height:88vh; display:flex; flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
+.month-check-header { padding:18px 24px 14px; border-bottom:1px solid var(--border); }
+.month-check-title { font-size:20px; font-weight:700; color:var(--text); }
+.month-check-sub { font-size:16px; color:var(--muted); margin-top:4px; }
+.month-check-body { overflow-y:auto; flex:1; padding:0; }
+.mcc-task { border-bottom:1px solid var(--border); padding:16px 24px; }
+.mcc-task:last-child { border-bottom:none; }
+.mcc-task-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.mcc-task-meta { font-size:15px; color:var(--muted); margin-bottom:12px; }
+.mcc-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.mcc-btn { padding:6px 14px; border-radius:6px; font-size:16px; font-family:var(--font);
+  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
+  color:var(--text); transition:all 0.15s; white-space:nowrap; }
+.mcc-btn:hover { border-color:var(--accent); color:var(--accent); }
+.mcc-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.mcc-btn.primary:hover { background:var(--accent2); }
+.mcc-btn.danger { border-color:var(--danger); color:var(--danger); }
+.mcc-btn.danger:hover { background:var(--danger); color:#fff; }
+.mcc-btn.done { border-color:#22c55e; color:#22c55e; opacity:0.5; cursor:default; }
+.mcc-postpone-form { margin-top:10px; padding:12px; background:var(--bg);
+  border-radius:8px; border:1px solid var(--border); display:none; }
+.mcc-postpone-form.open { display:block; }
+.mcc-form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end; }
+.mcc-form-field { display:flex; flex-direction:column; gap:4px; }
+.mcc-form-field label { font-size:14px; color:var(--muted); text-transform:uppercase; font-weight:600; }
+.mcc-form-field input, .mcc-form-field select { padding:5px 8px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:5px; color:var(--text);
+  font-family:var(--font); font-size:16px; outline:none; }
+.mcc-form-field input:focus, .mcc-form-field select:focus { border-color:var(--accent); }
+.month-check-footer { padding:12px 24px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.mcc-progress { font-size:16px; color:var(--muted); }
+
+/* ── Мульти-фильтр колонок (mf = multifilter) ────────────────────────── */
+.mf-wrap { position:relative; width:100%; }
+.mf-trigger { width:100%; padding:4px 22px 4px 6px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:4px; color:var(--text);
+  font-family:var(--font); font-size:15px; outline:none; cursor:pointer;
+  text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:border-color 0.15s; box-sizing:border-box; }
+.mf-trigger.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+.mf-trigger::after { content:"\25BE"; position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  font-size:13px; color:var(--muted); pointer-events:none; }
+.mf-dropdown { position:fixed; z-index:9999; min-width:160px; max-width:240px;
+  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); padding:6px 0; display:none; max-height:260px; overflow-y:auto; }
+.mf-dropdown.open { display:block; }
+.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-size:15px; padding:3px 6px;
+  outline:none; font-family:var(--font); box-sizing:border-box; }
+.mf-option { display:flex; align-items:center; gap:7px; padding:5px 10px;
+  cursor:pointer; font-size:16px; color:var(--text); transition:background 0.1s; }
+.mf-option:hover { background:var(--surface2); }
+.mf-option input[type=checkbox] { accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+.mf-actions { display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-btn { flex:1; padding:3px 0; font-size:14px; border-radius:4px; border:1px solid var(--border);
+  background:transparent; color:var(--muted); cursor:pointer; font-family:var(--font); }
+.mf-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── Переключатель режима фильтра ─────────────────────────────────────── */
+.filter-mode-toggle { display:flex; align-items:center; gap:6px; font-size:15px;
+  color:var(--muted); white-space:nowrap; margin-left:8px; flex-shrink:0; }
+.filter-mode-toggle input[type=checkbox] { accent-color:var(--accent); cursor:pointer; }
+.filter-mode-toggle label { cursor:pointer; user-select:none; }
+
+/* ── Блок «Суммарная трудоёмкость» в тулбаре ─────────────────────────── */
+.plan-summary { display:flex; align-items:center; gap:10px; margin-left:auto;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  padding:8px 16px; flex-shrink:0; }
+.plan-summary-label { font-size:15px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:0.06em; font-weight:600; white-space:nowrap; }
+.plan-summary-value { font-size:26px; font-weight:700; color:var(--accent);
+  font-family:var(--mono); white-space:nowrap; }
+.plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
+
+/* ── Строка фильтров под заголовками колонок ──────────────────────────── */
+.filter-row { position:sticky; top:73px; z-index:10; }
+.filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
+.col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box; text-align:center; }
+.col-filter:focus { border-color:var(--accent); background:var(--accent-light); }
+.col-filter.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
+.filter-clear-btn { width:20px; height:20px; border-radius:3px; border:none; background:transparent;
+  color:var(--muted); cursor:pointer; font-size:16px; padding:0; line-height:1;
+  display:none; align-items:center; justify-content:center; flex-shrink:0; }
+.filter-clear-btn.visible { display:flex; }
+.filter-clear-btn:hover { color:var(--danger); }
+.filter-cell { display:flex; align-items:center; gap:2px; }
+.filters-active-badge { display:none; font-size:14px; color:var(--accent); margin-left:6px; cursor:pointer; }
+.filters-active-badge.visible { display:inline; }
+
+/* ── Кастомный скроллбар ──────────────────────────────────────────────── */
+.table-wrap::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width:6px; height:6px; }
+.table-wrap::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background:var(--bg); }
+.table-wrap::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+.table-wrap::-webkit-scrollbar-thumb:hover, .modal-body::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+/* ── Toast-нотификации (план-специфичные) ─────────────────────────────── */
+.notif { position:fixed; bottom:60px; right:20px; z-index:400; background:var(--surface);
+  border:1px solid var(--border); border-radius:8px; padding:10px 16px; font-size:15px;
+  animation:slideUp 0.25s ease; box-shadow:0 4px 16px rgba(0,0,0,0.12); }
+@keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1} }
+.notif.ok { background:#16a34a; border-color:#16a34a; color:#fff; }
+.notif.err { background:#dc2626; border-color:#dc2626; color:#fff; }
+
+/* ── Модал выбора типа задачи ─────────────────────────────────────────── */
+.type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; }
+.type-modal.open { display:flex; }
+.type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:32px 36px; width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.15); }
+.type-modal-title { font-size:20px; font-weight:600; margin-bottom:6px; }
+.type-modal-sub { font-size:16px; color:var(--muted); margin-bottom:24px; }
+.type-options { display:flex; flex-direction:column; gap:10px; }
+.type-option { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:10px;
+  border:1px solid var(--border); cursor:pointer; transition:all 0.15s; background:var(--surface2); }
+.type-option:hover { border-color:var(--accent); background:var(--accent-glow); transform:translateX(4px); }
+.type-icon { font-size:26px; width:36px; text-align:center; }
+.type-label { font-size:17px; font-weight:500; }
+
+/* ── Цветные бейджи типов задач ───────────────────────────────────────── */
+.type-badge { display:inline-block; padding:2px 8px; border-radius:4px;
+  font-size:14px; font-weight:600; letter-spacing:0.04em; white-space:nowrap; }
+.type-badge.разработка { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+.type-badge.выпуск { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.type-badge.корректировка { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+.type-badge.сопровождение { background:#faf5ff; color:#9333ea; border:1px solid #e9d5ff; }
+
+/* ── Модал создания/редактирования задачи ─────────────────────────────── */
+.new-task-modal { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; }
+.new-task-modal.open { display:flex; }
+.new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,0.15); }
+.new-task-header { padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; justify-content:space-between; }
+.new-task-title { font-size:19px; font-weight:600; margin-bottom:6px; }
+.new-task-body { flex:1; overflow-y:auto; padding:20px 24px; }
+.new-task-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+
+/* ── Сетка полей формы задачи ─────────────────────────────────────────── */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-field { display:flex; flex-direction:column; gap:6px; }
+.form-field.full { grid-column:1/-1; }
+.form-label { font-size:15px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.form-input { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none; }
+.form-input:focus { border-color:var(--accent); }
+.form-select { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+.form-select:focus { border-color:var(--accent); }
+.form-select option { background:var(--surface); }
+.form-textarea { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  resize:vertical; min-height:60px; }
+.form-textarea:focus { border-color:var(--accent); }
+.form-input:not(:disabled), .form-select:not(:disabled), .form-textarea:not(:disabled) {
+  background:var(--surface);
+}
+.form-input:disabled, .form-select:disabled, .form-textarea:disabled {
+  opacity:1; cursor:not-allowed; background:rgba(30,37,54,0.15);
+  border-color:var(--border); color:var(--text);
+}
+
+/* ── Блок исполнителя в модале управления ──────────────────────────────── */
+.executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.executor-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.executor-name { font-size:18px; font-weight:600; color:var(--text); }
+.executor-remove { padding:4px 10px; border-radius:5px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
+.executor-remove:hover { background:rgba(239,68,68,0.1); border-color:var(--danger); }
+.executor-hours { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
+.executor-month { display:flex; flex-direction:column; gap:4px; }
+.executor-month-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.executor-month-input { padding:6px 8px; background:var(--bg); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; outline:none;
+  text-align:center; width:100%; }
+.executor-month-input:focus { border-color:var(--accent); }
+
+/* ── Блок исполнителя в форме новой задачи (nt = new task) ────────────── */
+.nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
+.nt-executor-name { font-size:17px; font-weight:500; color:var(--text); }
+.nt-executor-remove { padding:3px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
+.nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
+
+/* ── Slideout-режим модала редактирования ──────────────────────────────── */
+.new-task-modal.slideout-mode {
+  justify-content:flex-end; align-items:stretch;
+}
+.new-task-modal.slideout-mode .new-task-box {
+  max-width:min(560px, 90vw); width:min(560px, 90vw); max-height:100vh;
+  border-radius:16px 0 0 16px; margin:0;
+  animation:slideInRight 0.25s ease;
+}
+@keyframes slideInRight { from{transform:translateX(100%)}to{transform:translateX(0)} }
+
+/* ── Статус-панель встроенная в view-tabs ─────────────────────────────── */
+.sp-status-inline {
+  display:flex; align-items:center; gap:12px;
+  margin:0 auto; padding:0 20px;
+}
+.sp-status-inline .status-bar-mini {
+  width:600px; height:16px;
+}
+.sp-status-inline .status-chip {
+  padding:5px 14px; font-size:13px;
+}
+.status-bar-mini {
+  width:80px; height:6px; border-radius:4px; background:var(--border);
+  display:flex; overflow:hidden; flex-shrink:0;
+}
+.status-bar-wrap { flex:1; min-width:200px; max-width:400px; }
+.status-bar {
+  height:8px; border-radius:4px; background:var(--border);
+  display:flex; overflow:hidden;
+}
+.status-bar-done    { background:#22c55e; transition:width .3s; }
+.status-bar-overdue { background:#ef4444; transition:width .3s; }
+.status-bar-inwork  { background:#eab308; transition:width .3s; }
+.status-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.status-chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; border-radius:16px; font-size:12px; font-weight:500;
+  border:1px solid var(--border); background:var(--surface); color:var(--text);
+  cursor:pointer; transition:all .15s; user-select:none;
+}
+.status-chip:hover { opacity:.85; }
+.status-chip.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+.status-chip.chip-done    { background:rgba(34,197,94,0.15); border-color:rgba(34,197,94,0.4); color:#16a34a; }
+.status-chip.chip-overdue { background:rgba(239,68,68,0.14); border-color:rgba(239,68,68,0.4); color:#dc2626; }
+.status-chip.chip-inwork  { background:rgba(234,179,8,0.10); border-color:rgba(234,179,8,0.4); color:#a16207; }
+.status-chip.chip-done.active    { background:#22c55e; border-color:#22c55e; color:#fff; }
+.status-chip.chip-overdue.active { background:#ef4444; border-color:#ef4444; color:#fff; }
+.status-chip.chip-inwork.active  { background:#eab308; border-color:#eab308; color:#fff; }
+.status-chip-count { font-weight:700; }
+
+/* ── Подсветка строк по статусу ──────────────────────────────────────── */
+#mainTable tbody tr.row-done    { background:rgba(34,197,94,0.15) !important; }
+#mainTable tbody tr.row-overdue { background:rgba(239,68,68,0.14) !important; }
+#mainTable tbody tr.row-inwork  { background:rgba(234,179,8,0.10) !important; }
+#mainTable tbody tr.row-done:hover    { background:rgba(34,197,94,0.25) !important; }
+#mainTable tbody tr.row-overdue:hover { background:rgba(239,68,68,0.24) !important; }
+#mainTable tbody tr.row-inwork:hover  { background:rgba(234,179,8,0.18) !important; }

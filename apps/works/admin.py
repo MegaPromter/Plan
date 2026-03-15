@@ -2,7 +2,7 @@
 from django.contrib import admin
 # Импорт моделей, которые будут зарегистрированы в Admin
 from .models import (
-    Project, Work, WorkReport, Notice,
+    Project, Work, WorkReport, Notice, Holiday,
 )
 
 
@@ -11,7 +11,7 @@ from .models import (
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display  = ('name', 'code', 'created_at')
-    search_fields = ('name', 'code')
+    search_fields = ('name_full', 'name_short', 'code')
 
 
 # ── Инлайн-редактор WorkReport (отчётные документы) ──────────────────────────
@@ -46,7 +46,7 @@ class WorkAdmin(admin.ModelAdmin):
             'fields': ('ntc_center', 'department', 'sector', 'project'),
         }),
         ('Исполнитель', {
-            'fields': ('executor', 'executor_name_raw'),
+            'fields': ('executor',),
         }),
         ('Сроки', {
             'fields': ('date_start', 'date_end', 'deadline'),
@@ -62,7 +62,7 @@ class WorkAdmin(admin.ModelAdmin):
             'fields': (
                 'pp_project', 'row_code', 'work_order', 'stage_num',
                 'milestone_num', 'sheets_a4', 'norm', 'coeff',
-                'total_2d', 'total_3d', 'labor', 'sector_head_name',
+                'total_2d', 'total_3d', 'labor',
             ),
             'classes': ('collapse',),
         }),
@@ -74,6 +74,14 @@ class WorkAdmin(admin.ModelAdmin):
 
 
 # ── Регистрация модели Notice (журнал извещений) ──────────────────────────────
+
+@admin.register(Holiday)
+class HolidayAdmin(admin.ModelAdmin):
+    list_display = ('date', 'name')
+    list_filter = ('date',)
+    search_fields = ('name',)
+    ordering = ('date',)
+
 
 @admin.register(Notice)
 class NoticeAdmin(admin.ModelAdmin):

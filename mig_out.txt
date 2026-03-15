@@ -1,0 +1,10 @@
+Migrations for 'works':
+  apps\works\migrations\0009_fix_coeff_max_digits.py
+    - Remove index audit_action_idx from auditlog
+    - Remove index audit_user_idx from auditlog
+    - Remove index audit_created_idx from auditlog
+    - Alter field coeff on ppwork
+    - Alter field task_type on ppwork
+    - Create index work_audit__action_18a5b5_idx on field(s) action of model auditlog
+    - Create index work_audit__user_id_dbc62b_idx on field(s) user of model auditlog
+    - Create index work_audit__created_237a30_idx on field(s) created_at of model auditlog

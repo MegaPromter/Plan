@@ -1,132 +1,344 @@
 {% extends "base.html" %}
-{% load employee_tags %}
-<!-- Страница журнала извещений (Notice list) с фильтром по статусу -->
+{% load static employee_tags %}
 {% block title %}Журнал извещений — Система управления{% endblock %}
+
+{% block styles %}
+<style>
+:root { --ji-row: 32px; }
+/* ── Обёртка таблицы ── */
+.ji-wrap { overflow:auto; max-height:calc(100vh - 180px); border:1px solid var(--border); border-radius:8px; }
+/* ── Таблица ── */
+.ji-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+.ji-table th,
+.ji-table td {
+  padding:6px 8px; font-size:13px;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ji-table th { background:var(--surface2); font-weight:700; font-size:11px;
+  color:var(--text2); text-transform:uppercase; letter-spacing:.05em;
+  position:sticky; top:0; z-index:3; padding-bottom:2px; }
+/* строка фильтров */
+.ji-table tr.filter-row th {
+  background:var(--surface2); top:31px; padding:3px 4px; z-index:3;
+}
+/* мультифильтр */
+.mf-wrap { position:relative; width:100%; }
+.mf-trigger {
+  width:100%; padding:2px 16px 2px 4px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:4px; color:var(--text);
+  font-family:var(--font); font-size:11px; outline:none; cursor:pointer;
+  text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:border-color .15s; box-sizing:border-box; position:relative;
+}
+.mf-trigger.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
+.mf-trigger::after { content:"\25BE"; position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  font-size:10px; color:var(--muted); pointer-events:none; }
+.mf-dropdown {
+  position:fixed; z-index:9999; min-width:160px; max-width:260px;
+  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12); padding:6px 0; display:none;
+  max-height:260px; overflow-y:auto;
+}
+.mf-dropdown.open { display:block; }
+.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
+.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-size:12px; padding:3px 6px; outline:none;
+  font-family:var(--font); box-sizing:border-box; }
+.mf-option { display:flex; align-items:center; gap:6px; padding:4px 10px; cursor:pointer;
+  font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mf-option:hover { background:var(--accent-light); }
+.mf-actions { display:flex; gap:6px; padding:4px 10px 6px; border-bottom:1px solid var(--border); }
+.mf-btn { flex:1; padding:2px 4px; border:1px solid var(--border); border-radius:4px;
+  background:var(--surface2); color:var(--text2); font-size:11px; cursor:pointer; }
+.mf-btn:hover { background:var(--accent-light); }
+/* строки данных */
+.ji-table tbody tr:nth-child(even) td { background:var(--surface2); }
+.ji-table tbody tr:nth-child(odd)  td { background:var(--surface); }
+.ji-table tbody tr:hover td { background:var(--accent-light) !important; }
+/* бейджи */
+.badge-active    { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:rgba(22,163,74,0.12); color:var(--success); white-space:nowrap; }
+.badge-expired   { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
+.badge-closed-no { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
+.badge-closed-yes{ display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
+  font-weight:600; background:var(--surface2); color:var(--muted2); white-space:nowrap; }
+.badge-auto, .badge-manual { display:inline-block; padding:1px 4px; border-radius:4px; font-size:9px;
+  font-weight:600; margin-left:4px; vertical-align:middle; cursor:default; }
+.badge-auto { background:rgba(67,56,202,0.1); color:#6366f1; }
+.badge-manual { background:rgba(217,119,6,0.1); color:var(--warning); }
+.ji-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
+  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
+  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; }
+.ji-tooltip.visible { opacity:1; }
+.ji-tooltip.auto { background:rgba(67,56,202,0.55); color:#fff; }
+.ji-tooltip.manual { background:rgba(146,64,14,0.55); color:#fff; }
+.ji-tooltip::after { content:''; position:absolute; left:50%; top:100%;
+  transform:translateX(-50%); border:5px solid transparent; }
+.ji-tooltip.auto::after { border-top-color:rgba(67,56,202,0.55); }
+.ji-tooltip.manual::after { border-top-color:rgba(146,64,14,0.55); }
+/* строка итогов */
+.ji-footer { padding:8px 4px; font-size:12px; color:var(--text2); }
+/* sticky-колонка действий */
+.ji-table th.col-actions,
+.ji-table td.col-actions {
+  position:sticky; right:0; z-index:2;
+  background:var(--surface); border-left:2px solid var(--border);
+  overflow:visible !important;
+}
+.ji-table thead th.col-actions { z-index:4; background:var(--surface2); }
+.ji-table tr.filter-row th.col-actions { z-index:5; background:var(--surface2); }
+.ji-table tbody tr:nth-child(even) td.col-actions { background:var(--surface2); }
+.ji-table tbody tr:hover td.col-actions { background:var(--accent-light) !important; }
+/* кнопки действий */
+.ji-btn { padding:3px 8px; border-radius:4px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer; font-size:12px; font-family:var(--font); }
+.ji-btn:hover { background:var(--accent-light); }
+.ji-btn-del { border-color:rgba(239,68,68,.3); color:var(--danger); }
+.ji-btn-del:hover { background:rgba(239,68,68,.07); }
+.ji-btn-close { border-color:rgba(234,179,8,.4); color:#92400e; font-size:11px; }
+.ji-btn-close:hover { background:rgba(234,179,8,.08); }
+/* модал */
+.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45);
+  backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--surface); border-radius:12px; padding:24px;
+  width:100%; box-shadow:0 8px 32px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-header h2 { font-size:18px; font-weight:700; margin:0; }
+.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text2); padding:4px; }
+.modal-footer { margin-top:16px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text2);
+  text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+.form-input { width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border);
+  border-radius:6px; background:var(--surface); color:var(--text); font-family:var(--font);
+  font-size:14px; outline:none; }
+.form-input:focus { border-color:var(--accent); }
+.form-input:disabled { background:var(--surface2); color:var(--muted); cursor:not-allowed; }
+</style>
+{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
 <span class="breadcrumb-current">Журнал извещений</span>
 {% endblock %}
 
-<!-- Помечаем пункт «Журнал извещений» в сайдбаре как активный -->
 {% block nav_notices %}active{% endblock %}
 
-<!-- Кнопка добавления извещения в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <a href="{% url 'works:notice_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+  <button class="btn btn-primary" onclick="openAddModal()">+ Добавить</button>
 {% endif %}
+<span id="exportBtnContainer"></span>
 {% endblock %}
 
 {% block content %}
-<!-- Заголовок страницы -->
-<div class="page-header">
+<div class="page-header" style="margin-bottom:12px;display:flex;align-items:center;gap:16px;">
   <h1>Журнал извещений</h1>
+  <!-- Переключатель плотности таблицы -->
+  <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
+    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  </div>
 </div>
 
-<!-- Строка фильтров: только по статусу (active / closed) -->
-<form method="get" class="filter-bar">
-  <!-- Выпадающий список статусов -->
-  <select name="status" class="filter-select">
-    <option value="">Все статусы</option>
-    <!-- Выделяем выбранный статус по значению GET-параметра -->
-    <option value="active"  {% if request.GET.status == "active"  %}selected{% endif %}>Активные</option>
-    <option value="closed"  {% if request.GET.status == "closed"  %}selected{% endif %}>Закрытые</option>
-  </select>
-  <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-  <!-- Сброс фильтров: возврат на список без параметров -->
-  <a href="{% url 'works:notice_list' %}" class="btn btn-outline">Сброс</a>
-</form>
-
-<!-- Таблица извещений (отображается только если есть записи) -->
-{% if notices %}
-<table class="data-table">
-  <thead>
-    <tr>
-      <th style="width:50px;">#</th>              <!-- PK извещения -->
-      <th style="width:120px;">Тип</th>           <!-- Тип извещения -->
-      <th style="width:120px;">Отдел</th>         <!-- Связанный отдел -->
-      <th style="width:120px;">Исполнитель</th>   <!-- Связанный сотрудник (short_name) -->
-      <th style="width:100px;">Дата</th>          <!-- Дата выдачи -->
-      <th>Тема</th>                               <!-- Краткое наименование -->
-      <th>Описание</th>                           <!-- Текст (усечённый) -->
-      <th style="width:80px;">Статус</th>         <!-- Бейдж статуса -->
-      <!-- Колонка действий — только для редакторов -->
-      {% if request.user|is_writer %}<th style="width:60px;"></th>{% endif %}
-    </tr>
-  </thead>
-  <tbody>
-    <!-- Цикл по извещениям из queryset (context notices) -->
-    {% for n in notices %}
-    <tr>
-      <!-- PK — ссылка на детальную страницу -->
-      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.pk }}</a></td>
-      <!-- Тип извещения -->
-      <td>{{ n.notice_type|default:"—" }}</td>
-      <!-- Отдел -->
-      <td>{{ n.department|default:"—" }}</td>
-      <!-- Короткое имя исполнителя (short_name — фамилия + инициалы) -->
-      <td>{{ n.executor.short_name|default:"—" }}</td>
-      <!-- Дата выдачи (без переноса) -->
-      <td style="white-space:nowrap;">{{ n.date_issued|default:"—" }}</td>
-      <!-- Тема — ссылка на детальную страницу, усечённая до 60 символов -->
-      <td><a href="{% url 'works:notice_detail' n.pk %}">{{ n.subject|truncatechars:60 }}</a></td>
-      <!-- Описание — приглушённый текст, усечённый до 80 символов -->
-      <td style="font-size:13px;color:var(--muted);">{{ n.description|truncatechars:80|default:"—" }}</td>
-      <!-- Бейдж статуса: active — зелёный, остальные — серый -->
-      <td>
-        {% if n.status == 'active' %}
-          <span class="badge badge-green">{{ n.get_status_display }}</span>
-        {% else %}
-          <span class="badge badge-gray">{{ n.get_status_display }}</span>
-        {% endif %}
-      </td>
-      <!-- Кнопка редактирования (только для редакторов) -->
-      {% if request.user|is_writer %}
-      <td>
-        <a href="{% url 'works:notice_edit' n.pk %}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
-      </td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<!-- Пагинация с сохранением фильтра ?status= -->
-{% if is_paginated %}
-<div class="pagination">
-  <!-- Кнопка «Предыдущая» — сохраняем параметр status -->
-  {% if page_obj.has_previous %}
-    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
-  {% endif %}
-  <!-- Номера страниц (±3 от текущей) -->
-  {% for num in page_obj.paginator.page_range %}
-    {% if page_obj.number == num %}
-      <!-- Текущая страница — выделена классом active -->
-      <span class="page-link active">{{ num }}</span>
-    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-      <!-- Ближайшие страницы — ссылки с сохранением фильтра -->
-      <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}" class="page-link">{{ num }}</a>
-    {% endif %}
-  {% endfor %}
-  <!-- Кнопка «Следующая» -->
-  {% if page_obj.has_next %}
-    <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
-  {% endif %}
-  <!-- Счётчик: текущая страница / всего страниц -->
-  <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+<div class="ji-wrap">
+  <table class="ji-table">
+    <colgroup>
+      <col style="width:30px;">  <!-- № -->
+      <col style="width:62px;">  <!-- ИИ/ПИ -->
+      <col style="width:78px;">  <!-- Номер изв. -->
+      <col style="width:110px;"> <!-- Наименование (под Группой) -->
+      <col style="width:110px;"> <!-- Обозначение (под Группой) -->
+      <col style="width:82px;">  <!-- Дата выпуска -->
+      <col style="width:82px;">  <!-- Срок действия -->
+      <col style="width:40px;">  <!-- Отдел -->
+      <col style="width:56px;">  <!-- Сектор -->
+      <col style="width:100px;"> <!-- Разработчик -->
+      <col style="width:90px;">  <!-- Описание -->
+      <col style="width:80px;">  <!-- Статус -->
+      <col style="width:110px;"> <!-- Действия -->
+    </colgroup>
+    <thead>
+      <tr>
+        <th rowspan="2">&#8470;</th>
+        <th rowspan="2">ИИ/ПИ</th>
+        <th rowspan="2">Номер изв.</th>
+        <th colspan="2" style="text-align:center;">Группа</th>
+        <th rowspan="2">Дата выпуска</th>
+        <th rowspan="2">Срок действия</th>
+        <th rowspan="2">Отдел</th>
+        <th rowspan="2">Сектор</th>
+        <th rowspan="2">Разработчик</th>
+        <th rowspan="2">Описание</th>
+        <th rowspan="2">Статус</th>
+        <th rowspan="2" class="col-actions"></th>
+      </tr>
+      <tr>
+        <th>Наименование</th>
+        <th>Обозначение</th>
+      </tr>
+      <tr class="filter-row">
+        <th></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="ii_pi" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="notice_number" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="subject" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="doc_designation" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_issued" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_expires" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="status" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th class="col-actions"></th>
+      </tr>
+    </thead>
+    <tbody id="jiBody">
+      <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Загрузка...</td></tr>
+    </tbody>
+  </table>
 </div>
-{% endif %}
+<div class="ji-footer" id="jiFooter"></div>
 
-{% else %}
-<!-- Пустое состояние: извещений не найдено (или список вообще пуст) -->
-<div class="empty-state">
-  <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
-  <p>Извещений не найдено</p>
-  <!-- Кнопка добавления первого извещения (только для редакторов) -->
-  {% if request.user|is_writer %}
-    <a href="{% url 'works:notice_add' %}" class="btn btn-primary">Добавить первое извещение</a>
-  {% endif %}
+<!-- ── Модал добавления/редактирования (ручной ввод) ── -->
+<div id="jiModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 id="jiModalTitle">Добавить извещение</h2>
+      <button class="modal-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <label class="form-label">ИИ/ПИ</label>
+        <select id="mf_ii_pi" class="form-input">
+          <option value="">--</option>
+          <option value="ИИ">ИИ</option>
+          <option value="ПИ">ПИ</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Номер изв.</label>
+        <input id="mf_notice_number" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Дата выпуска</label>
+        <input id="mf_date_issued" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Срок действия</label>
+        <input id="mf_date_expires" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Отдел</label>
+        <input id="mf_dept" class="form-input" type="text" placeholder="код отдела">
+      </div>
+      <div>
+        <label class="form-label">Сектор</label>
+        <input id="mf_sector" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Разработчик</label>
+        <input id="mf_executor" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Статус</label>
+        <select id="mf_status" class="form-input">
+          <option value="active">Действует</option>
+          <option value="expired">Просрочено</option>
+          <option value="closed_no">Погашено без внесения</option>
+          <option value="closed_yes">Погашено с внесением</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Наименование</label>
+        <input id="mf_subject" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Обозначение</label>
+        <input id="mf_doc_designation" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Описание</label>
+        <textarea id="mf_description" class="form-input" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveModal()">Сохранить</button>
+    </div>
+  </div>
 </div>
-{% endif %}
+
+<!-- ── Модал редактирования описания ── -->
+<div id="jiDescModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h2>Редактировать описание</h2>
+      <button class="modal-close" onclick="closeDescModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Описание</label>
+      <textarea id="desc_text" class="form-input" rows="5"></textarea>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeDescModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveDescModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал погашения ── -->
+<div id="jiCloseModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <h2>Погашение извещения</h2>
+      <button class="modal-close" onclick="closeCloseModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Тип погашения</label>
+        <select id="cl_status" class="form-input">
+          <option value="closed_yes">Погашено с внесением</option>
+          <option value="closed_no">Погашено без внесения</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">&#8470; документа погашения *</label>
+        <input id="cl_notice_number" class="form-input" type="text" required>
+      </div>
+      <div>
+        <label class="form-label">Дата документа *</label>
+        <input id="cl_date_issued" class="form-input" type="date" required>
+      </div>
+      <div>
+        <label class="form-label">Исполнитель *</label>
+        <select id="cl_executor" class="form-input" required>
+          <option value="">— выберите —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeCloseModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCloseModal()">Погасить</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+<script id="page-config" type="application/json">{
+  "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
+  "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
+  "userRole": "{{ request.user.employee.role|default:'' }}",
+  "userDept": "{{ request.user.employee.department.code|default:'' }}",
+  "userSector": "{{ request.user.employee.sector.code|default:'' }}",
+  "colSettings": {{ col_settings|safe }}
+}</script>
+<script src="{% static 'js/notices.js' %}"></script>
 {% endblock %}
