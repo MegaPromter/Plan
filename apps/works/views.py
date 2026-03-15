@@ -292,8 +292,8 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             return self.request.user.is_superuser
 
 
-class ProjectsSPAView(AdminRequiredMixin, SPAContextMixin, TemplateView):
-    """SPA-страница «Управление проектами» (только для админов)."""
+class ProjectsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Управление проектами» (просмотр — все, CRUD — только админы)."""
     template_name = 'works/projects_spa.html'
 
 

@@ -182,7 +182,7 @@ function renderProjects() {
       </div>` : '';
 
     return `
-      <div class="project-card" ${IS_ADMIN ? `onclick="openEditProjectModal(${p.id})" style="cursor:pointer"` : ''}>
+      <div class="project-card" onclick="${IS_ADMIN ? `openEditProjectModal(${p.id})` : `showToast('Доступно только Админу','warning')`}" style="cursor:pointer">
         <!-- Краткое наименование (если задано) -->
         ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
         <!-- Полное наименование проекта -->

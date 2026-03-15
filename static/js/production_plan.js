@@ -888,6 +888,7 @@ async function handleCellChange(e) {
     const rowObj = rows.find(r => String(r.id) === String(id));
     if (rowObj) {
       rowObj.dept = value;
+      rowObj.sector_head = '';  // Сброс сектора при смене отдела
       // Обновляем нач. секторов
       const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
       if (headSel) {
@@ -1102,6 +1103,7 @@ function openAddRowModal() {
   // Зависимость: при смене отдела — обновить список нач. секторов И исполнителей
   tr.querySelector('select[data-col="dept"]')?.addEventListener('change', function() {
     newRow.dept = this.value;
+    newRow.sector_head = '';  // Сброс сектора при смене отдела
     // Обновляем нач. секторов
     const tdSector = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
     if (tdSector) {

@@ -407,11 +407,40 @@ async function calcPlanningErrors() {
   const threshold = monthNorm * 1.10; // перегруз если > 110% нормы
   const overloaded  = []; // > 110% нормы
   const underloaded = []; // < нормы
+
+  // Перегруженные — из execLoad (только кто в задачах)
   Object.entries(execLoad).forEach(([name, hours]) => {
     if (hours > threshold && !peIsIgnored(`overload_${name}_${curKey}`)) {
       overloaded.push({ name, hours });
-    } else if (hours > 0 && hours < monthNorm && !peIsIgnored(`underload_${name}_${curKey}`)) {
-      underloaded.push({ name, hours });
+    }
+  });
+
+  // Недозагруженные — ВСЕ сотрудники (dirs._ids_employees), не только назначенные
+  // Учитываем отпуска: дни отпуска в текущем месяце уменьшают норму пропорционально
+  const _monthStart = new Date(curYear, curMonth - 1, 1);
+  const _monthEnd   = new Date(curYear, curMonth, 0); // последний день месяца
+  const _totalDays  = _monthEnd.getDate(); // рабочих дней ≈ кол-во дней (упрощённо)
+  // Считаем дни отпуска каждого сотрудника в текущем месяце
+  const _vacDays = {};
+  vacations.forEach(v => {
+    const name = v.executor || v.executor_name || '';
+    if (!name) return;
+    const vs = new Date(Math.max(new Date(v.date_start), _monthStart));
+    const ve = new Date(Math.min(new Date(v.date_end), _monthEnd));
+    if (vs <= ve) {
+      const days = Math.round((ve - vs) / 86400000) + 1;
+      _vacDays[name] = (_vacDays[name] || 0) + days;
+    }
+  });
+  // Уникальные сотрудники (по ФИО)
+  const _allEmps = new Set((dirs['_ids_employees'] || []).map(e => e.value));
+  _allEmps.forEach(name => {
+    const hours = execLoad[name] || 0;
+    // Скорректированная норма: уменьшаем пропорционально дням отпуска
+    const vacD = _vacDays[name] || 0;
+    const adjNorm = vacD >= _totalDays ? 0 : monthNorm * (1 - vacD / _totalDays);
+    if (adjNorm > 0 && hours < adjNorm && !peIsIgnored(`underload_${name}_${curKey}`)) {
+      underloaded.push({ name, hours, norm: Math.round(adjNorm) });
     }
   });
 
@@ -537,8 +566,8 @@ async function openPlanningErrors() {
     underloaded.length, underloaded.length > 0 ? "warn" : "ok",
     underloaded.map(e => ({
       title: e.name,
-      meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
-      highlight: `Дефицит: ${(monthNorm - e.hours).toFixed(1)} ч`,
+      meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
+      highlight: `Дефицит: ${((e.norm || monthNorm) - e.hours).toFixed(1)} ч`,
       actions: [
         { label: "🔍 Показать работы",    fn: `closePeModal();filterByExecutorCurMonth('${e.name.replace(/'/g,"\\'")}',${curYear},${curMonth})` },
         { label: "Оставить как есть",     fn: `peSetIgnored('underload_${e.name}_${curKey}');closePeModal();` },
@@ -881,7 +910,8 @@ let activeMfBtn = null;
 let activeMfDropdown = null;
 const MF_DEFAULTS = {
   dept: "▼", sector: "▼",
-  project: "▼", stage: "▼", executor: "▼"
+  project: "▼", stage: "▼", executor: "▼",
+  task_type: "▼"
 };
 
 function getMfValues(col) {
@@ -892,6 +922,8 @@ function getMfValues(col) {
       (t.executors_list || []).forEach(ex => { if (ex.name) vals.add(ex.name); });
     } else if (col === "has_deps") {
       vals.add((t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей");
+    } else if (col === "task_type") {
+      vals.add(t.task_type || "ПП");
     } else {
       if (t[col]) vals.add(t[col]);
     }
@@ -1147,6 +1179,8 @@ function renderTable() {
           } else if (field === "has_deps") {
             const label = (t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей";
             if (!val.has(label)) return false;
+          } else if (field === "task_type") {
+            if (!val.has(t.task_type || "ПП")) return false;
           } else {
             if (!val.has(t[field] || "")) return false;
           }

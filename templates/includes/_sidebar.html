@@ -22,17 +22,10 @@
 
     <!-- 1. Управление проектами -->
     <div class="nav-section">
-      {% if request.user|is_admin_role %}
       <a href="{% url 'works:projects' %}" class="nav-item nav-section-btn{% if active_nav == 'projects' %} active{% endif %}">
         <i class="fas fa-project-diagram"></i>
         <span>1. Управление проектами</span>
       </a>
-      {% else %}
-      <button class="nav-item nav-section-btn nav-btn-disabled" onclick="showSidebarToast('Доступно только Админу', event)">
-        <i class="fas fa-project-diagram"></i>
-        <span>1. Управление проектами</span>
-      </button>
-      {% endif %}
     </div>
 
     <!-- 2. Производственный план -->
