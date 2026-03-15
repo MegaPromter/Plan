@@ -1,5 +1,5 @@
 # Миксины для проверки аутентификации и прав доступа на уровне view
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, AccessMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 # Базовые generic-view классы Django
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView,
@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 # Получение объекта или автоматический возврат 404 при его отсутствии
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
+from django.db.models import Q
 
 # Модель сотрудника — нужна для получения роли и настроек пользователя
 from apps.employees.models import Employee

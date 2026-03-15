@@ -1,906 +1,40 @@
-{% load employee_tags %}<!DOCTYPE html>
-<!-- Страница «План/отчёт» — SPA для управления задач.
-     Автономный HTML-документ (не расширяет base.html): содержит
-     собственный сайдбар, топбар, тулбар, таблицу задач и все модальные окна. -->
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<!-- Иконка вкладки браузера -->
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>План/отчёт — Система управления</title>
-<!-- Google Fonts: Inter (основной интерфейс) + IBM Plex Mono (числа, коды) -->
+{% extends "base.html" %}
+{% load static employee_tags %}
+
+{% block title %}План/отчёт — Система управления{% endblock %}
+
+{% block styles %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- CSS: дизайн-токены, таблицы, компоненты -->
-<link rel="stylesheet" href="/static/css/variables.css">
-<link rel="stylesheet" href="/static/css/tables.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<!-- Font Awesome 6 — иконки кнопок и пунктов меню -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<!-- Стили сайдбара (единый источник) -->
-<link rel="stylesheet" href="/static/css/sidebar.css">
-<!-- Anti-flicker: тема устанавливается до рендера -->
-<script>!function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t)}()</script>
-<style>
-/* Сброс отступов и box-sizing для всех элементов */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-/* ── CSS-переменные (дизайн-токены) ─────────────────────────────────────── */
-:root {
-  /* Фоновые и поверхностные цвета */
-  --bg: #f0f2f5; --surface: #ffffff; --surface2: #f8f9fb;
-  /* Цвета рамок */
-  --border: #e2e6ed; --border2: #c8d0dc;
-  /* Цвета сайдбара/навигации */
-  --nav-bg: #1a2744; --nav-border: #243358;
-  --nav-text: #a8bbd4; --nav-text2: #cddaeb;
-  --nav-active-bg: rgba(255,255,255,0.10); --nav-hover-bg: rgba(255,255,255,0.06);
-  /* Цвет топбара */
-  --topbar-bg: #1e2e50;
-  /* Акцентный синий и его варианты */
-  --accent: #2563eb; --accent2: #1d4ed8; --accent-glow: rgba(37,99,235,0.10); --accent-light: #eff6ff;
-  /* Цвета текста */
-  --text: #1e293b; --text2: #475569; --muted: #94a3b8; --muted2: #64748b;
-  /* Семантические цвета состояний */
-  --danger: #dc2626; --success: #16a34a; --warning: #d97706;
-  /* Шрифты */
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; --mono: 'IBM Plex Mono', monospace;
-  /* Высоты фиксированных полос (для расчёта отступов) */
-  --header-h: 56px; --toolbar-h: 100px; --search-h: 42px;
-  /* Ширина сайдбара */
-  --sidebar-width: 260px;
-}
-/* Сайдбар: стили в static/css/sidebar.css */
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/variables.css' %}">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}">
+{% endblock %}
 
-/* ── Основное тело страницы, топбар, тулбар ─────────────────── */
-/* Фон страницы, шрифт, размер текста по умолчанию */
-body { background: var(--bg); font-family: var(--font); color: var(--text); font-size:17px; overflow-x: hidden; }
-/* Фиксированная верхняя полоса (шапка): слева от сайдбара */
-.topbar { position:fixed; top:0; left:var(--sidebar-width); right:0; z-index:100; height:var(--header-h);
-  background:var(--topbar-bg); border-bottom:1px solid var(--nav-border);
-  display:flex; align-items:center; padding:0 20px; gap:16px; transition:left 0.3s ease; }
-/* Топбар расширяется на всю ширину при свёрнутом сайдбаре */
-.topbar.sidebar-collapsed { left:0; }
-/* Хлебные крошки в топбаре */
-.breadcrumb { display:flex; align-items:center; gap:8px; font-size:14px; }
-.breadcrumb a { color:var(--nav-text); text-decoration:none; transition:color .15s; }
-.breadcrumb a:hover { color:#93c5fd; }
-.breadcrumb span { color:var(--nav-text); opacity:0.6; }
-.breadcrumb-current { color:#fff; font-weight:500; }
-/* Распорка между левой и правой частями топбара */
-.topbar-sep { flex:1; }
-/* Дропдаун карточки пользователя (стиль base.html) */
-.user-menu-wrap { position:relative; }
-.topbar-user { font-size:14px; color:var(--nav-text2); background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.15); padding:5px 10px; border-radius:6px;
-  display:flex; flex-direction:row; align-items:center; gap:8px;
-  cursor:pointer; user-select:none; transition:background 0.15s; }
-.topbar-user:hover { background:rgba(255,255,255,0.14); }
-.topbar-user-text { display:flex; flex-direction:column; align-items:flex-end; gap:1px; max-width:160px; }
-.topbar-user-name { font-weight:600; font-size:14px; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-.topbar-user-sub { font-size:11px; color:rgba(255,255,255,0.45); white-space:nowrap; }
-.topbar-user-chevron { font-size:10px; color:rgba(255,255,255,0.5); transition:transform 0.2s; }
-.topbar-user.menu-open .topbar-user-chevron { transform:rotate(180deg); }
-.user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
-  background:var(--surface); border:1px solid var(--border); border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.18); overflow:hidden;
-  display:none; flex-direction:column; z-index:300; }
-.user-dropdown.open { display:flex; }
-.user-dropdown a { display:flex; align-items:center; gap:10px;
-  padding:10px 16px; font-size:14px; color:var(--text); text-decoration:none;
-  transition:background 0.12s; }
-.user-dropdown a:hover { background:var(--surface2); }
-.user-dropdown .ud-sep { height:1px; background:var(--border); margin:2px 0; }
-.user-dropdown .ud-danger { color:var(--danger); }
-/* Базовая кнопка в топбаре (прозрачный фон, белая рамка) */
-.topbar-btn { padding:6px 14px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);
-  background:transparent; color:var(--nav-text2); font-family:var(--font);
-  font-size:14px; cursor:pointer; transition:all 0.15s; }
-.topbar-btn:hover { border-color:rgba(255,255,255,0.45); color:#fff; }
-/* Первичная (акцентная) кнопка топбара */
-.topbar-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-.topbar-btn.primary:hover { background:var(--accent2); }
-/* Опасная кнопка (красный контур) */
-.topbar-btn.danger { border-color:rgba(220,38,38,0.5); color:#f87171; }
-/* ── Кнопки topbar (стиль base.html) ──────────────────────────────── */
-.btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
-  font-size:14px; font-weight:600; font-family:var(--font);
-  cursor:pointer; border:none; transition:all 0.15s; }
-.btn-primary  { background:var(--accent); color:#fff; }
-.btn-primary:hover  { background:var(--accent2); transform:translateY(-1px); box-shadow:0 4px 12px rgba(59,130,246,0.4); }
-.btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
-.btn-outline:hover  { border-color:var(--border2); color:var(--text); }
-.btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
-.topbar .btn-outline { border-color:rgba(255,255,255,0.2); color:var(--nav-text2); background:transparent; }
-.topbar .btn-outline:hover { border-color:rgba(255,255,255,0.45); color:#fff; background:rgba(255,255,255,0.06); }
-/* Тулбар: строка с фильтром по году/месяцу и сводкой плана */
-.toolbar { position:fixed; top:var(--header-h); left:var(--sidebar-width); right:0; z-index:90;
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:10px 20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; min-height:var(--toolbar-h); transition:left 0.3s ease; }
-/* Тулбар расширяется при свёрнутом сайдбаре */
-.toolbar.sidebar-collapsed { left:0; }
-/* Блок «Год: < 2024 >» */
-.cal-block { display:flex; align-items:center; gap:8px; }
-/* Метка «Период:» перед блоком календаря */
-.cal-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; font-weight:600; }
-/* Кнопки «<» и «>» переключения года */
-.cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
-  background:transparent; color:var(--text2); cursor:pointer;
-  display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
-.cal-nav:hover { border-color:var(--accent); color:var(--accent); }
-/* Поле отображения текущего года */
-.cal-display { min-width:130px; text-align:center; font-size:16px; font-weight:600;
-  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 14px; color:var(--text); }
-/* Контейнер кнопок-чипов месяцев */
-.cal-months { display:flex; gap:4px; flex-wrap:wrap; }
-/* Один чип месяца; при активном состоянии — акцентный синий */
-.cal-month { padding:4px 10px; border-radius:5px; font-size:13px; cursor:pointer;
-  border:1px solid transparent; color:var(--text2); transition:all 0.15s; }
-.cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-/* Полоска кнопок-отделов (вторая строка тулбара) */
-.dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-top:4px; }
-.dept-chip { padding:3px 10px; border-radius:5px; font-size:12px; cursor:pointer;
-  border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap; }
-.dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-/* Ссылка «Показать все» (сброс фильтра по месяцу) */
-.cal-clear { font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
-.cal-clear:hover { color:var(--accent); }
-/* Строка поиска: фиксирована под тулбаром */
-.searchbar { position:fixed; top:calc(var(--header-h) + var(--toolbar-h)); left:var(--sidebar-width); right:0; z-index:80;
-  background:var(--surface2); border-bottom:1px solid var(--border);
-  padding:6px 20px; display:flex; align-items:center; gap:10px; height:var(--search-h); transition:left 0.3s ease; }
-.searchbar.sidebar-collapsed { left:0; }
-/* Иконка лупы перед полем поиска */
-.search-icon { color:var(--muted); font-size:16px; }
-/* Поле ввода поиска (занимает всё доступное место) */
-.search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
-.search-input::placeholder { color:var(--muted); }
-/* Счётчик найденных записей (моноширинный шрифт) */
-.search-count { font-size:13px; color:var(--muted); font-family:var(--mono); }
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">3. Сводное планирование (План/отчёт)</span>
+{% endblock %}
 
-/* ── Таблица задач ───────────────────────────────────────────── */
-/* Обёртка таблицы: занимает пространство ниже трёх фиксированных полос */
-.table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h)); margin-left:var(--sidebar-width);
-  overflow-x:auto; overflow-y:auto; padding-bottom:52px;
-  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h)); transition:margin-left 0.3s ease; }
-/* При свёрнутом сайдбаре таблица занимает всю ширину */
-.table-wrap.sidebar-collapsed { margin-left:0; }
-/* Широкая таблица с горизонтальной прокруткой */
-table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
-/* Липкие заголовки колонок */
-thead th {
-  z-index: 10;
-  background: var(--th-bg);
-  border-bottom: 2px solid var(--border2);
-  border-right: 1px solid var(--border2);
-  padding: 0;
-  white-space: nowrap;
-  box-shadow: 0 1px 0 var(--border2);
-}
-/* Sticky на <tr>: каждая строка thead прилипает на своём уровне.
-   row1=37px (Группа + rowspan-заголовки), row2=37px (обозначение/наименование) */
-thead tr:nth-child(1) { position:sticky; top:0; z-index:12; }
-thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
-.th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:var(--th-color);
-  letter-spacing:0.05em; text-transform:uppercase;
-  display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
-/* Колонка «№» с другим оттенком серого фона */
-.th-num { background:color-mix(in srgb, var(--th-bg), var(--border2) 30%); min-width:40px; width:40px; }
-/* Ручка изменения ширины колонки (drag-resize), позиционирована на правой границе th */
-.col-resize { width:10px; cursor:col-resize; flex-shrink:0;
-  border-right:2px solid transparent; transition:border-color 0.15s;
-  position:absolute; right:-5px; top:0; bottom:0; z-index:20; }
-.col-resize:hover { border-color:var(--accent); }
-/* Строки тела таблицы: чередующийся фон, hover-подсветка */
-tbody tr { border-bottom:1px solid var(--border2); transition:background 0.12s; }
-tbody tr:nth-child(even) { background:var(--row-even); }
-tbody tr:nth-child(odd)  { background:var(--row-odd); }
-tbody tr:hover { background:var(--row-hover) !important; }
-/* Новая строка (inline-добавление задачи) с анимацией появления */
-tbody tr.new-row { background:rgba(22,163,74,0.06) !important; animation:fadeIn 0.3s ease; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1} }
-td { border-right:1px solid var(--border2); padding:0; vertical-align:middle; text-align:center; overflow:hidden; }
-td:not(.actions-cell):not(.td-date) { contain:paint; }
-/* Ячейки дат: без обрезания чтобы текст даты был виден полностью */
-td.td-date { overflow:visible; contain:none; }
-/* Ячейка порядкового номера строки */
-td.num-cell { text-align:center; color:var(--text2); font-family:var(--mono);
-  font-size:var(--td-font); font-weight:600; padding:var(--td-pad-y) 4px; width:44px; min-width:44px; background:var(--row-num-bg);
-  border-right:2px solid var(--border2); font-variant-numeric:tabular-nums;
-  position:sticky; left:0; z-index:2; }
-thead th:first-child { position:sticky; left:0; z-index:13; }
-/* Редактируемая ячейка (textarea): без рамки, авторастяжение высоты */
-.cell-edit { width:100%; min-height:36px; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:var(--td-font); resize:none; overflow:hidden; display:block; text-align:center; }
-.cell-edit:focus { background:rgba(59,130,246,0.06); }
-/* Ячейка с датой: моноширинный шрифт для выравнивания цифр */
-.cell-edit.date { font-family:var(--mono); font-size:13px; min-width:130px; }
-/* Скрыть иконку календаря — освобождает место под текст даты */
-.cell-edit.date::-webkit-calendar-picker-indicator { display:none; }
-/* Показать календарь в инлайн-форме новой задачи */
-.cell-edit.date-pick::-webkit-calendar-picker-indicator { display:inline-block; cursor:pointer; }
-/* Отображение даты как текста */
-.date-display { font-family:var(--mono); font-size:var(--td-font); color:var(--text); display:block; padding:var(--td-pad-y) var(--td-pad-x); white-space:nowrap; }
-/* Встроенный select в ячейке: кастомная стрелочка через data-URI SVG */
-.cell-select { width:100%; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:var(--td-font); cursor:pointer; text-align:center;
-  -webkit-appearance:none; appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
-.cell-select:focus { background-color:rgba(59,130,246,0.06); }
-.cell-select option { background:var(--surface); color:var(--text); }
-/* Кнопка «Редактировать» в колонке действий */
-.btn-edit-row { padding:4px 8px; border-radius:5px; border:1px solid var(--border2);
-  background:transparent; color:var(--text2); font-size:14px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
-.btn-edit-row:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
-/* Кнопка «Отчёт» — акцентный контур */
-.btn-report { padding:4px 10px; border-radius:5px; border:1px solid var(--accent);
-  background:var(--accent-glow); color:var(--accent); font-size:13px;
-  cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
-.btn-report:hover { background:var(--accent); color:#fff; }
-/* Кнопка удаления задачи */
-.btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(220,38,38,0.3);
-  background:transparent; color:var(--danger); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
-.btn-del:hover { background:rgba(220,38,38,0.08); }
-/* Бейджи типа задачи в колонке «Код строки» (стиль как в ЖИ) */
-.rc-type-badge { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; white-space:nowrap; cursor:default; }
-.rc-type-нов  { background:rgba(22,163,74,0.1); color:#16a34a; }
-.rc-type-корр { background:rgba(217,119,6,0.1); color:#b45309; }
-.rc-type-разр { background:rgba(67,56,202,0.1); color:#6366f1; }
-.rc-type-окан { background:rgba(139,92,246,0.1); color:#7c3aed; }
-/* Tooltip для бейджей типа задачи (стиль ЖИ) */
-.rc-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
-  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
-  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; color:#fff; }
-.rc-tooltip.visible { opacity:1; }
-.rc-tooltip::after { content:''; position:absolute; left:50%; top:100%;
-  transform:translateX(-50%); border:5px solid transparent; }
-.rc-tooltip.tip-нов  { background:rgba(22,101,52,0.55); }
-.rc-tooltip.tip-нов::after  { border-top-color:rgba(22,101,52,0.55); }
-.rc-tooltip.tip-корр { background:rgba(146,64,14,0.55); }
-.rc-tooltip.tip-корр::after { border-top-color:rgba(146,64,14,0.55); }
-.rc-tooltip.tip-разр { background:rgba(67,56,202,0.55); }
-.rc-tooltip.tip-разр::after { border-top-color:rgba(67,56,202,0.55); }
-.rc-tooltip.tip-окан { background:rgba(109,40,217,0.55); }
-.rc-tooltip.tip-окан::after { border-top-color:rgba(109,40,217,0.55); }
-/* Кнопка и бейдж зависимостей */
-.btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);
-  background:transparent; color:#7c3aed; font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
-.btn-deps:hover { background:rgba(139,92,246,0.1); }
-.dep-badge { display:inline-block; background:rgba(139,92,246,0.12); color:#7c3aed; font-size:13px;
-  font-weight:600; padding:2px 8px; border-radius:10px; font-family:var(--mono); min-width:22px; text-align:center; }
-.dep-badge.zero { background:transparent; color:var(--muted); font-weight:400; }
-/* Модал зависимостей */
-.deps-modal { max-width:700px; width:95vw; }
-.deps-table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
-.deps-table th, .deps-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
-.deps-table th { background:var(--surface2); font-weight:600; color:var(--text2); font-size:13px; }
-.deps-table td { color:var(--text); }
-.deps-table .dep-type-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:12px;
-  font-weight:600; font-family:var(--mono); background:rgba(37,99,235,0.1); color:var(--accent); }
-.deps-add-form { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; padding:12px; background:var(--surface2); border-radius:8px; margin-top:12px; }
-.deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
-.deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
-  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); }
-/* Searchable dropdown */
-.search-dropdown { position:relative; }
-.search-dropdown-input { width:100%; padding:6px 30px 6px 10px; border:1px solid var(--border); border-radius:6px;
-  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); box-sizing:border-box; }
-.search-dropdown-input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 2px rgba(37,99,235,0.15); }
-.search-dropdown-arrow { position:absolute; right:8px; top:50%; transform:translateY(-50%); pointer-events:none;
-  font-size:10px; color:var(--muted); }
-.search-dropdown-list { position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto;
-  background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 6px 6px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.12); z-index:300; display:none; }
-.search-dropdown-list.open { display:block; }
-.search-dropdown-item { padding:6px 10px; font-size:14px; cursor:pointer; color:var(--text); white-space:nowrap;
-  overflow:hidden; text-overflow:ellipsis; }
-.search-dropdown-item:hover, .search-dropdown-item.highlighted { background:rgba(37,99,235,0.08); }
-.search-dropdown-item.selected { background:rgba(37,99,235,0.12); font-weight:600; }
-.search-dropdown-empty { padding:8px 10px; font-size:13px; color:var(--muted); font-style:italic; }
-.deps-section-title { font-size:15px; font-weight:600; color:var(--text); margin:16px 0 8px; display:flex; align-items:center; gap:6px; }
-.deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
-  border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
-.deps-align-bar .warn-icon { font-size:20px; }
-.deps-align-bar .warn-text { flex:1; font-size:14px; color:var(--text2); }
-/* Табы Таблица/Ганта */
-.view-tabs { display:flex; gap:0; margin-left:var(--sidebar-width); padding:0 20px; background:var(--surface);
-  border-bottom:1px solid var(--border); position:fixed; top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h));
-  left:0; right:0; z-index:89; height:38px; align-items:stretch; }
-.view-tabs.sidebar-collapsed { margin-left:0; }
-.view-tab { padding:0 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
-  background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
-.view-tab:hover { color:var(--text); background:var(--surface2); }
-.view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-.gantt-scale-group { display:inline-flex; gap:0; margin-left:auto; align-items:stretch; }
-.gantt-scale-btn { padding:0 12px; font-size:12px; font-weight:500; color:var(--text2); cursor:pointer;
-  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
-.gantt-scale-btn:hover { color:var(--text); background:var(--surface2); }
-.gantt-scale-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.gantt-filter-btn { padding:0 14px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer;
-  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
-.gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
-.gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
-#ganttContainer { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + 38px); margin-left:var(--sidebar-width);
-  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - 38px); display:none; }
-#ganttContainer.sidebar-collapsed { margin-left:0; }
-/* Кнопка сброса пароля (таблица пользователей) */
-.btn-reset-pw { padding:4px 8px; border-radius:5px; border:1px solid rgba(217,119,6,0.3);
-  background:transparent; color:var(--warning); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; margin-right:4px; }
-.btn-reset-pw:hover { background:rgba(217,119,6,0.08); }
-/* Ячейка колонки «Действия» */
-.actions-cell { padding:6px 6px; display:flex; gap:3px; align-items:center; flex-wrap:nowrap; width:190px; min-width:190px; }
-tr.pp-locked .actions-cell { background:rgba(59,130,246,0.03) !important; }
-tr.pp-locked:hover .actions-cell { background:rgba(59,130,246,0.07) !important; }
-/* Задачи, перенесённые из Производственного плана (from_pp): слегка синеватый фон */
-tr.pp-locked { background: rgba(59,130,246,0.03); }
-/* Readonly/disabled поля PP-строк выглядят как обычный текст */
-tr.pp-locked .cell-edit[readonly],
-tr.pp-locked .cell-edit:disabled {
-  background: transparent; border-color: transparent;
-  color: var(--text); cursor: default; resize: none; pointer-events: none;
-}
-/* Заблокированный select PP-строки: скрытая стрелочка */
-tr.pp-locked .cell-select:disabled {
-  background: transparent; border-color: transparent;
-  color: var(--text); cursor: default; pointer-events: none; opacity: 1;
-  appearance: none; -webkit-appearance: none;
-}
-/* Значок «🔒 ПП» под номером строки для PP-задач */
-tr.pp-locked .pp-lock-badge {
-  font-size: 14px; color: var(--accent); opacity: 0.9;
-  display: block; text-align: center; line-height: 1.2;
-  margin-top: 4px; letter-spacing: 0.02em; cursor: default; font-weight: 600;
-}
-/* Кастомный тултип для PP-бейджа (стиль ЖИ) */
-.pp-tooltip { position:fixed; padding:6px 14px; border-radius:6px; font-size:13px;
-  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
-  opacity:0; transition:opacity .15s; background:rgba(67,56,202,0.55); color:#fff; }
-.pp-tooltip.visible { opacity:1; }
-.pp-tooltip::after { content:''; position:absolute; left:-10px; top:50%;
-  transform:translateY(-50%); border:5px solid transparent; border-right-color:rgba(67,56,202,0.55); }
-/* Фиксированная нижняя панель с кнопкой добавления задачи */
-.add-row-wrap { padding:12px 20px; background:var(--surface2); border-top:1px solid var(--border);
-  position:fixed; bottom:0; left:var(--sidebar-width); right:0; z-index:10000; }
-.add-row-wrap.sidebar-collapsed { left:0; }
-/* Кнопка «+ Добавить задачу»: штриховой контур, зеленеет при наведении */
-.btn-add { padding:7px 18px; border-radius:6px; border:1px dashed var(--border2);
-  background:transparent; color:var(--muted2); font-family:var(--font); font-size:16px; cursor:pointer; transition:all 0.15s; }
-.btn-add:hover { border-color:var(--success); color:var(--success); }
-/* ── Общие стили модальных окон ──────────────────────────────── */
-/* Полноэкранный затемнённый оверлей; показывается добавлением класса .open */
-.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
-  display:none; align-items:center; justify-content:center; }
-.modal-overlay.open { display:flex; }
-/* Белый контейнер модала: flex-колонка с header/body/footer */
-.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px;
-  width:95vw; max-width:1100px; max-height:90vh; display:flex; flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,0.15); }
-.modal-header { padding:18px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-.modal-title { font-size:19px; font-weight:600; }
-/* Подпись к задаче в заголовке модала (ID/название) */
-.modal-task-ref { font-size:15px; color:var(--muted); font-family:var(--mono); }
-/* Кнопка закрытия модала: краснеет при наведении */
-.modal-close { width:30px; height:30px; border-radius:6px; border:1px solid var(--border);
-  background:transparent; color:var(--muted2); cursor:pointer; font-size:20px;
-  display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
-.modal-close:hover { border-color:var(--danger); color:var(--danger); }
-/* Прокручиваемое тело модала */
-.modal-body { flex:1; overflow:auto; padding:16px 24px; }
-/* Нижняя панель кнопок модала */
-.modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
-/* ── Таблица отчёта ──────────────────────────────────────────── */
-.report-table-wrap { overflow-x:auto; }
-/* Таблица отчётных строк — фиксированная раскладка, ширина по контейнеру */
-.report-table { border-collapse:collapse; min-width:0; font-size:13px; }
-.report-table th { background:var(--surface2); border:1px solid var(--border); padding:6px 4px;
-  font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.02em;
-  text-align:center; word-break:break-word; }
-.report-table td { border:1px solid var(--border); padding:0; vertical-align:middle; overflow:hidden; text-align:center; }
-/* Редактируемая ячейка таблицы отчёта */
-.report-table .r-cell { width:100%; padding:8px 6px; background:transparent; border:none; outline:none;
-  color:var(--text); font-family:var(--font); font-size:13px; min-height:34px; resize:none; overflow:hidden; display:block; word-break:break-word; box-sizing:border-box; text-align:center; }
-.report-table .r-cell:focus { background:var(--accent-light); }
-.report-table .r-cell-date { min-height:34px; height:34px; cursor:pointer; }
-.report-table .r-cell-select { height:34px; appearance:auto; cursor:pointer; }
-/* Неактивная ячейка отчёта (поле заблокировано для данного типа задачи) */
-.report-table td.r-td-disabled {
-  background:var(--surface2) !important;
-  padding:0;
-}
-.report-table .r-cell-disabled {
-  background:var(--surface2) !important;
-  color:var(--muted) !important;
-  border-color:transparent !important;
-  cursor:not-allowed !important;
-  pointer-events:none;
-  width:100%; box-sizing:border-box;
-  opacity:1 !important;
-}
-/* Кнопки действий строки отчёта */
-.r-save { padding:3px 9px; border-radius:4px; border:none;
-  background:var(--success); color:#fff; font-size:14px; cursor:pointer; font-family:var(--font); font-weight:700; margin-right:2px; }
-.r-save:hover { opacity:0.85; }
-.r-save:disabled { opacity:0.5; cursor:default; }
-.r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
-  background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
-.r-del:hover { background:rgba(239,68,68,0.1); }
-/* ── Таблица пользователей (модал управления аккаунтами) ────── */
-.users-table { width:100%; border-collapse:collapse; font-size:17px; min-width:unset; }
-.users-table th { padding:8px 12px; text-align:left; font-size:15px; color:var(--muted);
-  border-bottom:1px solid var(--border); text-transform:uppercase; }
-.users-table td { padding:8px 12px; border-bottom:1px solid var(--border); }
-/* ── Кнопка «Ошибки планирования» в топбаре ─────────────────── */
-/* В состоянии «есть ошибки» — пульсирующая красная рамка */
-.topbar-btn.errors { border-color:#f59e0b; color:#f59e0b; position:relative; }
-.topbar-btn.errors:hover { background:#f59e0b22; }
-.topbar-btn.errors.has-errors { border-color:var(--danger); color:var(--danger); animation:pulse-err 2s infinite; }
-/* В состоянии «нет ошибок» — зелёная рамка */
-.topbar-btn.errors.no-errors { border-color:#22c55e; color:#22c55e; }
-/* Анимация пульсации при наличии ошибок */
-@keyframes pulse-err {
-  0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); }
-  50%      { box-shadow:0 0 0 4px rgba(239,68,68,0.25); }
-}
-/* Бейдж с числом ошибок (красный кружок) */
-.err-badge { display:inline-block; background:var(--danger); color:#fff;
-  border-radius:10px; font-size:14px; padding:1px 5px; margin-left:4px; font-weight:700; }
-/* ── Модал «Ошибки планирования» (pe = Planning Errors) ─────── */
-/* Оверлей: появляется через opacity (не display) для плавности */
-.pe-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; pointer-events:none; transition:opacity 0.2s; }
-.pe-overlay.open { opacity:1; pointer-events:all; }
-/* Контейнер модала ошибок планирования */
-.pe-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
-  width:780px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
-.pe-header { padding:18px 24px 12px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between; }
-.pe-title { font-size:20px; font-weight:700; color:var(--text); }
-/* Мета-строка: «Месяц Год · Найдено ошибок: N · Норма: XXX ч/мес» */
-.pe-meta { font-size:16px; color:var(--muted); margin-top:3px; }
-.pe-body { overflow-y:auto; flex:1; }
-/* Одна секция (раздел) в списке ошибок */
-.pe-section { border-bottom:1px solid var(--border); }
-/* Заголовок секции: кликабельный, раскрывает/скрывает список */
-.pe-section-hdr { padding:12px 20px; display:flex; align-items:center; justify-content:space-between;
-  cursor:pointer; user-select:none; background:var(--surface2); }
-.pe-section-hdr:hover { background:var(--accent-light); }
-.pe-section-title { font-size:17px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
-/* Бейдж счётчика ошибок: красный/жёлтый/зелёный */
-.pe-count-badge { background:var(--danger); color:#fff; border-radius:8px;
-  font-size:14px; padding:2px 7px; font-weight:700; }
-.pe-count-badge.warn { background:#f59e0b; }
-.pe-count-badge.ok { background:#22c55e; }
-/* Тело секции: скрыто по умолчанию, раскрывается при клике */
-.pe-section-body { display:none; }
-.pe-section-body.open { display:block; }
-/* Одна запись об ошибке */
-.pe-item { padding:10px 24px; border-bottom:1px solid var(--border); display:flex;
-  align-items:flex-start; gap:12px; }
-.pe-item:last-child { border-bottom:none; }
-.pe-item-info { flex:1; }
-.pe-item-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:2px; }
-.pe-item-meta { font-size:15px; color:var(--muted); }
-/* Выделенные части мета-информации (просрочка в днях) */
-.pe-item-meta span { color:#f87171; font-weight:600; }
-.pe-item-actions { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
-/* Кнопки быстрых действий в карточке ошибки */
-.pe-btn { padding:4px 10px; border-radius:5px; font-size:15px; font-family:var(--font);
-  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
-  color:var(--text); transition:all 0.15s; }
-.pe-btn:hover { border-color:var(--accent); color:var(--accent); }
-.pe-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-.pe-btn.primary:hover { background:var(--accent2); }
-/* Нижняя панель модала ошибок */
-.pe-footer { padding:12px 24px; border-top:1px solid var(--border);
-  display:flex; justify-content:space-between; align-items:center; }
-/* Метка времени последней проверки */
-.pe-last-check { font-size:15px; color:var(--muted); }
-/* ── Модал проверки начала месяца (month check, mcc) ───────── */
-/* Появляется на 1-е число месяца при незакрытых задачах прошлого месяца */
-.month-check-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
-  display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
-.month-check-overlay.open { opacity:1; pointer-events:all; }
-.month-check-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
-  width:700px; max-width:95vw; max-height:88vh; display:flex; flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
-.month-check-header { padding:18px 24px 14px; border-bottom:1px solid var(--border); }
-.month-check-title { font-size:20px; font-weight:700; color:var(--text); }
-/* Подзаголовок: «Январь 2025 — 3 работы без отчёта» */
-.month-check-sub { font-size:16px; color:var(--muted); margin-top:4px; }
-.month-check-body { overflow-y:auto; flex:1; padding:0; }
-/* Блок одной задачи в списке проверки */
-.mcc-task { border-bottom:1px solid var(--border); padding:16px 24px; }
-.mcc-task:last-child { border-bottom:none; }
-.mcc-task-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:4px; }
-.mcc-task-meta { font-size:15px; color:var(--muted); margin-bottom:12px; }
-/* Ряд кнопок действий: перенести / завершить / внести отчёт */
-.mcc-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.mcc-btn { padding:6px 14px; border-radius:6px; font-size:16px; font-family:var(--font);
-  cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
-  color:var(--text); transition:all 0.15s; white-space:nowrap; }
-.mcc-btn:hover { border-color:var(--accent); color:var(--accent); }
-.mcc-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-.mcc-btn.primary:hover { background:var(--accent2); }
-.mcc-btn.danger { border-color:var(--danger); color:var(--danger); }
-.mcc-btn.danger:hover { background:var(--danger); color:#fff; }
-/* Кнопка в состоянии «обработано»: блеклая, не кликабельная */
-.mcc-btn.done { border-color:#22c55e; color:#22c55e; opacity:0.5; cursor:default; }
-/* Раскрывающаяся форма переноса задачи на следующий месяц */
-.mcc-postpone-form { margin-top:10px; padding:12px; background:var(--bg);
-  border-radius:8px; border:1px solid var(--border); display:none; }
-.mcc-postpone-form.open { display:block; }
-.mcc-form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end; }
-.mcc-form-field { display:flex; flex-direction:column; gap:4px; }
-.mcc-form-field label { font-size:14px; color:var(--muted); text-transform:uppercase; font-weight:600; }
-.mcc-form-field input, .mcc-form-field select { padding:5px 8px; background:var(--surface2);
-  border:1px solid var(--border); border-radius:5px; color:var(--text);
-  font-family:var(--font); font-size:16px; outline:none; }
-.mcc-form-field input:focus, .mcc-form-field select:focus { border-color:var(--accent); }
-/* Нижняя панель модала проверки с прогрессом и кнопками */
-.month-check-footer { padding:12px 24px; border-top:1px solid var(--border);
-  display:flex; justify-content:space-between; align-items:center; gap:10px; }
-/* Счётчик «Обработано: 2 из 5» */
-.mcc-progress { font-size:16px; color:var(--muted); }
-/* ── Мульти-фильтр колонок (mf = multifilter) ───────────────── */
-/* Обёртка триггер-кнопки относительно фиксированного дропдауна */
-.mf-wrap { position:relative; width:100%; }
-/* Кнопка-триггер мультифильтра в строке фильтрации */
-.mf-trigger { width:100%; padding:4px 22px 4px 6px; background:var(--surface2);
-  border:1px solid var(--border); border-radius:4px; color:var(--text);
-  font-family:var(--font); font-size:15px; outline:none; cursor:pointer;
-  text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  transition:border-color 0.15s; box-sizing:border-box; }
-/* Активный фильтр: синяя рамка */
-.mf-trigger.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
-/* Псевдо-стрелочка справа от триггера */
-.mf-trigger::after { content:"▾"; position:absolute; right:6px; top:50%; transform:translateY(-50%);
-  font-size:13px; color:var(--muted); pointer-events:none; }
-/* Выпадающий список чекбоксов (позиционируется через JS) */
-.mf-dropdown { position:fixed; z-index:9999; min-width:160px; max-width:240px;
-  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.4); padding:6px 0; display:none; max-height:260px; overflow-y:auto; }
-.mf-dropdown.open { display:block; }
-/* Поиск внутри дропдауна */
-.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
-.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
-  border-radius:4px; color:var(--text); font-size:15px; padding:3px 6px;
-  outline:none; font-family:var(--font); box-sizing:border-box; }
-/* Одна опция с чекбоксом */
-.mf-option { display:flex; align-items:center; gap:7px; padding:5px 10px;
-  cursor:pointer; font-size:16px; color:var(--text); transition:background 0.1s; }
-.mf-option:hover { background:var(--surface2); }
-.mf-option input[type=checkbox] { accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
-/* Кнопки «Выбрать все» / «Сбросить» */
-.mf-actions { display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); }
-.mf-btn { flex:1; padding:3px 0; font-size:14px; border-radius:4px; border:1px solid var(--border);
-  background:transparent; color:var(--muted); cursor:pointer; font-family:var(--font); }
-.mf-btn:hover { border-color:var(--accent); color:var(--accent); }
-/* ── Переключатель режима фильтра (мгновенный / по Enter) ───── */
-.filter-mode-toggle { display:flex; align-items:center; gap:6px; font-size:15px;
-  color:var(--muted); white-space:nowrap; margin-left:8px; flex-shrink:0; }
-.filter-mode-toggle input[type=checkbox] { accent-color:var(--accent); cursor:pointer; }
-.filter-mode-toggle label { cursor:pointer; user-select:none; }
-/* ── Блок «Суммарная трудоёмкость» в тулбаре ───────────────── */
-.plan-summary { display:flex; align-items:center; gap:10px; margin-left:auto;
-  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
-  padding:8px 16px; flex-shrink:0; }
-.plan-summary-label { font-size:15px; color:var(--muted); text-transform:uppercase;
-  letter-spacing:0.06em; font-weight:600; white-space:nowrap; }
-/* Крупное акцентное число (итоговые часы) */
-.plan-summary-value { font-size:26px; font-weight:700; color:var(--accent);
-  font-family:var(--mono); white-space:nowrap; }
-/* Подпись «Фев 2025 · 42 зап.» под числом */
-.plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
-/* ── Строка фильтров под заголовками колонок ────────────────── */
-.filter-row { position:sticky; top:73px; z-index:10; }
-.filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
-/* Поле текстового фильтра в каждой колонке */
-.col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
-  border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;
-  transition:border-color 0.15s; box-sizing:border-box; text-align:center; }
-.col-filter:focus { border-color:var(--accent); background:var(--accent-light); }
-/* Активный фильтр: синяя рамка и текст */
-.col-filter.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
-/* Кнопка «×» для сброса текстового фильтра (скрыта, пока поле пустое) */
-.filter-clear-btn { width:20px; height:20px; border-radius:3px; border:none; background:transparent;
-  color:var(--muted); cursor:pointer; font-size:16px; padding:0; line-height:1;
-  display:none; align-items:center; justify-content:center; flex-shrink:0; }
-.filter-clear-btn.visible { display:flex; }
-.filter-clear-btn:hover { color:var(--danger); }
-/* Обёртка поля фильтра + кнопки сброса */
-.filter-cell { display:flex; align-items:center; gap:2px; }
-/* Бейдж «✕ Сбросить фильтры» в поисковой строке */
-.filters-active-badge { display:none; font-size:14px; color:var(--accent); margin-left:6px; cursor:pointer; }
-.filters-active-badge.visible { display:inline; }
-/* ── Кастомный скроллбар (webkit) ───────────────────────────── */
-::-webkit-scrollbar { width:6px; height:6px; }
-::-webkit-scrollbar-track { background:var(--bg); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-::-webkit-scrollbar-thumb:hover { background:var(--muted); }
-/* ── Всплывающие уведомления (toast-нотификации) ────────────── */
-.notif { position:fixed; bottom:60px; right:20px; z-index:400; background:var(--surface);
-  border:1px solid var(--border); border-radius:8px; padding:10px 16px; font-size:15px;
-  animation:slideUp 0.25s ease; box-shadow:0 4px 16px rgba(0,0,0,0.12); }
-/* Анимация появления нотификации снизу */
-@keyframes slideUp { from{opacity:0;transform:translateY(10px)}to{opacity:1} }
-/* Варианты цвета нотификации: успех / ошибка */
-.notif.ok { background:#16a34a; border-color:#16a34a; color:#fff; }
-.notif.err { background:#dc2626; border-color:#dc2626; color:#fff; }
-/* ── Модал выбора типа задачи ────────────────────────────────── */
-.type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
-  display:none; align-items:center; justify-content:center; }
-.type-modal.open { display:flex; }
-/* Белый блок с вариантами типов */
-.type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
-  padding:32px 36px; width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.15); }
-.type-modal-title { font-size:20px; font-weight:600; margin-bottom:6px; }
-.type-modal-sub { font-size:16px; color:var(--muted); margin-bottom:24px; }
-/* Вертикальный список вариантов типов задачи */
-.type-options { display:flex; flex-direction:column; gap:10px; }
-/* Карточка одного типа; при наведении сдвигается вправо */
-.type-option { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:10px;
-  border:1px solid var(--border); cursor:pointer; transition:all 0.15s; background:var(--surface2); }
-.type-option:hover { border-color:var(--accent); background:var(--accent-glow); transform:translateX(4px); }
-/* Иконка-эмодзи типа задачи */
-.type-icon { font-size:26px; width:36px; text-align:center; }
-.type-label { font-size:17px; font-weight:500; }
-/* Цветные бейджи типов задач: применяются через CSS-класс по первому слову типа */
-.type-badge { display:inline-block; padding:2px 8px; border-radius:4px;
-  font-size:14px; font-weight:600; letter-spacing:0.04em; white-space:nowrap; }
-/* Разработка — синий */
-.type-badge.разработка { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
-/* Выпуск нового документа — зелёный */
-.type-badge.выпуск { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
-/* Корректировка документа — жёлтый */
-.type-badge.корректировка { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
-/* Сопровождение (ОКАН) — фиолетовый */
-.type-badge.сопровождение { background:#faf5ff; color:#9333ea; border:1px solid #e9d5ff; }
-/* ── Модал создания/редактирования задачи ────────────────────── */
-.new-task-modal { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
-  display:none; align-items:center; justify-content:center; }
-.new-task-modal.open { display:flex; }
-/* Контейнер модала задачи */
-.new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
-  width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
-  box-shadow:0 8px 40px rgba(0,0,0,0.15); }
-.new-task-header { padding:20px 24px; border-bottom:1px solid var(--border);
-  display:flex; align-items:flex-start; justify-content:space-between; }
-.new-task-title { font-size:19px; font-weight:600; margin-bottom:6px; }
-.new-task-body { flex:1; overflow-y:auto; padding:20px 24px; }
-.new-task-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
-/* ── Сетка полей формы ───────────────────────────────────────── */
-/* Двухколоночная сетка; .full занимает обе колонки */
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.form-field { display:flex; flex-direction:column; gap:6px; }
-.form-field.full { grid-column:1/-1; }
-/* Метка поля формы (uppercase) */
-.form-label { font-size:15px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
-/* Текстовый ввод формы */
-.form-input { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none; }
-.form-input:focus { border-color:var(--accent); }
-/* Select формы с кастомной стрелочкой */
-.form-select { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
-  -webkit-appearance:none; appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-.form-select:focus { border-color:var(--accent); }
-.form-select option { background:var(--surface); }
-/* Многострочный textarea формы */
-.form-textarea { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
-  resize:vertical; min-height:60px; }
-.form-textarea:focus { border-color:var(--accent); }
-/* Незаблокированные поля — белый фон для визуального отличия */
-.form-input:not(:disabled), .form-select:not(:disabled), .form-textarea:not(:disabled) {
-  background:var(--surface);
-}
-/* Заблокированные поля в режиме PP (from_pp=true) */
-.form-input:disabled, .form-select:disabled, .form-textarea:disabled {
-  opacity:1; cursor:not-allowed; background:rgba(30,37,54,0.15);
-  border-color:var(--border); color:var(--text);
-}
-/* Информационный блок «задача из ПП» в начале модала редактирования */
-.pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
-  border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
-.pp-edit-hint b { color:var(--accent); }
-/* ── Блок исполнителя в модале управления исполнителями ─────── */
-/* Карточка одного исполнителя с сеткой месячных часов */
-.executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; }
-.executor-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.executor-name { font-size:18px; font-weight:600; color:var(--text); }
-/* Кнопка удаления исполнителя */
-.executor-remove { padding:4px 10px; border-radius:5px; border:1px solid rgba(239,68,68,0.3);
-  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
-.executor-remove:hover { background:rgba(239,68,68,0.1); border-color:var(--danger); }
-/* Сетка полей «месяц: часы» для исполнителя */
-.executor-hours { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
-.executor-month { display:flex; flex-direction:column; gap:4px; }
-/* Метка месяца (моно uppercase) */
-.executor-month-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
-/* Числовой input для часов исполнителя в конкретном месяце */
-.executor-month-input { padding:6px 8px; background:var(--bg); border:1px solid var(--border);
-  border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; outline:none;
-  text-align:center; width:100%; }
-.executor-month-input:focus { border-color:var(--accent); }
-/* ── Блок исполнителя в форме новой задачи (nt = new task) ─── */
-.nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:8px;
-  padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
-.nt-executor-name { font-size:17px; font-weight:500; color:var(--text); }
-/* Кнопка «×» для удаления исполнителя из формы новой задачи */
-.nt-executor-remove { padding:3px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
-  background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
-.nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
+{% block topbar_actions %}
+<button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()">⚠️ Ошибки планирования</button>
+{% if is_writer %}
+<button class="btn btn-primary btn-sm" onclick="openInlineNewRow()">
+  <i class="fas fa-plus"></i> Добавить задачу
+</button>
+{% endif %}
+<span id="exportBtnContainer"></span>
+{% endblock %}
 
-/* ── Slideout-режим модала редактирования ───────────────────────── */
-.new-task-modal.slideout-mode {
-  justify-content:flex-end; align-items:stretch;
-}
-.new-task-modal.slideout-mode .new-task-box {
-  max-width:min(560px, 90vw); width:min(560px, 90vw); max-height:100vh;
-  border-radius:16px 0 0 16px; margin:0;
-  animation:slideInRight 0.25s ease;
-}
-@keyframes slideInRight { from{transform:translateX(100%)}to{transform:translateX(0)} }
-</style>
-<link rel="stylesheet" href="/static/css/tour.css?v=3">
-</head>
-<body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
-
-<!-- ══ Сайдбар: боковая навигационная панель ═══════════════════════════════ -->
-<aside class="sidebar" id="sidebar">
-  <!-- Шапка сайдбара с логотипом — ведёт на дашборд -->
-  <div class="sidebar-header">
-    <a href="/accounts/dashboard/" class="sidebar-logo">
-      <div class="sidebar-logo-icon">📋</div>
-      <span>Планирование</span>
-    </a>
-  </div>
-  <!-- Прокручиваемая зона навигационных секций -->
-  <nav class="sidebar-nav">
-    <!-- Секция «Обзор» -->
-    <div class="nav-section">
-      <div class="nav-section-title">Обзор</div>
-      <a href="/accounts/dashboard/" class="nav-item"><i class="fas fa-th-large"></i><span>Стартовая страница</span></a>
-    </div>
-    <!-- Секция «1. Управление проектами» (только для админов) -->
-    {% if role == 'admin' %}
-    <div class="nav-section">
-      <a href="/works/projects/" class="nav-item nav-section-btn"><i class="fas fa-project-diagram"></i><span>1. Управление проектами</span></a>
-    </div>
-    {% endif %}
-    <!-- Секция «2. Производственный план» -->
-    <div class="nav-section">
-      <a href="/works/production-plan/" class="nav-item nav-section-btn"><i class="fas fa-industry"></i><span>2. Производственный план</span></a>
-    </div>
-    <!-- Секция «3. Сводное планирование» — текущая страница (active) -->
-    <div class="nav-section">
-      <a href="/works/plan/" class="nav-item nav-section-btn active"><i class="fas fa-tasks"></i><span>3. Сводное планирование (План/отчёт)</span></a>
-    </div>
-    <!-- Секция «4. Журнал извещений» -->
-    <div class="nav-section">
-      <a href="/works/notices/" class="nav-item nav-section-btn"><i class="fas fa-envelope"></i><span>4. Журнал извещений</span></a>
-    </div>
-    <!-- Секция «4. Аналитика» (заглушки) -->
-    <div class="nav-section">
-      <div class="nav-section-title">5. Аналитика</div>
-      <a href="/accounts/stub/analytics-workload/" class="nav-item"><i class="fas fa-chart-bar"></i><span>Загрузка сотрудников</span></a>
-      <a href="/accounts/stub/analytics-deadlines/" class="nav-item"><i class="fas fa-chart-line"></i><span>Исполнение сроков</span></a>
-      <a href="/accounts/stub/analytics-reports/" class="nav-item"><i class="fas fa-file-alt"></i><span>Отчёты</span></a>
-    </div>
-    <!-- Секция «5. Справочники» -->
-    <div class="nav-section">
-      <div class="nav-dropdown">
-        <button class="nav-item nav-section-btn nav-dropdown-toggle" onclick="toggleNavDropdown(this)">
-          <i class="fas fa-book"></i><span>6. Справочники</span>
-          <i class="fas fa-chevron-down nav-chevron"></i>
-        </button>
-        <div class="nav-dropdown-menu">
-          <a href="/works/work-calendar/" class="nav-item nav-subitem"><i class="fas fa-calendar-check"></i><span>Производственный календарь</span></a>
-          <a href="/accounts/stub/norms/" class="nav-item nav-subitem"><i class="fas fa-ruler"></i><span>Нормативы</span></a>
-        </div>
-      </div>
-    </div>
-    <!-- Секция «6. Администрирование» -->
-    <div class="nav-section">
-      <div class="nav-section-title">7. Администрирование</div>
-      <!-- Выпадающее подменю «Сотрудники» -->
-      <div class="nav-dropdown">
-        <button class="nav-item nav-dropdown-toggle" onclick="toggleNavDropdown(this)">
-          <i class="fas fa-users"></i><span>Сотрудники</span>
-          <!-- Шеврон вращается при раскрытии -->
-          <i class="fas fa-chevron-down nav-chevron"></i>
-        </button>
-        <div class="nav-dropdown-menu">
-          <a href="/employees/" class="nav-item nav-subitem"><i class="fas fa-list"></i><span>Список сотрудников</span></a>
-          <a href="/employees/vacations/" class="nav-item nav-subitem"><i class="fas fa-calendar-alt"></i><span>План отпусков</span></a>
-          <a href="/accounts/stub/business-trips/" class="nav-item nav-subitem"><i class="fas fa-plane"></i><span>План командировок</span></a>
-        </div>
-      </div>
-      <a href="/accounts/stub/subdivisions/" class="nav-item"><i class="fas fa-sitemap"></i><span>Подразделения</span></a>
-      <!-- Пункты только для администраторов -->
-      {% if role == 'admin' %}
-      <a href="/admin/" class="nav-item"><i class="fas fa-cogs"></i><span>Настройки системы</span></a>
-      {% endif %}
-    </div>
-  </nav>
-  <!-- Подвал сайдбара: карточка текущего пользователя -->
-  <div class="sidebar-footer">
-    <div class="user-card">
-      <!-- Аватар: первая буква имени пользователя -->
-      <div class="user-avatar">{{ username|first|upper|default:"A" }}</div>
-      <div class="user-info">
-        <!-- Имя пользователя из Django-контекста -->
-        <div class="user-name">{{ username|default:"Пользователь" }}</div>
-        <!-- Роль: «Администратор» или «Пользователь» -->
-        <div class="user-role">{% if role == 'admin' %}Администратор{% else %}Пользователь{% endif %}</div>
-      </div>
-      <!-- Кнопка выхода из системы -->
-      <a href="/accounts/logout/" class="logout-btn" title="Выйти"><i class="fas fa-sign-out-alt"></i></a>
-    </div>
-  </div>
-</aside>
-
-<!-- ══ Топбар: верхняя фиксированная полоса ══════════════════════════════ -->
-<div class="topbar" id="topbar">
-  <!-- Кнопка сворачивания/разворачивания сайдбара -->
-  <button class="sidebar-toggle" id="sidebarToggle" title="Скрыть/показать меню"><i class="fas fa-bars"></i></button>
-  <!-- Хлебные крошки: Главная / Сводное планирование -->
-  <nav class="breadcrumb">
-    <a href="/accounts/dashboard/">Главная</a>
-    <span>/</span>
-    <span class="breadcrumb-current">3. Сводное планирование (План/отчёт)</span>
-  </nav>
-  <div class="topbar-sep"></div>
-  <!-- Кнопка открытия модала «Ошибки планирования»; меняет состояние has-errors/no-errors -->
-  <button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()">⚠️ Ошибки планирования</button>
-  {% if request.user|is_writer %}
-  <!-- Добавить новую задачу (открывает inline-строку) -->
-  <button class="btn btn-primary btn-sm" onclick="openInlineNewRow()">
-    <i class="fas fa-plus"></i> Добавить задачу
-  </button>
-  {% endif %}
-  <span id="exportBtnContainer"></span>
-  <!-- Карточка пользователя с дропдаун-меню (стиль base.html) -->
-  <div class="user-menu-wrap">
-    <div class="topbar-user" onclick="toggleUserMenu()">
-      <div class="topbar-user-text">
-        <span class="topbar-user-name">{{ username }}</span>
-        <span class="topbar-user-sub">{% employee_role %}</span>
-      </div>
-      <i class="fas fa-chevron-down topbar-user-chevron"></i>
-    </div>
-    <div class="user-dropdown" id="userDropdown">
-      <a href="/works/plan/"><i class="fas fa-tasks" style="width:16px;text-align:center;"></i> Личный план</a>
-      <a href="/accounts/stub/analytics-reports/"><i class="fas fa-file-alt" style="width:16px;text-align:center;"></i> Отчёт</a>
-      <a href="/accounts/stub/delegation/"><i class="fas fa-people-arrows" style="width:16px;text-align:center;"></i> Делегирование</a>
-      <div class="ud-sep"></div>
-      <a href="/accounts/profile/"><i class="fas fa-cog" style="width:16px;text-align:center;"></i> Настройки</a>
-      <div class="ud-sep"></div>
-      <a href="/accounts/logout/" class="ud-danger"><i class="fas fa-sign-out-alt" style="width:16px;text-align:center;"></i> Выйти</a>
-    </div>
-  </div>
-</div>
-
+{% block content %}
 <!-- ══ Тулбар: строка фильтрации по периоду ══════════════════════════════ -->
-<div class="toolbar">
+<div class="toolbar" id="toolbar">
   <span class="cal-label">Период:</span>
-  <!-- Блок переключения года: «< 2024 >» -->
   <div class="cal-block">
     <button class="cal-nav" onclick="changeYear(-1)">‹</button>
-    <!-- Текущий год (обновляется через JS при переключении) -->
     <div class="cal-display" id="yearDisplay">2024</div>
     <button class="cal-nav" onclick="changeYear(1)">›</button>
   </div>
-  <!-- Кнопки-чипы месяцев (data-m — номер месяца, 1..12) -->
   <div class="cal-months">
     <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
     <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
@@ -909,25 +43,19 @@ tr.pp-locked .pp-lock-badge {
     <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
     <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
   </div>
-  <!-- Ссылка «Показать все»: сбрасывает фильтр по месяцу, показывает весь год -->
   <span class="cal-clear" onclick="clearFilter()">Показать все</span>
-  <!-- Переключатель плотности таблицы -->
   <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
     <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
     <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
     <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
   </div>
-  <!-- Блок суммарной трудоёмкости: обновляется при каждом renderTable() -->
   <div class="plan-summary">
     <div>
       <div class="plan-summary-label">Суммарная трудоёмкость</div>
-      <!-- Подпись периода: «Фев 2025 · 42 зап.» -->
       <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
     </div>
-    <!-- Крупное акцентное число итоговых часов -->
     <div class="plan-summary-value" id="planSummaryValue">—</div>
   </div>
-  <!-- Полоска кнопок-отделов (показывается для admin/ntc_head/ntc_deputy) -->
   <div class="dept-bar" id="deptBar" style="display:none;">
     <span class="cal-label">Отдел:</span>
     <div id="deptChips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
@@ -935,15 +63,11 @@ tr.pp-locked .pp-lock-badge {
 </div>
 
 <!-- ══ Строка поиска (под тулбаром) ══════════════════════════════════════ -->
-<div class="searchbar">
+<div class="searchbar" id="searchbar">
   <span class="search-icon">🔍</span>
-  <!-- Поле full-text поиска; readonly снимается при фокусе (борьба с автозаполнением) -->
   <input class="search-input" id="searchInput" placeholder="Поиск по всем полям..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
-  <!-- Счётчик: «42 зап.» или «12 из 42 зап.» -->
   <span class="search-count" id="searchCount"></span>
-  <!-- Бейдж «✕ Сбросить фильтры» — виден только при активных колоночных фильтрах -->
   <span class="filters-active-badge" id="filtersActiveBadge" onclick="clearAllColFilters()">✕ Сбросить фильтры</span>
-  <!-- Переключатель «Мгновенный фильтр»: on=oninput, off=onEnter -->
   <div class="filter-mode-toggle">
     <input type="checkbox" id="filterInstant" onchange="toggleFilterMode(this)">
     <label for="filterInstant">Мгновенный фильтр</label>
@@ -964,50 +88,40 @@ tr.pp-locked .pp-lock-badge {
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
-<div class="table-wrap" id="tableView" style="margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + 38px);">
+<div class="table-wrap" id="tableView">
 <table id="mainTable">
-<!-- Строка заголовков колонок (липкая, остаётся при прокрутке) -->
 <thead>
 <tr>
-  <!-- Колонка порядкового номера -->
   <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <!-- Каждый th содержит .col-resize — ручку изменения ширины (drag-resize) -->
   <th id="th-type" rowspan="2" style="width:110px;min-width:110px;"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
   <th id="th-project" rowspan="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
   <th id="th-stage" rowspan="2"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
   <th id="th-wnum" rowspan="2"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
   <th id="th-just" rowspan="2"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
-  <!-- Группа: двухуровневый заголовок -->
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
   <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
   <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <!-- Колонка исполнителей: показывает список ФИО с часами -->
   <th id="th-exec" rowspan="2"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
   <th id="th-ds" rowspan="2"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
   <th id="th-de" rowspan="2"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
   <th id="th-dead" rowspan="2"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
-  <!-- Колонка кнопок действий (редактировать, отчёт, удалить) -->
   <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
   <th id="th-desc"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
   <th id="th-wname"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
 </tr>
-<!-- Строка фильтрации (третья строка thead) -->
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
-  <!-- Мульти-фильтры (выпадающие чекбоксы) для категориальных колонок -->
   <th><div class="filter-cell"><input class="col-filter" data-col="row_code" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
-  <!-- Текстовые фильтры (Enter — применить; × — сбросить) -->
   <th><div class="filter-cell"><input class="col-filter" data-col="work_number" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="justification" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="description" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="work_name" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
-  <!-- Мульти-фильтр исполнителей -->
   <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="date_start" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
   <th><div class="filter-cell"><input class="col-filter" data-col="date_end" placeholder="" onkeydown="if(event.key==='Enter')applyColFilters(this)"><button class="filter-clear-btn" onclick="clearColFilter(this)">×</button></div></th>
@@ -1015,23 +129,18 @@ tr.pp-locked .pp-lock-badge {
   <th></th>
 </tr>
 </thead>
-<!-- Тело таблицы: заполняется JS-функцией renderTable() через makeRow() -->
 <tbody id="taskBody"></tbody>
 </table>
 </div>
-
-<!-- Кнопка «Добавить задачу» перенесена в topbar -->
 
 <!-- ══ Контейнер диаграммы Ганта ═══════════════════════════════════════════ -->
 <div id="ganttContainer"></div>
 
 <!-- ══ Модал выбора типа задачи ════════════════════════════════════════════ -->
-<!-- Открывается при нажатии «+ Добавить задачу»; выбор типа запускает openNewTaskModal() -->
 <div class="type-modal" id="typeModal">
 <div class="type-modal-box">
   <div class="type-modal-title">Выберите тип задачи</div>
   <div class="type-modal-sub">Нажмите — откроется форма заполнения</div>
-  <!-- Список вариантов типов задач; data-type передаётся в selectTypeAndProceed() -->
   <div class="type-options">
     <div class="type-option" data-type="Разработка" onclick="selectTypeAndProceed(this)">
       <span class="type-icon">⚙️</span><span class="type-label">Разработка</span>
@@ -1294,11 +403,8 @@ tr.pp-locked .pp-lock-badge {
     <button class="modal-close" onclick="closeDepsModal()">✕</button>
   </div>
   <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
-    <!-- Предшественники (редактируемые) -->
     <div class="deps-section-title">⬅ Предшественники <span id="depsPredCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
     <div id="depsPredBody"></div>
-
-    <!-- Форма добавления -->
     <div class="deps-add-form" id="depsAddForm" style="display:none;">
       <div style="flex:1;min-width:200px;">
         <label>Задача-предшественник</label>
@@ -1324,12 +430,8 @@ tr.pp-locked .pp-lock-badge {
       </div>
       <button class="topbar-btn primary" onclick="addPredecessor()" style="margin-top:18px;">Добавить</button>
     </div>
-
-    <!-- Последователи -->
     <div class="deps-section-title" style="margin-top:24px;">➡ Последователи <span id="depsSuccCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
     <div id="depsSuccBody"></div>
-
-    <!-- Форма добавления последователя -->
     <div class="deps-add-form" id="depsAddSuccForm" style="display:none;">
       <div style="flex:1;min-width:200px;">
         <label>Задача-последователь</label>
@@ -1355,8 +457,6 @@ tr.pp-locked .pp-lock-badge {
       </div>
       <button class="topbar-btn primary" onclick="addSuccessor()" style="margin-top:18px;">Добавить</button>
     </div>
-
-    <!-- Выравнивание дат -->
     <div class="deps-align-bar" id="depsAlignBar" style="display:none;">
       <span class="warn-icon">⚠️</span>
       <span class="warn-text" id="depsAlignText"></span>
@@ -1402,10 +502,12 @@ tr.pp-locked .pp-lock-badge {
     </div>
   </div>
 </div>
+{% endblock %}
 
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/export.js"></script>
-<script src="/static/js/modal.js"></script>
+{% block scripts %}
+<script src="{% static 'js/utils.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
+<script src="{% static 'js/modal.js' %}"></script>
 <script id="sp-config" type="application/json">{
   "isWriter": {{ is_writer|yesno:"true,false" }},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
@@ -1415,8 +517,5 @@ tr.pp-locked .pp-lock-badge {
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="/static/js/plan.js"></script>
-<script src="/static/js/tour.js?v=3"></script>
-
-</body>
-</html>
+<script src="{% static 'js/plan.js' %}"></script>
+{% endblock %}

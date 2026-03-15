@@ -103,6 +103,8 @@ let selectedDept = localStorage.getItem('sp_selected_dept') || null;
 
 const MONTH_NAMES = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
 
+let showAll = false;
+
 // ── CALENDAR ──────────────────────────────────────────────────────────────
 function changeYear(d) {
   selectedYear += d;
@@ -120,7 +122,6 @@ function selectMonth(m) {
   localStorage.setItem("plan_month", selectedMonth === null ? "null" : selectedMonth);
   loadTasks();
 }
-let showAll = false;
 
 function clearFilter() {
   selectedMonth = null;
@@ -128,6 +129,15 @@ function clearFilter() {
   localStorage.setItem("plan_month", "null");
   document.querySelectorAll(".cal-month").forEach(e => e.classList.remove("active"));
   loadTasks();
+}
+
+// ── Пересчёт --toolbar-h по реальной высоте ──────────────────────────────
+function _syncToolbarHeight() {
+  var tb = document.getElementById('toolbar');
+  if (!tb) return;
+  // Синхронное чтение offsetHeight вызывает forced reflow — гарантирует актуальные размеры
+  var h = tb.offsetHeight;
+  document.documentElement.style.setProperty('--toolbar-h', h + 'px');
 }
 
 // ── DEPT CHIPS (переключатель отделов) ────────────────────────────────────
@@ -139,12 +149,12 @@ function initDeptChips() {
   // Кнопка «Все»
   let html = `<span class="dept-chip${!selectedDept ? ' active' : ''}" onclick="selectDept(null)">Все</span>`;
   depts.forEach(d => {
-    html += `<span class="dept-chip${selectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectDept('${d}')">${escapeHtml(d)}</span>`;
+    html += `<span class="dept-chip${selectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
   });
   wrap.innerHTML = html;
   bar.style.display = '';
-  // Расширяем toolbar для второй строки
-  document.documentElement.style.setProperty('--toolbar-h', '136px');
+  // Пересчитываем --toolbar-h по реальной высоте
+  _syncToolbarHeight();
   // Применяем сохранённый фильтр
   if (selectedDept && depts.includes(selectedDept)) {
     _syncDeptFilter(selectedDept);
@@ -181,68 +191,37 @@ function _syncDeptFilter(dept) {
   document.getElementById('filtersActiveBadge').classList.toggle('visible', hasFilters);
 }
 
-function toggleNavDropdown(btn) {
-  btn.classList.toggle('open');
-  var menu = btn.nextElementSibling;
-  if (menu) menu.classList.toggle('open');
-  var open = [];
-  document.querySelectorAll('.nav-dropdown-toggle.open').forEach(function(b) {
-    var s = b.querySelector('span'); if (s) open.push(s.textContent.trim());
-  });
-  localStorage.setItem('navDropdownOpen', JSON.stringify(open));
-}
+// toggleNavDropdown — определена в base.html
 
 window.addEventListener("DOMContentLoaded", async () => {
-  // Восстанавливаем открытые дропдауны сайдбара из localStorage
-  var _saved = []; try { _saved = JSON.parse(localStorage.getItem('navDropdownOpen')||'[]'); } catch(e){}
-  document.querySelectorAll('.nav-dropdown-toggle').forEach(function(btn) {
-    var s = btn.querySelector('span');
-    if (s && _saved.indexOf(s.textContent.trim()) >= 0) {
-      btn.classList.add('open');
-      var menu = btn.nextElementSibling; if (menu) menu.classList.add('open');
-    }
-  });
+  // Sidebar dropdowns и scroll — управляется base.html
 
-  // Сбрасываем скролл сайдбара в начало — браузер может автоскроллить к .active
-  var sidebarNav = document.querySelector('.sidebar-nav');
-  if (sidebarNav) sidebarNav.scrollTop = 0;
+  // Маппинг id → функция закрытия (для модалок со сбросом состояния)
+  var _modalClosers = {
+    newTaskModal: function() { closeNewTaskModal(); },
+    reportModal: function() { closeReportModal(); },
+    depsModal: function() { closeDepsModal(); }
+  };
+  function _closeLastModal() {
+    var openModals = document.querySelectorAll('.modal-overlay.open');
+    if (!openModals.length) return;
+    var last = openModals[openModals.length - 1];
+    var closer = _modalClosers[last.id];
+    if (closer) closer(); else last.classList.remove('open');
+  }
 
-  // ESC закрывает модалки (в порядке приоритета: верхний модал первым)
+  // ESC закрывает последний открытый .modal-overlay.open
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
-    const peModal = document.getElementById('peModal');
-    if (peModal && peModal.classList.contains('open')) {
-      closePeModal();
-      return;
-    }
-    const typeModal = document.getElementById('typeModal');
-    if (typeModal && typeModal.classList.contains('open')) {
-      closeTypeModal();
-      return;
-    }
-    const reportModal = document.getElementById('reportModal');
-    if (reportModal && reportModal.classList.contains('open')) {
-      closeReportModal();
-      return;
-    }
-    const modal = document.getElementById('newTaskModal');
-    if (modal && modal.classList.contains('open')) {
-      e.stopPropagation();
-      closeNewTaskModal();
-    }
+    _closeLastModal();
   });
 
-  // Клик по фону new-task-modal закрывает через closeNewTaskModal() (сбрасывает состояние)
-  document.getElementById('newTaskModal').addEventListener('click', function(e) {
-    if (e.target === this) closeNewTaskModal();
-  });
-  // Клик по фону reportModal закрывает через closeReportModal()
-  document.getElementById('reportModal').addEventListener('click', function(e) {
-    if (e.target === this) closeReportModal();
-  });
-  // Клик по фону depsModal закрывает
-  document.getElementById('depsModal').addEventListener('click', function(e) {
-    if (e.target === this) closeDepsModal();
+  // Клик по фону .modal-overlay закрывает его
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('open')) {
+      var closer = _modalClosers[e.target.id];
+      if (closer) closer(); else e.target.classList.remove('open');
+    }
   });
 
   // ── Tooltip для бейджей типа задачи (стиль ЖИ) ──
@@ -287,8 +266,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   setTimeout(() => { si.value = ""; }, 50);
   setTimeout(() => { si.value = ""; }, 200);
   _initDensity();
+  _syncToolbarHeight();
+  window.addEventListener('resize', _syncToolbarHeight);
+  // ResizeObserver — автоматически пересчитывает --toolbar-h при изменении размера тулбара (dept chips и т.д.)
+  if (window.ResizeObserver) {
+    var _tbEl = document.getElementById('toolbar');
+    if (_tbEl) new ResizeObserver(_syncToolbarHeight).observe(_tbEl);
+  }
   await loadDirs();
   await loadTasks();
+  _syncToolbarHeight(); // после loadTasks — dept chips уже отрисованы
   // Listener после первого loadTasks, чтобы setTimeout-очистки не вызвали повторную загрузку
   si.addEventListener("input", debounce(() => loadTasks(), 300));
   initColResize();
@@ -1314,8 +1301,8 @@ function makeRow(t, num) {
   // dirKey — ключ справочника для select, parentField/parentDirKey — каскадная фильтрация,
   // extraField — дополнительное отображение (напр. ФИО руководителя сектора)
   const cols = [
-    {field:"project",      type:"select", dirKey:"project"},
-    {field:"stage",        type:"select", dirKey:"stage"},
+    {field:"project",      type:"select", dirKey:"project", readOnly:true},
+    {field:"stage",        type:"select", dirKey:"stage",   readOnly:true},
     {field:"work_number",  type:"text"},
     {field:"justification",type:"text"},
     {field:"description",  type:"text"},
@@ -1467,6 +1454,11 @@ function makeRow(t, num) {
     }
     else if (col.type === "select") {
       // ── Select-поля (dept, sector, project, stage) ──
+      if (col.readOnly) {
+        // Read-only select: отображаем как текст (редактирование через модалку)
+        td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;";
+        td.textContent = t[col.field] || '';
+      } else {
       const sel = document.createElement("select");
       sel.className = "cell-select";
       sel.dataset.field = col.field;
@@ -1488,6 +1480,7 @@ function makeRow(t, num) {
         });
       }
       td.appendChild(sel);
+      }
       // Если у колонки есть extraField — ищем head_name сектора из dirs
       if (col.extraField) {
         const sectorCode = t[col.field] || '';
@@ -2462,21 +2455,7 @@ function _makeNewReportRow() {
 
 function closeReportModal() { document.getElementById("reportModal").classList.remove("open"); currentTaskId=null; currentTask=null; }
 
-// ── Дропдаун карточки пользователя ───────────────────────────────────────────
-function toggleUserMenu() {
-  const dd = document.getElementById("userDropdown");
-  const user = document.querySelector(".topbar-user");
-  dd.classList.toggle("open");
-  if (user) user.classList.toggle("menu-open", dd.classList.contains("open"));
-}
-document.addEventListener("click", e => {
-  const wrap = document.querySelector(".user-menu-wrap");
-  if (wrap && !wrap.contains(e.target)) {
-    document.getElementById("userDropdown").classList.remove("open");
-    const user = document.querySelector(".topbar-user");
-    if (user) user.classList.remove("menu-open");
-  }
-});
+// User menu — управляется base.html (toggleBaseUserMenu)
 
 // Обновляет заголовки таблицы в зависимости от типа задачи
 function _updateReportHeader(cfg) {
@@ -3767,40 +3746,7 @@ async function renderGantt() {
   }
 }
 
-// ── SIDEBAR TOGGLE — сворачивание/разворачивание боковой панели ────────────
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
-const topbar = document.getElementById('topbar');
-const toolbar = document.querySelector('.toolbar');
-const searchbar = document.querySelector('.searchbar');
-const tableWrap = document.querySelector('.table-wrap');
-const addRowWrap = document.querySelector('.add-row-wrap');
-const viewTabs = document.getElementById('viewTabs');
-const ganttEl = document.getElementById('ganttContainer');
-
-if (sidebarToggle) {
-  sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    topbar.classList.toggle('sidebar-collapsed');
-    if (toolbar) toolbar.classList.toggle('sidebar-collapsed');
-    if (searchbar) searchbar.classList.toggle('sidebar-collapsed');
-    if (tableWrap) tableWrap.classList.toggle('sidebar-collapsed');
-    if (addRowWrap) addRowWrap.classList.toggle('sidebar-collapsed');
-    if (viewTabs) viewTabs.classList.toggle('sidebar-collapsed');
-    if (ganttEl) ganttEl.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-  });
-  if (localStorage.getItem('sidebarCollapsed') === 'true') {
-    sidebar.classList.add('collapsed');
-    topbar.classList.add('sidebar-collapsed');
-    if (toolbar) toolbar.classList.add('sidebar-collapsed');
-    if (searchbar) searchbar.classList.add('sidebar-collapsed');
-    if (tableWrap) tableWrap.classList.add('sidebar-collapsed');
-    if (addRowWrap) addRowWrap.classList.add('sidebar-collapsed');
-    if (viewTabs) viewTabs.classList.add('sidebar-collapsed');
-    if (ganttEl) ganttEl.classList.add('sidebar-collapsed');
-  }
-}
+// Sidebar toggle — управляется base.html, стили через .main-content.sidebar-collapsed в plan.css
 // Экспорт — инициализация после загрузки export.js
 buildExportDropdown('exportBtnContainer', {
   pageName: 'СП',

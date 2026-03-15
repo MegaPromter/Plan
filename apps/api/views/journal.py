@@ -41,7 +41,9 @@ def _check_journal_access(user, notice):
         dept_id = work.department_id if work else None
     else:
         dept_id = notice.department_id
-    if dept_id and employee.department_id != dept_id:
+    if not dept_id:
+        return 'Не удалось определить отдел записи'
+    if employee.department_id != dept_id:
         return 'Вы можете редактировать только записи своего отдела'
     return None
 
@@ -240,6 +242,12 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
             if len(parts) >= 3:
                 qs = qs.filter(patronymic__iexact=parts[2])
             executor = qs.first()
+
+        # Серверная проверка дублей по номеру+типу (защита от race condition)
+        nn = data.get('notice_number', '') or ''
+        iip = data.get('ii_pi', '') or ''
+        if nn and iip and Notice.objects.filter(notice_number=nn, ii_pi=iip).exists():
+            return JsonResponse({'error': f'Извещение {iip} № {nn} уже существует'}, status=409)
 
         valid_statuses = {c[0] for c in Notice.STATUS_CHOICES}
         status = data.get('status', Notice.STATUS_ACTIVE)

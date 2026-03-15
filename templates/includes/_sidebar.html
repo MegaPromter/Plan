@@ -1,0 +1,168 @@
+{% load static employee_tags %}
+{# _sidebar.html — Единый сайдбар для всех страниц. #}
+{# Подключается через include "includes/_sidebar.html" #}
+{# active_nav: dashboard, projects, pp, plan, notices, work_calendar, employees, vacation_plan, subdivisions #}
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="{% url 'accounts:dashboard' %}" class="sidebar-logo">
+      <div class="sidebar-logo-icon">📋</div>
+      <span>Планирование</span>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- Обзор -->
+    <div class="nav-section">
+      <div class="nav-section-title">Обзор</div>
+      <a href="{% url 'accounts:dashboard' %}" class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}">
+        <i class="fas fa-th-large"></i>
+        <span>Стартовая страница</span>
+      </a>
+    </div>
+
+    <!-- 1. Управление проектами -->
+    <div class="nav-section">
+      {% if request.user|is_admin_role %}
+      <a href="{% url 'works:projects' %}" class="nav-item nav-section-btn{% if active_nav == 'projects' %} active{% endif %}">
+        <i class="fas fa-project-diagram"></i>
+        <span>1. Управление проектами</span>
+      </a>
+      {% else %}
+      <button class="nav-item nav-section-btn nav-btn-disabled" onclick="showSidebarToast('Доступно только Админу', event)">
+        <i class="fas fa-project-diagram"></i>
+        <span>1. Управление проектами</span>
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- 2. Производственный план -->
+    <div class="nav-section">
+      <a href="{% url 'works:production_plan' %}" class="nav-item nav-section-btn{% if active_nav == 'pp' %} active{% endif %}">
+        <i class="fas fa-industry"></i>
+        <span>2. Производственный план</span>
+      </a>
+    </div>
+
+    <!-- 3. Сводное планирование -->
+    <div class="nav-section">
+      <a href="{% url 'works:plan' %}" class="nav-item nav-section-btn{% if active_nav == 'plan' %} active{% endif %}">
+        <i class="fas fa-tasks"></i>
+        <span>3. Сводное планирование (План/отчёт)</span>
+      </a>
+    </div>
+
+    <!-- 4. Журнал извещений -->
+    <div class="nav-section">
+      <a href="{% url 'works:notice_list' %}" class="nav-item nav-section-btn{% if active_nav == 'notices' %} active{% endif %}">
+        <i class="fas fa-envelope"></i>
+        <span>4. Журнал извещений</span>
+      </a>
+    </div>
+
+    <!-- 5. Аналитика -->
+    <div class="nav-section">
+      <div class="nav-section-title">5. Аналитика</div>
+      <a href="{% url 'accounts:stub' 'analytics-workload' %}" class="nav-item{% if active_nav == 'analytics_workload' %} active{% endif %}">
+        <i class="fas fa-chart-bar"></i>
+        <span>Загрузка сотрудников</span>
+      </a>
+      <a href="{% url 'accounts:stub' 'analytics-deadlines' %}" class="nav-item{% if active_nav == 'analytics_deadlines' %} active{% endif %}">
+        <i class="fas fa-chart-line"></i>
+        <span>Исполнение сроков</span>
+      </a>
+      <a href="{% url 'accounts:stub' 'analytics-reports' %}" class="nav-item{% if active_nav == 'analytics_reports' %} active{% endif %}">
+        <i class="fas fa-file-alt"></i>
+        <span>Отчёты</span>
+      </a>
+    </div>
+
+    <!-- 6. Справочники -->
+    <div class="nav-section">
+      <div class="nav-dropdown">
+        <button class="nav-item nav-section-btn nav-dropdown-toggle{% if active_nav == 'work_calendar' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Справочники" aria-expanded="false">
+          <i class="fas fa-book"></i>
+          <span>6. Справочники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="{% url 'works:work_calendar' %}" class="nav-item nav-subitem{% if active_nav == 'work_calendar' %} active{% endif %}">
+            <i class="fas fa-calendar-check"></i>
+            <span>Производственный календарь</span>
+          </a>
+          <a href="{% url 'accounts:stub' 'norms' %}" class="nav-item nav-subitem">
+            <i class="fas fa-ruler"></i>
+            <span>Нормативы</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Администрирование -->
+    <div class="nav-section">
+      <div class="nav-section-title">7. Администрирование</div>
+      <div class="nav-dropdown">
+        <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false">
+          <i class="fas fa-users"></i>
+          <span>Сотрудники</span>
+          <i class="fas fa-chevron-down nav-chevron"></i>
+        </button>
+        <div class="nav-dropdown-menu">
+          <a href="{% url 'employees:list' %}" class="nav-item nav-subitem{% if active_nav == 'employees' %} active{% endif %}">
+            <i class="fas fa-list"></i>
+            <span>Список сотрудников</span>
+          </a>
+          <a href="{% url 'employees:vacation_plan' %}" class="nav-item nav-subitem{% if active_nav == 'vacation_plan' %} active{% endif %}">
+            <i class="fas fa-calendar-alt"></i>
+            <span>План отпусков</span>
+          </a>
+          <a href="{% url 'accounts:stub' 'business-trips' %}" class="nav-item nav-subitem">
+            <i class="fas fa-plane"></i>
+            <span>План командировок</span>
+          </a>
+        </div>
+      </div>
+      <a href="{% url 'accounts:stub' 'subdivisions' %}" class="nav-item{% if active_nav == 'subdivisions' %} active{% endif %}">
+        <i class="fas fa-sitemap"></i>
+        <span>Подразделения</span>
+      </a>
+      {% if request.user|is_admin_role %}
+      <a href="/admin/" class="nav-item">
+        <i class="fas fa-cogs"></i>
+        <span>Настройки системы</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    {% if request.user.is_authenticated %}
+    <div class="user-card">
+      <div class="user-avatar">{% employee_initial %}</div>
+      <div class="user-info">
+        <div class="user-name">{% employee_name %}</div>
+        <div class="user-role">{% employee_role %}</div>
+      </div>
+      <a href="{% url 'accounts:logout' %}" class="logout-btn" title="Выйти">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</aside>
+<div class="sidebar-toast" id="sidebarToast"></div>
+<script>
+function showSidebarToast(msg, e) {
+  var t = document.getElementById('sidebarToast');
+  t.textContent = msg;
+  if (e) {
+    var btn = e.currentTarget || e.target;
+    var r = btn.getBoundingClientRect();
+    t.style.top = r.top + 'px';
+    t.style.left = (r.right + 8) + 'px';
+    t.style.bottom = 'auto';
+  }
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+</script>

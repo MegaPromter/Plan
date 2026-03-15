@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',  # добавляет объект request в шаблон
                 'django.contrib.auth.context_processors.auth', # добавляет user и perms в шаблон
                 'django.contrib.messages.context_processors.messages',  # добавляет messages в шаблон
+                'apps.accounts.context_processors.active_nav',  # active_nav для подсветки сайдбара
             ],
         },
     },

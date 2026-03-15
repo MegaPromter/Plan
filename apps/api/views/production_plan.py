@@ -190,15 +190,19 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
 
         # Проверка прав на отдел/сектор
         if employee and employee.role in ('dept_head', 'dept_deputy'):
+            if not employee.department:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
             dept_code = d.get('dept', '') or ''
-            if dept_code and employee.department and dept_code != employee.department.code:
+            if dept_code and dept_code != employee.department.code:
                 return JsonResponse(
                     {'error': 'Вы можете создавать задачи только для своего отдела'},
                     status=403,
                 )
         elif employee and employee.role == 'sector_head':
+            if not employee.department:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
             dept_code = d.get('dept', '') or ''
-            if dept_code and employee.department and dept_code != employee.department.code:
+            if dept_code and dept_code != employee.department.code:
                 return JsonResponse(
                     {'error': 'Вы можете создавать задачи только для своего отдела'},
                     status=403,

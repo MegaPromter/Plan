@@ -8,6 +8,7 @@
   position:fixed; top:0; left:0; width:260px; height:100vh;
   background:var(--nav-bg); border-right:1px solid var(--nav-border);
   display:flex; flex-direction:column; z-index:100; transition:transform 0.3s ease;
+  font-size:14px; font-family:var(--font);
 }
 .sidebar.collapsed { transform:translateX(-100%); }
 
@@ -23,7 +24,14 @@
 }
 
 /* ── Зона навигации (прокручиваемая) ──────────────────────────────── */
-.sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; scrollbar-gutter:stable; }
+.sidebar-nav {
+  flex:1; padding:16px 12px; overflow-y:auto; scrollbar-gutter:stable;
+  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.15) transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width:6px; }
+.sidebar-nav::-webkit-scrollbar-track { background:transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.3); }
 
 /* ── Секции и заголовки ───────────────────────────────────────────── */
 .nav-section { margin-bottom:24px; }
@@ -56,6 +64,21 @@
   background:var(--nav-active-bg); color:var(--nav-active-color);
   border-left:3px solid #fff;
 }
+
+/* ── Кнопка-заглушка (не-админ, «Управление проектами») ─────────── */
+.nav-btn-disabled {
+  width:100%; text-align:left; background:none; cursor:pointer;
+  opacity:0.5;
+}
+
+/* ── Toast-уведомление сайдбара ────────────────────────────────── */
+.sidebar-toast {
+  position:fixed; z-index:500;
+  background:#1e293b; color:#e2e8f0; padding:8px 14px; border-radius:6px;
+  font-size:13px; font-family:var(--font); box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  opacity:0; transition:opacity 0.2s; pointer-events:none; white-space:nowrap;
+}
+.sidebar-toast.show { opacity:1; transform:translateY(0); }
 
 /* ── Вложенный пункт (подраздел) ──────────────────────────────────── */
 .nav-subitem { padding-left:28px; font-size:13px; }

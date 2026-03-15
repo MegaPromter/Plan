@@ -336,15 +336,19 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
 
         # Проверка прав по роли
         if employee and employee.role in ('dept_head', 'dept_deputy'):
+            if not employee.department:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
             dept_val = (d.get('dept') or '').strip()
-            if dept_val and employee.department and dept_val != employee.department.code:
+            if dept_val and dept_val != employee.department.code:
                 return JsonResponse(
                     {'error': 'Вы можете создавать задачи только для своего отдела'}, status=403
                 )
 
         if employee and employee.role == 'sector_head':
+            if not employee.department:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
             dept_val = (d.get('dept') or '').strip()
-            if dept_val and employee.department and dept_val != employee.department.code:
+            if dept_val and dept_val != employee.department.code:
                 return JsonResponse(
                     {'error': 'Вы можете создавать задачи только для своего отдела'}, status=403
                 )
