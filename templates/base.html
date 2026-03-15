@@ -405,7 +405,7 @@ textarea { resize:vertical; min-height:80px; }
 <link rel="stylesheet" href="{% static 'css/tables.css' %}?v=1">
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=1">
 {% block styles %}{% endblock %}
-<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=6">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 <a href="#main-content" class="skip-link">Перейти к основному содержанию</a>
@@ -644,6 +644,6 @@ document.addEventListener('click', function(e) {
 <!-- Блок пользовательских скриптов из дочерних шаблонов -->
 {% block scripts %}{% endblock %}
 <!-- Скрипт интерактивного тура по интерфейсу -->
-<script src="{% static 'js/tour.js' %}?v=3"></script>
+<script src="{% static 'js/tour.js' %}?v=6"></script>
 </body>
 </html>

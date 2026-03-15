@@ -5,9 +5,9 @@
 /* ── Spotlight: подсветка целевого элемента ──────────────────────── */
 .tour-spotlight {
   position: fixed;
-  border: 3px solid var(--accent, #2563eb);
+  border: 3px solid #60a5fa;
   border-radius: 10px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 0 24px rgba(96, 165, 250, 0.5);
   z-index: 99991;
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -15,15 +15,20 @@
 }
 
 @keyframes tourPulse {
-  0%   { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 0    rgba(37,99,235,0.5); }
-  50%  { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 14px rgba(37,99,235,0.15); }
-  100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 0    rgba(37,99,235,0.5); }
+  0%   { box-shadow: 0 0 24px rgba(96,165,250,0.5), 0 0 0 0    rgba(96,165,250,0.6); }
+  50%  { box-shadow: 0 0 24px rgba(96,165,250,0.5), 0 0 0 16px rgba(96,165,250,0.2); }
+  100% { box-shadow: 0 0 24px rgba(96,165,250,0.5), 0 0 0 0    rgba(96,165,250,0.6); }
 }
 
 @keyframes tourGlow {
-  0%   { border-color: var(--accent, #2563eb); }
-  50%  { border-color: #60a5fa; }
-  100% { border-color: var(--accent, #2563eb); }
+  0%   { border-color: #60a5fa; }
+  50%  { border-color: #93c5fd; }
+  100% { border-color: #60a5fa; }
+}
+
+/* Второй spotlight (без затемнения фона) */
+#tourSpotlight2 {
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
 }
 
 /* ── Tooltip: карточка-подсказка рядом с элементом ───────────────── */
@@ -175,7 +180,7 @@
   position: fixed;
   inset: 0;
   z-index: 99990;
-  background: rgba(0, 0, 0, 0.78);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -251,7 +256,7 @@
   position: fixed;
   inset: 0;
   z-index: 99990;
-  background: rgba(0, 0, 0, 0.82);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,4 +304,33 @@
 .tour-modal-actions .tour-btn {
   padding: 10px 24px;
   font-size: 14px;
+}
+
+/* ── Пульсация sidebar-ссылки ─────────────────────────────────── */
+.tour-sidebar-pulse {
+  animation: tourSidebarPulse 1.2s ease-in-out infinite !important;
+  position: relative;
+  z-index: 2;
+  border: 2px solid rgba(96, 165, 250, 0.7) !important;
+  border-radius: 8px;
+}
+
+@keyframes tourSidebarPulse {
+  0%   { background: rgba(37, 99, 235, 0.08); box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6); }
+  50%  { background: rgba(37, 99, 235, 0.25); box-shadow: 0 0 18px 6px rgba(96, 165, 250, 0.4); }
+  100% { background: rgba(37, 99, 235, 0.08); box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6); }
+}
+
+/* ── Стрелка-указатель от tooltip к элементу ──────────────────── */
+.tour-arrow line {
+  stroke: var(--accent, #2563eb);
+  stroke-width: 2.5;
+  stroke-dasharray: 8 4;
+  animation: tourArrowDash 0.6s linear infinite;
+}
+.tour-arrow polygon {
+  fill: var(--accent, #2563eb);
+}
+@keyframes tourArrowDash {
+  to { stroke-dashoffset: -12; }
 }
