@@ -380,7 +380,7 @@ def mcc_finish_data():
     Аналог Flask _mcc_finish логики.
     """
     # Сегодняшняя дата
-    today = date.today()
+    today = timezone.now().date()
     if today.month == 1:
         # Январь — предыдущий месяц это декабрь прошлого года
         last_day = date(today.year - 1, 12, 31)

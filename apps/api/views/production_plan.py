@@ -173,6 +173,8 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
 
     def _create(self, request):
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         project_id = d.get('project_id') or None
         if not project_id:
             return JsonResponse(
@@ -284,7 +286,12 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             err = _check_dept_access(request.user, work)
             if err:
                 return JsonResponse({'error': err}, status=403)
-            work.delete()
+            if work.show_in_plan:
+                work.show_in_pp = False
+                work.pp_project = None
+                work.save(update_fields=['show_in_pp', 'pp_project'])
+            else:
+                work.delete()
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error("ProductionPlanDetailView.delete error: %s", e, exc_info=True)
@@ -294,6 +301,8 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         """Inline single-field update."""
         field = request.GET.get('field')
         d = parse_json_body(request)
+        if d is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
         value = d.get('value', '')
 
         if not field:

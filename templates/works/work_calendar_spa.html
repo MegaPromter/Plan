@@ -22,7 +22,7 @@
 .calendar-toolbar {
   display:flex; flex-wrap:wrap; gap:12px; align-items:center;
   margin-bottom:20px; background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:14px 16px;
+  border-radius:12px; padding:14px 16px;
 }
 /* Стили select внутри тулбара */
 .calendar-toolbar select { padding:6px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); color:var(--text); font-size:14px; }
@@ -37,7 +37,7 @@
 /* ── Карточка одного месяца ─────────────────────────────────────────────── */
 .calendar-card {
   background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:16px;
+  border-radius:12px; padding:16px;
   display:flex; flex-direction:column; gap:8px;
 }
 /* Название месяца */
@@ -76,11 +76,11 @@
 </div>
 
 <!-- Модальное окно добавления / редактирования записи календаря -->
-<div id="calModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+<div id="calModal" class="modal-overlay" onclick="if(event.target===this)closeCalModal()">
   <div class="modal-box" style="max-width:380px">
     <div class="modal-header">
       <h3 class="modal-title" id="calModalTitle">Добавить запись</h3>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      <button class="modal-close" onclick="closeCalModal()"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
       <!-- Поле года (disabled при редактировании — нельзя менять ключ) -->
@@ -109,7 +109,7 @@
       <div id="calModalError" class="error-message" style="display:none"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline modal-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-outline modal-cancel" onclick="closeCalModal()">Отмена</button>
       <button class="btn btn-primary" id="calModalSaveBtn" onclick="saveRecord()">Сохранить</button>
     </div>
   </div>
@@ -136,6 +136,7 @@ async function loadCalendar() {
   try {
     // GET /api/work_calendar/?year=<year>
     const resp = await fetch(`/api/work_calendar/?year=${year}`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     calData = await resp.json();
     renderGrid();
   } catch(e) {
@@ -171,11 +172,9 @@ function renderGrid() {
         <div class="hours-value">${rec.hours_norm}</div>
         <div class="hours-label">нормо-часов / чел.</div>
         <div class="card-actions">
-          <!-- Кнопка редактирования нормы часов -->
           <button class="btn btn-outline btn-sm btn-edit" onclick="openEditModal(${rec.id}, ${year}, ${m}, ${rec.hours_norm})">
             <i class="fas fa-pen"></i> Изменить
           </button>
-          <!-- Кнопка удаления записи за месяц -->
           <button class="btn btn-danger btn-sm" onclick="deleteRecord(${rec.id}, '${MONTH_NAMES[m]} ${year}')">
             <i class="fas fa-trash"></i>
           </button>
@@ -195,7 +194,7 @@ function openAddModal() {
   document.getElementById('fieldMonth').value = 1;
   document.getElementById('fieldHours').value = '';
   document.getElementById('calModalError').style.display = 'none';
-  document.getElementById('calModal').style.display = 'flex';
+  document.getElementById('calModal').classList.add('open');
 }
 
 /* ── Открытие модала редактирования существующей записи ─────────────────── */
@@ -209,12 +208,12 @@ function openEditModal(id, year, month, hours) {
   document.getElementById('fieldYear').disabled = true;
   document.getElementById('fieldMonth').disabled = true;
   document.getElementById('calModalError').style.display = 'none';
-  document.getElementById('calModal').style.display = 'flex';
+  document.getElementById('calModal').classList.add('open');
 }
 
 /* ── Закрытие модала ────────────────────────────────────────────────────── */
-function closeModal() {
-  document.getElementById('calModal').style.display = 'none';
+function closeCalModal() {
+  document.getElementById('calModal').classList.remove('open');
   // Разблокируем поля на случай следующего открытия в режиме создания
   document.getElementById('fieldYear').disabled = false;
   document.getElementById('fieldMonth').disabled = false;
@@ -264,7 +263,7 @@ async function saveRecord() {
       return;
     }
     // Успех: закрываем модал и перезагружаем сетку
-    closeModal();
+    closeCalModal();
     await loadCalendar();
   } catch(e) {
     // Сетевая ошибка

@@ -414,7 +414,7 @@ function openProductsModal(projId) {
         </div>
         <!-- Кнопки редактирования и удаления изделия (только для admin) -->
         ${IS_ADMIN ? `
-        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeJs(pr.name)}', '${escapeJs(pr.code)}')" title="Редактировать"><i class="fas fa-pen"></i></button>
+        <button class="pc-btn" onclick="editProduct(${projId}, ${pr.id}, '${escapeHtml(escapeJs(pr.name))}', '${escapeHtml(escapeJs(pr.code || ''))}')" title="Редактировать"><i class="fas fa-pen"></i></button>
         <button class="pc-btn danger" onclick="deleteProduct(${projId}, ${pr.id})" title="Удалить"><i class="fas fa-trash"></i></button>
         ` : ''}
       </div>`).join('');

@@ -20,6 +20,10 @@ class ColumnFilter {
         this.onChange = options.onChange || (() => {});
         this.activeFilters = {};
         this._dropdowns = {};
+        // Единый обработчик закрытия дропдаунов по клику вне (один раз)
+        document.addEventListener('click', () => {
+            Object.values(this._dropdowns).forEach(dd => dd.style.display = 'none');
+        });
     }
 
     /**
@@ -174,10 +178,6 @@ class ColumnFilter {
             }
         });
 
-        // Закрыть по клику вне
-        document.addEventListener('click', () => {
-            dropdown.style.display = 'none';
-        });
         dropdown.addEventListener('click', (e) => e.stopPropagation());
 
         th.appendChild(btn);

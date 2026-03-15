@@ -1313,21 +1313,12 @@ async function calcPlanningErrors() {
   } catch {}
 
   // ── 1. Просроченные задачи (срок прошёл, отчёт не заполнен) ──────────────
-  const overdueChecks = await Promise.all(
-    allTasks
-      .filter(t => {
-        const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
-        const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
-        return (de && de < todayStr) || (dead && dead < todayStr);
-      })
-      .map(async t => {
-        const reports = await fetch(`/api/reports/${t.id}/`).then(r=>r.json());
-        return { task: t, hasReport: reports.length > 0 };
-      })
-  );
-  const overdue = overdueChecks
-    .filter(c => !c.hasReport && !peIsIgnored(`overdue_${c.task.id}`))
-    .map(c => c.task);
+  const overdue = allTasks.filter(t => {
+    const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
+    const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
+    const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
+    return isOverdue && !t.has_reports && !peIsIgnored(`overdue_${t.id}`);
+  });
 
   // ── 2. Задачи с датами уже просроченными при создании ────────────────────
   // date_start > date_end ИЛИ date_start > deadline
@@ -1631,13 +1622,7 @@ async function checkMonthStart() {
   const monthTasks = await res.json();
   if (!monthTasks.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
 
-  const checks = await Promise.all(monthTasks.map(async t => {
-    const r = await fetch(`/api/reports/${t.id}/`);
-    const reports = await r.json();
-    return { task: t, hasReport: reports.length > 0 };
-  }));
-
-  const missing = checks.filter(c => !c.hasReport);
+  const missing = monthTasks.filter(t => !t.has_reports);
   if (!missing.length) { localStorage.setItem(MCC_KEY, todayKey); return; }
   openMonthCheckModal(missing.map(c => c.task), prevYear, prevMonth, todayKey);
 }
@@ -1929,7 +1914,7 @@ function buildMfDropdown(btn, col) {
 
   document.body.appendChild(drop);
   const rect = btn.getBoundingClientRect();
-  drop.style.top = (rect.bottom + window.scrollY + 2) + "px";
+  drop.style.top = (rect.bottom + 2) + "px";
   drop.style.left = Math.min(rect.left, window.innerWidth - 250) + "px";
   activeMfDropdown = drop;
   activeMfBtn = btn;
@@ -2423,7 +2408,8 @@ async function saveTask(id, tr) {
 
 async function deleteTask(id, tr) {
   if (!await confirmDialog("Удалить задачу?", "Удаление")) return;
-  await fetch(`/api/tasks/${id}/`, {method:"DELETE", headers:apiHeaders()});
+  const resp = await fetch(`/api/tasks/${id}/`, {method:"DELETE", headers:apiHeaders()});
+  if (!resp.ok) { const d = await resp.json().catch(()=>({})); notify(d.error || "Ошибка удаления", "err"); return; }
   tr.style.transition = "opacity 0.2s, transform 0.2s";
   tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
   setTimeout(() => {
@@ -2988,12 +2974,14 @@ async function submitNewTask() {
   }
 
   if (editingTaskId) {
-    await fetch(`/api/tasks/${editingTaskId}/`, {
+    const res = await fetch(`/api/tasks/${editingTaskId}/`, {
       method: "PUT", headers: apiHeaders(), body: JSON.stringify(data)
     });
+    if (!res.ok) { const d = await res.json().catch(()=>({})); notify(d.error || "Ошибка сохранения", "err"); return; }
     closeNewTaskModal(); await loadTasks(); notify("✓ Изменения сохранены", "ok");
   } else {
     const res = await fetch("/api/tasks/create/", {method:"POST", headers:apiHeaders(), body:JSON.stringify(data)});
+    if (!res.ok) { const d = await res.json().catch(()=>({})); notify(d.error || "Ошибка создания задачи", "err"); return; }
     const {id} = await res.json();
     closeNewTaskModal(); await loadTasks(); notify("✓ Задача создана", "ok");
   }
@@ -3101,7 +3089,7 @@ async function delUser(id) {
   if (!resp.ok) {
     let errMsg = "Ошибка удаления пользователя";
     try { const d = await resp.json(); if (d && d.error) errMsg = d.error; } catch {}
-    showToast(errMsg, "error");
+    notify(errMsg, "err");
     return;
   }
   openUsersModal();

@@ -38,6 +38,7 @@ from apps.works.models import (
 )
 from apps.employees.models import Employee, Department, Sector, NTCCenter
 from apps.api.audit import log_action
+from django.db.models import Exists, OuterRef
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,7 @@ def _serialize_task(work, executors_data=None):
 
     d['pp_labor'] = pp_labor_val
     d['from_pp'] = is_from_pp
+    d['has_reports'] = getattr(work, 'has_reports', False)
 
     return d
 
@@ -220,7 +222,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
                 | Q(executor__last_name__icontains=s)
                 | Q(executor_name_raw__icontains=s)
                 | Q(department__code__icontains=s)
-                | Q(description__icontains=s)
+                | Q(work_designation__icontains=s)
                 | Q(project__name_short__icontains=s)
                 | Q(project__name_full__icontains=s)
                 | Q(task_type__icontains=s)
@@ -229,7 +231,9 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         total_count = qs.count()
 
-        qs = qs.select_related(
+        qs = qs.annotate(
+            has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
+        ).select_related(
             'department', 'sector', 'project',
             'executor', 'ntc_center', 'created_by',
             'pp_project', 'pp_project__up_project',

@@ -78,7 +78,7 @@ class VacationListView(LoginRequiredJsonMixin, View):
         if year:
             try:
                 yr = int(year)
-                qs = qs.filter(date_start__year=yr)
+                qs = qs.filter(date_start__year__lte=yr, date_end__year__gte=yr)
             except (ValueError, TypeError):
                 pass
 
@@ -108,6 +108,8 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         # Определяем сотрудника: по employee_id или по имени (executor)
         employee = None
@@ -291,6 +293,8 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
 
     def post(self, request):
         data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
 
         executors_raw = data.get('executors', [])
         date_start_str = data.get('date_start')

@@ -255,19 +255,17 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
             # И в очередь для поиска их дочерних записей
             queue.extend(children_ids)
 
-        # Удаляем все найденные записи одним запросом
-        Directory.objects.filter(pk__in=to_delete_ids).delete()
-
         # Каскадное удаление производственного плана при удалении проекта
+        # (выполняем ДО удаления Directory, иначе FK directory_id уже NULL)
         if is_top_project:
             from django.db import transaction
-            # Находим все PPProject, связанные с удалённым справочным проектом
-            pp_projects = PPProject.objects.filter(directory_id=pk)
-            with transaction.atomic():
-                for pp in pp_projects:
-                    # Сначала удаляем строки ПП (Work с show_in_pp=True)
-                    pp.pp_works.all().delete()
-                    # Затем удаляем сам проект ПП
-                    pp.delete()
+            pp_projects = list(PPProject.objects.filter(directory_id=pk))
+            if pp_projects:
+                with transaction.atomic():
+                    Work.objects.filter(pp_project__in=pp_projects).delete()
+                    PPProject.objects.filter(pk__in=[pp.pk for pp in pp_projects]).delete()
+
+        # Удаляем все найденные записи справочника одним запросом
+        Directory.objects.filter(pk__in=to_delete_ids).delete()
 
         return JsonResponse({'ok': True})

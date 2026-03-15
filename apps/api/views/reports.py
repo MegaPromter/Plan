@@ -140,8 +140,17 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
             )
 
         # Проверяем существование задачи
-        if not Work.objects.filter(pk=task_id).exists():
+        work = Work.objects.filter(pk=task_id).select_related('department').first()
+        if not work:
             return JsonResponse({'error': 'Задача не найдена'}, status=404)
+
+        # Проверка доступа по отделу (создавать отчёт — только свой отдел)
+        employee = getattr(request.user, 'employee', None)
+        if employee and employee.role not in ('admin', 'ntc_head', 'ntc_deputy'):
+            if not employee.department_id:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
+            if work.department_id and employee.department_id != work.department_id:
+                return JsonResponse({'error': 'Вы можете создавать отчёты только для задач своего отдела'}, status=403)
 
         report = WorkReport.objects.create(
             work_id=task_id,
