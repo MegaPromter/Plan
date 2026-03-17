@@ -15,8 +15,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),  # если DEBUG не задан в .env — используем False (продакшн-безопасно)
 )
-# Читаем файл .env из корня проекта и загружаем переменные в os.environ
-environ.Env.read_env(BASE_DIR / '.env')
+# Читаем файл .env из корня проекта (если существует) и загружаем переменные в os.environ
+_env_file = BASE_DIR / '.env'
+if _env_file.is_file():
+    environ.Env.read_env(_env_file)
 
 # Секретный ключ Django — используется для подписи cookies, CSRF-токенов и т.д.
 # В продакшне обязательно задавать через переменную среды SECRET_KEY
