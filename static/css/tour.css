@@ -334,3 +334,12 @@
 @keyframes tourArrowDash {
   to { stroke-dashoffset: -12; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight, .tour-tooltip, .tour-info-backdrop, .tour-modal-backdrop,
+  .tour-info-card, .tour-modal-card, .tour-sidebar-pulse,
+  .tour-btn-navigate, .tour-arrow, .tour-arrow line {
+    animation: none !important;
+    transition: none !important;
+  }
+}

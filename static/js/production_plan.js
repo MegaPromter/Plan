@@ -59,7 +59,7 @@ function _initPPDensity() {
       if (d !== 'comfortable') wrap.classList.add('density-' + d);
       toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
       fetch('/api/col_settings/', {
-        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':getCSRF()},
+        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
         body: JSON.stringify({ density: d })
       }).catch(function() {});
     });
@@ -729,9 +729,12 @@ function renderPPTable() {
 
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="19" style="padding:40px;text-align:center;color:var(--muted);">
-      <i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>
-      Нет записей
+    tbody.innerHTML = `<tr><td colspan="19">
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+        <div class="empty-state-title">Нет записей</div>
+        <div class="empty-state-desc">Попробуйте изменить фильтры или добавьте новую строку</div>
+      </div>
     </td></tr>`;
     return;
   }
@@ -1492,7 +1495,7 @@ function initPPDeptChips() {
   }
   let html = `<span class="pp-dept-chip${!ppSelectedDept ? ' active' : ''}" onclick="selectPPDept(null)">Все</span>`;
   depts.forEach(d => {
-    html += `<span class="pp-dept-chip${ppSelectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectPPDept('${d}')">${escapeHtml(d)}</span>`;
+    html += `<span class="pp-dept-chip${ppSelectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectPPDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
   });
   wrap.innerHTML = html;
   bar.style.display = '';
@@ -2060,7 +2063,7 @@ async function ppAddSuccessor() {
       showToast('Зависимость добавлена', 'success');
       document.getElementById('ppDepsAddSuccInput').value = '';
       document.getElementById('ppDepsAddSuccSelect').value = '';
-      ppLoadDeps(ppCurrentDepsTaskId);
+      await ppLoadDeps(ppCurrentDepsTaskId);
       const succRow = rows.find(r => r.id === parseInt(succId));
       if (succRow) {
         succRow.predecessors_count = (succRow.predecessors_count || 0) + 1;
@@ -2193,7 +2196,7 @@ async function ppAddPredecessor() {
       showToast('Зависимость добавлена', 'success');
       document.getElementById('ppDepsAddPredInput').value = '';
       document.getElementById('ppDepsAddPredSelect').value = '';
-      ppLoadDeps(ppCurrentDepsTaskId);
+      await ppLoadDeps(ppCurrentDepsTaskId);
       const row = rows.find(r => r.id === ppCurrentDepsTaskId);
       if (row) row.predecessors_count = (row.predecessors_count || 0) + 1;
       renderPPTable();
@@ -2212,7 +2215,7 @@ async function ppDeleteDep(depId) {
     });
     if (res.ok) {
       showToast('Зависимость удалена', 'success');
-      ppLoadDeps(ppCurrentDepsTaskId);
+      await ppLoadDeps(ppCurrentDepsTaskId);
       const row = rows.find(r => r.id === ppCurrentDepsTaskId);
       if (row) row.predecessors_count = Math.max(0, (row.predecessors_count || 0) - 1);
       renderPPTable();
@@ -2235,7 +2238,8 @@ async function ppAlignDates(cascade) {
     if (res.ok) {
       showToast(`Даты выровнены (${data.aligned_count} задач)`, 'success');
       ppLoadDeps(ppCurrentDepsTaskId);
-      loadPPRows(currentProjectId);
+      await loadPPRows(currentProjectId);
+      renderPPTable();
     } else { showToast(data.error || 'Ошибка', 'error'); }
   } catch (e) { showToast('Ошибка', 'error'); }
 }

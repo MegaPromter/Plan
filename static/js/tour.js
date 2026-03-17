@@ -1,4 +1,4 @@
-/* ── Интерактивное обучение — Tour/Onboarding (11 шагов) ──────────────────
+/* ── Интерактивное обучение — Tour/Onboarding (11 шагов, без зависимостей) ──────────────────
  * Межстраничный тур: автоматический переход на нужную страницу,
  * подсветка элементов с пульсацией на каждом шаге.
  * Прогресс: localStorage + сервер (/api/col_settings/).
@@ -44,17 +44,7 @@
       desc: 'Внутри открытого ПП кнопка «Добавить строку» создаёт новую работу. Каждая строка — это работа с этапом, вехой, шифром и трудоёмкостью.'
     },
     {
-      id: 'dependencies', stepNum: 4,
-      page: '/works/production-plan/',
-      selector: '.dep-badge.action-dep',
-      needProject: true,
-      autoAction: 'openDepsModal',
-      title: 'Зависимости между работами',
-      icon: 'fa-link',
-      desc: 'Кнопка 🔗 показывает зависимости между работами (FS/SS/FF/SF). Зависимости позволяют выстраивать последовательность и автоматически выравнивать сроки.'
-    },
-    {
-      id: 'sync_to_sp', stepNum: 5,
+      id: 'sync_to_sp', stepNum: 4,
       page: '/works/production-plan/',
       selector: '#projectActions .btn-secondary',
       needProject: true,
@@ -63,7 +53,7 @@
       desc: 'Кнопка «Синхронизировать с СП» переносит работы из производственного плана в сводный план (план/отчёт). После синхронизации задачи появляются в СП с пометкой «из ПП».'
     },
     {
-      id: 'sp_overview', stepNum: 6,
+      id: 'sp_overview', stepNum: 5,
       page: '/works/plan/',
       selector: null,
       sidebarHighlight: 'a[href="/works/plan/"]',
@@ -73,7 +63,7 @@
       infoOnly: true
     },
     {
-      id: 'edit_task', stepNum: 7,
+      id: 'edit_task', stepNum: 6,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-edit-row',
       title: 'Редактирование задачи в СП',
@@ -81,7 +71,7 @@
       desc: 'Кнопка \u270F\uFE0F открывает модальное окно редактирования задачи. Здесь можно изменить сроки, исполнителей, плановые часы по месяцам и другие параметры.'
     },
     {
-      id: 'report', stepNum: 8,
+      id: 'report', stepNum: 7,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-report',
       title: 'Отчёт по задаче',
@@ -89,7 +79,7 @@
       desc: 'Кнопка отчёта позволяет внести фактические данные о выполнении работы: процент готовности, фактические часы, примечания.'
     },
     {
-      id: 'errors_btn', stepNum: 9,
+      id: 'errors_btn', stepNum: 8,
       page: '/works/plan/',
       selector: '#errorsBtn',
       autoAction: 'openErrorsPanel',
@@ -98,7 +88,7 @@
       desc: 'Кнопка «Ошибки планирования» показывает несоответствия: задачи без исполнителей, пересечение сроков с отпусками, превышение норм часов и другие проблемы.'
     },
     {
-      id: 'work_calendar', stepNum: 10,
+      id: 'work_calendar', stepNum: 9,
       page: '/works/work-calendar/',
       selector: '.cal-summary-table, table',
       title: 'Производственный календарь',
@@ -108,7 +98,7 @@
       descNonAdmin: 'Производственный календарь задаёт норму рабочих часов по месяцам (фонд рабочего времени). Доступен для управления администраторам.'
     },
     {
-      id: 'notices', stepNum: 11,
+      id: 'notices', stepNum: 10,
       page: '/works/notices/',
       selector: '.ji-table, table',
       noArrow: true,
@@ -117,7 +107,7 @@
       desc: 'Журнал извещений фиксирует изменения в документации. Пункты ЖИ создаются автоматически при корректировке или вручную. Здесь отслеживается статус (сроки действия, просрочка, погашение и проч.).'
     },
     {
-      id: 'roles', stepNum: 12,
+      id: 'roles', stepNum: 11,
       page: null,
       selector: null,
       title: 'Роли и права доступа',

@@ -6,7 +6,7 @@
 .data-table-wrap {
   overflow: auto;
   border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  box-shadow: var(--shadow-md, 0 1px 6px rgba(0,0,0,0.07));
   border: 1px solid var(--border2);
 }
 
@@ -20,10 +20,11 @@
 }
 
 /* Заголовки */
+.data-table thead { box-shadow: var(--shadow-sticky, 0 4px 12px rgba(0,0,0,0.08)); }
 .data-table thead th {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 51;
   background: var(--th-bg);
   border-bottom: 2px solid var(--border2);
   border-right: 1px solid var(--border2);
@@ -51,8 +52,9 @@
 /* Чередование строк */
 .data-table tbody tr:nth-child(even) { background: var(--row-even); }
 .data-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
-.data-table tbody tr { transition: background 0.12s; }
+.data-table tbody tr { transition: background 0.12s; position:relative; }
 .data-table tbody tr:hover { background: var(--row-hover) !important; }
+.data-table tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent, #2563eb); }
 
 /* Первая колонка — номер строки */
 .data-table td:first-child {
@@ -205,7 +207,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   left: 0;
   z-index: 2;
 }
-.sticky-first-col thead th:first-child { z-index: 11; }
+.sticky-first-col thead th:first-child { z-index: 52; }
 
 /* Тень-разделитель */
 .sticky-first-col th:first-child::after,
@@ -285,4 +287,12 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-spinner i, .skeleton,
+  .cell-error, .bulk-bar {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -44,6 +44,16 @@
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
 
+  /* Gradient accent (blue → purple) */
+  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+
+  /* Layered shadows — натуральная глубина */
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:  0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:  0 4px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.10), 0 16px 48px rgba(0,0,0,0.06);
+  --shadow-accent: 0 4px 14px rgba(37,99,235,0.35);
+  --shadow-sticky: 0 4px 12px rgba(0,0,0,0.08);
+
   /* Плотность таблиц (comfortable по умолчанию) */
   --td-pad-y: 10px;
   --td-pad-x: 12px;
@@ -56,7 +66,7 @@
   /* Таблица-заголовок */
   --th-bg:       #eef1f7;
   --th-color:    #4a5568;
-  --row-even:    #f6f8fb;
+  --row-even:    #f3f5f9;
   --row-odd:     #ffffff;
   --row-hover:   #edf2ff;
   --row-num-bg:  #f0f3f8;
@@ -81,6 +91,13 @@
   --accent-glow:  rgba(59,130,246,0.15);
   --accent-light: rgba(59,130,246,0.10);
 
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:  0 2px 4px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg:  0 4px 8px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-accent: 0 4px 14px rgba(59,130,246,0.3);
+  --shadow-sticky: 0 4px 12px rgba(0,0,0,0.3);
+
   /* Текст инвертирован */
   --text:  #e2e8f0;
   --text2: #94a3b8;
@@ -90,10 +107,61 @@
   /* Таблица-заголовок */
   --th-bg:       #1e2130;
   --th-color:    #94a3b8;
-  --row-even:    #15171f;
+  --row-even:    #13151d;
   --row-odd:     #1a1d27;
   --row-hover:   rgba(59,130,246,0.08);
   --row-num-bg:  #15171f;
+}
+
+/* ── Сумерки — мягкая промежуточная тема ─────────────────────────── */
+[data-theme="twilight"] {
+  --bg:       #dfe4ec;
+  --surface:  #e8ecf3;
+  --surface2: #d2d9e4;
+  --border:   #bfc8d6;
+  --border2:  #a4b0c2;
+
+  /* Сайдбар — тёплый тёмно-синий, мягче чем light */
+  --nav-bg:     #2c3a52;
+  --nav-border: #3a4d6a;
+  --nav-text:   #b0c4de;
+  --nav-text2:  #d6e2f0;
+  --nav-active-bg: rgba(255,255,255,0.12);
+  --nav-active-color: #ffffff;
+  --nav-hover-bg: rgba(255,255,255,0.08);
+  --topbar-bg:  #344763;
+
+  /* Акцент — чуть мягче, приятнее */
+  --accent:       #3b7cf5;
+  --accent2:      #2563eb;
+  --accent-glow:  rgba(59,130,246,0.10);
+  --accent-light: #e0ecff;
+
+  --accent-gradient: linear-gradient(135deg, #3b7cf5 0%, #8b5cf6 100%);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:  0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:  0 4px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.08);
+  --shadow-accent: 0 4px 14px rgba(59,124,245,0.30);
+  --shadow-sticky: 0 4px 12px rgba(0,0,0,0.10);
+
+  /* Текст — приглушённый, но читаемый */
+  --text:  #2d3a4e;
+  --text2: #56667d;
+  --muted: #7a8da4;
+  --muted2:#6b7f96;
+
+  /* Статусы — чуть мягче */
+  --danger:  #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+
+  /* Таблицы */
+  --th-bg:       #d0d7e3;
+  --th-color:    #445064;
+  --row-even:    #e0e5ee;
+  --row-odd:     #e8ecf3;
+  --row-hover:   #d4ddef;
+  --row-num-bg:  #dce1eb;
 }
 
 /* ── Плотность: compact ──────────────────────────────────────────── */

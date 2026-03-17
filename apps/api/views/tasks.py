@@ -144,8 +144,9 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
     # Индикатор просроченности: deadline (или date_end) < сегодня
     today = timezone.now().date()
     effective_deadline = (work.date_end if is_from_pp else work.deadline) or work.date_end
+    has_reports = d['has_reports']
     d['is_overdue'] = bool(
-        effective_deadline and effective_deadline < today
+        not has_reports and effective_deadline and effective_deadline < today
     )
 
     return d
@@ -247,6 +248,8 @@ class TaskListView(LoginRequiredJsonMixin, View):
                 | Q(work_designation__icontains=s)
                 | Q(project__name_short__icontains=s)
                 | Q(project__name_full__icontains=s)
+                | Q(pp_project__up_project__name_short__icontains=s)
+                | Q(pp_project__up_project__name_full__icontains=s)
                 | Q(task_type__icontains=s)
                 | Q(work_num__icontains=s)
             )
@@ -483,6 +486,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                                'Перезагрузите страницу.',
                 }, status=409)
 
+        _orig_project_id = work.project_id
         # from_pp: запись из ПП — ПП-поля заблокированы для редактирования в СП
         is_from_pp = work.show_in_pp
         _PP_LOCKED_FIELDS = frozenset((
@@ -555,7 +559,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 work.save()
 
                 # Автогенерация row_code при назначении/смене проекта
-                if 'project' in d and work.project:
+                if 'project' in d and work.project and work.project_id != _orig_project_id:
                     work.row_code = generate_row_code(work.project)
                     work.save(update_fields=['row_code'])
 
@@ -609,6 +613,54 @@ class TaskDeleteAllView(AdminRequiredJsonMixin, View):
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error("TaskDeleteAllView error: %s", e, exc_info=True)
+            return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
+
+
+# ---------------------------------------------------------------------------
+#  POST /api/tasks/bulk_delete (writer)
+# ---------------------------------------------------------------------------
+
+class TaskBulkDeleteView(WriterRequiredJsonMixin, View):
+    """POST /api/tasks/bulk_delete — удаление нескольких задач по списку ID."""
+
+    def post(self, request):
+        data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+
+        ids = data.get('ids', [])
+        if not ids or not isinstance(ids, list):
+            return JsonResponse({'error': 'Не указаны ID задач'}, status=400)
+
+        # Ограничиваем до 100 за раз
+        ids = [int(i) for i in ids[:100] if str(i).isdigit()]
+        if not ids:
+            return JsonResponse({'error': 'Нет валидных ID'}, status=400)
+
+        try:
+            vis_q = get_visibility_filter(request.user)
+            with transaction.atomic():
+                works = list(
+                    Work.objects
+                    .select_for_update()
+                    .filter(pk__in=ids, show_in_plan=True)
+                    .filter(vis_q)
+                )
+                deleted = 0
+                for work in works:
+                    log_action(request, AuditLog.ACTION_TASK_DELETE,
+                               object_id=work.id, object_repr=work.work_name)
+                    if work.show_in_pp:
+                        work.show_in_plan = False
+                        work.actions = {}
+                        work.save(update_fields=['show_in_plan', 'actions'])
+                    else:
+                        work.delete()
+                    deleted += 1
+
+            return JsonResponse({'ok': True, 'deleted': deleted})
+        except Exception as e:
+            logger.error("TaskBulkDeleteView error: %s", e, exc_info=True)
             return JsonResponse({'error': 'Внутренняя ошибка сервера'}, status=500)
 
 

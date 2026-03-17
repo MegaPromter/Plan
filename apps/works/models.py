@@ -609,6 +609,7 @@ class AuditLog(models.Model):
     ACTION_TASK_DELETE   = 'task_delete'
     ACTION_PP_SYNC       = 'pp_sync'
     ACTION_PP_CREATE     = 'pp_create'
+    ACTION_PP_UPDATE     = 'pp_update'
     ACTION_PP_DELETE     = 'pp_delete'
     ACTION_ROLE_CHANGE   = 'role_change'
     ACTION_USER_CREATE   = 'user_create'
@@ -624,6 +625,7 @@ class AuditLog(models.Model):
         (ACTION_TASK_DELETE, 'Удаление задачи'),
         (ACTION_PP_SYNC,     'Синхронизация ПП'),
         (ACTION_PP_CREATE,   'Создание записи ПП'),
+        (ACTION_PP_UPDATE,   'Изменение записи ПП'),
         (ACTION_PP_DELETE,   'Удаление записи ПП'),
         (ACTION_ROLE_CHANGE, 'Смена роли пользователя'),
         (ACTION_USER_CREATE, 'Создание пользователя'),

@@ -55,17 +55,17 @@
     <!-- 5. Аналитика -->
     <div class="nav-section">
       <div class="nav-section-title">5. Аналитика</div>
-      <a href="{% url 'accounts:stub' 'analytics-workload' %}" class="nav-item{% if active_nav == 'analytics_workload' %} active{% endif %}">
+      <a href="{% url 'works:analytics_workload' %}" class="nav-item{% if active_nav == 'analytics_workload' %} active{% endif %}">
         <i class="fas fa-chart-bar"></i>
-        <span>Загрузка сотрудников</span>
+        <span>Доска руководителя</span>
       </a>
-      <a href="{% url 'accounts:stub' 'analytics-deadlines' %}" class="nav-item{% if active_nav == 'analytics_deadlines' %} active{% endif %}">
-        <i class="fas fa-chart-line"></i>
-        <span>Исполнение сроков</span>
+      <a href="{% url 'works:analytics_employee' %}" class="nav-item{% if active_nav == 'analytics_employee' %} active{% endif %}">
+        <i class="fas fa-id-badge"></i>
+        <span>Доска сотрудника</span>
       </a>
-      <a href="{% url 'accounts:stub' 'analytics-reports' %}" class="nav-item{% if active_nav == 'analytics_reports' %} active{% endif %}">
+      <a href="{% url 'works:analytics_pp' %}" class="nav-item{% if active_nav == 'analytics_pp' %} active{% endif %}">
         <i class="fas fa-file-alt"></i>
-        <span>Отчёты</span>
+        <span>Отчёты ПП</span>
       </a>
     </div>
 
@@ -119,6 +119,10 @@
         <span>Подразделения</span>
       </a>
       {% if request.user|is_admin_role %}
+      <a href="{% url 'works:audit_log' %}" class="nav-item{% if active_nav == 'audit_log' %} active{% endif %}">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Журнал аудита</span>
+      </a>
       <a href="/admin/" class="nav-item">
         <i class="fas fa-cogs"></i>
         <span>Настройки системы</span>

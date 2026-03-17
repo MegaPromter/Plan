@@ -21,6 +21,14 @@ urlpatterns = [
     path('work-calendar/',      views.WorkCalendarSPAView.as_view(),    name='work_calendar'),
     # План командировок
     path('business-trips/',     views.BusinessTripsSPAView.as_view(),   name='business_trips'),
+    # Журнал аудита (только admin)
+    path('audit-log/',          views.AuditLogSPAView.as_view(),        name='audit_log'),
+    # Аналитика: загрузка сотрудников
+    path('analytics-workload/', views.AnalyticsWorkloadSPAView.as_view(), name='analytics_workload'),
+    # Аналитика: доска сотрудника
+    path('analytics-employee/', views.AnalyticsEmployeeSPAView.as_view(), name='analytics_employee'),
+    # Аналитика: отчёты ПП
+    path('analytics-pp/', views.AnalyticsPPSPAView.as_view(), name='analytics_pp'),
 
     # ── Стандартные CRUD-маршруты для работ ────────────────────────────────────
 

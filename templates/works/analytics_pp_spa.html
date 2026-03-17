@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+{% block title %}Отчёты ПП — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Отчёты ПП</span>
+{% endblock %}
+
+{% block extra_context %}
+<span class="topbar-meta">{{ username }}</span>
+<span class="topbar-meta muted">{{ user_position }}</span>
+{% endblock %}
+
+{% block styles %}
+<style>
+.analytics-page { display:flex; flex-direction:column; gap:20px; }
+
+.analytics-toolbar {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.analytics-toolbar .year-label { font-weight:600; font-size:14px; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; }
+.year-btn {
+  padding:5px 14px; border-radius:6px; border:1px solid var(--border2);
+  background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
+  font-family:var(--font); transition:all 0.15s;
+}
+.year-btn:hover { border-color:var(--accent); color:var(--accent); }
+.year-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.pp-select {
+  padding:5px 12px; border-radius:6px; border:1px solid var(--border2);
+  background:var(--surface); color:var(--text); font-size:13px;
+  font-family:var(--font); min-width:240px; cursor:pointer;
+}
+
+/* Сводка */
+.summary-row { display:grid; grid-template-columns:repeat(5, 1fr); gap:14px; }
+.summary-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:18px 16px; text-align:center; box-shadow:var(--shadow-sm);
+  transition:transform 0.15s, box-shadow 0.15s;
+}
+.summary-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.summary-card-value {
+  font-size:28px; font-weight:800; line-height:1;
+  font-variant-numeric:tabular-nums; margin-bottom:6px;
+}
+.summary-card-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+.sc-tasks .summary-card-value { color:var(--accent); }
+.sc-labor .summary-card-value { color:#8b5cf6; }
+.sc-sheets .summary-card-value { color:#f59e0b; }
+.sc-done .summary-card-value { color:#22c55e; }
+.sc-overdue .summary-card-value { color:var(--danger); }
+
+/* Виджеты */
+.widgets-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.widget {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:20px; box-shadow:var(--shadow-sm);
+}
+.widget-full { grid-column: 1 / -1; }
+.widget-title {
+  font-size:15px; font-weight:700; color:var(--text); margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.widget-title i { color:var(--accent); font-size:16px; }
+
+.chart-wrap { position:relative; height:300px; }
+.chart-wrap-sm { position:relative; height:250px; }
+
+.widget-table { width:100%; border-collapse:collapse; font-size:13px; }
+.widget-table th {
+  text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+  color:var(--muted); padding:6px 8px; border-bottom:2px solid var(--border2);
+  font-weight:600;
+}
+.widget-table td {
+  padding:8px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:middle;
+}
+.widget-table .cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+
+.widget-empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:14px; }
+.widget-loading { text-align:center; padding:40px; color:var(--muted); }
+.widget-loading i { animation:spin 0.7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-page">
+
+  <!-- Тулбар -->
+  <div class="analytics-toolbar">
+    <span class="year-label">Год:</span>
+    {% for y in years %}
+    <button class="year-btn{% if y == current_year %} active{% endif %}" onclick="setYear({{ y }})">{{ y }}</button>
+    {% endfor %}
+    <span class="year-label" style="margin-left:16px;">ПП-Проект:</span>
+    <select class="pp-select" id="ppProjectSelect" onchange="setPPProject(this.value)">
+      <option value="">Все проекты</option>
+    </select>
+  </div>
+
+  <!-- Сводка -->
+  <div class="summary-row">
+    <div class="summary-card sc-tasks fade-in fade-in-1">
+      <div class="summary-card-value" id="sumTasks">—</div>
+      <div class="summary-card-label">Задачи</div>
+    </div>
+    <div class="summary-card sc-labor fade-in fade-in-2">
+      <div class="summary-card-value" id="sumLabor">—</div>
+      <div class="summary-card-label">Трудоёмкость (ч)</div>
+    </div>
+    <div class="summary-card sc-sheets fade-in fade-in-3">
+      <div class="summary-card-value" id="sumSheets">—</div>
+      <div class="summary-card-label">Листы А4</div>
+    </div>
+    <div class="summary-card sc-done fade-in fade-in-4">
+      <div class="summary-card-value" id="sumDone">—</div>
+      <div class="summary-card-label">Выполнено</div>
+    </div>
+    <div class="summary-card sc-overdue fade-in fade-in-5">
+      <div class="summary-card-value" id="sumOverdue">—</div>
+      <div class="summary-card-label">Просрочено</div>
+    </div>
+  </div>
+
+  <!-- Виджеты -->
+  <div class="widgets-grid">
+
+    <!-- По проектам -->
+    <div class="widget fade-in fade-in-1">
+      <div class="widget-title"><i class="fas fa-project-diagram"></i> Трудоёмкость по проектам</div>
+      <div class="chart-wrap" data-canvas="chartProjects"><canvas id="chartProjects"></canvas></div>
+    </div>
+
+    <!-- По отделам -->
+    <div class="widget fade-in fade-in-2">
+      <div class="widget-title"><i class="fas fa-building"></i> Нагрузка по отделам</div>
+      <div class="chart-wrap" data-canvas="chartDepts"><canvas id="chartDepts"></canvas></div>
+    </div>
+
+    <!-- По типам работ -->
+    <div class="widget fade-in fade-in-3">
+      <div class="widget-title"><i class="fas fa-tags"></i> Типы работ</div>
+      <div class="chart-wrap-sm" data-canvas="chartTypes"><canvas id="chartTypes"></canvas></div>
+    </div>
+
+    <!-- Помесячно -->
+    <div class="widget fade-in fade-in-4">
+      <div class="widget-title"><i class="fas fa-calendar-alt"></i> Динамика по месяцам</div>
+      <div class="chart-wrap-sm" data-canvas="chartMonthly"><canvas id="chartMonthly"></canvas></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var selectedYear = {{ current_year }};
+  var selectedPPProject = '';
+  var chartProjects = null;
+  var chartDepts = null;
+  var chartTypes = null;
+  var chartMonthly = null;
+  var MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  var TYPE_COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+
+  function getCSRF() {
+    var c = document.cookie.match(/csrftoken=([^;]+)/);
+    return c ? c[1] : '';
+  }
+  function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function ensureCanvas(id) {
+    var el = document.getElementById(id);
+    if (el) return el;
+    // Canvas был уничтожен empty-state — восстанавливаем
+    var wrap = document.querySelector('[data-canvas="' + id + '"]');
+    if (wrap) {
+      wrap.innerHTML = '<canvas id="' + id + '"></canvas>';
+      return document.getElementById(id);
+    }
+    return null;
+  }
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  window.setYear = function(y) {
+    selectedYear = y;
+    document.querySelectorAll('.year-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.textContent) === y);
+    });
+    loadData();
+  };
+
+  window.setPPProject = function(id) {
+    selectedPPProject = id;
+    loadData();
+  };
+
+  function loadData() {
+    var url = '/api/analytics/pp/?year=' + selectedYear;
+    if (selectedPPProject) url += '&pp_project_id=' + selectedPPProject;
+
+    fetch(url)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      renderSummary(data.summary);
+      renderProjectsChart(data.by_project || []);
+      renderDeptsChart(data.by_dept || []);
+      renderTypesChart(data.by_type || []);
+      renderMonthlyChart(data.monthly || []);
+      renderPPProjectSelect(data.pp_projects || []);
+    })
+    .catch(function(e) {
+      console.error('PP analytics error:', e);
+      if (typeof showToast === 'function') showToast('Ошибка загрузки данных', 'error');
+    });
+  }
+
+  function renderSummary(s) {
+    if (!s) return;
+    document.getElementById('sumTasks').textContent = s.total_tasks;
+    document.getElementById('sumLabor').textContent = s.total_labor;
+    document.getElementById('sumSheets').textContent = s.total_sheets;
+    document.getElementById('sumDone').textContent = s.done;
+    document.getElementById('sumOverdue').textContent = s.overdue;
+  }
+
+  function renderPPProjectSelect(list) {
+    var sel = document.getElementById('ppProjectSelect');
+    var current = sel.value;
+    var html = '<option value="">Все проекты</option>';
+    list.forEach(function(p) {
+      var selected = String(p.id) === String(current) ? ' selected' : '';
+      html += '<option value="' + p.id + '"' + selected + '>' + esc(p.name) + '</option>';
+    });
+    sel.innerHTML = html;
+  }
+
+  function renderProjectsChart(data) {
+    if (chartProjects) { chartProjects.destroy(); chartProjects = null; }
+    var canvas = ensureCanvas('chartProjects');
+    if (!canvas) return;
+    if (!data.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по проектам</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    var accent = getCSSVar('--accent') || '#3b82f6';
+    chartProjects = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(function(d) { return d.name.length > 25 ? d.name.slice(0,22) + '…' : d.name; }),
+        datasets: [{
+          label: 'Трудоёмкость (ч)',
+          data: data.map(function(d) { return d.labor; }),
+          backgroundColor: accent + '88',
+          borderColor: accent,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: getCSSVar('--muted') || '#888' }, grid: { color: getCSSVar('--border') || '#eee' } },
+          y: { ticks: { color: getCSSVar('--text') || '#333', font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderDeptsChart(data) {
+    if (chartDepts) { chartDepts.destroy(); chartDepts = null; }
+    var canvas = ensureCanvas('chartDepts');
+    if (!canvas) return;
+    if (!data.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по отделам</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    var accent = getCSSVar('--accent') || '#3b82f6';
+    var warn = '#f59e0b';
+    chartDepts = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(function(d) { return d.dept; }),
+        datasets: [
+          { label: 'Трудоёмкость (ч)', data: data.map(function(d) { return d.labor; }), backgroundColor: accent + '88', borderColor: accent, borderWidth: 1 },
+          { label: 'Листы А4', data: data.map(function(d) { return d.sheets; }), backgroundColor: warn + '88', borderColor: warn, borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: getCSSVar('--text') || '#333' } } },
+        scales: {
+          x: { ticks: { color: getCSSVar('--muted') || '#888' }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: getCSSVar('--muted') || '#888' }, grid: { color: getCSSVar('--border') || '#eee' } }
+        }
+      }
+    });
+  }
+
+  function renderTypesChart(data) {
+    if (chartTypes) { chartTypes.destroy(); chartTypes = null; }
+    var canvas = ensureCanvas('chartTypes');
+    if (!canvas) return;
+    if (!data.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по типам работ</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    chartTypes = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.map(function(d) { return d.task_type; }),
+        datasets: [{
+          data: data.map(function(d) { return d.count; }),
+          backgroundColor: data.map(function(_, i) { return TYPE_COLORS[i % TYPE_COLORS.length]; }),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 }, color: getCSSVar('--text') || '#333', padding: 8, boxWidth: 14 } }
+        }
+      }
+    });
+  }
+
+  function renderMonthlyChart(data) {
+    if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+    var canvas = ensureCanvas('chartMonthly');
+    if (!canvas) return;
+    if (!data || !data.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по месяцам</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    var accent = getCSSVar('--accent') || '#3b82f6';
+    var success = '#22c55e';
+    chartMonthly = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: MONTHS_RU,
+        datasets: [
+          { label: 'Трудоёмкость (ч)', data: data.map(function(d) { return d.labor; }), backgroundColor: accent + '66', borderColor: accent, borderWidth: 1 },
+          { label: 'Выполнено', type: 'line', data: data.map(function(d) { return d.done; }), borderColor: success, borderWidth: 2, pointRadius: 3, pointBackgroundColor: success, fill: false, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: getCSSVar('--text') || '#333' } } },
+        scales: {
+          x: { ticks: { color: getCSSVar('--muted') || '#888' }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: getCSSVar('--muted') || '#888' }, grid: { color: getCSSVar('--border') || '#eee' }, title: { display: true, text: 'Часы', color: getCSSVar('--muted') || '#888' } },
+          y1: { beginAtZero: true, position: 'right', ticks: { color: success }, grid: { display: false }, title: { display: true, text: 'Задач', color: success } }
+        }
+      }
+    });
+  }
+
+  loadData();
+})();
+</script>
+{% endblock %}

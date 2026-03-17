@@ -18,7 +18,7 @@
 <!-- Font Awesome — иконки в навигации и кнопках -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <!-- Стили сайдбара (единый источник) -->
-<link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=2">
 <style>
 /* Сброс отступов и задание box-sizing для всех элементов */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,12 +77,14 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
   z-index:50;
 }
 /* Хлебные крошки (навигационная цепочка) */
-.breadcrumb { display:flex; align-items:center; gap:8px; font-size:14px; }
-.breadcrumb a { color:var(--nav-text); text-decoration:none; transition:color .15s; }
-.breadcrumb a:hover { color:#93c5fd; }
-.breadcrumb span { color:var(--nav-text); opacity:0.6; }
+.breadcrumb { display:flex; align-items:center; gap:6px; font-size:14px; }
+.breadcrumb a { color:var(--nav-text); text-decoration:none; transition:all .15s; }
+.breadcrumb a:hover { color:#fff; }
+/* Chevron-разделители */
+.breadcrumb span:not(.breadcrumb-current) { color:var(--nav-text); opacity:0.4; font-size:11px; }
+.breadcrumb span:not(.breadcrumb-current)::before { content:''; }
 /* Текущий раздел в хлебных крошках */
-.breadcrumb-current { color:#fff; font-weight:500; }
+.breadcrumb-current { color:#fff; font-weight:600; }
 /* Растяжка для выравнивания (толкает правые элементы к краю) */
 .topbar-spacer { flex:1; }
 /* Основная область контента страницы */
@@ -136,19 +138,30 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
   display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
   font-size:14px; font-weight:600; font-family:var(--font);
   text-decoration:none; cursor:pointer; border:none; transition:all 0.2s ease;
+  position:relative; overflow:hidden;
 }
-/* Основная кнопка (синяя) */
-.btn-primary  { background:var(--accent);   color:#fff; }
-.btn-primary:hover  { background:var(--accent2); transform:translateY(-1px); box-shadow:0 4px 12px rgba(59,130,246,0.4); }
+/* Ripple-эффект при клике */
+.btn::after {
+  content:''; position:absolute; inset:0; background:rgba(255,255,255,0.3);
+  border-radius:inherit; transform:scale(0); opacity:0; transition:none;
+}
+.btn:active::after { transform:scale(2.5); opacity:0; animation:btnRipple 0.5s ease-out; }
+@keyframes btnRipple { from{transform:scale(0);opacity:0.4} to{transform:scale(2.5);opacity:0} }
+/* Иконки в кнопках — сдвиг при hover */
+.btn i, .btn .fas, .btn .far { transition:transform 0.2s ease; }
+.btn:hover i, .btn:hover .fas, .btn:hover .far { transform:translateX(1px); }
+/* Основная кнопка (gradient) */
+.btn-primary  { background:var(--accent-gradient, var(--accent)); color:#fff; }
+.btn-primary:hover  { transform:translateY(-1px); box-shadow:var(--shadow-accent); filter:brightness(1.08); }
 /* Вторичная кнопка (светлая) */
 .btn-secondary{ background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-.btn-secondary:hover{ border-color:var(--accent); color:var(--accent); }
+.btn-secondary:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
 /* Опасная кнопка (красная, для удаления) */
 .btn-danger   { background:var(--danger);   color:#fff; }
-.btn-danger:hover   { background:#dc2626; transform:translateY(-1px); }
+.btn-danger:hover   { background:#dc2626; transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.35); }
 /* Кнопка-контур (прозрачный фон) */
 .btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
-.btn-outline:hover  { border-color:var(--border2); color:var(--text); }
+.btn-outline:hover  { border-color:var(--border2); color:var(--text); transform:translateY(-1px); }
 /* Маленький размер кнопки */
 .btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
 /* Неактивная кнопка */
@@ -160,11 +173,11 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
   display:flex; align-items:center; justify-content:space-between;
   flex-wrap:wrap; gap:12px; margin-bottom:24px;
 }
-.page-header h1 { font-size:24px; font-weight:700; color:var(--text); }
+.page-header h1 { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-0.01em; }
 
 /* ── Section card ────────────────────────────────────────────────────── */
 /* Секция-карточка — белый блок с рамкой и скруглёнными углами */
-.section { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.section { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
 /* Шапка секции с заголовком и действиями */
 .section-header {
   padding:20px 24px; border-bottom:1px solid var(--border);
@@ -179,7 +192,7 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 /* Универсальные стили таблицы данных */
 .data-table { width:100%; border-collapse:collapse; }
 /* Шапка таблицы прилипает при прокрутке (ниже topbar) */
-.data-table thead { position:sticky; top:60px; z-index:2; }
+.data-table thead { position:sticky; top:60px; z-index:2; box-shadow:var(--shadow-sticky); }
 .data-table th {
   text-align:left; padding:11px 16px;
   font-size:11px; font-weight:700; color:var(--text2);
@@ -399,11 +412,52 @@ textarea { resize:vertical; min-height:80px; }
 .base-user-dropdown a:hover { background:var(--surface2); }
 .base-user-dropdown .ud-sep { height:1px; background:var(--border); margin:2px 0; }
 .base-user-dropdown .ud-danger { color:var(--danger); }
+
+/* ── Кастомные скроллбары ──────────────────────────────────────────── */
+/* Тонкие, скруглённые, accent при hover */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+/* Firefox */
+* { scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
+
+/* ── Микроанимация fadeUp ──────────────────────────────────────────── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Print stylesheet ──────────────────────────────────────────────── */
+@media print {
+  .sidebar, .sidebar-overlay, .topbar, .toast-container,
+  .skip-link, .sidebar-toggle, .btn, .breadcrumb-nav,
+  .tour-tooltip, .tour-spotlight, .tour-info-backdrop, .tour-modal-backdrop { display:none !important; }
+  .main-content { margin-left:0 !important; padding:0 !important; }
+  body { background:#fff !important; color:#000 !important; font-size:12px; }
+  .section { border:1px solid #ccc; box-shadow:none !important; break-inside:avoid; }
+  .data-table th { background:#eee !important; color:#333 !important; }
+  .data-table td { border-bottom:1px solid #ddd; }
+  .data-table thead { position:static !important; }
+  a { color:#000 !important; text-decoration:none !important; }
+}
+
+/* ── Предупреждение таймаута сессии ────────────────────────────────── */
+.session-warn-overlay {
+  position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+}
+.session-warn-card {
+  background:var(--surface); border:2px solid var(--warning); border-radius:16px;
+  padding:32px; max-width:400px; width:90%; text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.session-warn-card h3 { color:var(--text); font-size:18px; margin-bottom:8px; }
+.session-warn-card p { color:var(--muted); font-size:14px; margin-bottom:20px; }
+.session-warn-card .btn { margin:0 6px; }
 </style>
 <!-- Общие CSS-файлы: переменные, таблицы, компоненты -->
-<link rel="stylesheet" href="{% static 'css/variables.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'css/tables.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'css/components.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/variables.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/tables.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/components.css' %}?v=2">
 {% block styles %}{% endblock %}
 <link rel="stylesheet" href="{% static 'css/tour.css' %}?v=6">
 </head>
@@ -437,6 +491,7 @@ textarea { resize:vertical; min-height:80px; }
     <div class="topbar-spacer"></div>
     <!-- Дополнительные кнопки в topbar (определяются в дочерних шаблонах) -->
     {% block topbar_actions %}{% endblock %}
+    {% block extra_context %}{% endblock %}
     {% block topbar_theme %}{% endblock %}
     <!-- Карточка пользователя с дропдауном -->
     {% if request.user.is_authenticated %}
@@ -580,6 +635,49 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// ── Onboarding Tips — одноразовые подсказки для новых пользователей ─────
+(function() {
+  var TIPS = [
+    { target: '.sidebar-nav .nav-item:first-child', text: 'Главное меню — нажмите для навигации', pos: 'right' },
+    { target: '#themeToggle', text: 'Переключатель темы: светлая, тёмная или системная', pos: 'bottom' },
+  ];
+  var seen = {};
+  try { seen = JSON.parse(localStorage.getItem('onboardingSeen') || '{}'); } catch(e) {}
+
+  function showNextTip() {
+    for (var idx = 0; idx < TIPS.length; idx++) {
+      if (seen[idx]) continue;
+      var el = document.querySelector(TIPS[idx].target);
+      if (!el) continue;
+      var tip = document.createElement('div');
+      tip.className = 'onboarding-tip';
+      tip.innerHTML = '<span>' + TIPS[idx].text + '</span><button>Понятно</button>';
+      var rect = el.getBoundingClientRect();
+      if (TIPS[idx].pos === 'right') {
+        tip.style.top = (rect.top + rect.height / 2 - 20) + 'px';
+        tip.style.left = (rect.right + 12) + 'px';
+      } else {
+        tip.style.top = (rect.bottom + 12) + 'px';
+        tip.style.left = (rect.left + rect.width / 2 - 100) + 'px';
+      }
+      // IIFE для замыкания idx
+      (function(tipIdx) {
+        tip.querySelector('button').addEventListener('click', function() {
+          seen[tipIdx] = true;
+          localStorage.setItem('onboardingSeen', JSON.stringify(seen));
+          tip.remove();
+          // Показать следующую подсказку через небольшую паузу
+          setTimeout(showNextTip, 500);
+        });
+      })(idx);
+      document.body.appendChild(tip);
+      break;
+    }
+  }
+  // Показываем через 1с после загрузки
+  setTimeout(showNextTip, 1000);
+})();
+
 // ESC закрывает любое открытое модальное окно (.modal-overlay.open или .modal-backdrop)
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
@@ -643,7 +741,42 @@ document.addEventListener('click', function(e) {
 </script>
 <!-- Блок пользовательских скриптов из дочерних шаблонов -->
 {% block scripts %}{% endblock %}
+<!-- Предупреждение о таймауте сессии (за 10 мин до истечения 8-часовой сессии) -->
+<script>
+(function(){
+  var SESSION_LIFETIME = 8*3600*1000;
+  var WARN_BEFORE = 10*60*1000;
+  var warned = false;
+  var overlay = null;
+  function showWarn(){
+    if(warned) return;
+    warned = true;
+    overlay = document.createElement('div');
+    overlay.className = 'session-warn-overlay';
+    overlay.innerHTML = '<div class="session-warn-card">' +
+      '<h3><i class="fas fa-clock" style="color:var(--warning);margin-right:8px;"></i>Сессия истекает</h3>' +
+      '<p>Ваша сессия скоро завершится. Сохраните изменения и обновите страницу.</p>' +
+      '<button class="btn btn-primary" id="sessionRefreshBtn">Продлить сессию</button>' +
+      '<button class="btn btn-outline" id="sessionDismissBtn">Закрыть</button></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('sessionRefreshBtn').onclick = function(){
+      fetch('/api/health/', {credentials:'same-origin'}).then(function(){
+        if(overlay){overlay.remove();overlay=null;}
+        warned=false;
+        startTimer();
+      });
+    };
+    document.getElementById('sessionDismissBtn').onclick = function(){
+      if(overlay){overlay.remove();overlay=null;}
+    };
+  }
+  function startTimer(){
+    setTimeout(showWarn, SESSION_LIFETIME - WARN_BEFORE);
+  }
+  startTimer();
+})();
+</script>
 <!-- Скрипт интерактивного тура по интерфейсу -->
-<script src="{% static 'js/tour.js' %}?v=6"></script>
+<script src="{% static 'js/tour.js' %}?v=7"></script>
 </body>
 </html>

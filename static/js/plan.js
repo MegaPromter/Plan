@@ -338,7 +338,7 @@ async function loadTasks() {
   }
   if (search) url += `&search=${encodeURIComponent(search)}`;
 
-  document.getElementById("taskBody").innerHTML = _spSkeletonRows(10, 20);
+  document.getElementById("taskBody").innerHTML = _spSkeletonRows(10, 15);
   document.getElementById("searchCount").textContent = "...";
 
   try {
@@ -880,11 +880,11 @@ async function mccDoneAll() {
   for (const [taskId, decision] of Object.entries(mccDecisions)) {
     const id = parseInt(taskId);
     if (decision.action === "finish") {
-      await fetch(`/api/tasks/${id}/`, {
+      const res = await fetch(`/api/tasks/${id}/`, {
         method:"PUT", headers:apiHeaders(),
         body: JSON.stringify({ _mcc_finish: true })
       });
-      processed++;
+      if (res.ok) processed++;
     } else if (decision.action === "postpone") {
       const ph = {};
       if (decision.hours > 0 && decision.de) {
@@ -892,7 +892,7 @@ async function mccDoneAll() {
         const key = `${de.getFullYear()}-${String(de.getMonth()+1).padStart(2,"0")}`;
         ph[key] = decision.hours;
       }
-      await fetch(`/api/tasks/${id}/`, {
+      const res = await fetch(`/api/tasks/${id}/`, {
         method:"PUT", headers:apiHeaders(),
         body: JSON.stringify({
           date_start: decision.ds || null,
@@ -902,7 +902,7 @@ async function mccDoneAll() {
           plan_hours_update: ph
         })
       });
-      processed++;
+      if (res.ok) processed++;
     }
   }
   closeMonthCheckModal();
@@ -1100,7 +1100,7 @@ function applyMfFilter(col, btn) {
     if (mfSelections['sector'] && mfSelections['sector'].size > 0) {
       mfSelections['sector'] = new Set();
       delete colFilters['mf_sector'];
-      const sectorBtn = document.querySelector('.mf-btn-trigger[data-col="sector"]');
+      const sectorBtn = document.querySelector('.mf-trigger[data-col="sector"]');
       if (sectorBtn) { sectorBtn.textContent = MF_DEFAULTS['sector'] || '▼'; sectorBtn.classList.remove('active'); }
     }
   }
@@ -1254,6 +1254,19 @@ function renderTable() {
   document.getElementById("searchCount").textContent =
     shown ? (hasFilters ? `${shown} из ${total} зап.` : `${shown} зап.`) : "";
 
+  // Пустое состояние: нет строк после фильтрации
+  if (_spFiltered.length === 0 && (hasFilters || _spStatusFilter !== 'all')) {
+    tbody.innerHTML = `<tr><td colspan="15">
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+        <div class="empty-state-title">Ничего не найдено</div>
+        <div class="empty-state-desc">Попробуйте изменить фильтры или сбросить поиск</div>
+      </div>
+    </td></tr>`;
+    updatePlanSummary();
+    return;
+  }
+
   // Рендерим первую порцию
   _spAppendBatch(SP_CHUNK);
   requestAnimationFrame(() => { _resizeTextareas(tbody); updatePlanSummary(); });
@@ -1290,7 +1303,7 @@ function _spAppendBatch(count) {
   if (_spRenderedCount < _spFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'spScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="20" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+    spinnerTr.innerHTML = '<td colspan="15" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
     tbody.appendChild(spinnerTr);
   }
 }
@@ -1824,11 +1837,92 @@ async function deleteTask(id, tr) {
     tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
     setTimeout(() => {
       tr.remove();
-      document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => td.textContent = i+1);
+      document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => {
+        const cb = td.querySelector('input[type="checkbox"]');
+        if (cb) { cb.nextSibling ? cb.nextSibling.textContent = ' ' + (i+1) : td.appendChild(document.createTextNode(' ' + (i+1))); }
+        else { td.textContent = i+1; }
+      });
     }, 200);
     notify("Задача удалена", "ok");
   } catch(e) {
     notify("Ошибка сети: " + e.message, "err");
+  }
+}
+
+// ── BULK SELECT / DELETE ──────────────────────────────────────────────────
+var _bulkMode = false;
+var _bulkSelected = new Set();
+
+function toggleBulkMode() {
+  _bulkMode = !_bulkMode;
+  _bulkSelected.clear();
+  var btn = document.getElementById('bulkModeBtn');
+  if (btn) btn.classList.toggle('active', _bulkMode);
+  var bar = document.getElementById('bulkBar');
+  if (bar) bar.style.display = _bulkMode ? 'flex' : 'none';
+  // Добавляем/убираем чекбоксы в num-cell
+  document.querySelectorAll('#taskBody tr').forEach(function(tr) {
+    var numCell = tr.querySelector('.num-cell');
+    if (!numCell) return;
+    var existing = numCell.querySelector('.bulk-cb');
+    if (_bulkMode && !existing) {
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'bulk-cb';
+      cb.style.cssText = 'margin-right:4px;cursor:pointer;vertical-align:middle;';
+      cb.onchange = function() {
+        var id = parseInt(tr.dataset.id);
+        if (cb.checked) _bulkSelected.add(id); else _bulkSelected.delete(id);
+        updateBulkBar();
+      };
+      numCell.insertBefore(cb, numCell.firstChild);
+    } else if (!_bulkMode && existing) {
+      existing.remove();
+    }
+  });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  var count = document.getElementById('bulkCount');
+  if (count) count.textContent = _bulkSelected.size;
+  var delBtn = document.getElementById('bulkDeleteBtn');
+  if (delBtn) delBtn.disabled = _bulkSelected.size === 0;
+}
+
+function bulkSelectAll() {
+  var cbs = document.querySelectorAll('#taskBody .bulk-cb');
+  var allChecked = _bulkSelected.size === cbs.length && cbs.length > 0;
+  cbs.forEach(function(cb) {
+    cb.checked = !allChecked;
+    var id = parseInt(cb.closest('tr').dataset.id);
+    if (!allChecked) _bulkSelected.add(id); else _bulkSelected.delete(id);
+  });
+  updateBulkBar();
+}
+
+async function bulkDelete() {
+  if (_bulkSelected.size === 0) return;
+  if (!await confirmDialog('Удалить ' + _bulkSelected.size + ' задач(и)?', 'Массовое удаление')) return;
+  try {
+    var res = await fetch('/api/tasks/bulk_delete/', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ ids: Array.from(_bulkSelected) })
+    });
+    if (!res.ok) {
+      var e = await res.json().catch(function(){return {};});
+      notify(e.error || 'Ошибка удаления', 'err'); return;
+    }
+    var data = await res.json();
+    notify('Удалено задач: ' + data.deleted, 'ok');
+    _bulkSelected.clear();
+    _bulkMode = false;
+    var btn = document.getElementById('bulkModeBtn');
+    if (btn) btn.classList.remove('active');
+    var bar = document.getElementById('bulkBar');
+    if (bar) bar.style.display = 'none';
+    await loadTasks();
+  } catch(e) {
+    notify('Ошибка сети: ' + e.message, 'err');
   }
 }
 
@@ -2344,7 +2438,8 @@ async function submitNewTask() {
         date_start: ds, date_end: de
       })
     });
-    const {conflicts} = await checkRes.json();
+    const checkData = checkRes.ok ? await checkRes.json() : {};
+    const conflicts = checkData.conflicts || [];
     if (conflicts.length > 0) {
       const conflictMsg = conflicts.map(c =>
         `${c.executor}: отпуск с ${c.vacation_start} по ${c.vacation_end}`
@@ -2380,6 +2475,19 @@ async function submitNewTask() {
     }
   }
 
+  // Клиентская валидация обязательных полей
+  const workNameVal = document.getElementById("nt-work_name").value.trim();
+  if (!workNameVal) {
+    notify('Укажите наименование работы', 'err');
+    document.getElementById("nt-work_name").focus();
+    return;
+  }
+  if (ds && de && ds > de) {
+    notify('Дата начала не может быть позже даты окончания', 'err');
+    document.getElementById("nt-date_start").focus();
+    return;
+  }
+
   const data = {
     task_type:     pendingTaskType,
     dept:          document.getElementById("nt-dept").value || null,
@@ -2387,7 +2495,7 @@ async function submitNewTask() {
     project:       document.getElementById("nt-project").value || null,
     stage:         document.getElementById("nt-stage").value || null,
     executor:      null,
-    work_name:     document.getElementById("nt-work_name").value || null,
+    work_name:     workNameVal || null,
     work_number:   document.getElementById("nt-work_number").value || null,
     justification: document.getElementById("nt-justification").value || null,
     description:   null,
@@ -2409,7 +2517,7 @@ async function submitNewTask() {
     });
     if (!res.ok) {
       let msg = 'Ошибка сохранения';
-      try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+      try { const e = await res.json(); msg = e.error || e.detail || Object.values(e).flat().join('; ') || msg; } catch(_){}
       notify(msg, "err"); return;
     }
     closeNewTaskModal(); await loadTasks(); notify("✓ Изменения сохранены", "ok");
@@ -2417,7 +2525,7 @@ async function submitNewTask() {
     const res = await fetch("/api/tasks/create/", {method:"POST", headers:apiHeaders(), body:JSON.stringify(data)});
     if (!res.ok) {
       let msg = 'Ошибка создания задачи';
-      try { const e = await res.json(); if (e.error) msg = e.error; } catch(_){}
+      try { const e = await res.json(); msg = e.error || e.detail || Object.values(e).flat().join('; ') || msg; } catch(_){}
       notify(msg, "err"); return;
     }
     closeNewTaskModal();
@@ -2512,6 +2620,7 @@ async function openReportModal(taskOrId) {
   // Заголовок модала — наименование задачи
   document.getElementById("reportTaskRef").textContent = currentTask.work_name || `Задача #${currentTaskId}`;
   const res = await fetch(`/api/reports/${currentTaskId}/`);
+  if (!res.ok) { notify('Ошибка загрузки отчётов', 'err'); return; }
   reportRows = await res.json();
   // Проверка прав на редактирование отчётов этой задачи
   const canEditThisReport = _canModify(currentTask.dept, currentTask.sector);
@@ -2712,7 +2821,7 @@ function makeReportRow(r, idx, cfg) {
     const delBtn = document.createElement("button"); delBtn.className = "r-del"; delBtn.title = "Удалить строку";
     delBtn.textContent = "✕";
     delBtn.onclick = async () => {
-      if (!confirm("Удалить строку отчёта? Данные будут удалены из ЕТБД без возможности восстановления.")) return;
+      if (!await confirmDialog("Удалить строку отчёта? Данные будут удалены из ЕТБД без возможности восстановления.")) return;
       if (r.id) await fetchJson(`/api/reports/${r.id}/detail/`, {method: "DELETE"});
       reportRows.splice(idx, 1); renderReportTable();
     };
@@ -3541,7 +3650,7 @@ async function addPredecessor() {
 
 // Удаляет зависимость (DELETE /api/dependencies/<depId>/) с подтверждением
 async function deleteDep(depId) {
-  if (!confirm('Удалить эту зависимость?')) return;
+  if (!await confirmDialog('Удалить эту зависимость?')) return;
   try {
     const res = await fetch(`/api/dependencies/${depId}/`, {
       method: 'DELETE', headers: apiHeaders(),
@@ -3639,7 +3748,7 @@ let ganttLoaded = false;                             // Флаг: библиот
 let ganttDepsFilterActive = false;                   // Фильтр: показывать только задачи с зависимостями
 let _ganttDepsSet = new Set();                       // IDs задач, у которых есть зависимости
 
-// Переключает вид (table ↔ gantt), лениво загружает Гант при первом переключении
+// Переключает вид (table ↔ gantt)
 function switchView(view) {
   currentView = view;
   document.querySelectorAll('.view-tab').forEach(tab => {
@@ -3650,16 +3759,18 @@ function switchView(view) {
   const addRow = document.querySelector('.add-row-wrap');
   const filterBtn = document.getElementById('ganttFilterDeps');
   const scaleGroup = document.getElementById('ganttScaleGroup');
+
+  tableEl.style.display = 'none';
+  ganttEl.style.display = 'none';
+  if (addRow) addRow.style.display = 'none';
+  if (filterBtn) filterBtn.style.display = 'none';
+  if (scaleGroup) scaleGroup.style.display = 'none';
+
   if (view === 'table') {
     tableEl.style.display = '';
-    ganttEl.style.display = 'none';
     if (addRow) addRow.style.display = '';
-    if (filterBtn) filterBtn.style.display = 'none';
-    if (scaleGroup) scaleGroup.style.display = 'none';
   } else {
-    tableEl.style.display = 'none';
     ganttEl.style.display = 'block';
-    if (addRow) addRow.style.display = 'none';
     if (filterBtn) filterBtn.style.display = '';
     if (scaleGroup) scaleGroup.style.display = '';
     if (!ganttLoaded) {
@@ -3682,6 +3793,7 @@ function toggleGanttDepsFilter() {
 // Устанавливает масштаб диаграммы Ганта (day/week/month/year)
 function setGanttScale(scale) {
   if (typeof gantt === 'undefined') return;
+  localStorage.setItem('gantt_scale', scale);
   document.querySelectorAll('#ganttScaleGroup .gantt-scale-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.scale === scale));
   if (scale === 'day') {
@@ -3776,6 +3888,8 @@ function setupGantt() {
   if (typeof gantt === 'undefined') return;
   _applyGanttLocaleRu();
   gantt.config.date_format = "%Y-%m-%d";
+  // Восстанавливаем масштаб из localStorage или ставим default
+  var savedScale = localStorage.getItem('gantt_scale') || 'month';
   gantt.config.scale_unit = "year";
   gantt.config.date_scale = "%Y";
   gantt.config.subscales = [{ unit: "month", step: 1, date: "%M" }];
@@ -3791,6 +3905,8 @@ function setupGantt() {
   gantt.config.drag_move = false;
   gantt.config.drag_resize = false;
   gantt.init("ganttContainer");
+  // Применяем сохранённый масштаб
+  if (savedScale && savedScale !== 'month') setGanttScale(savedScale);
 }
 
 // Загружает зависимости с сервера и отрисовывает диаграмму Ганта

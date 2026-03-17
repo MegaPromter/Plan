@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+{% block title %}Доска руководителя — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Доска руководителя</span>
+{% endblock %}
+
+{% block extra_context %}
+<span class="topbar-meta">{{ username }}</span>
+<span class="topbar-meta muted">{{ user_position }}</span>
+{% endblock %}
+
+{% block styles %}
+<style>
+.analytics-page { display:flex; flex-direction:column; gap:20px; }
+
+/* Период */
+.analytics-toolbar {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.analytics-toolbar .year-label { font-weight:600; font-size:14px; color:var(--text2); text-transform:uppercase; letter-spacing:0.05em; }
+.year-btn {
+  padding:5px 14px; border-radius:6px; border:1px solid var(--border2);
+  background:var(--surface); color:var(--text); font-size:13px; cursor:pointer;
+  font-family:var(--font); transition:all 0.15s;
+}
+.year-btn:hover { border-color:var(--accent); color:var(--accent); }
+.year-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* Сетка виджетов 2x2 */
+.widgets-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:20px;
+}
+
+/* Виджет */
+.widget {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:20px; box-shadow:var(--shadow-sm);
+}
+.widget-title {
+  font-size:15px; font-weight:700; color:var(--text); margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.widget-title i { color:var(--accent); font-size:16px; }
+
+/* Мини-таблица внутри виджета */
+.widget-table { width:100%; border-collapse:collapse; font-size:13px; }
+.widget-table th {
+  text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+  color:var(--muted); padding:6px 8px; border-bottom:2px solid var(--border2);
+  font-weight:600;
+}
+.widget-table td {
+  padding:8px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:middle;
+}
+.widget-table tbody tr { cursor:pointer; transition:background 0.12s; }
+.widget-table tbody tr:hover { background:var(--row-hover); }
+.widget-table .cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+
+.badge-days-overdue {
+  background:rgba(239,68,68,0.12); color:var(--danger); padding:2px 8px;
+  border-radius:10px; font-size:12px; font-weight:600;
+}
+.badge-days-left {
+  background:rgba(59,130,246,0.12); color:var(--accent); padding:2px 8px;
+  border-radius:10px; font-size:12px; font-weight:600;
+}
+.badge-days-left.urgent {
+  background:rgba(245,158,11,0.12); color:#d97706;
+}
+
+/* Графики */
+.chart-wrap { position:relative; height:280px; }
+
+/* Empty state */
+.widget-empty {
+  text-align:center; padding:40px 20px; color:var(--muted); font-size:14px;
+}
+
+/* Спиннер */
+.widget-loading { text-align:center; padding:40px; color:var(--muted); }
+.widget-loading i { animation:spin 0.7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-page">
+
+  <!-- Тулбар: год -->
+  <div class="analytics-toolbar">
+    <span class="year-label">Год:</span>
+    {% for y in years %}
+    <button class="year-btn{% if y == current_year %} active{% endif %}" onclick="setYear({{ y }})">{{ y }}</button>
+    {% endfor %}
+  </div>
+
+  <!-- Сетка 2x2 -->
+  <div class="widgets-grid">
+
+    <!-- 1. Загрузка по отделам -->
+    <div class="widget">
+      <div class="widget-title"><i class="fas fa-chart-bar"></i> Загрузка по отделам</div>
+      <div class="chart-wrap" data-canvas="chartDept"><canvas id="chartDept"></canvas></div>
+    </div>
+
+    <!-- 2. Выполнение по месяцам -->
+    <div class="widget">
+      <div class="widget-title"><i class="fas fa-chart-line"></i> Выполнение по месяцам</div>
+      <div class="chart-wrap" data-canvas="chartMonthly"><canvas id="chartMonthly"></canvas></div>
+    </div>
+
+    <!-- 3. Просроченные (топ-10) -->
+    <div class="widget">
+      <div class="widget-title"><i class="fas fa-exclamation-triangle"></i> Просроченные задачи</div>
+      <div id="overdueList">
+        <div class="widget-loading"><i class="fas fa-spinner"></i> Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- 4. Ближайшие дедлайны -->
+    <div class="widget">
+      <div class="widget-title"><i class="fas fa-calendar-day"></i> Ближайшие дедлайны</div>
+      <div id="upcomingList">
+        <div class="widget-loading"><i class="fas fa-spinner"></i> Загрузка...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var selectedYear = {{ current_year }};
+  var chartDept = null;
+  var chartMonthly = null;
+
+  var MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+  function getCSRF() {
+    var c = document.cookie.match(/csrftoken=([^;]+)/);
+    return c ? c[1] : '';
+  }
+
+  function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function ensureCanvas(id) {
+    var el = document.getElementById(id);
+    if (el) return el;
+    var wrap = document.querySelector('[data-canvas="' + id + '"]');
+    if (wrap) { wrap.innerHTML = '<canvas id="' + id + '"></canvas>'; return document.getElementById(id); }
+    return null;
+  }
+
+  window.setYear = function(y) {
+    selectedYear = y;
+    document.querySelectorAll('.year-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.textContent) === y);
+    });
+    loadData();
+  };
+
+  function loadData() {
+    fetch('/api/analytics/workload/?year=' + selectedYear)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      renderDeptChart(data.by_dept || []);
+      renderMonthlyChart(data.monthly || []);
+      renderOverdueTable(data.top_overdue || []);
+      renderUpcomingTable(data.upcoming || []);
+    })
+    .catch(function(e) {
+      console.error('Workload analytics error:', e);
+      if (typeof showToast === 'function') showToast('Ошибка загрузки данных', 'error');
+    });
+  }
+
+  function renderDeptChart(byDept) {
+    if (chartDept) { chartDept.destroy(); chartDept = null; }
+    var canvas = ensureCanvas('chartDept');
+    if (!canvas) return;
+    if (!byDept.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по отделам</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    var accent = getCSSVar('--accent') || '#3b82f6';
+    var success = '#22c55e';
+    var danger = getCSSVar('--danger') || '#ef4444';
+
+    chartDept = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: byDept.map(function(d) { return d.dept; }),
+        datasets: [
+          { label: 'Всего', data: byDept.map(function(d) { return d.total; }), backgroundColor: accent + '99', borderColor: accent, borderWidth: 1 },
+          { label: 'Выполнено', data: byDept.map(function(d) { return d.done; }), backgroundColor: success + '99', borderColor: success, borderWidth: 1 },
+          { label: 'Просрочено', data: byDept.map(function(d) { return d.overdue; }), backgroundColor: danger + '99', borderColor: danger, borderWidth: 1 },
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: getCSSVar('--text') || '#333' } } },
+        scales: {
+          x: { ticks: { color: getCSSVar('--muted') || '#888' }, grid: { color: getCSSVar('--border') || '#eee' } },
+          y: { ticks: { color: getCSSVar('--text') || '#333', font: { weight: 'bold' } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderMonthlyChart(monthly) {
+    if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+    var canvas = ensureCanvas('chartMonthly');
+    if (!canvas) return;
+    if (!monthly.length) {
+      canvas.parentNode.innerHTML = '<div class="widget-empty"><i class="fas fa-info-circle"></i> Нет данных по месяцам</div>';
+      return;
+    }
+    var ctx = canvas.getContext('2d');
+
+    var accent = getCSSVar('--accent') || '#3b82f6';
+    var success = '#22c55e';
+
+    chartMonthly = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: MONTHS_RU,
+        datasets: [
+          { label: 'Всего задач', data: monthly.map(function(m) { return m.total; }), backgroundColor: accent + '44', borderColor: accent, borderWidth: 2 },
+          { label: 'Выполнено', data: monthly.map(function(m) { return m.done; }), backgroundColor: success + '88', borderColor: success, borderWidth: 2 },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, color: getCSSVar('--text') || '#333' } } },
+        scales: {
+          x: { ticks: { color: getCSSVar('--muted') || '#888' }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: getCSSVar('--muted') || '#888' }, grid: { color: getCSSVar('--border') || '#eee' } }
+        }
+      }
+    });
+  }
+
+  function renderOverdueTable(items) {
+    var el = document.getElementById('overdueList');
+    if (!items.length) {
+      el.innerHTML = '<div class="widget-empty">Просроченных задач нет</div>';
+      return;
+    }
+    var html = '<table class="widget-table"><thead><tr><th>Задача</th><th>Отдел</th><th>Исполнитель</th><th>Просрочка</th></tr></thead><tbody>';
+    items.forEach(function(t) {
+      html += '<tr onclick="window.location=\'/works/plan/?search=' + encodeURIComponent(t.work_name) + '\'">';
+      html += '<td>' + esc(t.work_name) + '</td>';
+      html += '<td>' + esc(t.dept) + '</td>';
+      html += '<td>' + esc(t.executor) + '</td>';
+      html += '<td class="cell-num"><span class="badge-days-overdue">' + t.days_overdue + ' дн.</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function renderUpcomingTable(items) {
+    var el = document.getElementById('upcomingList');
+    if (!items.length) {
+      el.innerHTML = '<div class="widget-empty">Нет предстоящих дедлайнов</div>';
+      return;
+    }
+    var html = '<table class="widget-table"><thead><tr><th>Задача</th><th>Отдел</th><th>Исполнитель</th><th>Осталось</th></tr></thead><tbody>';
+    items.forEach(function(t) {
+      var cls = t.days_left <= 7 ? 'badge-days-left urgent' : 'badge-days-left';
+      html += '<tr onclick="window.location=\'/works/plan/?search=' + encodeURIComponent(t.work_name) + '\'">';
+      html += '<td>' + esc(t.work_name) + '</td>';
+      html += '<td>' + esc(t.dept) + '</td>';
+      html += '<td>' + esc(t.executor) + '</td>';
+      html += '<td class="cell-num"><span class="' + cls + '">' + t.days_left + ' дн.</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  loadData();
+})();
+</script>
+{% endblock %}

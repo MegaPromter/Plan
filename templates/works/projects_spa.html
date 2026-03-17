@@ -26,19 +26,21 @@
 .project-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-top: 3px solid; border-image: var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
   border-radius: 14px;
   padding: 20px;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
 }
 /* Hover-эффект: поднимаем карточку и добавляем тень */
 .project-card:hover {
   border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(59,130,246,0.15));
 }
 /* Полное наименование проекта */
 .project-card-title {

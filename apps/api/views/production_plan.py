@@ -271,8 +271,19 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             if changed:
                 work.save()
 
+            # Синхронизация ЖИ при создании с task_type «Корректировка документа»
+            _sync_notices_for_work(work)
+
+        log_action(request, AuditLog.ACTION_PP_CREATE,
+                   object_id=work.pk,
+                   object_repr=work.work_name or str(work.pk),
+                   details={'task_type': work.task_type})
+
         work_data = _serialize_pp(
-            Work.objects.select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project')
+            Work.objects.annotate(
+                _pred_count=Count('predecessor_links'),
+                _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
+            ).select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project')
             .get(pk=work.pk)
         )
         return JsonResponse({'id': work.id, 'work': work_data})
@@ -318,20 +329,27 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            work = Work.objects.filter(pk=pk, show_in_pp=True).select_related('department').first()
-            if not work:
-                return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
-            # Проверка: не-admin может удалять только записи своего отдела
-            err = _check_dept_access(request.user, work)
-            if err:
-                return JsonResponse({'error': err}, status=403)
-            if work.show_in_plan:
-                # Запись также видна в СП — не удаляем, а убираем из ПП
-                work.show_in_pp = False
-                work.pp_project = None
-                work.save(update_fields=['show_in_pp', 'pp_project'])
-            else:
-                work.delete()
+            with transaction.atomic():
+                work = (Work.objects.select_for_update(of=('self',))
+                        .filter(pk=pk, show_in_pp=True)
+                        .select_related('department').first())
+                if not work:
+                    return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
+                # Проверка: не-admin может удалять только записи своего отдела
+                err = _check_dept_access(request.user, work)
+                if err:
+                    return JsonResponse({'error': err}, status=403)
+                work_repr = f'{work.work_name} (id={work.pk})'
+                if work.show_in_plan:
+                    # Запись также видна в СП — не удаляем, а убираем из ПП
+                    work.show_in_pp = False
+                    work.pp_project = None
+                    work.save(update_fields=['show_in_pp', 'pp_project'])
+                else:
+                    work.delete()
+                log_action(request, AuditLog.ACTION_PP_DELETE,
+                           object_id=work.pk if work.pk else pk,
+                           object_repr=work_repr)
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error("ProductionPlanDetailView.delete error: %s", e, exc_info=True)
@@ -357,34 +375,38 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             if not value:
                 value = 'Выпуск нового документа'
 
-        work = Work.objects.filter(pk=pk, show_in_pp=True).select_related(
-            'department', 'ntc_center', 'executor', 'sector',
-        ).first()
-        if not work:
-            return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
-
-        # Проверка: не-admin может редактировать только записи своего отдела
-        err = _check_dept_access(request.user, work)
-        if err:
-            return JsonResponse({'error': err}, status=403)
-
-        # Optimistic locking — нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
-        # (отбрасываем микросекунды и TZ-суффикс для надёжного сравнения)
-        client_updated_at = d.get('updated_at')
-        if client_updated_at:
-            server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
-                         if work.updated_at else '')
-            raw = str(client_updated_at).replace(' ', 'T')
-            client_ts = raw[:19] if len(raw) >= 19 else raw
-            if server_ts != client_ts:
-                return JsonResponse({
-                    'error': 'conflict',
-                    'message': 'Запись была изменена другим пользователем. '
-                               'Перезагрузите данные.',
-                }, status=409)
-
         with transaction.atomic():
+            work = (Work.objects.select_for_update(of=('self',))
+                    .filter(pk=pk, show_in_pp=True)
+                    .select_related('department', 'ntc_center', 'executor', 'sector')
+                    .first())
+            if not work:
+                return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
+
+            # Проверка: не-admin может редактировать только записи своего отдела
+            err = _check_dept_access(request.user, work)
+            if err:
+                return JsonResponse({'error': err}, status=403)
+
+            # Optimistic locking — нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
+            client_updated_at = d.get('updated_at')
+            if client_updated_at is not None:
+                server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
+                             if work.updated_at else '')
+                raw = str(client_updated_at).replace(' ', 'T')
+                client_ts = raw[:19] if len(raw) >= 19 else raw
+                if server_ts != client_ts:
+                    return JsonResponse({
+                        'error': 'conflict',
+                        'message': 'Запись была изменена другим пользователем. '
+                                   'Перезагрузите данные.',
+                    }, status=409)
+
             self._update_field(work, field, value)
+            log_action(request, AuditLog.ACTION_PP_UPDATE,
+                       object_id=work.pk,
+                       object_repr=work.work_name or str(work.pk),
+                       details={'field': field, 'value': str(value)[:200]})
 
         return JsonResponse({'ok': True})
 

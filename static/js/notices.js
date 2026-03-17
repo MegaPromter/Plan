@@ -171,6 +171,7 @@ async function loadJournal() {
   try {
     document.getElementById('jiBody').innerHTML = _jiSkeletonRows(8, 13);
     const r = await fetch('/api/journal/?per_page=100000');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     jiData = await r.json();
     renderTable();
   } catch(e) {
@@ -447,6 +448,7 @@ async function openCloseModal(id) {
   if (deptCode) {
     try {
       const r = await fetch('/api/dept_employees/?dept=' + encodeURIComponent(deptCode));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       const emps = await r.json();
       sel.innerHTML = '<option value="">— выберите —</option>';
       emps.forEach(function(emp) {

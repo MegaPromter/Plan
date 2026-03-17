@@ -65,17 +65,19 @@
 .pp-project-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-top: 3px solid; border-image: var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
   border-radius: 12px;
   padding: 20px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   position: relative;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
 }
 /* Карточка при наведении: приподнять и добавить синюю тень */
 .pp-project-card:hover {
   border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg, 0 4px 16px rgba(59,130,246,0.15));
 }
 /* Название ПП-плана в карточке */
 .pp-project-card-name {
@@ -581,10 +583,10 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   </div>
 
   <!-- Переключатель плотности таблицы -->
-  <div class="density-toggle" id="densityToggle" title="Плотность таблицы" style="margin-bottom:6px;">
-    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
-    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
-    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  <div class="density-toggle" id="densityToggle" data-tip="Плотность таблицы" style="margin-bottom:6px;">
+    <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
   </div>
 
   <!-- Переключатель вида + статус-панель в одной строке -->

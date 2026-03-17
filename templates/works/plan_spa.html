@@ -22,6 +22,9 @@
 <button class="btn btn-primary btn-sm" onclick="openInlineNewRow()">
   <i class="fas fa-plus"></i> Добавить задачу
 </button>
+<button class="btn btn-outline btn-sm" id="bulkModeBtn" onclick="toggleBulkMode()" data-tip="Массовое выделение">
+  <i class="fas fa-check-square"></i>
+</button>
 {% endif %}
 <span id="exportBtnContainer"></span>
 {% endblock %}
@@ -44,10 +47,10 @@
     <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
   </div>
   <span class="cal-clear" onclick="clearFilter()">Показать все</span>
-  <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
-    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
-    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
-    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  <div class="density-toggle" id="densityToggle">
+    <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
   </div>
   <div class="plan-summary">
     <div>
@@ -84,7 +87,7 @@
     <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">Месяцы</button>
     <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
   </span>
-  <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" title="Показать только задачи с зависимостями">🔗 Только зависимые</button>
+  <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" data-tip="Показать только задачи с зависимостями">🔗 Только зависимые</button>
   <!-- Статус-панель (прогресс-бар + чипы) встроена в view-tabs справа -->
   <div class="sp-status-inline" id="spStatusPanel" style="display:none;">
     <div class="status-bar-mini" id="spStatusBar">
@@ -105,6 +108,13 @@
       <i class="fas fa-spinner"></i> В работе <span class="status-chip-count" id="spCountInWork"></span>
     </button>
   </div>
+</div>
+
+<!-- ══ Панель массовых операций ═══════════════════════════════════════════ -->
+<div id="bulkBar" style="display:none;padding:10px 16px;background:var(--accent-light);border:1px solid var(--accent);border-radius:10px;margin-bottom:12px;align-items:center;gap:12px;">
+  <button class="btn btn-sm btn-outline" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Выбрать все</button>
+  <span style="font-size:13px;color:var(--text2);">Выбрано: <strong id="bulkCount">0</strong></span>
+  <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()"><i class="fas fa-trash"></i> Удалить выбранные</button>
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
@@ -152,6 +162,7 @@
 <tbody id="taskBody"></tbody>
 </table>
 </div>
+
 
 <!-- ══ Контейнер диаграммы Ганта ═══════════════════════════════════════════ -->
 <div id="ganttContainer"></div>
@@ -537,5 +548,5 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}"></script>
+<script src="{% static 'js/plan.js' %}?v=2"></script>
 {% endblock %}

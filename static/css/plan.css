@@ -651,3 +651,12 @@ tr.pp-locked .pp-lock-badge {
 #mainTable tbody tr.row-done:hover    { background:rgba(34,197,94,0.25) !important; }
 #mainTable tbody tr.row-overdue:hover { background:rgba(239,68,68,0.24) !important; }
 #mainTable tbody tr.row-inwork:hover  { background:rgba(234,179,8,0.18) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .notif, tbody tr.new-row, .topbar-btn.errors.has-errors,
+  .pe-overlay, .month-check-overlay,
+  .new-task-modal.slideout-mode .new-task-box {
+    animation: none !important;
+    transition: none !important;
+  }
+}

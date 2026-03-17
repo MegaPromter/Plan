@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Журнал аудита — Система управления{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Журнал аудита</span>
+{% endblock %}
+
+{% block styles %}
+<style>
+.audit-filters { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+.audit-filters select, .audit-filters input {
+  padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+  background:var(--surface); color:var(--text); font-size:13px; font-family:var(--font);
+}
+.audit-filters select:focus, .audit-filters input:focus { outline:none; border-color:var(--accent); }
+.audit-detail-btn { background:none; border:none; color:var(--accent); cursor:pointer; font-size:12px; padding:2px 6px; border-radius:4px; }
+.audit-detail-btn:hover { background:var(--accent-light); }
+.audit-details-cell { max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--muted); }
+.audit-pager { display:flex; gap:8px; align-items:center; justify-content:center; margin-top:16px; }
+.audit-pager button { padding:6px 14px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); cursor:pointer; font-size:13px; }
+.audit-pager button:disabled { opacity:0.4; cursor:not-allowed; }
+.audit-pager button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-clipboard-list" style="color:var(--accent);margin-right:8px;"></i>Журнал аудита</h1>
+</div>
+
+<div class="section" style="padding:20px;">
+  <div class="audit-filters">
+    <select id="auditAction">
+      <option value="">Все действия</option>
+      <option value="task_create">Создание задачи</option>
+      <option value="task_update">Обновление задачи</option>
+      <option value="task_delete">Удаление задачи</option>
+      <option value="pp_create">Создание ПП</option>
+      <option value="pp_delete">Удаление ПП</option>
+      <option value="pp_sync">Синхронизация ПП</option>
+      <option value="dep_create">Создание зависимости</option>
+      <option value="dep_update">Обновление зависимости</option>
+      <option value="dep_delete">Удаление зависимости</option>
+      <option value="dep_align">Выравнивание дат</option>
+      <option value="role_change">Смена роли</option>
+      <option value="user_create">Создание пользователя</option>
+      <option value="user_delete">Удаление пользователя</option>
+    </select>
+    <input type="text" id="auditSearch" placeholder="Поиск по объекту..." style="width:220px;">
+    <button class="btn btn-outline btn-sm" onclick="loadAuditLog()"><i class="fas fa-search"></i> Найти</button>
+  </div>
+
+  <div class="data-table-wrap" style="overflow-x:auto;">
+    <table class="data-table" id="auditTable">
+      <thead>
+        <tr>
+          <th style="width:50px;">№</th>
+          <th>Дата/время</th>
+          <th>Пользователь</th>
+          <th>Действие</th>
+          <th>Объект</th>
+          <th>Детали</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody id="auditBody">
+        <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Загрузка...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="audit-pager" id="auditPager"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var auditPage = 1;
+var auditPerPage = 50;
+
+function apiHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value
+      || document.cookie.split('csrftoken=')[1]?.split(';')[0] || ''
+  };
+}
+
+async function loadAuditLog() {
+  var action = document.getElementById('auditAction').value;
+  var search = document.getElementById('auditSearch').value.trim();
+  var params = new URLSearchParams({ page: auditPage, per_page: auditPerPage });
+  if (action) params.set('action', action);
+  if (search) params.set('search', search);
+
+  var tbody = document.getElementById('auditBody');
+  tbody.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Загрузка...</td></tr>';
+
+  try {
+    var res = await fetch('/api/audit_log/?' + params.toString(), { headers: apiHeaders() });
+    if (!res.ok) { tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--danger);">Ошибка загрузки</td></tr>'; return; }
+    var data = await res.json();
+    renderAuditTable(data);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--danger);">Ошибка сети</td></tr>';
+  }
+}
+
+function renderAuditTable(data) {
+  var tbody = document.getElementById('auditBody');
+  if (!data.items.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);"><i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>Нет записей</td></tr>';
+    document.getElementById('auditPager').innerHTML = '';
+    return;
+  }
+
+  var offset = (data.page - 1) * data.per_page;
+  tbody.innerHTML = data.items.map(function(item, i) {
+    var details = item.details && Object.keys(item.details).length
+      ? '<span class="audit-details-cell" title="' + escHtml(JSON.stringify(item.details)) + '">' + escHtml(JSON.stringify(item.details).substring(0, 60)) + '</span>'
+      : '—';
+    return '<tr>' +
+      '<td style="text-align:center;color:var(--muted);font-size:12px;">' + (offset + i + 1) + '</td>' +
+      '<td style="white-space:nowrap;font-size:13px;">' + escHtml(item.created_at) + '</td>' +
+      '<td>' + escHtml(item.user) + '</td>' +
+      '<td><span class="badge badge-info" style="font-size:11px;">' + escHtml(item.action_display) + '</span></td>' +
+      '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(item.object_repr || '—') + '</td>' +
+      '<td>' + details + '</td>' +
+      '<td style="font-size:12px;color:var(--muted);">' + escHtml(item.ip_address || '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  // Пагинация
+  var totalPages = Math.ceil(data.total / data.per_page);
+  var pager = document.getElementById('auditPager');
+  if (totalPages <= 1) { pager.innerHTML = ''; return; }
+
+  var html = '<button ' + (auditPage <= 1 ? 'disabled' : '') + ' onclick="auditPage--;loadAuditLog()">← Назад</button>';
+  html += '<span style="color:var(--muted);font-size:13px;">Стр. ' + data.page + ' из ' + totalPages + ' (' + data.total + ' записей)</span>';
+  html += '<button ' + (auditPage >= totalPages ? 'disabled' : '') + ' onclick="auditPage++;loadAuditLog()">Вперёд →</button>';
+  pager.innerHTML = html;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+document.getElementById('auditAction').onchange = function() { auditPage = 1; loadAuditLog(); };
+document.getElementById('auditSearch').onkeydown = function(e) { if (e.key === 'Enter') { auditPage = 1; loadAuditLog(); } };
+
+loadAuditLog();
+</script>
+{% endblock %}

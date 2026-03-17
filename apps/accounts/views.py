@@ -5,6 +5,7 @@ from django.views.generic import FormView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Count
+from django.db.models.functions import Coalesce
 
 
 class ChangePasswordView(LoginRequiredMixin, FormView):
@@ -55,7 +56,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'accounts/dashboard.html'
 
     def get_context_data(self, **kwargs):
-        from apps.works.models import Work, Notice
+        from datetime import timedelta
+        from django.db.models import Exists, OuterRef, Q
+        from django.utils import timezone
+        from apps.works.models import Work, Notice, WorkReport
         from apps.employees.models import Employee, Vacation
         ctx = super().get_context_data(**kwargs)
         ctx['works_count']    = Work.objects.count()
@@ -64,6 +68,29 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ctx['notices_count']  = Notice.objects.count()
         ctx['employees_count']= Employee.objects.filter(is_active=True).count()
         ctx['vacations_count']= Vacation.objects.count()
+
+        # Персональная статистика для hero-секции
+        today = timezone.now().date()
+        emp = getattr(self.request.user, 'employee', None)
+        if emp:
+            has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
+            my_tasks = Work.objects.filter(
+                show_in_plan=True, executor=emp
+            ).annotate(
+                _done=has_reports,
+                _eff_deadline=Coalesce('deadline', 'date_end'),
+            )
+            my_overdue = my_tasks.filter(_done=False, _eff_deadline__lt=today).count()
+            my_upcoming = my_tasks.filter(
+                _done=False,
+                _eff_deadline__gte=today,
+                _eff_deadline__lte=today + timedelta(days=7),
+            ).count()
+            ctx['my_overdue'] = my_overdue
+            ctx['my_upcoming'] = my_upcoming
+        else:
+            ctx['my_overdue'] = 0
+            ctx['my_upcoming'] = 0
         return ctx
 
 
@@ -73,9 +100,9 @@ _STUB_TITLES = {
     'projects-stages':       ('Этапы и вехи',               'Управление иерархией этапов проектов'),
     'projects-deadlines':    ('Сроки и вехи',              'Контрольные точки и плановые сроки по проектам'),
     'pp-import':             ('Импорт / экспорт ПП',       'Загрузка и выгрузка данных производственного плана'),
-    'analytics-workload':    ('Загрузка сотрудников',      'Анализ плановой и фактической нагрузки по исполнителям'),
-    'analytics-deadlines':   ('Исполнение сроков',         'Статистика соблюдения плановых дат завершения работ'),
-    'analytics-reports':     ('Отчёты',                    'Сводные аналитические отчёты по планированию и отчётности'),
+    'analytics-workload':    ('Доска руководителя',         'Аналитика: загрузка, дедлайны, выполнение плана'),
+    'analytics-employee':    ('Доска сотрудника',          'Персональные задачи и загрузка по часам'),
+    'analytics-pp':          ('Отчёты ПП',                 'Метрики производственного плана: трудоёмкость, листы, типы работ'),
 }
 
 class StubView(LoginRequiredMixin, TemplateView):

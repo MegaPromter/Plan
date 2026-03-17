@@ -20,8 +20,12 @@ from .views.col_settings import ColSettingsView
 # Вьюхи задач (plan_tasks)
 from .views.tasks import (
     TaskListView, TaskCreateView, TaskDetailView,
-    TaskDeleteAllView, TaskExecutorsView,
+    TaskDeleteAllView, TaskBulkDeleteView, TaskExecutorsView,
 )
+# Журнал аудита (только admin)
+from .views.audit_log import AuditLogListView
+# Аналитика
+from .views.analytics import EmployeeAnalyticsView, PPAnalyticsView, WorkloadAnalyticsView
 # Вьюхи отчётных документов (WorkReport)
 from .views.reports import ReportListView, ReportCreateView, ReportDetailView
 # Вьюхи производственного плана (PPWork)
@@ -109,6 +113,8 @@ urlpatterns = [
     path('tasks/create/',       TaskCreateView.as_view()),
     # DELETE /api/tasks/all/ — удаление всех задач (только admin)
     path('tasks/all/',          TaskDeleteAllView.as_view()),
+    # POST /api/tasks/bulk_delete/ — удаление нескольких задач по списку ID
+    path('tasks/bulk_delete/',  TaskBulkDeleteView.as_view()),
     # GET/PUT/DELETE /api/tasks/<pk>/ — чтение, обновление, удаление задачи
     path('tasks/<int:pk>/',     TaskDetailView.as_view()),
     # GET /api/tasks/<pk>/executors/ — список исполнителей задачи
@@ -199,6 +205,18 @@ urlpatterns = [
     path('holidays/',          HolidayListView.as_view()),
     # DELETE /api/holidays/<pk>/ — удаление нерабочего дня (admin)
     path('holidays/<int:pk>/', HolidayDetailView.as_view()),
+
+    # ── Журнал аудита ──────────────────────────────────────────────────
+    # GET /api/audit_log/ — список записей аудита (admin)
+    path('audit_log/',         AuditLogListView.as_view()),
+
+    # ── Аналитика ────────────────────────────────────────────────────
+    # GET /api/analytics/workload/ — загрузка по отделам, месяцам, дедлайны
+    path('analytics/workload/', WorkloadAnalyticsView.as_view()),
+    # GET /api/analytics/employee/ — персональная аналитика сотрудника
+    path('analytics/employee/', EmployeeAnalyticsView.as_view()),
+    # GET /api/analytics/pp/ — метрики производственного плана
+    path('analytics/pp/', PPAnalyticsView.as_view()),
 
 ]
 

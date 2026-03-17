@@ -327,6 +327,50 @@ class WorkCalendarSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
         return ctx
 
 
+class AuditLogSPAView(AdminRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Журнал аудита» (только admin)."""
+    template_name = 'works/audit_log_spa.html'
+
+
+class AnalyticsWorkloadSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Загрузка сотрудников» (аналитика)."""
+    template_name = 'works/analytics_workload_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        return ctx
+
+
+class AnalyticsEmployeeSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Доска сотрудника» (персональная аналитика)."""
+    template_name = 'works/analytics_employee_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        emp = getattr(self.request.user, 'employee', None)
+        ctx['current_employee_id'] = emp.pk if emp else 0
+        ctx['is_writer_flag'] = emp.is_writer if emp else False
+        return ctx
+
+
+class AnalyticsPPSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Отчёты ПП» (аналитика производственного плана)."""
+    template_name = 'works/analytics_pp_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        return ctx
+
+
 # ── Демо-страницы (только DEBUG) ────────────────────────────────────────────
 class DemoDensityView(TemplateView):
     """Демо: переключатель плотности таблицы."""
