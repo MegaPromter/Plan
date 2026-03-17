@@ -380,7 +380,7 @@ def validate_task_type(value):
         from apps.works.models import Directory
         valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
         cache.set(cache_key, valid, timeout=60)
-    if value not in valid:
+    if valid and value not in valid:
         return '', f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}'
     return value, None
 
