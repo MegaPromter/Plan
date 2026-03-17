@@ -83,16 +83,18 @@
 .main-content.sidebar-collapsed .table-wrap { margin-left:0; }
 table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
 thead th {
+  position: sticky;
   z-index: 10;
   background: var(--th-bg);
-  border-bottom: 2px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
   border-right: 1px solid var(--border2);
   padding: 0;
   white-space: nowrap;
-  box-shadow: 0 1px 0 var(--border2);
 }
-thead tr:nth-child(1) { position:sticky; top:0; z-index:12; }
-thead tr:nth-child(2) { position:sticky; top:37px; z-index:11; }
+/* Sticky top: точные значения устанавливает inline JS после загрузки */
+thead tr:nth-child(1) th { top: 0; z-index: 12; }
+thead tr:nth-child(2) th { top: 0; z-index: 11; }
+thead tr.filter-row th   { top: 0; z-index: 10; }
 .th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:var(--th-color);
   letter-spacing:0.05em; text-transform:uppercase;
   display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
@@ -477,7 +479,6 @@ tr.pp-locked .pp-lock-badge {
 .plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
 
 /* ── Строка фильтров под заголовками колонок ──────────────────────────── */
-.filter-row { position:sticky; top:73px; z-index:10; }
 .filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
 .col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
   border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;

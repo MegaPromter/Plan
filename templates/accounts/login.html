@@ -10,6 +10,7 @@
 <title>Вход — Система управления</title>
 <!-- Шрифт Inter из Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 /* Сброс отступов и box-sizing */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -145,6 +146,15 @@ select option{background:var(--surface);}
   border-radius:8px;padding:10px 14px;
   font-size:13px;color:var(--success);margin-bottom:16px;display:none;
 }
+/* Обёртка поля пароля с кнопкой-глазом */
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{flex:1;padding-right:38px}
+.pw-toggle{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--muted);
+  font-size:15px;padding:4px;line-height:1;
+}
+.pw-toggle:hover{color:var(--text2)}
 </style>
 </head>
 <body>
@@ -187,14 +197,20 @@ select option{background:var(--surface);}
       <!-- Поле «Пароль» -->
       <div class="form-group">
         <label for="id_password">Пароль</label>
-        <input type="password" name="password" id="id_password" placeholder="Введите пароль" autocomplete="current-password">
+        <div class="pw-wrap">
+          <input type="password" name="password" id="id_password" placeholder="Введите пароль" autocomplete="current-password">
+          <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
+        </div>
       </div>
       <!-- Скрытое поле next: куда перенаправить после успешного входа (если задано) -->
-      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% if next %}<input type="hidden" name="next" value="{{ next|urlencode }}">{% endif %}
       <button type="submit" class="btn-login">Войти</button>
     </form>
-    <!-- Кнопка открытия модального окна регистрации нового пользователя -->
-    <button class="reg-link" onclick="openRegModal()">Регистрация нового пользователя</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+      <!-- Кнопка открытия модального окна регистрации нового пользователя -->
+      <button class="reg-link" onclick="openRegModal()">Регистрация</button>
+      <a class="reg-link" href="{% url 'accounts:password_reset' %}">Забыли пароль?</a>
+    </div>
   </div>
 </div>
 
@@ -257,7 +273,7 @@ select option{background:var(--surface);}
     </div>
 
     <hr class="reg-divider">
-    <!-- Секция: Учётные данные (логин и пароль) -->
+    <!-- Секция: Учётные данные (логин, email, пароль) -->
     <div class="reg-section-title">Учётные данные</div>
     <div class="reg-row">
       <div class="field">
@@ -265,17 +281,25 @@ select option{background:var(--surface);}
         <input type="text" id="regUsername" placeholder="Логин" autocomplete="username">
       </div>
       <div class="field">
-        <label>Пароль <span style="color:var(--danger)">*</span></label>
-        <input type="password" id="regPassword" placeholder="Мин. 8 символов" autocomplete="new-password">
+        <label>Корп. email</label>
+        <input type="email" id="regEmail" placeholder="user@corp.ru" autocomplete="email">
       </div>
     </div>
-
-    <!-- Чекбокс «Админские права» (только для тестирования) -->
-    <div class="field" style="margin-top:12px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="regAdmin" style="width:18px;height:18px">
-        Получить права администратора (для тестирования)
-      </label>
+    <div class="reg-row">
+      <div class="field">
+        <label>Пароль <span style="color:var(--danger)">*</span></label>
+        <div class="pw-wrap">
+          <input type="password" id="regPassword" placeholder="Мин. 8 символов" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Повтор пароля <span style="color:var(--danger)">*</span></label>
+        <div class="pw-wrap">
+          <input type="password" id="regPassword2" placeholder="Повторите пароль" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
     </div>
 
     <!-- Блок ошибок регистрации (скрыт по умолчанию, показывается через JS) -->
@@ -288,7 +312,21 @@ select option{background:var(--surface);}
   </div>
 </div>
 
+
 <script>
+/* ── Показать/скрыть пароль ──────────────────────────────────────────── */
+function togglePw(btn) {
+  const inp = btn.parentElement.querySelector('input');
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    inp.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
 /* ── При входе на страницу логина — ВСЕГДА сбросить тур ──────────────── */
 /* Каждый логин = свежий welcome-модал с предложением обучения */
 (function() {
@@ -323,11 +361,19 @@ const POS_FIELDS = {
   'Специалист':                                 'both',
   'Специалист 2 кат.':                         'both',
   'Специалист 1 кат.':                         'both',
+  'Ведущий специалист':                         'both',
   'Инженер-конструктор':                        'both',
   'Инженер-конструктор 3 кат.':                'both',
   'Инженер-конструктор 2 кат.':                'both',
   'Инженер-конструктор 1 кат.':                'both',
   'Ведущий инженер-конструктор':               'both',
+  'Ведущий инженер по направлению 3 класса':   'both',
+  'Ведущий инженер по направлению 2 класса':   'both',
+  'Ведущий инженер - координатор группы':      'both',
+  'Начальник бюро':                             'both',
+  'Младший научный сотрудник':                  'both',
+  'Старший научный сотрудник':                  'both',
+  'Ведущий научный сотрудник':                  'both',
   'Начальник сектора':                          'both',
   'Зам. начальника отдела – начальник сектора': 'both',
   'Руководитель направления':                   'both',
@@ -472,7 +518,7 @@ document.getElementById('regOverlay').addEventListener('click', function(e) {
 
 // Закрыть по нажатию Escape
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeRegModal();
+  if (e.key === 'Escape') { closeRegModal(); }
 });
 
 // Отправить форму регистрации через API
@@ -486,8 +532,9 @@ async function submitReg() {
   const dept       = document.getElementById('regDept').value;
   const sector     = document.getElementById('regSector').value;
   const username   = document.getElementById('regUsername').value.trim();
+  const email      = document.getElementById('regEmail').value.trim();
   const password   = document.getElementById('regPassword').value;
-  const isAdmin    = document.getElementById('regAdmin').checked;
+  const password2  = document.getElementById('regPassword2').value;
 
   const errEl = document.getElementById('regError');
   const okEl  = document.getElementById('regSuccess');
@@ -511,7 +558,9 @@ async function submitReg() {
   if (rule === 'both' && !sector) return err('Выберите сектор');
 
   if (!username)           return err('Введите логин');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Некорректный email');
   if (password.length < 8) return err('Пароль — минимум 8 символов');
+  if (password !== password2) return err('Пароли не совпадают');
 
   // Блокируем кнопку на время отправки
   const btn = document.getElementById('regSubmitBtn');
@@ -523,8 +572,7 @@ async function submitReg() {
       method: 'POST',
       headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
       body: JSON.stringify({last_name: lastName, first_name: firstName,
-                            patronymic, position, center, dept, sector, username, password,
-                            is_admin: isAdmin})
+                            patronymic, position, center, dept, sector, username, email, password})
     });
     const data = await res.json();
     if (!res.ok) {

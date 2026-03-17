@@ -40,6 +40,13 @@
   </button>
   {% endif %}
   <span id="exportBtnContainer"></span>
+  <!-- Кнопка статистики с дропдауном -->
+  <span class="pp-stats-wrap" style="position:relative;display:inline-block;">
+    <button class="btn btn-outline btn-sm" id="ppStatsBtn" onclick="togglePPStats()">
+      <i class="fas fa-chart-pie"></i> Статистика
+    </button>
+    <div class="pp-stats-dropdown" id="ppStatsDropdown"></div>
+  </span>
   <!-- Кнопка сброса фильтров со счётчиком строк -->
   <button id="filtersActiveBadge" onclick="clearAllColFilters()"
           style="display:none;" class="btn btn-outline btn-sm">
@@ -54,6 +61,19 @@
 {% block styles %}
 <style>
 /* ── Стили, специфичные для страницы производственного плана ─────────── */
+
+/* Дропдаун статистики ПП */
+.pp-stats-dropdown {
+  display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
+  min-width:320px; background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.15); padding:14px 16px;
+  font-size:13px; color:var(--text);
+}
+.pp-stats-dropdown.open { display:block; }
+.pp-stats-row { display:flex; justify-content:space-between; padding:5px 0; }
+.pp-stats-row + .pp-stats-row { border-top:1px solid var(--border); }
+.pp-stats-label { color:var(--text2); }
+.pp-stats-val { font-weight:600; }
 
 /* Сетка карточек ПП-проектов на лендинге (адаптивная) */
 .pp-projects-grid {
@@ -133,7 +153,8 @@
 }
 /* Основная таблица производственного плана */
 .pp-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: auto;
   font-size: 13px;
   min-width: 100%;
@@ -142,11 +163,10 @@
 /* Заголовки столбцов: прилипающие при прокрутке (sticky) */
 .pp-table thead th {
   position: sticky;
-  top: 0;
   z-index: 10;
   background: var(--th-bg);
-  border-bottom: 2px solid var(--border2);
   border-right: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
   padding: 9px 6px;
   font-size: 11px;
   font-weight: 700;
@@ -155,10 +175,13 @@
   text-transform: uppercase;
   white-space: nowrap;
   text-align: center;
-  box-shadow: 0 1px 0 var(--border2);
 }
+/* Sticky: top для каждого ряда, точные значения устанавливает inline JS */
+.pp-table thead tr:first-child th  { top: 0; }
+.pp-table thead tr:nth-child(2) th { top: 0; }
+.pp-table thead tr.filter-row th   { top: 0; }
 /* Строки тела таблицы */
-.pp-table tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.12s; }
+.pp-table tbody tr { transition: background 0.12s; }
 /* Чередование фонов: чётные строки чуть темнее */
 .pp-table tbody tr:nth-child(even) { background: var(--row-even); }
 .pp-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
@@ -167,6 +190,7 @@
 /* Ячейки таблицы */
 .pp-table td {
   border-right: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
   padding: 3px;
   vertical-align: middle;
   text-align: center;
@@ -328,7 +352,8 @@ select.cell-edit option {
 .filter-row th {
   padding: 3px;
   background: color-mix(in srgb, var(--th-bg), var(--border) 20%);
-  border-bottom: 2px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+  box-shadow: 0 1px 0 var(--border2);
 }
 /* Обёртка мультифильтра (относительное позиционирование для dropdown) */
 .mf-wrap { position: relative; width: 100%; }
@@ -627,50 +652,29 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
       <thead>
         <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
-          <!-- Порядковый номер строки -->
           <th style="width:40px;" rowspan="2">No</th>
-          <!-- Код строки -->
           <th style="width:100px;" rowspan="2">Код строки</th>
-          <!-- Наряд-заказ -->
           <th style="width:110px;" rowspan="2">Наряд-заказ</th>
-          <!-- Номер этапа -->
           <th style="width:90px;" rowspan="2">No этапа</th>
-          <!-- Номер вехи -->
           <th style="width:100px;" rowspan="2">No вехи</th>
-          <!-- Номер работы -->
           <th style="width:90px;" rowspan="2">No работы</th>
-          <!-- Группа: Обозначение + Наименование -->
           <th colspan="2" style="text-align:center;">Группа</th>
-          <!-- Срок выполнения -->
           <th style="width:130px;" rowspan="2">Сроки выполнения</th>
-          <!-- Группа столбцов «Расчёт трудозатрат» (colspan=4) -->
           <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
-          <!-- Подразделение (НТЦ) -->
           <th style="width:100px;" rowspan="2">Подразделение</th>
-          <!-- Отдел -->
           <th style="width:60px;" rowspan="2">Отдел</th>
-          <!-- Сектор / Нач. сектора -->
           <th style="width:130px;" rowspan="2">Сектор /<br>Нач. сектора</th>
-          <!-- ФИО исполнителя -->
           <th style="width:140px;" rowspan="2">Разработчик</th>
-          <!-- Тип задачи (выпуск нового/корректировка и т.д.) -->
           <th style="width:120px;" rowspan="2">Тип задачи</th>
-          <!-- Столбец действий -->
           <th style="width:70px;" rowspan="2">Действия</th>
         </tr>
-        <!-- Вторая строка заголовков: детализация трудозатрат -->
+        <!-- Вторая строка заголовков: детализация -->
         <tr>
-          <!-- Обозначение документа -->
           <th style="width:300px;">Обозначение</th>
-          <!-- Наименование работы -->
           <th style="width:350px;">Наименование</th>
-          <!-- Форматы А4 -->
           <th style="width:100px;">Ф, А4</th>
-          <!-- Норматив трудоёмкости -->
           <th style="width:100px;">Норматив</th>
-          <!-- Коэффициент -->
           <th style="width:100px;">Коэфф</th>
-          <!-- Плановая трудоёмкость = Ф × Норматив × Коэффициент -->
           <th style="width:130px;">Плановая<br>трудоёмкость</th>
         </tr>
         <!-- Строка мультифильтров по каждому столбцу -->
@@ -805,12 +809,66 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 <script id="pp-config" type="application/json">{
   "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
-  "userRole": "{{ request.user.employee.role|default:'' }}",
-  "userDept": "{{ request.user.employee.department.code|default:'' }}",
-  "userSector": "{{ request.user.employee.sector.code|default:'' }}",
-  "userSectorName": "{{ request.user.employee.sector.name|default:'' }}",
-  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}",
+  "userRole": "{{ request.user.employee.role|default:''|escapejs }}",
+  "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
+  "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
+  "userSectorName": "{{ request.user.employee.sector.name|default:''|escapejs }}",
+  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/production_plan.js' %}"></script>
+<script>
+// Калибровка sticky top для multi-row thead (rowspan-совместимо)
+// Вызывается после openProject, когда таблица видима
+(function(){
+  function fixStickyOffsets() {
+    var tbl = document.querySelector('.pp-table');
+    if (!tbl) return;
+    var theadRows = tbl.querySelectorAll('thead tr');
+    if (theadRows.length < 2) return;
+
+    // Ряд 0: top=0 (ячейки с rowspan=2 высотой ~88px)
+    // Ряд 1: подзаголовки, top = высота ряда0 минус высота ряда1
+    //   (ячейки без rowspan из ряда 1 начинаются после "одного логического ряда")
+    // Ряд 2 (filter-row): top = высота ячейки с rowspan=2 из ряда 0
+
+    // Находим высоту rowspan=2 ячейки (полная высота шапки до фильтров)
+    var rowspan2H = 0;
+    var row0ths = theadRows[0].querySelectorAll('th');
+    for (var i = 0; i < row0ths.length; i++) {
+      if ((parseInt(row0ths[i].getAttribute('rowspan')) || 1) >= 2) {
+        rowspan2H = row0ths[i].getBoundingClientRect().height;
+        break;
+      }
+    }
+    if (rowspan2H < 1) return; // таблица скрыта
+
+    // Высота подзаголовочного ряда (без rowspan)
+    var row1th = theadRows[1] ? theadRows[1].querySelector('th') : null;
+    var row1H = row1th ? row1th.getBoundingClientRect().height : 0;
+
+    // top для ряда 1 = rowspan2H - row1H (подзаголовки начинаются после первого "логического" ряда)
+    var row1Top = rowspan2H - row1H;
+
+    // Устанавливаем top
+    // Ряд 0: top=0 (уже в CSS)
+    if (theadRows[1]) {
+      var ths1 = theadRows[1].querySelectorAll('th');
+      for (var j = 0; j < ths1.length; j++) ths1[j].style.top = row1Top + 'px';
+    }
+    // Filter-row: top = rowspan2H
+    if (theadRows[2]) {
+      var ths2 = theadRows[2].querySelectorAll('th');
+      for (var k = 0; k < ths2.length; k++) ths2[k].style.top = rowspan2H + 'px';
+    }
+  }
+
+  var _origOpen = window.openProject;
+  if (!_origOpen) return;
+  window.openProject = async function() {
+    await _origOpen.apply(this, arguments);
+    requestAnimationFrame(function(){ requestAnimationFrame(fixStickyOffsets); });
+  };
+})();
+</script>
 {% endblock %}

@@ -192,6 +192,18 @@ if not DEBUG:
     # Передавать CSRF cookie только по HTTPS (защита от перехвата)
     CSRF_COOKIE_SECURE             = True
 
+# --- Email -----------------------------------------------------------------
+# Для отправки писем (сброс пароля и др.)
+# Настраивается через .env: EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER,
+# EMAIL_HOST_PASSWORD, EMAIL_USE_TLS, DEFAULT_FROM_EMAIL
+EMAIL_BACKEND  = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST     = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT     = env.int('EMAIL_PORT', default=587)
+EMAIL_HOST_USER     = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS  = env.bool('EMAIL_USE_TLS', default=True)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@planapp.local')
+
 # --- Redis-сессии (если доступен Redis) ------------------------------------
 if _CACHE_BACKEND == 'redis':
     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'

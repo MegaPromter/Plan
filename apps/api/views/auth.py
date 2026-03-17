@@ -61,11 +61,19 @@ _POSITION_FIELD_RULES = {
     'Специалист':                                 'both',
     'Специалист 2 кат.':                         'both',
     'Специалист 1 кат.':                         'both',
+    'Ведущий специалист':                         'both',
     'Инженер-конструктор':                        'both',
     'Инженер-конструктор 3 кат.':                'both',
     'Инженер-конструктор 2 кат.':                'both',
     'Инженер-конструктор 1 кат.':                'both',
     'Ведущий инженер-конструктор':               'both',
+    'Ведущий инженер по направлению 3 класса':   'both',
+    'Ведущий инженер по направлению 2 класса':   'both',
+    'Ведущий инженер - координатор группы':      'both',
+    'Начальник бюро':                             'both',
+    'Младший научный сотрудник':                  'both',
+    'Старший научный сотрудник':                  'both',
+    'Ведущий научный сотрудник':                  'both',
     'Начальник сектора':                          'both',
     'Зам. начальника отдела – начальник сектора': 'both',
     'Руководитель направления':                   'both',
@@ -135,8 +143,6 @@ class DirsPublicView(View):
 
 # ── POST /api/register_public ────────────────────────────────────────────────
 
-# Отключаем CSRF (публичный эндпоинт регистрации)
-@method_decorator(csrf_exempt, name='dispatch')
 class RegisterPublicView(View):
     """
     POST -- публичная регистрация нового пользователя.
@@ -159,6 +165,7 @@ class RegisterPublicView(View):
         center = data.get('center', '').strip()         # код НТЦ-центра
         dept = data.get('dept', '').strip()             # код отдела
         sector = data.get('sector', '').strip()         # код сектора
+        email = data.get('email', '').strip()            # корп. email (необязательно)
 
         # Валидация обязательных персональных данных
         if not last_name:
@@ -235,6 +242,7 @@ class RegisterPublicView(View):
                 user = User.objects.create_user(
                     username=username,
                     password=password,
+                    email=email,
                 )
                 # Создаём связанный профиль Employee
                 # На продакшене роль определяется по должности,
@@ -253,6 +261,7 @@ class RegisterPublicView(View):
                     ntc_center=center_obj,
                     department=dept_obj,
                     sector=sector_obj,
+                    email_corp=email,
                 )
         except ValidationError as e:
             return JsonResponse(

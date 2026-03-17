@@ -542,11 +542,48 @@
 <script id="sp-config" type="application/json">{
   "isWriter": {{ is_writer|yesno:"true,false" }},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
-  "userRole": "{{ request.user.employee.role|default:'' }}",
-  "userDept": "{{ request.user.employee.department.code|default:'' }}",
-  "userSector": "{{ request.user.employee.sector.code|default:'' }}",
-  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:'' }}",
+  "userRole": "{{ request.user.employee.role|default:''|escapejs }}",
+  "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
+  "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
+  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/plan.js' %}?v=2"></script>
+<script>
+// Калибровка sticky top для multi-row thead (rowspan-совместимо)
+(function(){
+  function fixStickyOffsets() {
+    var tbl = document.getElementById('mainTable');
+    if (!tbl) return;
+    var theadRows = tbl.querySelectorAll('thead tr');
+    if (theadRows.length < 3) return;
+
+    var rowspan2H = 0;
+    var row0ths = theadRows[0].querySelectorAll('th');
+    for (var i = 0; i < row0ths.length; i++) {
+      if ((parseInt(row0ths[i].getAttribute('rowspan')) || 1) >= 2) {
+        rowspan2H = row0ths[i].getBoundingClientRect().height;
+        break;
+      }
+    }
+    if (rowspan2H < 1) { setTimeout(fixStickyOffsets, 50); return; }
+
+    var row1th = theadRows[1].querySelector('th');
+    var row1H = row1th ? row1th.getBoundingClientRect().height : 0;
+    var row1Top = rowspan2H - row1H;
+
+    var ths1 = theadRows[1].querySelectorAll('th');
+    for (var j = 0; j < ths1.length; j++) ths1[j].style.top = row1Top + 'px';
+    var ths2 = theadRows[2].querySelectorAll('th');
+    for (var k = 0; k < ths2.length; k++) ths2[k].style.top = rowspan2H + 'px';
+  }
+  // Двойной rAF гарантирует что стили применены после layout
+  function schedule() { requestAnimationFrame(function(){ requestAnimationFrame(fixStickyOffsets); }); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', schedule);
+  } else {
+    schedule();
+  }
+})();
+</script>
 {% endblock %}

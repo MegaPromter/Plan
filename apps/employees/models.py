@@ -132,11 +132,19 @@ class Employee(models.Model):
         ('spec',                'Специалист'),
         ('spec_2',              'Специалист 2 кат.'),
         ('spec_1',              'Специалист 1 кат.'),
+        ('lead_spec',           'Ведущий специалист'),
         ('eng',                 'Инженер-конструктор'),
         ('eng_3',               'Инженер-конструктор 3 кат.'),
         ('eng_2',               'Инженер-конструктор 2 кат.'),
         ('eng_1',               'Инженер-конструктор 1 кат.'),
         ('lead_eng',            'Ведущий инженер-конструктор'),
+        ('lead_eng_dir_3',      'Ведущий инженер по направлению 3 класса'),
+        ('lead_eng_dir_2',      'Ведущий инженер по направлению 2 класса'),
+        ('lead_eng_coord',      'Ведущий инженер - координатор группы'),
+        ('bureau_head',         'Начальник бюро'),
+        ('jr_researcher',       'Младший научный сотрудник'),
+        ('sr_researcher',       'Старший научный сотрудник'),
+        ('lead_researcher',     'Ведущий научный сотрудник'),
         ('sector_head',         'Начальник сектора'),
         ('dept_deputy_sector',  'Зам. начальника отдела – начальник сектора'),
         ('dept_deputy',         'Зам. начальника отдела'),
@@ -166,7 +174,7 @@ class Employee(models.Model):
     role       = models.CharField('Роль',      max_length=20,
                                   choices=ROLE_CHOICES, default=ROLE_USER)
     # Должность по штатному расписанию
-    position   = models.CharField('Должность', max_length=30,
+    position   = models.CharField('Должность', max_length=50,
                                   choices=POSITION_CHOICES, blank=True)
     # НТЦ-центр, к которому относится сотрудник (для фильтрации видимости)
     ntc_center = models.ForeignKey(
@@ -268,7 +276,7 @@ class Employee(models.Model):
     def full_name(self) -> str:
         """Фамилия Имя Отчество."""
         # Собираем список непустых частей ФИО
-        parts = [self.last_name, self.first_name]
+        parts = [p for p in (self.last_name, self.first_name) if p]
         # Добавляем отчество только если оно задано
         if self.patronymic:
             parts.append(self.patronymic)

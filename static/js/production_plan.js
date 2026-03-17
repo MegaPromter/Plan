@@ -3,6 +3,19 @@
    Логика: лендинг со списком ПП-проектов + таблица строк с инлайн-редактированием
    ======================================================================== */
 
+// Калибровка sticky top для filter-row (после того как таблица стала видимой)
+function _fixFilterRowTop() {
+  var tbl = document.querySelector('.pp-table');
+  if (!tbl) return;
+  var headerRow = tbl.querySelector('thead tr:first-child');
+  var filterRow = tbl.querySelector('thead tr.filter-row');
+  if (!headerRow || !filterRow) return;
+  var h = headerRow.getBoundingClientRect().height;
+  if (h < 1) return; // таблица ещё скрыта
+  var ths = filterRow.querySelectorAll('th');
+  for (var i = 0; i < ths.length; i++) ths[i].style.top = h + 'px';
+}
+
 // Экранирование строки для безопасной вставки в JS-строки внутри onclick-атрибутов
 function escapeJs(s) {
   if (!s) return '';
@@ -587,6 +600,7 @@ async function openProject(id, name) {
   }
 
   renderPPTable();
+  requestAnimationFrame(_fixFilterRowTop);
   initPPPeriodBar();
   initPPDeptChips();
 }
@@ -647,8 +661,7 @@ function buildSelectHtml(col, row) {
     if (val && !filtered.find(h => h.value === val)) {
       // Ищем ФИО нач. сектора среди всех секторов
       const anyMatch = allHeads.find(h => h.value === val);
-      const phantomLabel = anyMatch && anyMatch.head_name ? val + ' — ' + anyMatch.head_name : val;
-      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(phantomLabel)}</option>`;
+      options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
     }
     filtered.forEach(h => {
       // Начальник сектора видит все сектора своего отдела,
@@ -656,9 +669,8 @@ function buildSelectHtml(col, row) {
       const isOwnSector = IS_ADMIN || USER_ROLE === 'dept_head' || USER_ROLE === 'dept_deputy'
                           || !USER_SECTOR || h.value === USER_SECTOR;
       const disabledAttr = isOwnSector ? '' : ' disabled style="color:var(--muted)"';
-      // Текст опции: код сектора + ФИО начальника
-      const label = h.head_name ? h.value + ' — ' + h.head_name : h.value;
-      options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(label)}</option>`;
+      // Текст опции: только код сектора (ФИО выводится серым под select'ом)
+      options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(h.value)}</option>`;
     });
   } else if (col === 'task_type') {
     // Тип задачи: значение по умолчанию «Выпуск нового документа»
@@ -1023,7 +1035,7 @@ async function handleCellChange(e) {
 
   // Автоматический пересчёт трудоёмкости при изменении листов/норматива/коэффициента
   if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
-    setTimeout(async () => {
+    setTimeout(async () => { try {
       const tr = input.closest('tr');
       let sheets = null, norm = null, coeff = null;
       // Читаем актуальные значения из DOM
@@ -1057,6 +1069,7 @@ async function handleCellChange(e) {
       } else {
         cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
       }
+    } catch (e) { console.error('Ошибка пересчёта трудоёмкости:', e); }
     }, 50);
   }
 }
@@ -1282,6 +1295,48 @@ function openAddRowModal() {
     });
   });
 }
+
+/* ── Статистика ПП ───────────────────────────────────────────────────── */
+
+function togglePPStats() {
+  const dd = document.getElementById('ppStatsDropdown');
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+
+  // Считаем по всем строкам проекта (не фильтрованным)
+  const executors = new Set();
+  let totalLabor = 0;
+  let doneLabor = 0;
+
+  rows.forEach(r => {
+    if (r.executor) executors.add(r.executor);
+    const lab = parseFloat(r.labor);
+    if (!isNaN(lab)) {
+      totalLabor += lab;
+      if (r.has_reports) doneLabor += lab;
+    }
+  });
+
+  const fmt = v => v % 1 === 0 ? v : v.toFixed(2);
+
+  dd.innerHTML =
+    '<div class="pp-stats-row">' +
+      '<span class="pp-stats-label">Разработчиков</span>' +
+      '<span class="pp-stats-val">' + executors.size + '</span>' +
+    '</div>' +
+    '<div class="pp-stats-row">' +
+      '<span class="pp-stats-label">Трудоёмкость план / выполнено</span>' +
+      '<span class="pp-stats-val">' + fmt(totalLabor) + ' / ' + fmt(doneLabor) + '</span>' +
+    '</div>';
+
+  dd.classList.add('open');
+}
+
+// Закрытие дропдауна статистики по клику вне
+document.addEventListener('click', function(e) {
+  const wrap = document.querySelector('.pp-stats-wrap');
+  const dd = document.getElementById('ppStatsDropdown');
+  if (wrap && dd && !wrap.contains(e.target)) dd.classList.remove('open');
+});
 
 /* ── Синхронизация ПП → модуль «План/отчёт» ────────────────────────── */
 // Переносит строки ПП в задачи модуля ПО (если заполнены все обязательные поля)
@@ -1654,13 +1709,10 @@ function buildMfDropdown(btn, col) {
     };
     opt.onclick = (e) => { if (e.target !== cb) toggle(); };
     opt.appendChild(cb);
-    // Для date_end отображаем «Март 2026»; для sector_head — код + ФИО
+    // Для date_end отображаем «Март 2026»
     let displayText = val;
     if (col === 'date_end') {
       displayText = formatYearMonth(val);
-    } else if (col === 'sector_head') {
-      const sh = (dirs.sector_head || []).find(h => h.value === val);
-      if (sh && sh.head_name) displayText = val + ' — ' + sh.head_name;
     }
     opt.appendChild(document.createTextNode(displayText));
     drop.appendChild(opt);
@@ -2408,3 +2460,4 @@ async function ppRenderGantt() {
     gantt.render();
   } catch (e) { console.error('ppRenderGantt error:', e); }
 }
+
