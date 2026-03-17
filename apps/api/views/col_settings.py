@@ -18,6 +18,27 @@ class ColSettingsView(LoginRequiredJsonMixin, View):
     Принимает JSON-объект с настройками и записывает в employee.col_settings.
     """
 
+    # Максимальное количество ключей в одном запросе
+    _MAX_KEYS = 100
+    # Максимальная длина ключа
+    _MAX_KEY_LEN = 64
+    # Разрешённые символы в ключах: буквы, цифры, _, -
+    _KEY_RE = __import__('re').compile(r'^[a-zA-Z_][a-zA-Z0-9_-]*$')
+
+    @classmethod
+    def _validate_keys(cls, data):
+        """Проверяет ключи на допустимость. Возвращает строку ошибки или None."""
+        if len(data) > cls._MAX_KEYS:
+            return f'Слишком много ключей (максимум {cls._MAX_KEYS})'
+        for key in data:
+            if not isinstance(key, str):
+                return f'Ключ должен быть строкой'
+            if len(key) > cls._MAX_KEY_LEN:
+                return f'Ключ слишком длинный: {key[:20]}...'
+            if not cls._KEY_RE.match(key):
+                return f'Недопустимый ключ: {key}'
+        return None
+
     def post(self, request):
         # Получаем профиль сотрудника, привязанный к пользователю
         employee = getattr(request.user, 'employee', None)
@@ -31,6 +52,11 @@ class ColSettingsView(LoginRequiredJsonMixin, View):
         incoming = parse_json_body(request)
         if incoming is None:
             return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+
+        # Валидация ключей
+        key_err = self._validate_keys(incoming)
+        if key_err:
+            return JsonResponse({'error': key_err}, status=400)
 
         # Специальный флаг: сброс ширин колонок
         # Сохраняем только «не-ширинные» ключи (show_all_depts и т.п.)

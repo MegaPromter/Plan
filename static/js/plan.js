@@ -556,9 +556,9 @@ async function openPlanningErrors() {
         meta: `${t.task_type||""} · ${t.executor||"—"} · Дата окончания: ${de||"—"} · Срок выполнения: ${dead||"—"}`,
         highlight: `Просрочено на ${daysCalc} дн.`,
         actions: [
-          { label: "✏️ Редактировать", fn: `closePeModal();openEditTaskModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
-          { label: "📝 Внести отчёт",  fn: `closePeModal();openReportModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
-          { label: "Игнорировать",     fn: `peSetIgnored('overdue_${t.id}');closePeModal();` },
+          { label: "✏️ Редактировать", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
+          { label: "📝 Внести отчёт",  fn: () => { closePeModal(); openReportModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
+          { label: "Игнорировать",     fn: () => { peSetIgnored('overdue_'+t.id); closePeModal(); } },
         ]
       };
     })
@@ -577,8 +577,8 @@ async function openPlanningErrors() {
         meta: `${t.executor||"—"} · Начало: ${ds} · Окончание: ${de} · Срок: ${dead}`,
         highlight: "Дата начала позже даты окончания/срока",
         actions: [
-          { label: "✏️ Исправить", fn: `closePeModal();openEditTaskModal(tasks.find(x=>x.id===${t.id})||{id:${t.id}})` },
-          { label: "Игнорировать", fn: `peSetIgnored('baddates_${t.id}');closePeModal();` },
+          { label: "✏️ Исправить", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
+          { label: "Игнорировать", fn: () => { peSetIgnored('baddates_'+t.id); closePeModal(); } },
         ]
       };
     })
@@ -594,8 +594,8 @@ async function openPlanningErrors() {
       meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
       highlight: `Перегруз: +${(e.hours - monthNorm).toFixed(1)} ч`,
       actions: [
-        { label: "🔍 Показать работы",    fn: `closePeModal();filterByExecutorCurMonth('${e.name.replace(/'/g,"\\'")}',${curYear},${curMonth})` },
-        { label: "Оставить как есть",     fn: `peSetIgnored('overload_${e.name}_${curKey}');closePeModal();` },
+        { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
+        { label: "Оставить как есть",     fn: () => { peSetIgnored('overload_'+e.name+'_'+curKey); closePeModal(); } },
       ]
     }))
   );
@@ -610,8 +610,8 @@ async function openPlanningErrors() {
       meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
       highlight: `Дефицит: ${((e.norm || monthNorm) - e.hours).toFixed(1)} ч`,
       actions: [
-        { label: "🔍 Показать работы",    fn: `closePeModal();filterByExecutorCurMonth('${e.name.replace(/'/g,"\\'")}',${curYear},${curMonth})` },
-        { label: "Оставить как есть",     fn: `peSetIgnored('underload_${e.name}_${curKey}');closePeModal();` },
+        { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
+        { label: "Оставить как есть",     fn: () => { peSetIgnored('underload_'+e.name+'_'+curKey); closePeModal(); } },
       ]
     }))
   );
@@ -629,9 +629,9 @@ async function openPlanningErrors() {
         meta: `Отпуск: ${v.date_start||"—"} — ${v.date_end||"—"} · ${v.vac_type||""}`,
         highlight: "Запланированы задачи в период отпуска",
         actions: [
-          { label: "Игнорировать",              fn: `peSetIgnored('${ign}');closePeModal();` },
-          { label: "✏️ Скорректировать план",   fn: `closePeModal();filterByExecutorCurMonth('${name.replace(/'/g,"\\'")}',${curYear},${curMonth})` },
-          { label: "📅 Скорректировать отпуск", fn: `closePeModal();window.location.href='/employees/vacation-plan/'` },
+          { label: "Игнорировать",              fn: () => { peSetIgnored(ign); closePeModal(); } },
+          { label: "✏️ Скорректировать план",   fn: () => { closePeModal(); filterByExecutorCurMonth(name, curYear, curMonth); } },
+          { label: "📅 Скорректировать отпуск", fn: () => { closePeModal(); window.location.href='/employees/vacation-plan/'; } },
         ]
       };
     })
@@ -677,15 +677,20 @@ function buildPeSection(title, count, badgeClass, items) {
   items.forEach(item => {
     const row = document.createElement("div");
     row.className = "pe-item";
-    const actionsHtml = item.actions.map(a =>
-      `<button class="pe-btn" onclick="${a.fn}">${a.label}</button>`
-    ).join("");
     row.innerHTML = `
       <div class="pe-item-info">
         <div class="pe-item-name">${escapePe(item.title)}</div>
         <div class="pe-item-meta">${escapePe(item.meta)} · <span>${escapePe(item.highlight)}</span></div>
-        <div class="pe-item-actions">${actionsHtml}</div>
+        <div class="pe-item-actions"></div>
       </div>`;
+    const actionsContainer = row.querySelector(".pe-item-actions");
+    item.actions.forEach(a => {
+      const btn = document.createElement("button");
+      btn.className = "pe-btn";
+      btn.textContent = a.label;
+      btn.addEventListener("click", a.fn);
+      actionsContainer.appendChild(btn);
+    });
     body.appendChild(row);
   });
 
@@ -3300,7 +3305,7 @@ async function saveTaskExecutors() {
       method: 'PUT', headers: apiHeaders(),
       body: JSON.stringify({ executors_list: taskExecutorsData })
     });
-    if (res.ok) { notify('✓ Исполнители сохранены', 'ok'); closeExecutorsModal(); loadTasks(); }
+    if (res.ok) { notify('✓ Исполнители сохранены', 'ok'); closeExecutorsModal(); await loadTasks(); }
     else notify('Ошибка сохранения', 'err');
   } catch (error) { console.error('Error saving executors:', error); notify('Ошибка сохранения', 'err'); }
 }

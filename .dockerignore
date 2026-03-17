@@ -32,6 +32,9 @@ pytest.ini
 .DS_Store
 Thumbs.db
 
+# Presentation
+presentation/
+
 # Docs / misc
 *.docx
 *.md

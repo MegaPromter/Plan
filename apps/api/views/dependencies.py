@@ -444,30 +444,31 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                 })
 
             # Определяем самую позднюю дату начала по всем предшественникам
-            earliest_start = None
+            # (задача не может начаться раньше, чем завершится последний предшественник)
+            latest_start = None
             for dep in predecessors:
                 pred = dep.predecessor
                 ref_date = _get_reference_date(dep, pred)
                 if ref_date is None:
                     continue
                 candidate = _add_work_days(ref_date, dep.lag_days)
-                if earliest_start is None or candidate > earliest_start:
-                    earliest_start = candidate
+                if latest_start is None or candidate > latest_start:
+                    latest_start = candidate
 
-            if earliest_start is None:
+            if latest_start is None:
                 return JsonResponse(
                     {'error': 'Невозможно определить дату: у предшественников нет дат'},
                     status=400,
                 )
 
             with transaction.atomic():
-                changes = {'date_start': earliest_start.isoformat()}
+                changes = {'date_start': latest_start.isoformat()}
                 if work.date_start and work.date_end:
                     duration = (work.date_end - work.date_start).days
-                    new_end = earliest_start + timedelta(days=duration)
+                    new_end = latest_start + timedelta(days=duration)
                     changes['date_end'] = new_end.isoformat()
                     work.date_end = new_end
-                work.date_start = earliest_start
+                work.date_start = latest_start
                 work.save(update_fields=['date_start', 'date_end', 'updated_at'])
 
                 log_action(

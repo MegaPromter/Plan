@@ -39,4 +39,4 @@ def log_action(request, action, object_id=None, object_repr='', details=None):
     except Exception as e:
         # Не ломаем основной запрос из-за ошибки в аудите
         # Логируем ошибку с трейсбеком, но не пробрасываем исключение дальше
-        logger.error('audit log error: %s', e, exc_info=True)
+        logger.exception('audit log error: %s', e)

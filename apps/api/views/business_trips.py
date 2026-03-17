@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 
 TRIPS_MAX = 500
 
-ALLOWED_FIELDS = {'location', 'purpose', 'date_start', 'date_end', 'status', 'notes'}
-
 
 def _serialize_trip(t):
     emp = t.employee
@@ -139,6 +137,12 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
         notes = data.get('notes', '')
         status_val = data.get('status', BusinessTrip.STATUS_PLAN)
 
+        valid_statuses = {c[0] for c in BusinessTrip.STATUS_CHOICES}
+        if status_val not in valid_statuses:
+            return JsonResponse(
+                {'error': f'Недопустимый статус: {status_val}'}, status=400
+            )
+
         ds_str = data.get('date_start', '')
         de_str = data.get('date_end', '')
 
@@ -172,6 +176,7 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
 # ── PUT / DELETE /api/business_trips/<id>/ ────────────────────────────────────
 
 class BusinessTripDetailView(WriterRequiredJsonMixin, View):
+    http_method_names = ['put', 'delete']
 
     def put(self, request, pk):
         data = parse_json_body(request)
@@ -198,6 +203,13 @@ class BusinessTripDetailView(WriterRequiredJsonMixin, View):
                 update_fields.append('employee')
             except Employee.DoesNotExist:
                 return JsonResponse({'error': 'Сотрудник не найден'}, status=404)
+
+        if 'status' in data:
+            valid_statuses = {c[0] for c in BusinessTrip.STATUS_CHOICES}
+            if data['status'] not in valid_statuses:
+                return JsonResponse(
+                    {'error': f'Недопустимый статус: {data["status"]}'}, status=400
+                )
 
         for field in ('location', 'purpose', 'notes', 'status'):
             if field in data:

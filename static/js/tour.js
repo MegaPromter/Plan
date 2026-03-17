@@ -120,6 +120,7 @@
   var TOTAL = STEPS.length;
   var LS_KEY = 'tour_state';
   var currentIdx = -1;
+  var _activePoll = null; // ID активного setInterval (tryOpenFirstProject)
 
   /* ═══════════════════════════════════════════════════════════════════════
      2. Определение роли
@@ -191,6 +192,8 @@
     var openModals = document.querySelectorAll('.modal-overlay.open');
     openModals.forEach(function(m) { m.classList.remove('open'); });
     document.removeEventListener('keydown', keyHandler);
+    // Очищаем polling (tryOpenFirstProject)
+    if (_activePoll) { clearInterval(_activePoll); _activePoll = null; }
   }
 
   function currentPage() {
@@ -494,17 +497,17 @@
     if (card) {
       card.click();
       var attempts = 0;
-      var poll = setInterval(function() {
+      _activePoll = setInterval(function() {
         var el = findEl(step);
         attempts++;
         if (el) {
-          clearInterval(poll);
+          clearInterval(_activePoll); _activePoll = null;
           setTimeout(function() {
             if (step.autoAction) runAutoAction(step, el);
             showSpotlight(el, step, idx, desc, adminNote);
           }, 500);
         } else if (attempts > 30) {
-          clearInterval(poll);
+          clearInterval(_activePoll); _activePoll = null;
           showInfoCard(step, idx, desc, adminNote);
         }
       }, 200);
@@ -642,7 +645,7 @@
       return;
     }
 
-    if (!state.completed && typeof state.step === 'number' && state.step < TOTAL) {
+    if (!state.completed && typeof state.step === 'number' && state.step >= 0 && state.step < TOTAL) {
       setTimeout(function() {
         goStep(state.step);
       }, 600);

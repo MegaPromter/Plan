@@ -235,7 +235,9 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
             doc_link=d.get('doc_link') or '',
         )
         # Авто-создание записи ЖИ для «Корректировка документа»
-        report.work = Work.objects.get(pk=task_id)
+        # Присваиваем кешированный объект work, чтобы _sync_notice_for_report
+        # не делал лишний SQL-запрос через FK
+        report.work = work
         _sync_notice_for_report(report)
         return JsonResponse({'id': report.id})
 

@@ -464,58 +464,64 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
         vis_q = get_visibility_filter(request.user)
-        work = Work.objects.filter(pk=pk, show_in_plan=True).filter(vis_q).first()
-        if not work:
-            return JsonResponse({'error': 'Задача не найдена'}, status=404)
-
-        if d.get('_mcc_finish'):
-            return self._mcc_finish(work)
-
-        # Optimistic locking: нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
-        # (отбрасываем микросекунды и TZ-суффикс для надёжного сравнения)
-        if 'updated_at' in d and d['updated_at'] is not None:
-            server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
-                         if work.updated_at else '')
-            raw = str(d['updated_at']).replace(' ', 'T')
-            # Обрезаем микросекунды (.123456) и TZ-суффикс (+00:00 / Z)
-            client_ts = raw[:19] if len(raw) >= 19 else raw
-            if server_ts != client_ts:
-                return JsonResponse({
-                    'error': 'conflict',
-                    'message': 'Запись была изменена другим пользователем. '
-                               'Перезагрузите страницу.',
-                }, status=409)
-
-        _orig_project_id = work.project_id
-        # from_pp: запись из ПП — ПП-поля заблокированы для редактирования в СП
-        is_from_pp = work.show_in_pp
-        _PP_LOCKED_FIELDS = frozenset((
-            'work_name', 'work_number', 'description',
-            'task_type', 'dept', 'sector', 'project',
-            'stage', 'justification', 'deadline',
-        ))
-        if is_from_pp and not d.get('_mcc_finish'):
-            # Определяем какие заблокированные поля клиент пытался изменить
-            attempted_locked = [lf for lf in _PP_LOCKED_FIELDS if lf in d]
-            if attempted_locked:
-                # Проверяем, остаются ли разрешённые поля
-                non_service = {k for k in d if not k.startswith('_') and k != 'updated_at'}
-                remaining = non_service - _PP_LOCKED_FIELDS
-                if not remaining:
-                    # Все переданные поля заблокированы — отклоняем
-                    return JsonResponse({
-                        'error': 'Запись из ПП: редактирование заблокированных полей запрещено',
-                        'locked_fields': attempted_locked,
-                    }, status=403)
-                # Есть и разрешённые поля — тихо убираем заблокированные, добавим warning
-                for lf in attempted_locked:
-                    d.pop(lf, None)
-                logger.info(
-                    "PP lock: task %d — ignored locked fields %s",
-                    pk, attempted_locked,
-                )
 
         with transaction.atomic():
+            work = (
+                Work.objects
+                .select_for_update(of=('self',))
+                .filter(pk=pk, show_in_plan=True)
+                .filter(vis_q)
+                .first()
+            )
+            if not work:
+                return JsonResponse({'error': 'Задача не найдена'}, status=404)
+
+            if d.get('_mcc_finish'):
+                return self._mcc_finish(work)
+
+            # Optimistic locking: нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
+            # (отбрасываем микросекунды и TZ-суффикс для надёжного сравнения)
+            if 'updated_at' in d and d['updated_at'] is not None:
+                server_ts = (work.updated_at.strftime('%Y-%m-%dT%H:%M:%S')
+                             if work.updated_at else '')
+                raw = str(d['updated_at']).replace(' ', 'T')
+                # Обрезаем микросекунды (.123456) и TZ-суффикс (+00:00 / Z)
+                client_ts = raw[:19] if len(raw) >= 19 else raw
+                if server_ts != client_ts:
+                    return JsonResponse({
+                        'error': 'conflict',
+                        'message': 'Запись была изменена другим пользователем. '
+                                   'Перезагрузите страницу.',
+                    }, status=409)
+
+            _orig_project_id = work.project_id
+            # from_pp: запись из ПП — ПП-поля заблокированы для редактирования в СП
+            is_from_pp = work.show_in_pp
+            _PP_LOCKED_FIELDS = frozenset((
+                'work_name', 'work_number', 'description',
+                'task_type', 'dept', 'sector', 'project',
+                'stage', 'justification', 'deadline',
+            ))
+            if is_from_pp and not d.get('_mcc_finish'):
+                # Определяем какие заблокированные поля клиент пытался изменить
+                attempted_locked = [lf for lf in _PP_LOCKED_FIELDS if lf in d]
+                if attempted_locked:
+                    # Проверяем, остаются ли разрешённые поля
+                    non_service = {k for k in d if not k.startswith('_') and k != 'updated_at'}
+                    remaining = non_service - _PP_LOCKED_FIELDS
+                    if not remaining:
+                        # Все переданные поля заблокированы — отклоняем
+                        return JsonResponse({
+                            'error': 'Запись из ПП: редактирование заблокированных полей запрещено',
+                            'locked_fields': attempted_locked,
+                        }, status=403)
+                    # Есть и разрешённые поля — тихо убираем заблокированные, добавим warning
+                    for lf in attempted_locked:
+                        d.pop(lf, None)
+                    logger.info(
+                        "PP lock: task %d — ignored locked fields %s",
+                        pk, attempted_locked,
+                    )
             if 'plan_hours_update' in d:
                 ph_upd, ph_err = validate_plan_hours(d['plan_hours_update'])
                 if ph_err:

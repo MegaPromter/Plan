@@ -1,4 +1,4 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.views.generic import FormView, TemplateView
@@ -61,9 +61,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from django.utils import timezone
         from apps.works.models import Work, Notice, WorkReport
         from apps.employees.models import Employee, Vacation
+        from apps.api.utils import get_visibility_filter
         ctx = super().get_context_data(**kwargs)
-        ctx['works_count']    = Work.objects.count()
-        ctx['tasks_count']    = Work.objects.filter(show_in_plan=True).count()
+        vis_q = get_visibility_filter(self.request.user)
+        ctx['works_count']    = Work.objects.filter(vis_q).count()
+        ctx['tasks_count']    = Work.objects.filter(show_in_plan=True).filter(vis_q).count()
         ctx['pp_count']       = Work.objects.filter(show_in_pp=True).count()
         ctx['notices_count']  = Notice.objects.count()
         ctx['employees_count']= Employee.objects.filter(is_active=True).count()
@@ -91,6 +93,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         else:
             ctx['my_overdue'] = 0
             ctx['my_upcoming'] = 0
+
+        # Имя Отчество для приветствия (fallback на username)
+        display_name = ''
+        if emp:
+            parts = [p for p in (emp.first_name, emp.patronymic) if p]
+            display_name = ' '.join(parts)
+        if not display_name:
+            display_name = (self.request.user.first_name or '').strip()
+        if not display_name:
+            display_name = self.request.user.username
+        ctx['display_name'] = display_name
         return ctx
 
 
@@ -117,8 +130,14 @@ class StubView(LoginRequiredMixin, TemplateView):
         return ctx
 
 
-class AdminSPAView(LoginRequiredMixin, TemplateView):
+class AdminSPAView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'accounts/admin_spa.html'
+
+    def test_func(self):
+        try:
+            return self.request.user.employee.role == 'admin'
+        except Exception:
+            return self.request.user.is_superuser
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

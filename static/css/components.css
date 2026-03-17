@@ -648,10 +648,20 @@
   max-width: 300px;
   animation: fadeUp 0.3s ease;
 }
-.onboarding-tip::before {
+.onboarding-tip[data-pos="right"]::before {
   content: '';
   position: absolute;
-  bottom: -6px;
+  top: 18px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--nav-bg, #1e293b);
+  transform: rotate(45deg);
+}
+.onboarding-tip[data-pos="bottom"]::before {
+  content: '';
+  position: absolute;
+  top: -6px;
   left: 24px;
   width: 12px;
   height: 12px;

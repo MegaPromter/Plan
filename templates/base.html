@@ -638,8 +638,18 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Onboarding Tips — одноразовые подсказки для новых пользователей ─────
 (function() {
   var TIPS = [
-    { target: '.sidebar-nav .nav-item:first-child', text: 'Главное меню — нажмите для навигации', pos: 'right' },
-    { target: '#themeToggle', text: 'Переключатель темы: светлая, тёмная или системная', pos: 'bottom' },
+    {
+      target: '.sidebar-nav',
+      title: 'Навигация',
+      text: 'Здесь находятся все разделы системы: планы, проекты, аналитика и справочники.',
+      pos: 'right'
+    },
+    {
+      target: '#themeToggle',
+      title: 'Тема оформления',
+      text: 'Нажмите, чтобы переключить между светлой и тёмной темой.',
+      pos: 'bottom'
+    },
   ];
   var seen = {};
   try { seen = JSON.parse(localStorage.getItem('onboardingSeen') || '{}'); } catch(e) {}
@@ -651,31 +661,38 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!el) continue;
       var tip = document.createElement('div');
       tip.className = 'onboarding-tip';
-      tip.innerHTML = '<span>' + TIPS[idx].text + '</span><button>Понятно</button>';
+      tip.setAttribute('data-pos', TIPS[idx].pos);
+      tip.innerHTML =
+        '<button class="onboarding-tip-close" aria-label="Закрыть">&times;</button>' +
+        '<div class="onboarding-tip-title">' + TIPS[idx].title + '</div>' +
+        '<div>' + TIPS[idx].text + '</div>' +
+        '<div class="onboarding-tip-footer">' +
+          '<span class="onboarding-tip-step">' + (idx + 1) + ' из ' + TIPS.length + '</span>' +
+          '<button class="onboarding-tip-btn">Понятно</button>' +
+        '</div>';
       var rect = el.getBoundingClientRect();
       if (TIPS[idx].pos === 'right') {
-        tip.style.top = (rect.top + rect.height / 2 - 20) + 'px';
-        tip.style.left = (rect.right + 12) + 'px';
+        tip.style.top = (rect.top + rect.height / 2 - 30) + 'px';
+        tip.style.left = (rect.right + 14) + 'px';
       } else {
-        tip.style.top = (rect.bottom + 12) + 'px';
-        tip.style.left = (rect.left + rect.width / 2 - 100) + 'px';
+        tip.style.top = (rect.bottom + 14) + 'px';
+        tip.style.left = (rect.left + rect.width / 2 - 120) + 'px';
       }
-      // IIFE для замыкания idx
-      (function(tipIdx) {
-        tip.querySelector('button').addEventListener('click', function() {
+      (function(tipIdx, tipEl) {
+        var dismiss = function() {
           seen[tipIdx] = true;
           localStorage.setItem('onboardingSeen', JSON.stringify(seen));
-          tip.remove();
-          // Показать следующую подсказку через небольшую паузу
-          setTimeout(showNextTip, 500);
-        });
-      })(idx);
+          tipEl.remove();
+          setTimeout(showNextTip, 400);
+        };
+        tipEl.querySelector('.onboarding-tip-btn').addEventListener('click', dismiss);
+        tipEl.querySelector('.onboarding-tip-close').addEventListener('click', dismiss);
+      })(idx, tip);
       document.body.appendChild(tip);
       break;
     }
   }
-  // Показываем через 1с после загрузки
-  setTimeout(showNextTip, 1000);
+  setTimeout(showNextTip, 1200);
 })();
 
 // ESC закрывает любое открытое модальное окно (.modal-overlay.open или .modal-backdrop)

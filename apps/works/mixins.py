@@ -21,5 +21,6 @@ class SPAContextMixin:
             col_settings = {}
             if emp and emp.col_settings:
                 col_settings = emp.col_settings if isinstance(emp.col_settings, dict) else {}
-            ctx['col_settings'] = json.dumps(col_settings)
+            # Экранируем '</' для предотвращения выхода из <script> тега
+            ctx['col_settings'] = json.dumps(col_settings).replace('</', '<\\/')
         return ctx

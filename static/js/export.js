@@ -211,6 +211,8 @@ function buildExportDropdown(containerId, config) {
     wrap.appendChild(menu);
     container.appendChild(wrap);
 
-    // Закрытие по клику вне
-    document.addEventListener('click', () => menu.classList.remove('open'));
+    // Закрытие по клику вне (используем capture для одного обработчика)
+    document.addEventListener('click', (e) => {
+        if (!wrap.contains(e.target)) menu.classList.remove('open');
+    }, { once: false });
 }

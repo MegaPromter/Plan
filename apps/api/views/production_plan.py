@@ -474,7 +474,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
 #  POST /api/production_plan/sync
 # ---------------------------------------------------------------------------
 
-class ProductionPlanSyncView(LoginRequiredJsonMixin, View):
+class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
     """POST /api/production_plan/sync — синхронизация ПП → СП.
 
     Никаких копий/дублей: просто включает show_in_plan=True на записях ПП,
@@ -500,12 +500,23 @@ class ProductionPlanSyncView(LoginRequiredJsonMixin, View):
                 status=400,
             )
 
+        # Проверка прав: только admin/ntc_head/ntc_deputy или writer своего отдела
+        employee = getattr(request.user, 'employee', None)
+        if not employee:
+            return JsonResponse({'error': 'Нет профиля сотрудника'}, status=403)
+
         # Непустые ПП-записи проекта, ещё не показанные в СП
         qs = Work.objects.filter(
             show_in_pp=True,
             show_in_plan=False,
             pp_project_id=filter_project_id,
         )
+
+        # Ограничение по отделу: не-admin/ntc видят только свой отдел
+        if employee.role not in ('admin', 'ntc_head', 'ntc_deputy'):
+            if not employee.department:
+                return JsonResponse({'error': 'Вашему профилю не назначен отдел'}, status=403)
+            qs = qs.filter(department=employee.department)
 
         # Если переданы конкретные ids (отфильтрованные на клиенте) — синхронизируем только их
         ids = d.get('ids')
