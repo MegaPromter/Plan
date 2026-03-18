@@ -23,7 +23,10 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import PRODUCTION_ALLOWED_FIELDS, validate_task_type, generate_row_code
+from apps.api.utils import (
+    PRODUCTION_ALLOWED_FIELDS, validate_task_type, generate_row_code,
+    safe_date, safe_decimal, resolve_employee,
+)
 from apps.works.models import Work, WorkReport, PPProject, AuditLog
 from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.audit import log_action
@@ -45,25 +48,9 @@ def _round_labor(val):
     return i if f == i else round(f, 2)
 
 
-def _safe_decimal(val):
-    """Безопасно конвертирует значение в Decimal. Возвращает None при ошибке."""
-    if val is None or val == '':
-        return None
-    try:
-        normalized = str(val).replace(',', '.').strip()
-        return Decimal(normalized)
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-
-
-def _safe_date(val):
-    """Безопасно парсит строку даты ISO 8601. Возвращает None при ошибке."""
-    if not val or val == '':
-        return None
-    try:
-        return dt_date.fromisoformat(str(val))
-    except (ValueError, TypeError):
-        return None
+# _safe_decimal / _safe_date → вынесены в apps.api.utils (safe_decimal / safe_date)
+_safe_decimal = safe_decimal
+_safe_date = safe_date
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +127,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         limit = min(limit, TASKS_MAX)
 
         try:
-            offset = int(request.GET.get('offset', 0))
+            offset = max(int(request.GET.get('offset', 0)), 0)
         except (ValueError, TypeError):
             offset = 0
 
@@ -348,7 +335,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 else:
                     work.delete()
                 log_action(request, AuditLog.ACTION_PP_DELETE,
-                           object_id=work.pk if work.pk else pk,
+                           object_id=pk,
                            object_repr=work_repr)
             return JsonResponse({'ok': True})
         except Exception as e:
@@ -419,17 +406,10 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         elif field == 'date_end':
             work.date_end = _safe_date(value)
         elif field == 'executor':
+            # Строгий поиск по ФИО — назначаем только при точном совпадении
             if value:
-                parts = value.split()
-                qs = Employee.objects.all()
-                if parts:
-                    qs = qs.filter(last_name__iexact=parts[0])
-                if len(parts) >= 2:
-                    qs = qs.filter(first_name__iexact=parts[1])
-                if len(parts) >= 3:
-                    qs = qs.filter(patronymic__iexact=parts[2])
-                emp = qs.first() if parts else None
-                work.executor = emp if (emp and emp.full_name == value) else None
+                emp, _ = resolve_employee(value)
+                work.executor = emp
             else:
                 work.executor = None
         elif field == 'dept':

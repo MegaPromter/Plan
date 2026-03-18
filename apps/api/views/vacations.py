@@ -23,6 +23,8 @@ from apps.api.mixins import (
 from apps.api.utils import (
     VACATION_ALLOWED_FIELDS,
     get_vacation_visibility_filter,
+    resolve_employee_loose,
+    build_employee_q,
 )
 from apps.employees.models import Employee, Vacation
 
@@ -124,16 +126,8 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
                     {'error': 'Сотрудник не найден'}, status=404
                 )
         elif executor_name:
-            # Поиск по полному имени (фамилия + имя + отчество)
-            parts = executor_name.split()
-            qs = Employee.objects.all()
-            if len(parts) >= 1:
-                qs = qs.filter(last_name__iexact=parts[0])
-            if len(parts) >= 2:
-                qs = qs.filter(first_name__iexact=parts[1])
-            if len(parts) >= 3:
-                qs = qs.filter(patronymic__iexact=parts[2])
-            employee = qs.first()
+            # Нестрогий поиск по ФИО (ручной ввод из UI)
+            employee = resolve_employee_loose(executor_name)
 
         date_start_str = data.get('date_start', '')
         date_end_str = data.get('date_end', '')
@@ -204,19 +198,11 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
         # Фильтрация допустимых полей
         update_fields = []
 
-        # executor -- меняем привязку к сотруднику
+        # executor -- меняем привязку к сотруднику по ФИО
         if 'executor' in data:
             executor_name = data['executor'].strip()
             if executor_name:
-                parts = executor_name.split()
-                qs = Employee.objects.all()
-                if len(parts) >= 1:
-                    qs = qs.filter(last_name__iexact=parts[0])
-                if len(parts) >= 2:
-                    qs = qs.filter(first_name__iexact=parts[1])
-                if len(parts) >= 3:
-                    qs = qs.filter(patronymic__iexact=parts[2])
-                emp = qs.first()
+                emp = resolve_employee_loose(executor_name)
                 if emp:
                     vacation.employee = emp
                     update_fields.append('employee')
@@ -326,17 +312,12 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
             return JsonResponse({'conflicts': []})
 
         # Собираем Q для поиска сотрудников по ФИО
+        # Собираем Q-фильтр для массового поиска сотрудников по списку ФИО
         emp_q = Q()
         for name in exec_names:
-            parts = name.split()
-            q = Q()
-            if len(parts) >= 1:
-                q &= Q(last_name__iexact=parts[0])
-            if len(parts) >= 2:
-                q &= Q(first_name__iexact=parts[1])
-            if len(parts) >= 3:
-                q &= Q(patronymic__iexact=parts[2])
-            emp_q |= q
+            q = build_employee_q(name)
+            if q:
+                emp_q |= q
 
         employee_ids = list(
             Employee.objects

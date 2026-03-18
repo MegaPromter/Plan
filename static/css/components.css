@@ -722,3 +722,30 @@
   cursor: pointer;
 }
 
+/* ── Sticky Horizontal Scrollbar ─────────────────────────────────── */
+/* Приклеенный к низу viewport скроллбар, синхронизированный с таблицей */
+.sticky-hscroll {
+  position: sticky;
+  bottom: 0;
+  z-index: 49;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+  min-height: 14px;
+  background: var(--surface, #fff);
+  border-top: 1px solid var(--border, #e2e6ed);
+  cursor: default;
+  flex-shrink: 0;
+}
+/* Внутренний div — растягивает скроллбар на ширину таблицы */
+.sticky-hscroll-inner {
+  height: 1px;
+}
+/* Скрываем sticky-scrollbar если таблица не требует скролла */
+.sticky-hscroll.hidden { display: none; }
+
+/* ── Drag-to-Scroll курсоры ──────────────────────────────────────── */
+.drag-scroll-ready { cursor: default; }
+.drag-scroll-active { cursor: grabbing !important; user-select: none; }
+.drag-scroll-active * { cursor: grabbing !important; user-select: none; }
+

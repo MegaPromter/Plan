@@ -293,7 +293,7 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 
 class ProjectsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
-    """SPA-страница «Управление проектами» (просмотр — все, CRUD — только админы)."""
+    """SPA-страница «Управление проектами» (чтение — все, редактирование — admin через API)."""
     template_name = 'works/projects_spa.html'
 
 

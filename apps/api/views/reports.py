@@ -21,7 +21,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import get_visibility_filter
+from apps.api.utils import get_visibility_filter, safe_date, safe_decimal, safe_int
 from apps.works.models import Work, WorkReport, Notice
 
 logger = logging.getLogger(__name__)
@@ -111,34 +111,10 @@ def _serialize_report(r):
     }
 
 
-def _safe_decimal(val):
-    """Безопасное преобразование в Decimal или None."""
-    if val is None or val == '':
-        return None
-    try:
-        return Decimal(str(val))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-
-
-def _safe_int(val):
-    """Безопасное преобразование в int или None."""
-    if val is None or val == '':
-        return None
-    try:
-        return int(val)
-    except (ValueError, TypeError):
-        return None
-
-
-def _safe_date(val):
-    """Безопасное преобразование строки в date или None."""
-    if not val:
-        return None
-    try:
-        return dt_date.fromisoformat(str(val))
-    except (ValueError, TypeError):
-        return None
+# _safe_decimal / _safe_int / _safe_date → вынесены в apps.api.utils
+_safe_decimal = safe_decimal
+_safe_int = safe_int
+_safe_date = safe_date
 
 
 # ---------------------------------------------------------------------------
@@ -216,29 +192,30 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
         if url_err:
             return JsonResponse({'error': url_err}, status=400)
 
-        report = WorkReport.objects.create(
-            work_id=task_id,
-            doc_name=d.get('doc_name') or '',
-            doc_designation=d.get('doc_designation') or '',
-            ii_pi=d.get('ii_pi') or '',
-            doc_number=d.get('doc_number') or '',
-            inventory_num=d.get('inventory_num') or '',
-            date_accepted=_safe_date(d.get('date_accepted')),
-            date_expires=_safe_date(d.get('date_expires')),
-            doc_type=d.get('doc_type', ''),
-            doc_class=d.get('doc_class', ''),
-            sheets_a4=_safe_int(d.get('sheets_a4')),
-            norm=_safe_decimal(d.get('norm')),
-            coeff=_safe_decimal(d.get('coeff')),
-            bvd_hours=_safe_decimal(d.get('bvd_hours')),
-            norm_control=d.get('norm_control') or '',
-            doc_link=d.get('doc_link') or '',
-        )
-        # Авто-создание записи ЖИ для «Корректировка документа»
-        # Присваиваем кешированный объект work, чтобы _sync_notice_for_report
-        # не делал лишний SQL-запрос через FK
-        report.work = work
-        _sync_notice_for_report(report)
+        with transaction.atomic():
+            report = WorkReport.objects.create(
+                work_id=task_id,
+                doc_name=d.get('doc_name') or '',
+                doc_designation=d.get('doc_designation') or '',
+                ii_pi=d.get('ii_pi') or '',
+                doc_number=d.get('doc_number') or '',
+                inventory_num=d.get('inventory_num') or '',
+                date_accepted=_safe_date(d.get('date_accepted')),
+                date_expires=_safe_date(d.get('date_expires')),
+                doc_type=d.get('doc_type', ''),
+                doc_class=d.get('doc_class', ''),
+                sheets_a4=_safe_int(d.get('sheets_a4')),
+                norm=_safe_decimal(d.get('norm')),
+                coeff=_safe_decimal(d.get('coeff')),
+                bvd_hours=_safe_decimal(d.get('bvd_hours')),
+                norm_control=d.get('norm_control') or '',
+                doc_link=d.get('doc_link') or '',
+            )
+            # Авто-создание записи ЖИ для «Корректировка документа»
+            # Присваиваем кешированный объект work, чтобы _sync_notice_for_report
+            # не делал лишний SQL-запрос через FK
+            report.work = work
+            _sync_notice_for_report(report)
         return JsonResponse({'id': report.id})
 
 

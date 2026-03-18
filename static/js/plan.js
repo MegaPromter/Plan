@@ -22,6 +22,10 @@ function escapeHtml(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+function escapeJs(s) {
+  if (!s) return '';
+  return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'\\r');
+}
 const _now = new Date();
 let selectedYear  = parseInt(localStorage.getItem("plan_year")  || _now.getFullYear());
 let selectedMonth = localStorage.getItem("plan_month") !== null
@@ -767,6 +771,7 @@ const mccDecisions = {};
 let mccTodayKey = "";
 
 function openMonthCheckModal(tasksList, year, month, todayKey) {
+  Object.keys(mccDecisions).forEach(k => delete mccDecisions[k]);
   mccTodayKey = todayKey;
   const MONTHS = ["","Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
   document.getElementById("monthCheckSub").textContent =
@@ -787,7 +792,7 @@ function openMonthCheckModal(tasksList, year, month, todayKey) {
       <div class="mcc-actions">
         <button class="mcc-btn" onclick="mccTogglePostpone(${t.id})">📅 Перенести на следующий месяц</button>
         <button class="mcc-btn danger" onclick="mccFinish(${t.id}, this)">✓ Завершить работу</button>
-        <button class="mcc-btn primary" onclick="mccOpenReport(${t.id}, '${(t.work_name||"").replace(/'/g,"\\'")}')">📝 Внести отчёт</button>
+        <button class="mcc-btn primary" onclick="mccOpenReport(${t.id}, '${escapeJs(t.work_name||"")}')">📝 Внести отчёт</button>
       </div>
       <div class="mcc-postpone-form" id="mcc-pform-${t.id}">
         <div class="mcc-form-row">
@@ -2161,6 +2166,20 @@ function openInlineNewRow() {
 // ── NEW TASK FORM MODAL — модал создания/редактирования задачи ─────────────
 let editingTaskId = null;                            // ID редактируемой задачи (null = создание)
 let _editingTaskOriginal = null;                     // Исходные данные задачи (для сравнения)
+
+// Сброс состояния при закрытии модалки через ESC (base.html снимает .open)
+(function() {
+  const ntm = document.getElementById("newTaskModal");
+  if (ntm) {
+    const obs = new MutationObserver(function() {
+      if (!ntm.classList.contains("open") && editingTaskId !== null) {
+        editingTaskId = null;
+        _editingTaskOriginal = null;
+      }
+    });
+    obs.observe(ntm, { attributes: true, attributeFilter: ["class"] });
+  }
+})();
 
 // Открывает модал создания новой задачи; taskType — тип задачи, prefill — начальные значения
 function openNewTaskModal(taskType, prefill) {

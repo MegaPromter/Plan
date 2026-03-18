@@ -2110,21 +2110,23 @@ async function ppAddSuccessor() {
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({ predecessor_id: ppCurrentDepsTaskId, dep_type: depType, lag_days: lagDays }),
     });
-    const data = await res.json();
-    if (res.ok) {
-      showToast('Зависимость добавлена', 'success');
-      document.getElementById('ppDepsAddSuccInput').value = '';
-      document.getElementById('ppDepsAddSuccSelect').value = '';
-      await ppLoadDeps(ppCurrentDepsTaskId);
-      const succRow = rows.find(r => r.id === parseInt(succId));
-      if (succRow) {
-        succRow.predecessors_count = (succRow.predecessors_count || 0) + 1;
-        renderPPTable();
-      }
-    } else {
+    if (!res.ok) {
+      let data = {};
+      try { data = await res.json(); } catch(_) {}
       showToast(data.error || 'Ошибка', 'error');
+      return;
     }
-  } catch (e) { showToast('Ошибка', 'error'); }
+    const data = await res.json();
+    showToast('Зависимость добавлена', 'success');
+    document.getElementById('ppDepsAddSuccInput').value = '';
+    document.getElementById('ppDepsAddSuccSelect').value = '';
+    await ppLoadDeps(ppCurrentDepsTaskId);
+    const succRow = rows.find(r => r.id === parseInt(succId));
+    if (succRow) {
+      succRow.predecessors_count = (succRow.predecessors_count || 0) + 1;
+      renderPPTable();
+    }
+  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 }
 
 function openPPDepsModal(taskId) {
@@ -2243,19 +2245,21 @@ async function ppAddPredecessor() {
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({ predecessor_id: parseInt(predId), dep_type: depType, lag_days: lagDays }),
     });
-    const data = await res.json();
-    if (res.ok) {
-      showToast('Зависимость добавлена', 'success');
-      document.getElementById('ppDepsAddPredInput').value = '';
-      document.getElementById('ppDepsAddPredSelect').value = '';
-      await ppLoadDeps(ppCurrentDepsTaskId);
-      const row = rows.find(r => r.id === ppCurrentDepsTaskId);
-      if (row) row.predecessors_count = (row.predecessors_count || 0) + 1;
-      renderPPTable();
-    } else {
+    if (!res.ok) {
+      let data = {};
+      try { data = await res.json(); } catch(_) {}
       showToast(data.error || 'Ошибка', 'error');
+      return;
     }
-  } catch (e) { showToast('Ошибка', 'error'); }
+    const data = await res.json();
+    showToast('Зависимость добавлена', 'success');
+    document.getElementById('ppDepsAddPredInput').value = '';
+    document.getElementById('ppDepsAddPredSelect').value = '';
+    await ppLoadDeps(ppCurrentDepsTaskId);
+    const row = rows.find(r => r.id === ppCurrentDepsTaskId);
+    if (row) row.predecessors_count = (row.predecessors_count || 0) + 1;
+    renderPPTable();
+  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 }
 
 async function ppDeleteDep(depId) {

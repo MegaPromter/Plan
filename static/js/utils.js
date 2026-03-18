@@ -254,3 +254,183 @@ function createScrollLoader(container, onNearBottom, threshold = 200) {
         target.removeEventListener('scroll', onScroll);
     };
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Sticky Horizontal Scrollbar + Drag-to-Scroll
+   Автоматически находит обёртки таблиц и добавляет:
+   1) Приклеенный к низу viewport горизонтальный скроллбар
+   2) Drag-scroll через среднюю (колесо) и правую кнопку мыши
+   ══════════════════════════════════════════════════════════════════════════ */
+
+(function() {
+    // Селекторы обёрток таблиц, в которых может понадобиться горизонтальный скролл
+    const WRAP_SELECTORS = '.table-wrap, .pp-table-wrap, .ji-wrap, .data-table-wrap';
+
+    // Порог перемещения мыши (px) — если меньше, считаем кликом, а не drag
+    const DRAG_THRESHOLD = 3;
+
+    /* ── Sticky Scrollbar ──────────────────────────────────────────────── */
+
+    function initStickyScrollbar(wrap) {
+        // Не создаём повторно
+        if (wrap._stickyScrollbar) return;
+
+        // Создаём sticky-div внизу обёртки
+        const bar = document.createElement('div');
+        bar.className = 'sticky-hscroll';
+        const inner = document.createElement('div');
+        inner.className = 'sticky-hscroll-inner';
+        bar.appendChild(inner);
+
+        // Вставляем сразу после обёртки (внутри родителя)
+        wrap.parentNode.insertBefore(bar, wrap.nextSibling);
+        wrap._stickyScrollbar = bar;
+
+        // Флаг для предотвращения рекурсивного scroll-события
+        let syncing = false;
+
+        // Обёртка → sticky: при скролле таблицы обновляем sticky-bar
+        wrap.addEventListener('scroll', function() {
+            if (syncing) return;
+            syncing = true;
+            bar.scrollLeft = wrap.scrollLeft;
+            syncing = false;
+        }, { passive: true });
+
+        // Sticky → обёртка: при скролле sticky-bar обновляем таблицу
+        bar.addEventListener('scroll', function() {
+            if (syncing) return;
+            syncing = true;
+            wrap.scrollLeft = bar.scrollLeft;
+            syncing = false;
+        }, { passive: true });
+
+        // Обновляем ширину inner (= scrollWidth таблицы) и видимость
+        function updateSize() {
+            const sw = wrap.scrollWidth;
+            const cw = wrap.clientWidth;
+            inner.style.width = sw + 'px';
+            // Скрываем если скролл не нужен (таблица влезает)
+            bar.classList.toggle('hidden', sw <= cw + 1);
+        }
+
+        // Наблюдаем за изменением размера таблицы
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(updateSize);
+            ro.observe(wrap);
+            // Если внутри есть table — наблюдаем и за ней
+            const table = wrap.querySelector('table');
+            if (table) ro.observe(table);
+        }
+
+        // Начальная синхронизация
+        updateSize();
+    }
+
+    /* ── Drag-to-Scroll ────────────────────────────────────────────────── */
+
+    function initDragScroll(wrap) {
+        if (wrap._dragScrollInit) return;
+        wrap._dragScrollInit = true;
+
+        let dragging = false;   // идёт ли перетаскивание прямо сейчас
+        let startX = 0;        // координата X мыши в момент нажатия
+        let startScrollLeft = 0;// scrollLeft обёртки в момент нажатия
+        let totalDx = 0;       // суммарное смещение (для отличия клика от drag)
+        let suppressContext = false; // блокировать ли контекстное меню после drag
+
+        function onDown(e) {
+            // Реагируем только на колесо (button=1) и правую кнопку (button=2)
+            if (e.button !== 1 && e.button !== 2) return;
+
+            // Не начинаем drag если контент не шире контейнера
+            if (wrap.scrollWidth <= wrap.clientWidth + 1) return;
+
+            dragging = true;
+            startX = e.clientX;
+            startScrollLeft = wrap.scrollLeft;
+            totalDx = 0;
+            suppressContext = false;
+
+            wrap.classList.add('drag-scroll-active');
+            e.preventDefault(); // предотвращаем авто-скролл (колесо) и контекстное меню (ПКМ)
+        }
+
+        function onMove(e) {
+            if (!dragging) return;
+            var dx = e.clientX - startX;
+            totalDx += Math.abs(dx);
+            startX = e.clientX;
+            wrap.scrollLeft = wrap.scrollLeft - dx;
+
+            // Синхронизируем sticky-scrollbar
+            if (wrap._stickyScrollbar) {
+                wrap._stickyScrollbar.scrollLeft = wrap.scrollLeft;
+            }
+        }
+
+        function onUp(e) {
+            if (!dragging) return;
+            dragging = false;
+            wrap.classList.remove('drag-scroll-active');
+
+            // Если сместились больше порога — блокируем context menu для ПКМ
+            if (totalDx > DRAG_THRESHOLD && e.button === 2) {
+                suppressContext = true;
+            }
+        }
+
+        // Блокируем контекстное меню только после drag правой кнопкой
+        function onContext(e) {
+            if (suppressContext) {
+                e.preventDefault();
+                suppressContext = false;
+            }
+        }
+
+        wrap.addEventListener('mousedown', onDown);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        wrap.addEventListener('contextmenu', onContext);
+
+        // Отменяем drag если мышь ушла за пределы окна
+        document.addEventListener('mouseleave', function() {
+            if (dragging) {
+                dragging = false;
+                wrap.classList.remove('drag-scroll-active');
+            }
+        });
+    }
+
+    /* ── Инициализация ─────────────────────────────────────────────────── */
+
+    function initAll() {
+        document.querySelectorAll(WRAP_SELECTORS).forEach(function(wrap) {
+            initStickyScrollbar(wrap);
+            initDragScroll(wrap);
+        });
+    }
+
+    // При загрузке DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+
+    // Повторная инициализация через 1с (SPA может добавить таблицы позже)
+    setTimeout(initAll, 1000);
+
+    // MutationObserver: ловим динамически добавленные таблицы
+    if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].addedNodes.length) {
+                    initAll();
+                    return;
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+})();

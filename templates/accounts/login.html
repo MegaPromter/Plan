@@ -203,7 +203,7 @@ select option{background:var(--surface);}
         </div>
       </div>
       <!-- Скрытое поле next: куда перенаправить после успешного входа (если задано) -->
-      {% if next %}<input type="hidden" name="next" value="{{ next|urlencode }}">{% endif %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <button type="submit" class="btn-login">Войти</button>
     </form>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">

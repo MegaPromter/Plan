@@ -60,9 +60,15 @@ class RateLimitMiddleware:
             # Все запросы в одном окне накапливают один счётчик
             window_key = f'{key}:{now // window}'
 
-            # Читаем текущий счётчик из кэша (0 если ключа нет)
-            count = cache.get(window_key, 0)
-            if count >= max_req:
+            # Атомарно увеличиваем счётчик (без TOCTOU race condition)
+            try:
+                count = cache.incr(window_key)
+            except ValueError:
+                # Ключ ещё не существует — создаём с начальным значением 1
+                cache.set(window_key, 1, timeout=window)
+                count = 1
+
+            if count > max_req:
                 # Лимит превышен — логируем предупреждение
                 logger.warning(
                     'rate_limit: ip=%s path=%s count=%d limit=%d',
@@ -81,9 +87,6 @@ class RateLimitMiddleware:
                     status=429,
                     content_type='text/plain; charset=utf-8',
                 )
-
-            # Увеличиваем счётчик на 1 и обновляем TTL = размер окна
-            cache.set(window_key, count + 1, timeout=window)
             break  # применяем только первое совпавшее правило
 
         # Передаём запрос следующему обработчику (middleware или view)

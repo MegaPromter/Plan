@@ -9,7 +9,7 @@ import calendar
 # date и timedelta из стандартной библиотеки
 from datetime import date, timedelta
 # Decimal — для точных вычислений с дробными числами (финансовые данные)
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 # Q — объект для построения сложных ORM-запросов (OR/AND)
 from django.db.models import Q
@@ -92,6 +92,100 @@ def get_client_ip(request):
     """Возвращает IP-адрес клиента из REMOTE_ADDR.
     X-Forwarded-For не используется — легко подделать."""
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
+# ── Безопасные конвертеры типов (общие для всех views) ─────────────────────────
+
+def safe_date(val):
+    """Безопасно парсит строку даты ISO 8601 → date или None."""
+    if not val or val == '':
+        return None
+    try:
+        return date.fromisoformat(str(val))
+    except (ValueError, TypeError):
+        return None
+
+
+def safe_decimal(val):
+    """Безопасно конвертирует значение в Decimal → Decimal или None.
+    Поддерживает запятую как десятичный разделитель."""
+    if val is None or val == '':
+        return None
+    try:
+        normalized = str(val).replace(',', '.').strip()
+        return Decimal(normalized)
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
+def safe_int(val):
+    """Безопасно конвертирует значение в int → int или None."""
+    if val is None or val == '':
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+
+
+# ── Поиск Employee по ФИО ──────────────────────────────────────────────────────
+
+def _build_employee_qs(name):
+    """Общая логика: разбивает ФИО на части и фильтрует Employee queryset.
+    Возвращает (queryset, name_stripped). Если имя пустое — (None, '')."""
+    name = (name or '').strip()
+    if not name:
+        return None, name
+    parts = name.split()
+    qs = Employee.objects.all()
+    if parts:
+        qs = qs.filter(last_name__iexact=parts[0])
+    if len(parts) >= 2:
+        qs = qs.filter(first_name__iexact=parts[1])
+    if len(parts) >= 3:
+        qs = qs.filter(patronymic__iexact=parts[2])
+    return qs, name
+
+
+def resolve_employee(name):
+    """Строгий поиск: возвращает Employee только если full_name точно совпадает.
+    Используется в ПП и СП (назначение исполнителя).
+    Возвращает (Employee|None, name_str)."""
+    qs, name = _build_employee_qs(name)
+    if qs is None:
+        return None, name
+    emp = qs.first()
+    if emp and emp.full_name == name:
+        return emp, name
+    return None, name
+
+
+def resolve_employee_loose(name):
+    """Нестрогий поиск: возвращает первого найденного по ФИО (без проверки full_name).
+    Используется в ЖИ, отпусках, командировках — когда точное совпадение не критично.
+    Возвращает Employee|None."""
+    qs, name = _build_employee_qs(name)
+    if qs is None:
+        return None
+    return qs.first()
+
+
+def build_employee_q(name):
+    """Строит Q-объект для фильтрации Employee по ФИО.
+    Используется при массовом поиске (например, проверка конфликтов отпусков).
+    Возвращает Q() или None если имя пустое."""
+    name = (name or '').strip()
+    if not name:
+        return None
+    parts = name.split()
+    q = Q()
+    if len(parts) >= 1:
+        q &= Q(last_name__iexact=parts[0])
+    if len(parts) >= 2:
+        q &= Q(first_name__iexact=parts[1])
+    if len(parts) >= 3:
+        q &= Q(patronymic__iexact=parts[2])
+    return q
 
 
 # ── Фильтрация по ролям (visibility) ──────────────────────────────────────────

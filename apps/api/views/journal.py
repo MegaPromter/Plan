@@ -10,6 +10,7 @@ DELETE  /api/journal/<id>     -- удаление записи (writer, толь
 import logging
 from datetime import date
 
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views import View
 
@@ -18,6 +19,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
+from apps.api.utils import safe_date, resolve_employee_loose
 from apps.employees.models import Department, Employee, Sector
 from apps.works.models import Notice
 
@@ -48,13 +50,8 @@ def _check_journal_access(user, notice):
     return None
 
 
-def _safe_date(val):
-    if not val:
-        return None
-    try:
-        return date.fromisoformat(str(val))
-    except (ValueError, TypeError):
-        return None
+# _safe_date → вынесена в apps.api.utils (safe_date)
+_safe_date = safe_date
 
 
 def _serialize_notice(n):
@@ -63,10 +60,10 @@ def _serialize_notice(n):
     if n.work_report_id:
         wr = n.work_report
         w = wr.work if wr else None
-        ii_pi = wr.ii_pi or ''
-        notice_number = wr.doc_number or ''
-        date_issued = wr.date_accepted.isoformat() if wr.date_accepted else ''
-        date_expires = wr.date_expires.isoformat() if wr.date_expires else ''
+        ii_pi = (wr.ii_pi or '') if wr else ''
+        notice_number = (wr.doc_number or '') if wr else ''
+        date_issued = (wr.date_accepted.isoformat() if wr.date_accepted else '') if wr else ''
+        date_expires = (wr.date_expires.isoformat() if wr.date_expires else '') if wr else ''
         subject = w.work_name if w else ''
         doc_designation = w.work_designation if w else ''
         dept = w.department.code if w and w.department else ''
@@ -231,44 +228,40 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
             if not sector:
                 sector = Sector.objects.filter(name=sector_name).first()
 
-        executor = None
-        if executor_name:
-            parts = executor_name.split()
-            qs = Employee.objects.all()
-            if parts:
-                qs = qs.filter(last_name__iexact=parts[0])
-            if len(parts) >= 2:
-                qs = qs.filter(first_name__iexact=parts[1])
-            if len(parts) >= 3:
-                qs = qs.filter(patronymic__iexact=parts[2])
-            executor = qs.first()
+        # Нестрогий поиск исполнителя по ФИО (ручной ввод — точное совпадение не критично)
+        executor = resolve_employee_loose(executor_name) if executor_name else None
 
-        # Серверная проверка дублей по номеру+типу (защита от race condition)
+        # Серверная проверка дублей по номеру+типу (атомарно для защиты от race condition)
         nn = data.get('notice_number', '') or ''
         iip = data.get('ii_pi', '') or ''
-        if nn and iip and Notice.objects.filter(notice_number=nn, ii_pi=iip).exists():
-            return JsonResponse({'error': f'Извещение {iip} № {nn} уже существует'}, status=409)
 
         valid_statuses = {c[0] for c in Notice.STATUS_CHOICES}
         status = data.get('status', Notice.STATUS_ACTIVE)
         if status not in valid_statuses:
             status = Notice.STATUS_ACTIVE
 
-        notice = Notice.objects.create(
-            notice_number=data.get('notice_number', '') or '',
-            ii_pi=data.get('ii_pi', '') or '',
-            notice_type=data.get('notice_type', '') or '',
-            group=data.get('group', '') or '',
-            doc_designation=data.get('doc_designation', '') or '',
-            department=department,
-            sector=sector,
-            executor=executor,
-            date_issued=_safe_date(data.get('date_issued')),
-            date_expires=_safe_date(data.get('date_expires')),
-            subject=data.get('subject', '') or '',
-            description=data.get('description', '') or '',
-            status=status,
-        )
+        try:
+            with transaction.atomic():
+                if nn and iip and Notice.objects.filter(notice_number=nn, ii_pi=iip).exists():
+                    return JsonResponse({'error': f'Извещение {iip} № {nn} уже существует'}, status=409)
+
+                notice = Notice.objects.create(
+                    notice_number=data.get('notice_number', '') or '',
+                    ii_pi=data.get('ii_pi', '') or '',
+                    notice_type=data.get('notice_type', '') or '',
+                    group=data.get('group', '') or '',
+                    doc_designation=data.get('doc_designation', '') or '',
+                    department=department,
+                    sector=sector,
+                    executor=executor,
+                    date_issued=_safe_date(data.get('date_issued')),
+                    date_expires=_safe_date(data.get('date_expires')),
+                    subject=data.get('subject', '') or '',
+                    description=data.get('description', '') or '',
+                    status=status,
+                )
+        except IntegrityError:
+            return JsonResponse({'error': f'Извещение {iip} № {nn} уже существует'}, status=409)
 
         return JsonResponse({'id': notice.pk, 'notice': _serialize_notice(
             Notice.objects.select_related(
@@ -390,18 +383,7 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
             if 'executor' in data:
                 executor_name = (data['executor'] or '').strip()
-                if executor_name:
-                    parts = executor_name.split()
-                    qs = Employee.objects.all()
-                    if parts:
-                        qs = qs.filter(last_name__iexact=parts[0])
-                    if len(parts) >= 2:
-                        qs = qs.filter(first_name__iexact=parts[1])
-                    if len(parts) >= 3:
-                        qs = qs.filter(patronymic__iexact=parts[2])
-                    notice.executor = qs.first()
-                else:
-                    notice.executor = None
+                notice.executor = resolve_employee_loose(executor_name) if executor_name else None
                 update_fields.append('executor')
 
             if 'date_issued' in data:

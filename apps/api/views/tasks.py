@@ -9,7 +9,6 @@ API задач (Work show_in_plan=True).
   DELETE /api/tasks/all       — удаление ВСЕХ задач (admin)
   GET    /api/tasks/<id>/executors — список исполнителей задачи
 """
-import json
 import logging
 from datetime import date as dt_date
 
@@ -35,6 +34,7 @@ from apps.api.utils import (
     validate_actions,
     validate_task_type,
     generate_row_code,
+    resolve_employee,
 )
 from apps.works.models import (
     Work, TaskExecutor, WorkReport, Project, AuditLog,
@@ -177,7 +177,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
         limit = min(limit, TASKS_MAX)
 
         try:
-            offset = int(request.GET.get('offset', 0))
+            offset = max(int(request.GET.get('offset', 0)), 0)
         except (ValueError, TypeError):
             offset = 0
 
@@ -746,19 +746,11 @@ def _set_work_fk_fields(work, d, request):
         if proj_obj:
             work.project = proj_obj
 
-    # executor — поиск по ФИО (фамилия + имя + отчество)
-    executor = d.get('executor', '')
-    if executor:
-        parts = executor.split()
-        qs = Employee.objects.all()
-        if parts:
-            qs = qs.filter(last_name__iexact=parts[0])
-        if len(parts) >= 2:
-            qs = qs.filter(first_name__iexact=parts[1])
-        if len(parts) >= 3:
-            qs = qs.filter(patronymic__iexact=parts[2])
-        emp = qs.first() if parts else None
-        work.executor = emp if (emp and emp.full_name == executor) else None
+    # executor — строгий поиск по ФИО (только при точном совпадении)
+    executor_name = d.get('executor', '')
+    if executor_name:
+        emp, _ = resolve_employee(executor_name)
+        work.executor = emp
 
     # center — из профиля пользователя (только при создании, чтобы не
     # перезаписывать НТЦ при обновлении чужим пользователем)
@@ -787,23 +779,8 @@ def _set_date_fields(work, d):
                     setattr(work, attr, None)
 
 
-def _resolve_employee(name):
-    """Ищет Employee по ФИО. Возвращает (Employee|None, name_str)."""
-    name = (name or '').strip()
-    if not name:
-        return None, name
-    parts = name.split()
-    qs = Employee.objects.all()
-    if parts:
-        qs = qs.filter(last_name__iexact=parts[0])
-    if len(parts) >= 2:
-        qs = qs.filter(first_name__iexact=parts[1])
-    if len(parts) >= 3:
-        qs = qs.filter(patronymic__iexact=parts[2])
-    emp = qs.first() if parts else None
-    if emp and emp.full_name == name:
-        return emp, name
-    return None, name
+# Локальный алиас для обратной совместимости (реализация в utils.py)
+_resolve_employee = resolve_employee
 
 
 def _save_executors(work, executors):

@@ -526,6 +526,7 @@ class Notice(models.Model):
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['department']),
+            models.Index(fields=['notice_number', 'ii_pi']),
         ]
 
     def __str__(self):

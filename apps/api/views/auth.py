@@ -143,6 +143,7 @@ class DirsPublicView(View):
 
 # ── POST /api/register_public ────────────────────────────────────────────────
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterPublicView(View):
     """
     POST -- публичная регистрация нового пользователя.

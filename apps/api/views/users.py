@@ -193,7 +193,11 @@ class UserDetailView(AdminRequiredJsonMixin, View):
                 {'error': f"Недопустимая роль: {updates['role']}"}, status=400
             )
 
-        # Применяем обновления к Employee
+        # Применяем обновления к Employee (в единой транзакции)
+        with transaction.atomic():
+            return self._apply_employee_updates(request, employee, updates, user)
+
+    def _apply_employee_updates(self, request, employee, updates, user):
         old_role = employee.role
         if 'role' in updates:
             employee.role = updates['role']

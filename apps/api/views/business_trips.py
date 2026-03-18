@@ -18,7 +18,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import get_vacation_visibility_filter
+from apps.api.utils import get_vacation_visibility_filter, resolve_employee_loose
 from apps.employees.models import BusinessTrip, Employee
 
 logger = logging.getLogger(__name__)
@@ -49,14 +49,15 @@ def _serialize_trip(t):
 class BusinessTripListView(LoginRequiredJsonMixin, View):
 
     def get(self, request):
+        # Пагинация с ограничением на максимум записей (защита от DoS)
         try:
             per_page = int(request.GET.get('per_page', 0)) or TRIPS_MAX
             page = int(request.GET.get('page', 1))
         except (ValueError, TypeError):
             per_page, page = TRIPS_MAX, 1
-        per_page = min(per_page, TRIPS_MAX)
-        page = max(page, 1)
-        offset = (page - 1) * per_page
+        per_page = min(per_page, TRIPS_MAX)  # не выдаём больше лимита
+        page = max(page, 1)                  # страница не может быть < 1
+        offset = (page - 1) * per_page       # смещение для SQL OFFSET
 
         vis_q = get_vacation_visibility_filter(request.user)
 
@@ -116,15 +117,8 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
             except Employee.DoesNotExist:
                 return JsonResponse({'error': 'Сотрудник не найден'}, status=404)
         elif executor_name:
-            parts = executor_name.split()
-            qs = Employee.objects.all()
-            if len(parts) >= 1:
-                qs = qs.filter(last_name__iexact=parts[0])
-            if len(parts) >= 2:
-                qs = qs.filter(first_name__iexact=parts[1])
-            if len(parts) >= 3:
-                qs = qs.filter(patronymic__iexact=parts[2])
-            employee = qs.first()
+            # Нестрогий поиск по ФИО (ручной ввод из UI)
+            employee = resolve_employee_loose(executor_name)
 
         if not employee:
             return JsonResponse(
