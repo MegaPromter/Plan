@@ -459,7 +459,7 @@ textarea { resize:vertical; min-height:80px; }
 <link rel="stylesheet" href="{% static 'css/tables.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=2">
 {% block styles %}{% endblock %}
-<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=6">
+<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=7">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 <a href="#main-content" class="skip-link">Перейти к основному содержанию</a>
@@ -794,6 +794,6 @@ document.addEventListener('click', function(e) {
 })();
 </script>
 <!-- Скрипт интерактивного тура по интерфейсу -->
-<script src="{% static 'js/tour.js' %}?v=7"></script>
+<script src="{% static 'js/tour.js' %}?v=8"></script>
 </body>
 </html>

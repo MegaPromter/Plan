@@ -314,14 +314,24 @@
   function drawSidebarArrow(tipEl, step) {
     if (!step.sidebarHighlight) return;
     var sbEl = document.querySelector(step.sidebarHighlight);
-    if (!sbEl || sbEl.offsetParent === null) return;
+    if (!sbEl) return;
+
+    // Если sidebar свёрнут — раскрываем на время тура
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+      sidebar.classList.remove('collapsed');
+      var mc = document.getElementById('mainContent');
+      if (mc) mc.classList.remove('sidebar-collapsed');
+    }
+
     var sbRect = sbEl.getBoundingClientRect();
     var tipRect = tipEl.getBoundingClientRect();
-    // Не рисуем если sidebar-ссылка за пределами видимости
-    if (sbRect.top < 0 || sbRect.bottom > window.innerHeight) return;
 
     var old = document.getElementById('tourSidebarArrow');
     if (old) old.remove();
+
+    // Если ссылка вертикально за viewport — не рисуем
+    if (sbRect.top < -50 || sbRect.bottom > window.innerHeight + 50) return;
 
     var ns = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(ns, 'svg');
@@ -329,17 +339,12 @@
     svg.setAttribute('class', 'tour-sidebar-arrow');
     svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99993;pointer-events:none';
 
-    // Начало: ближайший край tooltip → конец: центр sidebar-ссылки
-    var x1, y1;
-    if (tipRect.left > sbRect.right) {
-      x1 = tipRect.left;
-      y1 = tipRect.top + tipRect.height / 2;
-    } else {
-      x1 = tipRect.left + tipRect.width / 2;
-      y1 = tipRect.bottom;
-    }
-    var x2 = sbRect.right;
-    var y2 = sbRect.top + sbRect.height / 2;
+    // Начало: левый край tooltip → конец: правый край sidebar-ссылки
+    // Если sidebar за пределами экрана (мобильный) — указываем на левый край
+    var x1 = tipRect.left;
+    var y1 = tipRect.top + tipRect.height / 2;
+    var x2 = Math.max(sbRect.right, 4);
+    var y2 = Math.max(Math.min(sbRect.top + sbRect.height / 2, window.innerHeight - 10), 10);
 
     var line = document.createElementNS(ns, 'line');
     line.setAttribute('x1', x1); line.setAttribute('y1', y1);
