@@ -14,11 +14,12 @@
     {
       id: 'sidebar_intro', stepNum: 1,
       page: '/accounts/dashboard/',
-      selector: '#sidebar',
+      spotlightSelector: '#sidebar',
+      selector: null,
       title: 'Панель навигации',
       icon: 'fa-compass',
       desc: 'Панель навигации содержит ссылки на все основные модули и вспомогательные страницы.',
-      noArrow: true
+      infoOnly: true
     },
     {
       id: 'dashboard_intro', stepNum: 2,
@@ -393,8 +394,35 @@
       if (sbEl) sbEl.classList.add('tour-sidebar-pulse');
     }
 
-    // Info-only шаг
+    // Info-only шаг (центрированная карточка)
     if (step.infoOnly && !step.selector) {
+      // Если есть spotlightSelector — рисуем рамку вокруг элемента + стрелку
+      if (step.spotlightSelector) {
+        var spotEl = document.querySelector(step.spotlightSelector);
+        if (spotEl) {
+          showInfoCard(step, idx, desc, adminNote);
+          // Spotlight рамка поверх info-card
+          setTimeout(function() {
+            var rect = spotEl.getBoundingClientRect();
+            var pad = 6;
+            var spot = document.createElement('div');
+            spot.id = 'tourSpotlight';
+            spot.className = 'tour-spotlight';
+            spot.style.top = (rect.top - pad) + 'px';
+            spot.style.left = (rect.left - pad) + 'px';
+            spot.style.width = (rect.width + pad * 2) + 'px';
+            spot.style.height = (rect.height + pad * 2) + 'px';
+            document.body.appendChild(spot);
+            // Стрелка от info-card к spotlight
+            var card = document.querySelector('.tour-info-card');
+            if (card) {
+              var cardRect = card.getBoundingClientRect();
+              drawArrows(card, rect, null);
+            }
+          }, 100);
+          return;
+        }
+      }
       showInfoCard(step, idx, desc, adminNote);
       return;
     }
