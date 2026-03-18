@@ -13,7 +13,7 @@
   var STEPS = [
     {
       id: 'sidebar_intro', stepNum: 1,
-      page: null,
+      page: '/accounts/dashboard/',
       selector: '#sidebar',
       title: 'Панель навигации',
       icon: 'fa-compass',
@@ -231,7 +231,8 @@
     var sels = step.selector.split(',');
     for (var i = 0; i < sels.length; i++) {
       var el = document.querySelector(sels[i].trim());
-      if (el && el.offsetParent !== null) return el;
+      // #sidebar может быть скрыт через transform — не проверяем offsetParent для него
+      if (el && (el.id === 'sidebar' || el.offsetParent !== null)) return el;
     }
     return null;
   }
@@ -376,6 +377,14 @@
     if (step.adminOnly && !isAdmin()) {
       desc = step.descNonAdmin || step.desc;
       adminNote = '<div class="tour-admin-note"><i class="fas fa-lock"></i> Этот шаг выполняет администратор</div>';
+    }
+
+    // Раскрываем sidebar если он свёрнут (нужен для подсветки и поиска элементов)
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+      sidebar.classList.remove('collapsed');
+      var mc = document.getElementById('mainContent');
+      if (mc) mc.classList.remove('sidebar-collapsed');
     }
 
     // Пульсация sidebar-ссылки
