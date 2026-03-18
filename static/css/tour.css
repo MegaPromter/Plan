@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Tour / Onboarding — стили интерактивного обучения (12 шагов)
+   Tour / Onboarding — стили интерактивного обучения (13 шагов)
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Spotlight: подсветка целевого элемента ──────────────────────── */
@@ -333,6 +333,23 @@
 }
 @keyframes tourArrowDash {
   to { stroke-dashoffset: -12; }
+}
+
+/* ── Стрелка от tooltip к sidebar-ссылке (с пульсацией) ──────── */
+.tour-sidebar-arrow line {
+  stroke: #60a5fa;
+  stroke-width: 2.5;
+  stroke-dasharray: 8 4;
+  animation: tourArrowDash 0.6s linear infinite, tourSidebarArrowPulse 1.2s ease-in-out infinite;
+}
+.tour-sidebar-arrow polygon {
+  fill: #60a5fa;
+  animation: tourSidebarArrowPulse 1.2s ease-in-out infinite;
+}
+@keyframes tourSidebarArrowPulse {
+  0%   { opacity: 0.5; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
 @media (prefers-reduced-motion: reduce) {

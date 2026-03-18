@@ -142,7 +142,7 @@ class ReportListView(LoginRequiredJsonMixin, View):
         except Exception as e:
             logger.error("ReportListView.get error: %s", e, exc_info=True)
             return JsonResponse(
-                {'error': 'Внутренняя ошибка сервера'}, status=500,
+                {'error': f'Внутренняя ошибка сервера: {e}'}, status=500,
             )
 
 
@@ -159,7 +159,7 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
         except Exception as e:
             logger.error("ReportCreateView error: %s", e, exc_info=True)
             return JsonResponse(
-                {'error': 'Внутренняя ошибка сервера'}, status=500,
+                {'error': f'Внутренняя ошибка сервера: {e}'}, status=500,
             )
 
     def _create(self, request):
@@ -232,7 +232,7 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         except Exception as e:
             logger.error("ReportDetailView.put error: %s", e, exc_info=True)
             return JsonResponse(
-                {'error': 'Внутренняя ошибка сервера'}, status=500,
+                {'error': f'Внутренняя ошибка сервера: {e}'}, status=500,
             )
 
     def delete(self, request, pk):
@@ -257,7 +257,7 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         except Exception as e:
             logger.error("ReportDetailView.delete error: %s", e, exc_info=True)
             return JsonResponse(
-                {'error': 'Внутренняя ошибка сервера'}, status=500,
+                {'error': f'Внутренняя ошибка сервера: {e}'}, status=500,
             )
 
     def _update(self, request, pk):

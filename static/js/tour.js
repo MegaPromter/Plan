@@ -12,7 +12,26 @@
      ═══════════════════════════════════════════════════════════════════════ */
   var STEPS = [
     {
-      id: 'create_project', stepNum: 1,
+      id: 'sidebar_intro', stepNum: 1,
+      page: null,
+      selector: '#sidebar',
+      title: 'Панель навигации',
+      icon: 'fa-compass',
+      desc: 'Панель навигации содержит ссылки на все основные модули и вспомогательные страницы. Отсюда вы можете перейти к проектам, планам, отчётам, справочникам и настройкам.',
+      noArrow: true
+    },
+    {
+      id: 'dashboard_intro', stepNum: 2,
+      page: '/accounts/dashboard/',
+      selector: '.page-content, .main-content',
+      sidebarHighlight: 'a[href="/accounts/dashboard/"]',
+      title: 'Стартовая страница',
+      icon: 'fa-th-large',
+      desc: 'Стартовая страница, которая перед Вами при входе. Содержит основные меню и будет дополнена статистикой и прочей информацией, ориентированной на пользователя (Вас). Можно будет настраивать под себя.',
+      noArrow: true
+    },
+    {
+      id: 'create_project', stepNum: 3,
       page: '/works/projects/',
       selector: '.btn-primary',
       sidebarHighlight: 'a[href="/works/projects/"]',
@@ -23,7 +42,7 @@
       adminOnly: true
     },
     {
-      id: 'create_pp', stepNum: 2,
+      id: 'create_pp', stepNum: 3,
       page: '/works/production-plan/',
       selector: '#landingActions .btn-primary',
       sidebarHighlight: 'a[href="/works/production-plan/"]',
@@ -34,7 +53,7 @@
       adminOnly: true
     },
     {
-      id: 'add_pp_row', stepNum: 3,
+      id: 'add_pp_row', stepNum: 4,
       page: '/works/production-plan/',
       selector: '#projectActions .btn-primary',
       secondarySelector: 'tr[data-id]',
@@ -44,7 +63,7 @@
       desc: 'Внутри открытого ПП кнопка «Добавить строку» создаёт новую работу. Каждая строка — это работа с этапом, вехой, шифром и трудоёмкостью.'
     },
     {
-      id: 'sync_to_sp', stepNum: 4,
+      id: 'sync_to_sp', stepNum: 5,
       page: '/works/production-plan/',
       selector: '#projectActions .btn-secondary',
       needProject: true,
@@ -53,7 +72,7 @@
       desc: 'Кнопка «Синхронизировать с СП» переносит работы из производственного плана в сводный план (план/отчёт). После синхронизации задачи появляются в СП с пометкой «из ПП».'
     },
     {
-      id: 'sp_overview', stepNum: 5,
+      id: 'sp_overview', stepNum: 6,
       page: '/works/plan/',
       selector: null,
       sidebarHighlight: 'a[href="/works/plan/"]',
@@ -63,7 +82,7 @@
       infoOnly: true
     },
     {
-      id: 'edit_task', stepNum: 6,
+      id: 'edit_task', stepNum: 7,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-edit-row',
       title: 'Редактирование задачи в СП',
@@ -71,7 +90,7 @@
       desc: 'Кнопка \u270F\uFE0F открывает модальное окно редактирования задачи. Здесь можно изменить сроки, исполнителей, плановые часы по месяцам и другие параметры.'
     },
     {
-      id: 'report', stepNum: 7,
+      id: 'report', stepNum: 8,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-report',
       title: 'Отчёт по задаче',
@@ -79,7 +98,7 @@
       desc: 'Кнопка отчёта позволяет внести фактические данные о выполнении работы: процент готовности, фактические часы, примечания.'
     },
     {
-      id: 'errors_btn', stepNum: 8,
+      id: 'errors_btn', stepNum: 9,
       page: '/works/plan/',
       selector: '#errorsBtn',
       autoAction: 'openErrorsPanel',
@@ -88,7 +107,7 @@
       desc: 'Кнопка «Ошибки планирования» показывает несоответствия: задачи без исполнителей, пересечение сроков с отпусками, превышение норм часов и другие проблемы.'
     },
     {
-      id: 'work_calendar', stepNum: 9,
+      id: 'work_calendar', stepNum: 10,
       page: '/works/work-calendar/',
       selector: '.cal-summary-table, table',
       title: 'Производственный календарь',
@@ -98,7 +117,7 @@
       descNonAdmin: 'Производственный календарь задаёт норму рабочих часов по месяцам (фонд рабочего времени). Доступен для управления администраторам.'
     },
     {
-      id: 'notices', stepNum: 10,
+      id: 'notices', stepNum: 11,
       page: '/works/notices/',
       selector: '.ji-table, table',
       noArrow: true,
@@ -107,7 +126,7 @@
       desc: 'Журнал извещений фиксирует изменения в документации. Пункты ЖИ создаются автоматически при корректировке или вручную. Здесь отслеживается статус (сроки действия, просрочка, погашение и проч.).'
     },
     {
-      id: 'roles', stepNum: 11,
+      id: 'roles', stepNum: 12,
       page: null,
       selector: null,
       title: 'Роли и права доступа',
@@ -180,7 +199,7 @@
      4. DOM-утилиты
      ═══════════════════════════════════════════════════════════════════════ */
   function clearTourUI() {
-    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourInfoBackdrop', 'tourModalBackdrop'];
+    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourSidebarArrow', 'tourInfoBackdrop', 'tourModalBackdrop'];
     ids.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.remove();
@@ -291,6 +310,56 @@
     document.addEventListener('keydown', keyHandler);
   }
 
+  /* Стрелка-указатель от tooltip к подсвеченной sidebar-ссылке */
+  function drawSidebarArrow(tipEl, step) {
+    if (!step.sidebarHighlight) return;
+    var sbEl = document.querySelector(step.sidebarHighlight);
+    if (!sbEl || sbEl.offsetParent === null) return;
+    var sbRect = sbEl.getBoundingClientRect();
+    var tipRect = tipEl.getBoundingClientRect();
+    // Не рисуем если sidebar-ссылка за пределами видимости
+    if (sbRect.top < 0 || sbRect.bottom > window.innerHeight) return;
+
+    var old = document.getElementById('tourSidebarArrow');
+    if (old) old.remove();
+
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.id = 'tourSidebarArrow';
+    svg.setAttribute('class', 'tour-sidebar-arrow');
+    svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99993;pointer-events:none';
+
+    // Начало: ближайший край tooltip → конец: центр sidebar-ссылки
+    var x1, y1;
+    if (tipRect.left > sbRect.right) {
+      x1 = tipRect.left;
+      y1 = tipRect.top + tipRect.height / 2;
+    } else {
+      x1 = tipRect.left + tipRect.width / 2;
+      y1 = tipRect.bottom;
+    }
+    var x2 = sbRect.right;
+    var y2 = sbRect.top + sbRect.height / 2;
+
+    var line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    svg.appendChild(line);
+
+    // Наконечник стрелки
+    var angle = Math.atan2(y2 - y1, x2 - x1);
+    var sz = 10;
+    var p1x = x2 - sz * Math.cos(angle - 0.4);
+    var p1y = y2 - sz * Math.sin(angle - 0.4);
+    var p2x = x2 - sz * Math.cos(angle + 0.4);
+    var p2y = y2 - sz * Math.sin(angle + 0.4);
+    var poly = document.createElementNS(ns, 'polygon');
+    poly.setAttribute('points', x2+','+y2+' '+p1x+','+p1y+' '+p2x+','+p2y);
+    svg.appendChild(poly);
+
+    document.body.appendChild(svg);
+  }
+
   /* ═══════════════════════════════════════════════════════════════════════
      8. showStep — главная функция отображения шага
      ═══════════════════════════════════════════════════════════════════════ */
@@ -396,6 +465,7 @@
 
       positionTooltip(tip, rect);
       if (!step.noArrow) drawArrows(tip, rect, secondaryRect);
+      drawSidebarArrow(tip, step);
       bindNavEvents();
     }, 400);
   }
@@ -539,6 +609,10 @@
     });
 
     bindNavEvents();
+
+    // Стрелка от info-card к sidebar-ссылке
+    var card = backdrop.querySelector('.tour-info-card');
+    if (card) drawSidebarArrow(card, step);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
