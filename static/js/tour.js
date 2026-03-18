@@ -1,4 +1,4 @@
-/* ── Интерактивное обучение — Tour/Onboarding (11 шагов, без зависимостей) ──────────────────
+/* ── Интерактивное обучение — Tour/Onboarding (15 шагов, без зависимостей) ──────────────────
  * Межстраничный тур: автоматический переход на нужную страницу,
  * подсветка элементов с пульсацией на каждом шаге.
  * Прогресс: localStorage + сервер (/api/col_settings/).
@@ -24,91 +24,128 @@
     {
       id: 'dashboard_intro', stepNum: 2,
       page: '/accounts/dashboard/',
-      selector: '.page-content, .main-content',
-      sidebarHighlight: 'a[href="/accounts/dashboard/"]',
+      selector: null,
+      sidebarHighlight: '.nav-item[href="/accounts/dashboard/"]',
       title: 'Стартовая страница',
       icon: 'fa-th-large',
       desc: 'Стартовая страница, которая перед Вами при входе. Содержит основные меню и будет дополнена статистикой и прочей информацией, ориентированной на пользователя (Вас). Можно будет настраивать под себя.',
-      noArrow: true
+      infoOnly: true
     },
     {
-      id: 'create_project', stepNum: 3,
+      id: 'projects_intro', stepNum: 3,
       page: '/works/projects/',
-      selector: '.btn-primary',
-      sidebarHighlight: 'a[href="/works/projects/"]',
-      title: 'Создание проекта (УП)',
-      icon: 'fa-folder-plus',
-      desc: 'Здесь администратор создаёт новый проект. Проект объединяет все работы, производственные планы и задачи.',
-      descNonAdmin: 'Администратор создаёт проекты на этой странице. Проект объединяет все работы, планы и задачи.',
-      adminOnly: true
+      selector: null,
+      sidebarHighlight: '.nav-item[href="/works/projects/"]',
+      title: 'Управление проектами',
+      icon: 'fa-folder-open',
+      desc: 'Меню управления проектами предоставляет основную и сводную информацию о проекте и имеющихся изделиях по данному проекту. Редактирование доступно только администратору.',
+      infoOnly: true
     },
     {
-      id: 'create_pp', stepNum: 3,
+      id: 'pp_intro', stepNum: 4,
       page: '/works/production-plan/',
-      selector: '#landingActions .btn-primary',
-      sidebarHighlight: 'a[href="/works/production-plan/"]',
-      title: 'Создание производственного плана',
+      selector: null,
+      sidebarHighlight: '.nav-item[href="/works/production-plan/"]',
+      title: 'Производственный план',
       icon: 'fa-file-circle-plus',
-      desc: 'Кнопка создания нового производственного плана (ПП). ПП содержит список работ с трудоёмкостью, сроками и исполнителями.',
-      descNonAdmin: 'Администратор создаёт производственные планы здесь. ПП содержит список работ с трудоёмкостью и сроками.',
-      adminOnly: true
+      desc: 'Меню «Производственный план» содержит перечень производственных планов, в которых задействовано Ваше подразделение. Предназначено для совместной работы подразделений при планировании работ по конкретному проекту/изделию. Кликнув на иконку любого из них, попадаем в раздел редактирования.',
+      infoOnly: true
     },
     {
-      id: 'add_pp_row', stepNum: 4,
+      id: 'add_pp_row', stepNum: 5,
       page: '/works/production-plan/',
       selector: '#projectActions .btn-primary',
       secondarySelector: 'tr[data-id]',
       needProject: true,
+      centerCard: true,
       title: 'Добавление строк в ПП',
       icon: 'fa-table-rows',
-      desc: 'Внутри открытого ПП кнопка «Добавить строку» создаёт новую работу. Каждая строка — это работа с этапом, вехой, шифром и трудоёмкостью.'
+      desc: 'План формируется посредством добавления строк с задачами. Например, выпуск документа. Представители каждого отдела могут добавлять/редактировать работы только для своего отдела. На чтение - полный доступ. По умолчанию добавлять может только начальник отдела. Делегирование прав будет настроено позже.'
     },
     {
-      id: 'sync_to_sp', stepNum: 5,
+      id: 'pp_deps', stepNum: 6,
+      page: '/works/production-plan/',
+      selector: '.dep-badge.action-dep',
+      needProject: true,
+      centerCard: true,
+      cardPosition: 'right',
+      autoAction: 'openDepsModal',
+      noBlur: true,
+      title: 'Зависимости задач',
+      icon: 'fa-link',
+      desc: 'Функция управления зависимостями. Предназначена для увязки последовательностей работ. Например, типа СТАРТ-ФИНИШ.'
+    },
+    {
+      id: 'sync_to_sp', stepNum: 7,
       page: '/works/production-plan/',
       selector: '#projectActions .btn-secondary',
       needProject: true,
+      centerCard: true,
       title: 'Синхронизация ПП \u2192 СП',
       icon: 'fa-arrows-rotate',
-      desc: 'Кнопка «Синхронизировать с СП» переносит работы из производственного плана в сводный план (план/отчёт). После синхронизации задачи появляются в СП с пометкой «из ПП».'
+      desc: 'Завершив работу по добавлению/редактированию работ в модуле производственного плана, можем перейти к автоматическому переносу данных в план подразделения (месячный/квартальный/годовой). Для этого нажимаем кнопку синхронизации с модулем «Сводное планирование (План/отчёт)». Таким образом работы появятся в плане вашего подразделения. Ручной ввод не требуется.'
     },
     {
-      id: 'sp_overview', stepNum: 6,
-      page: '/works/plan/',
+      id: 'goto_sp', stepNum: 8,
+      page: '/works/production-plan/',
       selector: null,
-      sidebarHighlight: 'a[href="/works/plan/"]',
-      title: 'Сводное планирование',
-      icon: 'fa-table-list',
-      desc: 'По завершении работы в Производственном плане и выполнения синхронизации данные отображаются в модуле «Сводное планирование».',
+      sidebarHighlight: '.nav-item[href="/works/plan/"]',
+      needProject: true,
+      title: 'Переход в СП',
+      icon: 'fa-arrow-right',
+      desc: 'Готово. Пора переходить в модуль сводного планирования.',
       infoOnly: true
     },
     {
-      id: 'edit_task', stepNum: 7,
+      id: 'sp_overview', stepNum: 9,
+      page: '/works/plan/',
+      selector: null,
+      title: 'Сводное планирование',
+      icon: 'fa-table-list',
+      desc: 'Страница модуля «Сводное планирование». Он же — привычный «План/отчёт».\n\nЕсли модуль производственного плана предназначен для планирования работ по конкретному проекту/изделию, то модуль сводного планирования предназначен для составления плана подразделения на период.\n\nВ отличие от модуля производственного плана предназначен для планирования каждой работы с простановкой сотрудника (-ов) и часов, необходимых ему для выполнения работы (части работы) в определённый календарный период, а также для заполнения отчётов. В сводном плане могут содержаться работы, как перенесённые (синхронизированные) из производственных планов, так и введённые вновь непосредственно на представленной странице.\n\nРаботы по умолчанию могут вводить начальник отдела и начальник сектора. Начальник сектора может вносить работы только для своего сектора.',
+      infoOnly: true
+    },
+    {
+      id: 'edit_task', stepNum: 10,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-edit-row',
+      centerCard: true,
       title: 'Редактирование задачи в СП',
       icon: 'fa-pen-to-square',
       desc: 'Кнопка \u270F\uFE0F открывает модальное окно редактирования задачи. Здесь можно изменить сроки, исполнителей, плановые часы по месяцам и другие параметры.'
     },
     {
-      id: 'report', stepNum: 8,
+      id: 'edit_task_modal', stepNum: 11,
+      page: '/works/plan/',
+      selector: null,
+      infoOnly: true,
+      autoAction: 'openEditTaskModal',
+      noBlur: true,
+      arrowToModal: true,
+      title: 'Модальное окно редактирования',
+      icon: 'fa-pen-to-square',
+      desc: 'Модальное окно редактирования задачи.'
+    },
+    {
+      id: 'report', stepNum: 12,
       page: '/works/plan/',
       selector: 'tr[data-id] .btn-report',
+      centerCard: true,
       title: 'Отчёт по задаче',
       icon: 'fa-chart-bar',
       desc: 'Кнопка отчёта позволяет внести фактические данные о выполнении работы: процент готовности, фактические часы, примечания.'
     },
     {
-      id: 'errors_btn', stepNum: 9,
+      id: 'errors_btn', stepNum: 13,
       page: '/works/plan/',
       selector: '#errorsBtn',
       autoAction: 'openErrorsPanel',
       title: 'Ошибки планирования',
       icon: 'fa-triangle-exclamation',
-      desc: 'Кнопка «Ошибки планирования» показывает несоответствия: задачи без исполнителей, пересечение сроков с отпусками, превышение норм часов и другие проблемы.'
+      desc: 'Функция «Ошибки планирования» позволяет проверить несоответствия: пересечение сроков с отпусками, командировками, превышение норм часов и другие проблемы.'
     },
     {
-      id: 'work_calendar', stepNum: 10,
+      id: 'work_calendar', stepNum: 14,
       page: '/works/work-calendar/',
       selector: '.cal-summary-table, table',
       title: 'Производственный календарь',
@@ -118,7 +155,7 @@
       descNonAdmin: 'Производственный календарь задаёт норму рабочих часов по месяцам (фонд рабочего времени). Доступен для управления администраторам.'
     },
     {
-      id: 'notices', stepNum: 11,
+      id: 'notices', stepNum: 15,
       page: '/works/notices/',
       selector: '.ji-table, table',
       noArrow: true,
@@ -127,7 +164,7 @@
       desc: 'Журнал извещений фиксирует изменения в документации. Пункты ЖИ создаются автоматически при корректировке или вручную. Здесь отслеживается статус (сроки действия, просрочка, погашение и проч.).'
     },
     {
-      id: 'roles', stepNum: 12,
+      id: 'roles', stepNum: 14,
       page: null,
       selector: null,
       title: 'Роли и права доступа',
@@ -200,7 +237,7 @@
      4. DOM-утилиты
      ═══════════════════════════════════════════════════════════════════════ */
   function clearTourUI() {
-    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourSidebarArrow', 'tourInfoBackdrop', 'tourModalBackdrop'];
+    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourArrow2', 'tourSidebarArrow', 'tourInfoBackdrop', 'tourModalBackdrop'];
     ids.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.remove();
@@ -208,9 +245,22 @@
     // Убираем пульсацию sidebar
     var pulsing = document.querySelectorAll('.tour-sidebar-pulse');
     pulsing.forEach(function(el) { el.classList.remove('tour-sidebar-pulse'); });
-    // Закрываем открытые модалы (зависимости, ошибки и т.д.)
+    // Закрываем открытые модалы и восстанавливаем blur
     var openModals = document.querySelectorAll('.modal-overlay.open');
-    openModals.forEach(function(m) { m.classList.remove('open'); });
+    openModals.forEach(function(m) {
+      m.classList.remove('open');
+      m.style.backdropFilter = '';
+      m.style.webkitBackdropFilter = '';
+    });
+    // Закрываем модалки, открытые autoAction-ами тура
+    ['newTaskModal', 'peModal', 'typeModal'].forEach(function(id) {
+      var m = document.getElementById(id);
+      if (m && m.classList.contains('open')) {
+        m.classList.remove('open');
+        m.style.backdropFilter = '';
+        m.style.webkitBackdropFilter = '';
+      }
+    });
     document.removeEventListener('keydown', keyHandler);
     // Очищаем polling (tryOpenFirstProject)
     if (_activePoll) { clearInterval(_activePoll); _activePoll = null; }
@@ -405,25 +455,79 @@
           setTimeout(function() {
             var rect = spotEl.getBoundingClientRect();
             var pad = 6;
+            // Для sidebar: рамка от верха до низа viewport, по ширине sidebar
+            var spotTop = Math.max(rect.top - pad - 5, 0);
+            var spotLeft = Math.max(rect.left - pad, 0);
+            var spotHeight = Math.min(rect.bottom + pad + 5, window.innerHeight) - spotTop;
+            var spotWidth = rect.width + pad * 2;
+
             var spot = document.createElement('div');
             spot.id = 'tourSpotlight';
             spot.className = 'tour-spotlight';
-            spot.style.top = (rect.top - pad) + 'px';
-            spot.style.left = (rect.left - pad) + 'px';
-            spot.style.width = (rect.width + pad * 2) + 'px';
-            spot.style.height = (rect.height + pad * 2) + 'px';
+            spot.style.top = spotTop + 'px';
+            spot.style.left = spotLeft + 'px';
+            spot.style.width = spotWidth + 'px';
+            spot.style.height = spotHeight + 'px';
             document.body.appendChild(spot);
-            // Стрелка от info-card к spotlight
+
+            // Стрелка от info-card к spotlight рамке
             var card = document.querySelector('.tour-info-card');
             if (card) {
-              var cardRect = card.getBoundingClientRect();
-              drawArrows(card, rect, null);
+              var spotRect = {
+                top: spotTop, left: spotLeft,
+                bottom: spotTop + spotHeight, right: spotLeft + spotWidth,
+                width: spotWidth, height: spotHeight
+              };
+              drawArrows(card, spotRect, null);
             }
           }, 100);
           return;
         }
       }
+      // Авто-действие для info-only шага (например, открытие модалки)
+      if (step.autoAction) {
+        var triggerEl = null;
+        if (step.autoAction === 'openEditTaskModal') {
+          triggerEl = document.querySelector('tr[data-id] .btn-edit-row');
+        }
+        runAutoAction(step, triggerEl);
+      }
       showInfoCard(step, idx, desc, adminNote);
+      // Стрелка от info-card к модалу
+      if (step.arrowToModal) {
+        var card = document.querySelector('.tour-info-card');
+        if (card) {
+          setTimeout(function() {
+            var modalOuter = document.getElementById('newTaskModal');
+            var modal = modalOuter ? modalOuter.querySelector('.new-task-box') : null;
+            if (modal && modalOuter.classList.contains('open') && card) {
+              var mRect = modal.getBoundingClientRect();
+              var cRect = card.getBoundingClientRect();
+              var ns = 'http://www.w3.org/2000/svg';
+              var svg = document.createElementNS(ns, 'svg');
+              svg.id = 'tourArrow2';
+              svg.setAttribute('class', 'tour-arrow');
+              svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99993;pointer-events:none';
+              var cy = cRect.top + cRect.height / 2;
+              var x1 = cRect.right + 5;
+              var x2 = mRect.left - 5;
+              var line = document.createElementNS(ns, 'line');
+              line.setAttribute('x1', x1); line.setAttribute('y1', cy);
+              line.setAttribute('x2', x2); line.setAttribute('y2', cy);
+              line.setAttribute('stroke', 'rgba(100,160,255,0.7)');
+              line.setAttribute('stroke-width', '2');
+              line.setAttribute('stroke-dasharray', '8,5');
+              svg.appendChild(line);
+              var a = 8;
+              var arrow = document.createElementNS(ns, 'polygon');
+              arrow.setAttribute('points', x2+','+cy+' '+(x2-a)+','+(cy-a/2)+' '+(x2-a)+','+(cy+a/2));
+              arrow.setAttribute('fill', 'rgba(100,160,255,0.7)');
+              svg.appendChild(arrow);
+              document.body.appendChild(svg);
+            }
+          }, 400);
+        }
+      }
       return;
     }
 
@@ -446,6 +550,26 @@
     if (step.autoAction === 'openDepsModal') {
       // Кликаем по кнопке зависимостей чтобы открыть модал
       try { el.click(); } catch(e) {}
+      // Убираем размытие фона если указано noBlur
+      if (step.noBlur) {
+        setTimeout(function() {
+          var modal = document.getElementById('ppDepsModal');
+          if (modal) modal.style.backdropFilter = 'none';
+          if (modal) modal.style.webkitBackdropFilter = 'none';
+        }, 100);
+      }
+    } else if (step.autoAction === 'openEditTaskModal') {
+      // Открываем модал редактирования первой задачи в СП
+      try {
+        var firstEditBtn = document.querySelector('tr[data-id] .btn-edit-row');
+        if (firstEditBtn) firstEditBtn.click();
+      } catch(e) {}
+      if (step.noBlur) {
+        setTimeout(function() {
+          var modal = document.getElementById('newTaskModal');
+          if (modal) { modal.style.backdropFilter = 'none'; modal.style.webkitBackdropFilter = 'none'; }
+        }, 100);
+      }
     } else if (step.autoAction === 'openErrorsPanel') {
       // Кликаем по кнопке ошибок чтобы открыть панель
       try { el.click(); } catch(e) {}
@@ -488,6 +612,65 @@
           spot2.style.height = (secondaryRect.height + pad * 2) + 'px';
           document.body.appendChild(spot2);
         }
+      }
+
+      // centerCard: info-card по центру вместо tooltip (но со стрелками к spotlight)
+      if (step.centerCard) {
+        showInfoCard(step, idx, desc, adminNote);
+        var card = document.querySelector('.tour-info-card');
+        if (card && !step.noArrow) drawArrows(card, rect, secondaryRect);
+        // Стрелка от info-card к модалу редактирования задачи
+        if (card && step.arrowToModal) {
+          setTimeout(function() {
+            var modalOuter = document.getElementById('newTaskModal');
+            var modal = modalOuter ? modalOuter.querySelector('.new-task-box') : null;
+            if (modal && modalOuter.classList.contains('open') && card) {
+              var mRect = modal.getBoundingClientRect();
+              var cRect = card.getBoundingClientRect();
+              var ns = 'http://www.w3.org/2000/svg';
+              var svg = document.createElementNS(ns, 'svg');
+              svg.id = 'tourArrow2';
+              svg.setAttribute('class', 'tour-arrow');
+              svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99993;pointer-events:none';
+              // Горизонтально: от правого края card к левому краю модалки
+              var cy = cRect.top + cRect.height / 2;
+              var x1 = cRect.right + 5;
+              var x2 = mRect.left - 5;
+              var line = document.createElementNS(ns, 'line');
+              line.setAttribute('x1', x1); line.setAttribute('y1', cy);
+              line.setAttribute('x2', x2); line.setAttribute('y2', cy);
+              line.setAttribute('stroke', 'rgba(100,160,255,0.7)');
+              line.setAttribute('stroke-width', '2');
+              line.setAttribute('stroke-dasharray', '8,5');
+              svg.appendChild(line);
+              var a = 8;
+              var arrow = document.createElementNS(ns, 'polygon');
+              arrow.setAttribute('points', x2+','+cy+' '+(x2-a)+','+(cy-a/2)+' '+(x2-a)+','+(cy+a/2));
+              arrow.setAttribute('fill', 'rgba(100,160,255,0.7)');
+              svg.appendChild(arrow);
+              document.body.appendChild(svg);
+            }
+          }, 400);
+        }
+        // Стрелка к открытому модалу (например, окно зависимостей)
+        if (card && step.autoAction === 'openDepsModal') {
+          setTimeout(function() {
+            var modalCard = document.querySelector('#ppDepsModal.open .modal');
+            if (modalCard && card) {
+              var mRect = modalCard.getBoundingClientRect();
+              var cRect = card.getBoundingClientRect();
+              var ns = 'http://www.w3.org/2000/svg';
+              var svg = document.createElementNS(ns, 'svg');
+              svg.id = 'tourArrow2';
+              svg.setAttribute('class', 'tour-arrow');
+              svg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99993;pointer-events:none';
+              addArrowLine(svg, card, mRect);
+              document.body.appendChild(svg);
+            }
+          }, 300);
+        }
+        drawSidebarArrow(card || document.body, step);
+        return;
       }
 
       // Tooltip
@@ -641,14 +824,18 @@
         '<div class="tour-info-icon"><i class="fas ' + step.icon + '"></i></div>' +
         '<div class="tour-info-title">' + step.title + '</div>' +
         '<div class="tour-info-counter">Шаг ' + (idx + 1) + ' из ' + TOTAL + '</div>' +
-        '<div class="tour-info-body">' + adminNote + desc + '</div>' +
+        '<div class="tour-info-body">' + adminNote + desc.replace(/\n\n/g, '<br><br>') + '</div>' +
         '<div class="tour-info-nav">' + buildNavButtons(idx) + '</div>' +
       '</div>';
     document.body.appendChild(backdrop);
 
-    backdrop.addEventListener('click', function(e) {
-      if (e.target === backdrop) skipTour();
-    });
+    // Позиционирование карточки (по умолчанию — центр)
+    if (step.cardPosition === 'right') {
+      backdrop.style.justifyContent = 'flex-end';
+      backdrop.style.paddingRight = '40px';
+    }
+
+    // Клик в фон НЕ закрывает обучение — только кнопки навигации
 
     bindNavEvents();
 
