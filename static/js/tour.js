@@ -15,6 +15,7 @@
       id: 'sidebar_intro', stepNum: 1,
       page: null,
       selector: '#sidebar',
+      sidebarHighlight: 'a[href="/accounts/dashboard/"]',
       title: 'Панель навигации',
       icon: 'fa-compass',
       desc: 'Панель навигации содержит ссылки на все основные модули и вспомогательные страницы. Отсюда вы можете перейти к проектам, планам, отчётам, справочникам и настройкам.',
