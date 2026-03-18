@@ -202,8 +202,8 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
                 inventory_num=d.get('inventory_num') or '',
                 date_accepted=_safe_date(d.get('date_accepted')),
                 date_expires=_safe_date(d.get('date_expires')),
-                doc_type=d.get('doc_type', ''),
-                doc_class=d.get('doc_class', ''),
+                doc_type=d.get('doc_type') or '',
+                doc_class=d.get('doc_class') or '',
                 sheets_a4=_safe_int(d.get('sheets_a4')),
                 norm=_safe_decimal(d.get('norm')),
                 coeff=_safe_decimal(d.get('coeff')),
@@ -287,15 +287,15 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
             if url_err:
                 return JsonResponse({'error': url_err}, status=400)
 
-        report.doc_name = d.get('doc_name', report.doc_name)
-        report.doc_designation = d.get('doc_designation', report.doc_designation)
-        report.ii_pi = d.get('ii_pi', report.ii_pi)
-        report.doc_number = d.get('doc_number', report.doc_number)
-        report.inventory_num = d.get('inventory_num', report.inventory_num)
-        report.doc_type = d.get('doc_type', report.doc_type)
-        report.doc_class = d.get('doc_class', report.doc_class)
-        report.norm_control = d.get('norm_control') or report.norm_control
-        report.doc_link = d.get('doc_link', report.doc_link) or ''
+        report.doc_name = d.get('doc_name') or report.doc_name or ''
+        report.doc_designation = d.get('doc_designation') or report.doc_designation or ''
+        report.ii_pi = d.get('ii_pi') or report.ii_pi or ''
+        report.doc_number = d.get('doc_number') or report.doc_number or ''
+        report.inventory_num = d.get('inventory_num') or report.inventory_num or ''
+        report.doc_type = d.get('doc_type') or report.doc_type or ''
+        report.doc_class = d.get('doc_class') or report.doc_class or ''
+        report.norm_control = d.get('norm_control') or report.norm_control or ''
+        report.doc_link = d.get('doc_link') or report.doc_link or ''
 
         if 'date_accepted' in d:
             report.date_accepted = _safe_date(d['date_accepted'])
