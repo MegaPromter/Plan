@@ -795,6 +795,8 @@ function _ppAppendBatch(count) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
           html += `<td style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
+        } else if (col === 'task_type' && val) {
+          html += `<td style="padding:4px 6px;">${taskTypeBadgeHtml(val)}</td>`;
         } else {
           html += `<td style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
         }

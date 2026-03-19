@@ -228,7 +228,7 @@ function _makeJiRow(n, idx) {
   };
   const [badgeCls, badgeTxt] = STATUS_LABELS[n.status] || ['badge-closed-yes', n.status || '\u2014'];
   const statusBadge = '<span class="' + badgeCls + '">' + badgeTxt + '</span>';
-  const autoTag = n.is_auto ? '<span class="badge-auto" data-tip="Запись создана на основании отчёта о выполненной работе">Авто</span>' : '<span class="badge-manual" data-tip="Запись создана вручную">Ручное</span>';
+  const autoTag = n.is_auto ? '<span class="badge-auto" title="Запись создана на основании отчёта о выполненной работе">Авто</span>' : '<span class="badge-manual" title="Запись создана вручную">Ручное</span>';
   const rowMod = _canModify(n.dept, n.sector);
   const canClose = rowMod && (n.status === 'active' || n.status === 'expired');
   const canEdit = rowMod && !n.is_auto;
@@ -567,38 +567,4 @@ buildExportDropdown('exportBtnContainer', {
   getFilteredData: () => applyFilters(),
 });
 
-/* ── Тултип для бейджей ──────────────────────────────────────────────────── */
-
-(function() {
-  const tip = document.createElement('div');
-  tip.className = 'ji-tooltip';
-  document.body.appendChild(tip);
-
-  document.addEventListener('mouseenter', function(e) {
-    const badge = e.target.closest('.badge-auto, .badge-manual');
-    if (!badge) return;
-    const text = badge.getAttribute('data-tip');
-    if (!text) return;
-    const isAuto = badge.classList.contains('badge-auto');
-    tip.textContent = text;
-    tip.className = 'ji-tooltip ' + (isAuto ? 'auto' : 'manual');
-    tip.style.left = '-9999px';
-    tip.style.top = '0px';
-    void tip.offsetWidth;
-    const tw = tip.offsetWidth;
-    const th = tip.offsetHeight;
-    const rect = badge.getBoundingClientRect();
-    var left = rect.left + rect.width / 2 - tw / 2;
-    if (left < 4) left = 4;
-    if (left + tw > window.innerWidth - 4) left = window.innerWidth - tw - 4;
-    tip.style.left = left + 'px';
-    tip.style.top  = (rect.top - th - 8) + 'px';
-    tip.classList.add('visible');
-  }, true);
-
-  document.addEventListener('mouseleave', function(e) {
-    if (e.target.closest('.badge-auto, .badge-manual')) {
-      tip.classList.remove('visible');
-    }
-  }, true);
-})();
+/* Тултип для бейджей — используется нативный title (кастомный удалён) */

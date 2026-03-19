@@ -269,37 +269,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // ── Tooltip для бейджей типа задачи (стиль ЖИ) ──
-  (function() {
-    var tip = document.createElement('div');
-    tip.className = 'rc-tooltip';
-    document.body.appendChild(tip);
-    document.addEventListener('mouseenter', function(e) {
-      var badge = e.target.closest('.rc-type-badge');
-      if (!badge) return;
-      var text = badge.getAttribute('data-tip');
-      if (!text) return;
-      tip.textContent = text;
-      tip.className = 'rc-tooltip';
-      var label = badge.textContent.trim().toLowerCase();
-      tip.classList.add('tip-' + label);
-      tip.style.left = '-9999px';
-      tip.style.top = '0px';
-      void tip.offsetWidth;
-      var tw = tip.offsetWidth;
-      var th = tip.offsetHeight;
-      var rect = badge.getBoundingClientRect();
-      var left = rect.left + rect.width / 2 - tw / 2;
-      if (left < 4) left = 4;
-      if (left + tw > window.innerWidth - 4) left = window.innerWidth - tw - 4;
-      tip.style.left = left + 'px';
-      tip.style.top  = (rect.top - th - 8) + 'px';
-      tip.classList.add('visible');
-    }, true);
-    document.addEventListener('mouseleave', function(e) {
-      if (e.target.closest('.rc-type-badge')) { tip.classList.remove('visible'); }
-    }, true);
-  })();
+  // Tooltip для бейджей типа задачи — используем нативный title (не зависает)
 
   document.getElementById("yearDisplay").textContent = selectedYear;
   if (selectedMonth) {
@@ -1378,7 +1348,7 @@ function makeRow(t, num) {
   if (isFromPP) {
     const lockBadge = document.createElement("span");
     lockBadge.className = "pp-lock-badge";
-    lockBadge.setAttribute("data-tip", "Перенесено из ПП — редактирование заблокировано");
+    lockBadge.title = "Перенесено из ПП — редактирование заблокировано";
     lockBadge.textContent = "🔒 пп";
     numTd.appendChild(lockBadge);
   }
@@ -1387,22 +1357,16 @@ function makeRow(t, num) {
   // ── Колонка «Код строки» — бейдж типа задачи + row_code ──
   const rcTd = document.createElement("td");
   rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
-  const _ttMap = {'Выпуск нового документа':'нов','Корректировка документа':'корр','Разработка':'разр','Сопровождение (ОКАН)':'ОКАН'};
-  const _ttLabel = _ttMap[t.task_type] || '';
   if (t.row_code) {
     const rcSpan = document.createElement("div");
     rcSpan.style.cssText = "font-family:var(--mono);font-size:12px;color:var(--text2);";
     rcSpan.textContent = t.row_code;
     rcTd.appendChild(rcSpan);
   }
-  if (_ttLabel) {
+  if (t.task_type) {
     const ttWrap = document.createElement("div");
-    ttWrap.style.cssText = "text-align:right;";
-    const ttBadge = document.createElement("span");
-    ttBadge.className = "rc-type-badge rc-type-" + _ttLabel.toLowerCase();
-    ttBadge.textContent = _ttLabel;
-    ttBadge.setAttribute('data-tip', t.task_type);
-    ttWrap.appendChild(ttBadge);
+    ttWrap.style.cssText = "text-align:right;margin-top:2px;";
+    ttWrap.innerHTML = taskTypeBadgeHtml(t.task_type, {short: true});
     rcTd.appendChild(ttWrap);
   }
   tr.appendChild(rcTd);
@@ -4035,33 +3999,4 @@ function spGetFilteredRows() {
   });
 }
 
-/* ── Кастомный тултип для PP-бейджа (аналог ЖИ) ──────────────────────── */
-(function() {
-  const tip = document.createElement('div');
-  tip.className = 'pp-tooltip';
-  document.body.appendChild(tip);
-
-  document.addEventListener('mouseenter', function(e) {
-    const badge = e.target.closest('.pp-lock-badge');
-    if (!badge) return;
-    const text = badge.getAttribute('data-tip');
-    if (!text) return;
-    tip.textContent = text;
-    tip.style.left = '-9999px';
-    tip.style.top = '0px';
-    void tip.offsetWidth;
-    const th = tip.offsetHeight;
-    const rect = badge.getBoundingClientRect();
-    // Позиционируем справа от бейджа, чтобы не перекрывать сайдбар
-    let left = rect.right + 8;
-    tip.style.left = left + 'px';
-    tip.style.top  = (rect.top + rect.height / 2 - th / 2) + 'px';
-    tip.classList.add('visible');
-  }, true);
-
-  document.addEventListener('mouseleave', function(e) {
-    if (e.target.closest('.pp-lock-badge')) {
-      tip.classList.remove('visible');
-    }
-  }, true);
-})();
+/* PP-бейдж тултип — используется нативный title (кастомный удалён) */

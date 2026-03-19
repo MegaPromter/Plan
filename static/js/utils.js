@@ -255,6 +255,28 @@ function createScrollLoader(container, onNearBottom, threshold = 200) {
     };
 }
 
+/* ── Единый бейдж типа задачи ──────────────────────────────────────────── */
+
+/**
+ * Возвращает HTML-строку бейджа типа задачи.
+ * @param {string} taskType — полное название ("Выпуск нового документа", "Корректировка документа", ...)
+ * @param {object} [opts] — опции: short=true — сокращённый текст ("нов","корр","разр","ОКАН")
+ * @returns {string} HTML <span class="task-type-badge ...">...</span>
+ */
+function taskTypeBadgeHtml(taskType, opts) {
+    if (!taskType) return '';
+    var map = {
+        'Выпуск нового документа': {cls: 'tt-выпуск', short: 'нов'},
+        'Корректировка документа': {cls: 'tt-корректировка', short: 'корр'},
+        'Разработка':              {cls: 'tt-разработка', short: 'разр'},
+        'Сопровождение (ОКАН)':    {cls: 'tt-сопровождение', short: 'ОКАН'},
+    };
+    var info = map[taskType];
+    if (!info) return '<span class="task-type-badge">' + escapeHtml(taskType) + '</span>';
+    var text = (opts && opts.short) ? info.short : taskType;
+    return '<span class="task-type-badge ' + info.cls + '" title="' + escapeHtml(taskType) + '">' + escapeHtml(text) + '</span>';
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Sticky Horizontal Scrollbar + Drag-to-Scroll
    Автоматически находит обёртки таблиц и добавляет:

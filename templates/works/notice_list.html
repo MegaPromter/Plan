@@ -3,122 +3,7 @@
 {% block title %}Журнал извещений — Система управления{% endblock %}
 
 {% block styles %}
-<style>
-:root { --ji-row: 32px; }
-/* ── Обёртка таблицы ── */
-.ji-wrap { overflow:auto; max-height:calc(100vh - 180px); border:1px solid var(--border); border-radius:8px; }
-/* ── Таблица ── */
-.ji-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; }
-.ji-table th,
-.ji-table td {
-  padding:6px 8px; font-size:13px;
-  border-right:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.ji-table th { background:var(--surface2); font-weight:700; font-size:11px;
-  color:var(--text2); text-transform:uppercase; letter-spacing:.05em;
-  position:sticky; top:0; z-index:3; padding-bottom:2px; }
-/* строка фильтров */
-.ji-table tr.filter-row th {
-  background:var(--surface2); top:31px; padding:3px 4px; z-index:3;
-}
-/* мультифильтр */
-.mf-wrap { position:relative; width:100%; }
-.mf-trigger {
-  width:100%; padding:2px 16px 2px 4px; background:var(--surface2);
-  border:1px solid var(--border); border-radius:4px; color:var(--text);
-  font-family:var(--font); font-size:11px; outline:none; cursor:pointer;
-  text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  transition:border-color .15s; box-sizing:border-box; position:relative;
-}
-.mf-trigger.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
-.mf-trigger::after { content:"\25BE"; position:absolute; right:4px; top:50%; transform:translateY(-50%);
-  font-size:10px; color:var(--muted); pointer-events:none; }
-.mf-dropdown {
-  position:fixed; z-index:9999; min-width:160px; max-width:260px;
-  background:var(--surface); border:1px solid var(--border2); border-radius:8px;
-  box-shadow:0 4px 20px rgba(0,0,0,.12); padding:6px 0; display:none;
-  max-height:260px; overflow-y:auto;
-}
-.mf-dropdown.open { display:block; }
-.mf-search { padding:6px 10px; border-bottom:1px solid var(--border); }
-.mf-search input { width:100%; background:var(--bg); border:1px solid var(--border);
-  border-radius:4px; color:var(--text); font-size:12px; padding:3px 6px; outline:none;
-  font-family:var(--font); box-sizing:border-box; }
-.mf-option { display:flex; align-items:center; gap:6px; padding:4px 10px; cursor:pointer;
-  font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mf-option:hover { background:var(--accent-light); }
-.mf-actions { display:flex; gap:6px; padding:4px 10px 6px; border-bottom:1px solid var(--border); }
-.mf-btn { flex:1; padding:2px 4px; border:1px solid var(--border); border-radius:4px;
-  background:var(--surface2); color:var(--text2); font-size:11px; cursor:pointer; }
-.mf-btn:hover { background:var(--accent-light); }
-/* строки данных */
-.ji-table tbody tr:nth-child(even) td { background:var(--surface2); }
-.ji-table tbody tr:nth-child(odd)  td { background:var(--surface); }
-.ji-table tbody tr:hover td { background:var(--accent-light) !important; }
-/* бейджи */
-.badge-active    { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:rgba(22,163,74,0.12); color:var(--success); white-space:nowrap; }
-.badge-expired   { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
-.badge-closed-no { display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:rgba(220,38,38,0.1); color:var(--danger); white-space:nowrap; }
-.badge-closed-yes{ display:inline-block; padding:2px 6px; border-radius:20px; font-size:11px;
-  font-weight:600; background:var(--surface2); color:var(--muted2); white-space:nowrap; }
-.badge-auto, .badge-manual { display:inline-block; padding:1px 4px; border-radius:4px; font-size:9px;
-  font-weight:600; margin-left:4px; vertical-align:middle; cursor:default; }
-.badge-auto { background:rgba(67,56,202,0.1); color:#6366f1; }
-.badge-manual { background:rgba(217,119,6,0.1); color:var(--warning); }
-.ji-tooltip { position:fixed; padding:5px 12px; border-radius:6px; font-size:11px;
-  font-weight:500; white-space:nowrap; pointer-events:none; z-index:9999;
-  opacity:0; transition:opacity .15s; max-width:calc(100vw - 8px); box-sizing:border-box; }
-.ji-tooltip.visible { opacity:1; }
-.ji-tooltip.auto { background:rgba(67,56,202,0.55); color:#fff; }
-.ji-tooltip.manual { background:rgba(146,64,14,0.55); color:#fff; }
-.ji-tooltip::after { content:''; position:absolute; left:50%; top:100%;
-  transform:translateX(-50%); border:5px solid transparent; }
-.ji-tooltip.auto::after { border-top-color:rgba(67,56,202,0.55); }
-.ji-tooltip.manual::after { border-top-color:rgba(146,64,14,0.55); }
-/* строка итогов */
-.ji-footer { padding:8px 4px; font-size:12px; color:var(--text2); }
-/* sticky-колонка действий */
-.ji-table th.col-actions,
-.ji-table td.col-actions {
-  position:sticky; right:0; z-index:2;
-  background:var(--surface); border-left:2px solid var(--border);
-  overflow:visible !important;
-}
-.ji-table thead th.col-actions { z-index:4; background:var(--surface2); }
-.ji-table tr.filter-row th.col-actions { z-index:5; background:var(--surface2); }
-.ji-table tbody tr:nth-child(even) td.col-actions { background:var(--surface2); }
-.ji-table tbody tr:hover td.col-actions { background:var(--accent-light) !important; }
-/* кнопки действий */
-.ji-btn { padding:3px 8px; border-radius:4px; border:1px solid var(--border);
-  background:transparent; color:var(--text2); cursor:pointer; font-size:12px; font-family:var(--font); }
-.ji-btn:hover { background:var(--accent-light); }
-.ji-btn-del { border-color:rgba(239,68,68,.3); color:var(--danger); }
-.ji-btn-del:hover { background:rgba(239,68,68,.07); }
-.ji-btn-close { border-color:rgba(234,179,8,.4); color:#92400e; font-size:11px; }
-.ji-btn-close:hover { background:rgba(234,179,8,.08); }
-/* модал */
-.modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45);
-  backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; }
-.modal-overlay.open { display:flex; }
-.modal-box { background:var(--surface); border-radius:12px; padding:24px;
-  width:100%; box-shadow:0 8px 32px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
-.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.modal-header h2 { font-size:18px; font-weight:700; margin:0; }
-.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text2); padding:4px; }
-.modal-footer { margin-top:16px; }
-.form-label { display:block; font-size:12px; font-weight:600; color:var(--text2);
-  text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-.form-input { width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border);
-  border-radius:6px; background:var(--surface); color:var(--text); font-family:var(--font);
-  font-size:14px; outline:none; }
-.form-input:focus { border-color:var(--accent); }
-.form-input:disabled { background:var(--surface2); color:var(--muted); cursor:not-allowed; }
-</style>
+<link rel="stylesheet" href="{% static 'css/notices.css' %}?v=1">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -329,7 +214,7 @@
   </div>
 </div>
 
-<script src="{% static 'js/utils.js' %}?v=2"></script>
+<script src="{% static 'js/utils.js' %}?v=3"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script id="page-config" type="application/json">{
@@ -340,5 +225,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}"></script>
+<script src="{% static 'js/notices.js' %}?v=3"></script>
 {% endblock %}

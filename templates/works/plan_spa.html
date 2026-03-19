@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=4">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -536,7 +536,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=2"></script>
+<script src="{% static 'js/utils.js' %}?v=3"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script id="sp-config" type="application/json">{
@@ -548,7 +548,7 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}?v=2"></script>
+<script src="{% static 'js/plan.js' %}?v=4"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){
