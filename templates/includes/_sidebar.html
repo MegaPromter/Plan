@@ -4,16 +4,12 @@
 {# active_nav: dashboard, projects, pp, plan, notices, work_calendar, employees, vacation_plan, subdivisions #}
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <a href="{% url 'accounts:dashboard' %}" class="sidebar-logo">
-      <div class="sidebar-logo-icon">📋</div>
-      <span>Планирование</span>
-    </a>
+    <span style="padding:20px 20px 8px;margin:0;display:block;font-size:18px;font-weight:700;color:var(--nav-active-color, #fff);letter-spacing:0.04em;">Обзор</span>
   </div>
 
   <nav class="sidebar-nav">
     <!-- Обзор -->
     <div class="nav-section">
-      <div class="nav-section-title">Обзор</div>
       <a href="{% url 'accounts:dashboard' %}" class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}">
         <i class="fas fa-th-large"></i>
         <span>Стартовая страница</span>
