@@ -5,18 +5,18 @@
 /* ── Макет страницы ──────────────────────────────────────────────────── */
 .an-page { display:flex; flex-direction:column; gap:16px; }
 
-/* ── Панель фильтров (год, месяц, проект, отдел/сектор) ──────────────── */
-.an-toolbar {
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:12px 16px; background:var(--surface); border:1px solid var(--border);
-  border-radius:12px; box-shadow:var(--shadow-sm);
+/* ── Ряд панелей фильтров ─────────────────────────────────────────────── */
+.an-toolbar-row {
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.an-toolbar-panel {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:8px 14px; background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.06);
 }
 .an-toolbar-label {
   font-size:12px; font-weight:600; color:var(--muted);
-  text-transform:uppercase; letter-spacing:0.05em;
-}
-.an-toolbar-sep {
-  width:1px; height:24px; background:var(--border); margin:0 4px;
+  text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap;
 }
 
 /* ── Чипы (год, месяц, отдел, сектор, проект) ───────────────────────── */
@@ -28,7 +28,11 @@
   white-space:nowrap;
 }
 .an-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.an-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.an-chip.active {
+  background:var(--accent); color:#fff; border-color:var(--accent);
+  transform:scale(1.08); box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  z-index:1; position:relative;
+}
 .an-chip-clear {
   padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer;
   color:var(--muted); border:none; background:none; text-decoration:underline;
@@ -114,7 +118,8 @@
 .an-load-over .an-load-bar-fill { background:var(--danger); }
 
 /* ── Таблица сотрудников / секторов / отделов ────────────────────────── */
-.an-list-table { width:100%; border-collapse:collapse; font-size:13px; }
+.an-list-table { width:auto; border-collapse:collapse; font-size:13px; }
+.an-widget:has(.an-list-table) { width:fit-content; }
 .an-list-table th {
   text-align:left; font-size:11px; text-transform:uppercase;
   letter-spacing:0.04em; color:var(--muted); padding:8px;
@@ -148,9 +153,32 @@
 .an-tasks-table td {
   padding:6px 8px; border-bottom:1px solid var(--border); color:var(--text);
 }
-.an-tasks-table td.cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.an-tasks-table th.cell-num { text-align:center; }
+.an-tasks-table td.cell-num { text-align:center; font-variant-numeric:tabular-nums; min-width:48px; }
 .an-tasks-table tbody tr { transition:background 0.12s; }
 .an-tasks-table tbody tr:hover { background:var(--row-hover); }
+
+/* Маркер периода выполнения задачи (без plan_hours) */
+.an-active-mark {
+  display:inline-block; width:16px; height:6px; border-radius:3px;
+  background:var(--accent); opacity:0.35;
+}
+/* Маркеры отпусков и командировок */
+.an-abs-mark {
+  display:inline-block; width:16px; height:6px; border-radius:3px;
+  vertical-align:middle;
+}
+.an-abs-vac { background:#22c55e; opacity:0.5; }
+.an-abs-trip { background:#a855f7; opacity:0.5; }
+.an-absence-row { background:var(--surface2, #f8f9fb); }
+.an-absence-row td { border-bottom:2px solid var(--border2) !important; }
+
+/* Легенда в заголовке таблицы задач */
+.an-legend {
+  font-size:11px; font-weight:400; color:var(--muted);
+  margin-left:12px; vertical-align:middle;
+}
+.an-legend .an-active-mark, .an-legend .an-abs-mark { vertical-align:middle; margin-right:2px; }
 
 /* Бейджи статуса */
 .an-badge-status {

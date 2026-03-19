@@ -190,7 +190,7 @@ function confirmDialog(message, title = 'Подтверждение') {
         }
 
         const msgEl = document.createElement('p');
-        msgEl.style.cssText = 'color:var(--text,#1e293b);margin:0;';
+        msgEl.style.cssText = 'color:var(--text,#1e293b);margin:0;white-space:pre-line;';
         msgEl.textContent = message;
 
         const modal = openModal({

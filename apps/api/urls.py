@@ -58,7 +58,7 @@ from .views.work_calendar import (
 # Вьюхи для заполнения тестовыми данными (seed)
 from .views.seed import (
     SeedDataView, SeedExecutorsView, SeedVacationsView,
-    FillAllView, FillDeptView,
+    FillAllView, FillDeptView, SeedAnalyticsView,
 )
 # Вьюхи зависимостей задач (TaskDependency)
 from .views.dependencies import (
@@ -241,6 +241,8 @@ if settings.DEBUG:
         path('seed_executors/',     SeedExecutorsView.as_view()),
         # POST /api/seed_vacations/ — заполнение отпусками
         path('seed_vacations/',     SeedVacationsView.as_view()),
+        # POST /api/seed_analytics/ — отпуска + командировки + plan_hours
+        path('seed_analytics/',     SeedAnalyticsView.as_view()),
         # POST /api/fill_all/ — заполнение всеми тестовыми данными сразу
         path('fill_all/',           FillAllView.as_view()),
         # POST /api/fill_dept/ — заполнение данными конкретного отдела

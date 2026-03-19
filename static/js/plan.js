@@ -2456,7 +2456,7 @@ async function submitNewTask() {
     const planned = Object.values(planHours).reduce((s, v) => s + (parseFloat(v) || 0), 0);
     if (planned > ppLabor) {
       const ok = await confirmDialog(
-        `Распланированная трудоёмкость (${planned} ч) превышает плановую (${ppLabor} ч).\nПродолжить сохранение?`,
+        `Распланированная трудоёмкость (${planned} ч) превышает плановую (${ppLabor} ч).\n\nПлановая трудоёмкость — значение из Производственного плана, рассчитанное по нормативам (листы А4 × норма × коэфф.).\n\nПродолжить сохранение?`,
         'Превышение трудоёмкости'
       );
       if (!ok) return;

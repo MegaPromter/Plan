@@ -17,8 +17,8 @@ from django.http import JsonResponse
 from django.views import View
 
 from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
-from apps.employees.models import Department, Employee, Sector, Vacation
-from apps.works.models import Directory, PPProject, Work
+from apps.employees.models import Department, Employee, Sector, Vacation, BusinessTrip
+from apps.works.models import Directory, PPProject, Work, WorkCalendar
 
 logger = logging.getLogger(__name__)
 
@@ -562,3 +562,194 @@ class FillDeptView(AdminRequiredJsonMixin, View):
                 Work.objects.bulk_update(works, ['department'], batch_size=1000)
 
         return JsonResponse({'updated': len(works), 'depts_used': depts})
+
+
+# ── POST /api/seed_analytics ──────────────────────────────────────────────
+
+_TRIP_LOCATIONS = [
+    'СПб, Северная верфь', 'Северодвинск, Севмаш', 'Москва, головной офис',
+    'Нижний Новгород, Красное Сормово', 'Комсомольск-на-Амуре, АСЗ',
+    'Калининград, Янтарь', 'Мурманск, 35 СРЗ', 'Владивосток, Звезда',
+    'Севастополь, 13 СРЗ', 'Астрахань, ЛСЗ',
+]
+
+_TRIP_PURPOSES = [
+    'Авторский надзор', 'Согласование КД', 'Техническое сопровождение',
+    'Приёмо-сдаточные испытания', 'Согласование ТУ', 'Входной контроль',
+    'Корректировка документации', 'Шеф-монтаж',
+]
+
+
+class SeedAnalyticsView(AdminRequiredJsonMixin, View):
+    """
+    Генерация данных для модуля аналитики:
+    1. Отпуска для ВСЕХ сотрудников (ежегодный 14-28 дней)
+    2. Командировки для 15% сотрудников (10-120 дней)
+    3. Заполнение plan_hours для всех СП-задач с учётом загрузки:
+       - 20% сотрудников — перегруз (110-140% нормы)
+       - 15% сотрудников — недогруз (30-60% нормы)
+       - 65% сотрудников — нормальная загрузка (70-100% нормы)
+    """
+
+    def post(self, request):
+        year = date.today().year
+        employees = list(Employee.objects.all())
+        if not employees:
+            return JsonResponse({'error': 'Нет сотрудников в базе'}, status=400)
+
+        # Загружаем нормы рабочего времени
+        norms = {}
+        for wc in WorkCalendar.objects.filter(year=year):
+            norms[wc.month] = float(wc.hours_norm)
+        annual_norm = sum(norms.values())  # полный годовой фонд
+        if annual_norm == 0:
+            return JsonResponse(
+                {'error': f'Нет данных WorkCalendar за {year} год'}, status=400,
+            )
+
+        stats = {'vacations': 0, 'trips': 0, 'works_updated': 0}
+
+        with transaction.atomic():
+            # ── 1. Отпуска для всех сотрудников ───────────────────────────
+            existing_vac_ids = set(
+                Vacation.objects.filter(
+                    employee__in=employees, date_start__year=year,
+                ).values_list('employee_id', flat=True)
+            )
+            vac_to_create = []
+            for emp in employees:
+                if emp.pk in existing_vac_ids:
+                    continue
+                # Летний отпуск (июнь-сентябрь, основной)
+                summer_start_day = random.randint(152, 260)  # ~июнь-сентябрь
+                d_start = date(year, 1, 1) + timedelta(days=summer_start_day)
+                duration = random.randint(14, 28)
+                d_end = d_start + timedelta(days=duration)
+                vac_to_create.append(Vacation(
+                    employee=emp,
+                    vac_type=Vacation.TYPE_ANNUAL,
+                    date_start=d_start,
+                    date_end=d_end,
+                    notes='Ежегодный оплачиваемый отпуск',
+                ))
+            if vac_to_create:
+                Vacation.objects.bulk_create(vac_to_create, batch_size=500)
+            stats['vacations'] = len(vac_to_create)
+
+            # ── 2. Командировки для 15% сотрудников ─────────────────────
+            existing_trip_ids = set(
+                BusinessTrip.objects.filter(
+                    employee__in=employees, date_start__year=year,
+                ).values_list('employee_id', flat=True)
+            )
+            trip_count = max(1, int(len(employees) * 0.15))
+            trip_employees = random.sample(employees, min(trip_count, len(employees)))
+            trips_to_create = []
+            for emp in trip_employees:
+                if emp.pk in existing_trip_ids:
+                    continue
+                start_day = random.randint(0, 300)
+                d_start = date(year, 1, 1) + timedelta(days=start_day)
+                duration = random.randint(10, 120)
+                d_end = d_start + timedelta(days=duration)
+                status = random.choice([
+                    BusinessTrip.STATUS_PLAN, BusinessTrip.STATUS_ACTIVE,
+                    BusinessTrip.STATUS_DONE,
+                ])
+                trips_to_create.append(BusinessTrip(
+                    employee=emp,
+                    location=random.choice(_TRIP_LOCATIONS),
+                    purpose=random.choice(_TRIP_PURPOSES),
+                    date_start=d_start,
+                    date_end=d_end,
+                    status=status,
+                ))
+            if trips_to_create:
+                BusinessTrip.objects.bulk_create(trips_to_create, batch_size=500)
+            stats['trips'] = len(trips_to_create)
+
+            # ── 3. Заполнение plan_hours для СП-задач ─────────────────────
+            # Распределяем сотрудников по категориям загрузки
+            random.shuffle(employees)
+            n_over = max(1, int(len(employees) * 0.20))   # 20% перегруз
+            n_under = max(1, int(len(employees) * 0.15))   # 15% недогруз
+            over_ids = set(e.pk for e in employees[:n_over])
+            under_ids = set(e.pk for e in employees[n_over:n_over + n_under])
+            # остальные — нормальная загрузка
+
+            # Собираем задачи по исполнителям
+            works = list(
+                Work.objects.filter(show_in_plan=True, executor__isnull=False)
+                .select_related('executor')
+            )
+            works_by_emp = {}
+            for w in works:
+                works_by_emp.setdefault(w.executor_id, []).append(w)
+
+            updated = []
+            for emp_id, emp_works in works_by_emp.items():
+                # Определяем целевую загрузку
+                if emp_id in over_ids:
+                    target_pct = random.uniform(1.10, 1.40)  # 110-140%
+                elif emp_id in under_ids:
+                    target_pct = random.uniform(0.30, 0.60)  # 30-60%
+                else:
+                    target_pct = random.uniform(0.70, 1.00)  # 70-100%
+
+                target_hours = annual_norm * target_pct
+                # Распределяем часы по задачам
+                n_tasks = len(emp_works)
+                if n_tasks == 0:
+                    continue
+
+                # Генерируем случайные веса для каждой задачи
+                weights = [random.random() for _ in range(n_tasks)]
+                total_w = sum(weights)
+                if total_w == 0:
+                    continue
+
+                for i, w in enumerate(emp_works):
+                    task_hours = target_hours * weights[i] / total_w
+                    if task_hours < 1:
+                        task_hours = 1
+
+                    # Определяем месяцы по date_start/date_end
+                    ds = w.date_start or date(year, 1, 1)
+                    de = w.date_end or date(year, 12, 31)
+                    months = []
+                    cur = date(ds.year, ds.month, 1)
+                    end_m = date(de.year, de.month, 1)
+                    while cur <= end_m:
+                        if cur.year == year:
+                            months.append(cur.month)
+                        if cur.month == 12:
+                            cur = date(cur.year + 1, 1, 1)
+                        else:
+                            cur = date(cur.year, cur.month + 1, 1)
+
+                    if not months:
+                        months = [ds.month]
+
+                    # Распределяем часы по месяцам задачи
+                    ph = {}
+                    remaining = round(task_hours, 1)
+                    for j, m in enumerate(months):
+                        if j == len(months) - 1:
+                            val = max(1.0, round(remaining, 1))
+                        else:
+                            val = round(remaining / (len(months) - j) * random.uniform(0.6, 1.4), 1)
+                            val = max(1.0, min(val, remaining - (len(months) - j - 1)))
+                        key = f'{year}-{m:02d}'
+                        ph[key] = val
+                        remaining -= val
+                        if remaining <= 0:
+                            break
+
+                    w.plan_hours = ph
+                    updated.append(w)
+
+            if updated:
+                Work.objects.bulk_update(updated, ['plan_hours'], batch_size=1000)
+            stats['works_updated'] = len(updated)
+
+        return JsonResponse(stats)
