@@ -11,6 +11,7 @@ import logging
 from datetime import date
 
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views import View
 
@@ -157,7 +158,6 @@ class JournalListView(LoginRequiredJsonMixin, View):
 
         dept = request.GET.get('dept', '').strip()
         if dept:
-            from django.db.models import Q
             qs = qs.filter(
                 Q(work_report__work__department__code=dept)
                 | Q(work_report__isnull=True, department__code=dept)
@@ -180,13 +180,25 @@ class JournalListView(LoginRequiredJsonMixin, View):
             total = qs.count()
             result = [_serialize_notice(n) for n in qs[offset:offset + per_page]]
         elif status_filter in ('active', 'expired'):
-            # computed_status вычисляется динамически (expired для ПИ) —
-            # берём все active, фильтруем в Python, затем пагинируем
+            # computed_status зависит от ii_pi + date_expires —
+            # фильтруем кандидатов на уровне БД, затем уточняем в Python
+            from django.utils import timezone
+            today = timezone.now().date()
             qs = qs.filter(status=Notice.STATUS_ACTIVE)
-            all_serialized = [_serialize_notice(n) for n in qs]
-            filtered = [r for r in all_serialized if r['status'] == status_filter]
-            total = len(filtered)
-            result = filtered[offset:offset + per_page]
+            if status_filter == 'expired':
+                # Expired = ПИ + дата истекла (ручные: ii_pi, авто: через work_report)
+                qs = qs.filter(
+                    Q(work_report__isnull=True, ii_pi='ПИ', date_expires__lt=today) |
+                    Q(work_report__isnull=False, work_report__ii_pi='ПИ', work_report__date_expires__lt=today)
+                )
+            else:
+                # Active = все active минус expired
+                qs = qs.exclude(
+                    Q(work_report__isnull=True, ii_pi='ПИ', date_expires__lt=today) |
+                    Q(work_report__isnull=False, work_report__ii_pi='ПИ', work_report__date_expires__lt=today)
+                )
+            total = qs.count()
+            result = [_serialize_notice(n) for n in qs[offset:offset + per_page]]
         else:
             total = qs.count()
             result = [_serialize_notice(n) for n in qs[offset:offset + per_page]]

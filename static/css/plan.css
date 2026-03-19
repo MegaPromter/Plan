@@ -160,7 +160,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 .btn-reset-pw:hover { background:rgba(217,119,6,0.08); }
 .actions-cell { padding:6px 6px; display:flex; gap:3px; align-items:center; flex-wrap:nowrap; width:190px; min-width:190px; }
 
-/* Бейджи типа задачи — стили в components.css (.task-type-badge) */
+/* Бейджи типа задачи — стили в components.css (.badge-sm) */
 
 /* ── Зависимости (dep) ────────────────────────────────────────────────── */
 .btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);

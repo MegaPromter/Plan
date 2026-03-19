@@ -1242,7 +1242,7 @@ function openAddRowModal() {
       if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
       // Вставляем новую запись в начало rows напрямую (не зависим от лимита пагинации)
       if (resp.work) {
-        rows = rows.filter(r => r.id !== resp.id);
+        rows = rows.filter(r => r.id !== resp.work.id);
         rows.unshift(resp.work);
       } else {
         await loadPPRows(currentProjectId);

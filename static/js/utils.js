@@ -261,7 +261,7 @@ function createScrollLoader(container, onNearBottom, threshold = 200) {
  * Возвращает HTML-строку бейджа типа задачи.
  * @param {string} taskType — полное название ("Выпуск нового документа", "Корректировка документа", ...)
  * @param {object} [opts] — опции: short=true — сокращённый текст ("нов","корр","разр","ОКАН")
- * @returns {string} HTML <span class="task-type-badge ...">...</span>
+ * @returns {string} HTML <span class="badge-sm ...">...</span>
  */
 function taskTypeBadgeHtml(taskType, opts) {
     if (!taskType) return '';
@@ -272,22 +272,31 @@ function taskTypeBadgeHtml(taskType, opts) {
         'Сопровождение (ОКАН)':    {cls: 'tt-сопровождение', short: 'ОКАН'},
     };
     var info = map[taskType];
-    if (!info) return '<span class="task-type-badge">' + escapeHtml(taskType) + '</span>';
+    if (!info) return '<span class="badge-sm">' + escapeHtml(taskType) + '</span>';
     var text = (opts && opts.short) ? info.short : taskType;
-    return '<span class="task-type-badge ' + info.cls + '" data-full="' + escapeHtml(taskType) + '">' + escapeHtml(text) + '</span>';
+    return '<span class="badge-sm ' + info.cls + '" data-full="' + escapeHtml(taskType) + '">' + escapeHtml(text) + '</span>';
 }
 
-/* Тултип для бейджей task-type-badge (event delegation, position:fixed) */
+/* Тултип для всех badge-sm (event delegation, position:fixed, справа) */
 (function() {
     var tip = null;
+    function getText(badge) {
+        return badge.getAttribute('data-full') || badge.getAttribute('title') || '';
+    }
     function show(badge) {
+        var text = getText(badge);
+        if (!text) return;
         if (!tip) {
             tip = document.createElement('div');
             tip.className = 'tt-tip';
             document.body.appendChild(tip);
         }
-        tip.textContent = badge.getAttribute('data-full');
-        // Цвет фона = color бейджа
+        // Убираем нативный title на время показа
+        if (badge.hasAttribute('title')) {
+            badge.setAttribute('data-title-bak', badge.getAttribute('title'));
+            badge.removeAttribute('title');
+        }
+        tip.textContent = text;
         tip.style.background = getComputedStyle(badge).color;
         var r = badge.getBoundingClientRect();
         tip.style.left = (r.right + 6) + 'px';
@@ -295,17 +304,33 @@ function taskTypeBadgeHtml(taskType, opts) {
         tip.style.transform = 'translateY(-50%)';
         tip.classList.add('visible');
     }
-    function hide() {
+    function hide(badge) {
         if (tip) tip.classList.remove('visible');
+        // Восстанавливаем title
+        if (badge && badge.hasAttribute('data-title-bak')) {
+            badge.setAttribute('title', badge.getAttribute('data-title-bak'));
+            badge.removeAttribute('data-title-bak');
+        }
     }
-    document.addEventListener('mouseenter', function(e) {
-        var b = e.target.closest && e.target.closest('.task-type-badge[data-full]');
-        if (b) show(b);
-    }, true);
-    document.addEventListener('mouseleave', function(e) {
-        var b = e.target.closest && e.target.closest('.task-type-badge[data-full]');
-        if (b) hide();
-    }, true);
+    var currentBadge = null;
+    document.addEventListener('mouseover', function(e) {
+        var b = e.target.closest && e.target.closest('.badge-sm');
+        if (b && b !== currentBadge && (b.hasAttribute('data-full') || b.hasAttribute('title'))) {
+            currentBadge = b;
+            show(b);
+        } else if (!b && currentBadge) {
+            hide(currentBadge);
+            currentBadge = null;
+        }
+    });
+    document.addEventListener('mouseout', function(e) {
+        if (!currentBadge) return;
+        var related = e.relatedTarget;
+        if (!related || !currentBadge.contains(related)) {
+            hide(currentBadge);
+            currentBadge = null;
+        }
+    });
 })();
 
 /* ══════════════════════════════════════════════════════════════════════════

@@ -214,7 +214,7 @@
   </div>
 </div>
 
-<script src="{% static 'js/utils.js' %}?v=4"></script>
+<script src="{% static 'js/utils.js' %}?v=6"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script id="page-config" type="application/json">{
@@ -225,5 +225,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}?v=3"></script>
+<script src="{% static 'js/notices.js' %}?v=4"></script>
 {% endblock %}

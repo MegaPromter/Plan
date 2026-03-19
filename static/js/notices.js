@@ -227,8 +227,8 @@ function _makeJiRow(n, idx) {
     closed_yes: ['badge-closed-yes','Погашено с внесением'],
   };
   const [badgeCls, badgeTxt] = STATUS_LABELS[n.status] || ['badge-closed-yes', n.status || '\u2014'];
-  const statusBadge = '<span class="' + badgeCls + '">' + badgeTxt + '</span>';
-  const autoTag = n.is_auto ? '<span class="badge-auto" title="Запись создана на основании отчёта о выполненной работе">Авто</span>' : '<span class="badge-manual" title="Запись создана вручную">Ручное</span>';
+  const statusBadge = '<span class="badge-sm ' + badgeCls + '">' + badgeTxt + '</span>';
+  const autoTag = n.is_auto ? '<span class="badge-sm tt-auto" title="Запись создана на основании отчёта о выполненной работе">Авто</span>' : '<span class="badge-sm tt-manual" title="Запись создана вручную">Ручное</span>';
   const rowMod = _canModify(n.dept, n.sector);
   const canClose = rowMod && (n.status === 'active' || n.status === 'expired');
   const canEdit = rowMod && !n.is_auto;
@@ -251,8 +251,8 @@ function _makeJiRow(n, idx) {
     '<td title="' + esc(n.notice_number) + '">' + (esc(n.notice_number) || '\u2014') + '</td>' +
     '<td title="' + esc(n.subject) + '">' + (esc(n.subject) || '\u2014') + '</td>' +
     '<td title="' + esc(n.doc_designation) + '">' + (esc(n.doc_designation) || '\u2014') + '</td>' +
-    '<td>' + (n.date_issued || '\u2014') + '</td>' +
-    '<td>' + (n.date_expires || '\u2014') + '</td>' +
+    '<td>' + (esc(n.date_issued) || '\u2014') + '</td>' +
+    '<td>' + (esc(n.date_expires) || '\u2014') + '</td>' +
     '<td title="' + esc(n.dept_name) + '">' + (esc(n.dept) || '\u2014') + '</td>' +
     '<td title="' + esc(n.sector) + '">' + (esc(n.sector) || '\u2014') + '</td>' +
     '<td title="' + esc(n.executor) + '">' + (esc(n.executor) || '\u2014') + '</td>' +
