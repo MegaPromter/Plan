@@ -172,6 +172,9 @@
 .an-abs-trip { background:#a855f7; opacity:0.5; }
 .an-absence-row { background:var(--surface2, #f8f9fb); }
 .an-absence-row td { border-bottom:2px solid var(--border2) !important; }
+/* Заливка ячеек месяцев при отпуске/командировке */
+.an-cell-vac { background:rgba(34,197,94,0.08); }
+.an-cell-trip { background:rgba(168,85,247,0.08); }
 
 /* Легенда в заголовке таблицы задач */
 .an-legend {

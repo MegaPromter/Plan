@@ -460,38 +460,39 @@ function renderEmployee(el, data) {
 
     var selYears = idsToList(currentYears);
 
-    // Строка отпусков/командировок
+    // Вычисляем месяцы отпусков/командировок (для заливки всех ячеек)
     var absences = data.absences || [];
-    if (absences.length > 0) {
-      var absMonths = {};  // {month: [{type, label}]}
-      absences.forEach(function(a) {
-        selYears.forEach(function(y) {
-          var yInt = parseInt(y);
-          var ds = new Date(a.date_start);
-          var de = new Date(a.date_end);
-          for (var mm = 1; mm <= 12; mm++) {
-            var mStart = new Date(yInt, mm - 1, 1);
-            var mEnd = new Date(yInt, mm, 0);
-            if (mEnd >= ds && mStart <= de) {
-              if (!absMonths[mm]) absMonths[mm] = [];
-              absMonths[mm].push({type: a.type, label: a.label});
-            }
+    var absMonths = {};  // {month: {vac: bool, trip: bool, titles: []}}
+    absences.forEach(function(a) {
+      selYears.forEach(function(y) {
+        var yInt = parseInt(y);
+        var ds = new Date(a.date_start);
+        var de = new Date(a.date_end);
+        for (var mm = 1; mm <= 12; mm++) {
+          var mStart = new Date(yInt, mm - 1, 1);
+          var mEnd = new Date(yInt, mm, 0);
+          if (mEnd >= ds && mStart <= de) {
+            if (!absMonths[mm]) absMonths[mm] = {vac: false, trip: false, titles: []};
+            if (a.type === 'vacation') absMonths[mm].vac = true;
+            else absMonths[mm].trip = true;
+            if (absMonths[mm].titles.indexOf(a.label) === -1) absMonths[mm].titles.push(a.label);
           }
-        });
+        }
       });
+    });
+
+    // Строка отпусков/командировок
+    if (absences.length > 0) {
       html += '<tr class="an-absence-row">';
       html += '<td colspan="4" style="font-weight:600;color:var(--muted);font-size:12px;"><i class="fas fa-plane-departure" style="margin-right:4px;"></i>Отпуска / командировки</td>';
       for (var m = 1; m <= 12; m++) {
-        var items = absMonths[m] || [];
-        if (items.length > 0) {
+        var info = absMonths[m];
+        if (info) {
           var marks = '';
-          var titles = [];
-          items.forEach(function(it) {
-            var cls = it.type === 'vacation' ? 'an-abs-vac' : 'an-abs-trip';
-            marks += '<span class="an-abs-mark ' + cls + '"></span>';
-            if (titles.indexOf(it.label) === -1) titles.push(it.label);
-          });
-          html += '<td class="cell-num" title="' + esc(titles.join('; ')) + '">' + marks + '</td>';
+          if (info.vac) marks += '<span class="an-abs-mark an-abs-vac"></span>';
+          if (info.trip) marks += '<span class="an-abs-mark an-abs-trip"></span>';
+          var bgCls = info.vac ? 'an-cell-vac' : 'an-cell-trip';
+          html += '<td class="cell-num ' + bgCls + '" title="' + esc(info.titles.join('; ')) + '">' + marks + '</td>';
         } else {
           html += '<td class="cell-num"></td>';
         }
@@ -542,12 +543,14 @@ function renderEmployee(el, data) {
           if (t.plan_hours && t.plan_hours[key]) hrs += parseFloat(t.plan_hours[key]);
         });
         rowTotal += hrs;
+        var absCls = absMonths[m] ? (absMonths[m].vac ? ' an-cell-vac' : ' an-cell-trip') : '';
+        var absTitle = absMonths[m] ? ' title="' + esc(absMonths[m].titles.join('; ')) + '"' : '';
         if (hrs > 0) {
-          html += '<td class="cell-num">' + hrs.toFixed(1) + '</td>';
+          html += '<td class="cell-num' + absCls + '"' + absTitle + '>' + hrs.toFixed(1) + '</td>';
         } else if (!hasPlanHours && activeMonths[m]) {
-          html += '<td class="cell-num"><span class="an-active-mark" title="Период выполнения"></span></td>';
+          html += '<td class="cell-num' + absCls + '"' + absTitle + '><span class="an-active-mark" title="Период выполнения"></span></td>';
         } else {
-          html += '<td class="cell-num"></td>';
+          html += '<td class="cell-num' + absCls + '"' + absTitle + '></td>';
         }
       }
       html += '<td class="cell-num"><strong>' + (rowTotal > 0 ? rowTotal.toFixed(1) : '') + '</strong></td>';
