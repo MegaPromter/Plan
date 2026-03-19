@@ -1,0 +1,177 @@
+/* ══════════════════════════════════════════════════════════════════════
+   analytics.css — Стили модуля «Аналитика» (единая страница)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Макет страницы ──────────────────────────────────────────────────── */
+.an-page { display:flex; flex-direction:column; gap:16px; }
+
+/* ── Панель фильтров (год, месяц, проект, отдел/сектор) ──────────────── */
+.an-toolbar {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:12px 16px; background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; box-shadow:var(--shadow-sm);
+}
+.an-toolbar-label {
+  font-size:12px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:0.05em;
+}
+.an-toolbar-sep {
+  width:1px; height:24px; background:var(--border); margin:0 4px;
+}
+
+/* ── Чипы (год, месяц, отдел, сектор, проект) ───────────────────────── */
+.an-chips { display:flex; gap:4px; flex-wrap:wrap; }
+.an-chip {
+  padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer;
+  border:1px solid transparent; color:var(--text2); transition:all 0.15s;
+  font-family:var(--font); font-weight:500; background:transparent;
+  white-space:nowrap;
+}
+.an-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
+.an-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.an-chip-clear {
+  padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer;
+  color:var(--muted); border:none; background:none; text-decoration:underline;
+  font-family:var(--font);
+}
+.an-chip-clear:hover { color:var(--accent); }
+
+/* ── Хлебные крошки навигации (drill-down) ───────────────────────────── */
+.an-breadcrumb {
+  display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2);
+}
+.an-breadcrumb-link {
+  color:var(--accent); cursor:pointer; text-decoration:none;
+  font-weight:500; transition:color 0.15s;
+}
+.an-breadcrumb-link:hover { text-decoration:underline; }
+.an-breadcrumb-sep { color:var(--muted); }
+
+/* ── Карточки сводки ─────────────────────────────────────────────────── */
+.an-summary {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;
+}
+.an-summary-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:16px; text-align:center; box-shadow:var(--shadow-sm);
+  transition:transform 0.15s, box-shadow 0.15s;
+}
+.an-summary-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.an-summary-val {
+  font-size:28px; font-weight:800; line-height:1;
+  font-variant-numeric:tabular-nums; margin-bottom:4px;
+}
+.an-summary-label {
+  font-size:11px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:0.05em; font-weight:600;
+}
+.an-val-accent { color:var(--accent); }
+.an-val-green { color:#22c55e; }
+.an-val-yellow { color:#f59e0b; }
+.an-val-red { color:var(--danger); }
+
+/* ── Виджеты (графики, таблицы) ──────────────────────────────────────── */
+.an-widgets {
+  display:grid; grid-template-columns:1fr 1fr; gap:16px;
+}
+.an-widget {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:20px; box-shadow:var(--shadow-sm);
+}
+.an-widget-full { grid-column:1 / -1; }
+.an-widget-title {
+  font-size:14px; font-weight:700; color:var(--text); margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}
+.an-widget-title i { color:var(--accent); font-size:15px; }
+
+/* ── График ──────────────────────────────────────────────────────────── */
+.an-chart-wrap { position:relative; height:260px; }
+
+/* ── Таблица загрузки по месяцам ─────────────────────────────────────── */
+.an-months-table { width:100%; border-collapse:collapse; font-size:13px; }
+.an-months-table th {
+  text-align:center; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:6px 4px;
+  border-bottom:2px solid var(--border2); font-weight:600;
+}
+.an-months-table td {
+  padding:6px 4px; text-align:center; border-bottom:1px solid var(--border);
+  font-variant-numeric:tabular-nums;
+}
+.an-months-table .row-label { text-align:left; font-weight:600; color:var(--text); }
+
+/* ── Прогресс-бар загрузки ───────────────────────────────────────────── */
+.an-load-bar {
+  height:6px; border-radius:3px; background:var(--surface2);
+  overflow:hidden; margin-top:4px;
+}
+.an-load-bar-fill {
+  height:100%; border-radius:3px; transition:width 0.3s;
+}
+.an-load-ok .an-load-bar-fill { background:#22c55e; }
+.an-load-warn .an-load-bar-fill { background:#f59e0b; }
+.an-load-over .an-load-bar-fill { background:var(--danger); }
+
+/* ── Таблица сотрудников / секторов / отделов ────────────────────────── */
+.an-list-table { width:100%; border-collapse:collapse; font-size:13px; }
+.an-list-table th {
+  text-align:left; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:8px;
+  border-bottom:2px solid var(--border2); font-weight:600;
+}
+.an-list-table th.cell-num { text-align:right; }
+.an-list-table td {
+  padding:8px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:middle;
+}
+.an-list-table td.cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.an-list-table tbody tr { cursor:pointer; transition:background 0.12s; }
+.an-list-table tbody tr:hover { background:var(--row-hover); }
+
+/* ── Бейдж загрузки (%) ──────────────────────────────────────────────── */
+.an-load-badge {
+  display:inline-block; padding:2px 8px; border-radius:10px;
+  font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
+}
+.an-load-badge.ok { background:rgba(34,197,94,0.12); color:#16a34a; }
+.an-load-badge.warn { background:rgba(245,158,11,0.12); color:#d97706; }
+.an-load-badge.over { background:rgba(239,68,68,0.12); color:var(--danger); }
+
+/* ── Таблица задач сотрудника ────────────────────────────────────────── */
+.an-tasks-table { width:100%; border-collapse:collapse; font-size:13px; }
+.an-tasks-table th {
+  text-align:left; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:6px 8px;
+  border-bottom:2px solid var(--border2); font-weight:600;
+}
+.an-tasks-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); color:var(--text);
+}
+.an-tasks-table td.cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.an-tasks-table tbody tr { transition:background 0.12s; }
+.an-tasks-table tbody tr:hover { background:var(--row-hover); }
+
+/* Бейджи статуса */
+.an-badge-status {
+  padding:2px 10px; border-radius:10px; font-size:12px; font-weight:600;
+  white-space:nowrap;
+}
+.an-badge-inwork { background:rgba(245,158,11,0.12); color:#d97706; }
+.an-badge-done { background:rgba(34,197,94,0.12); color:#16a34a; }
+.an-badge-overdue { background:rgba(239,68,68,0.12); color:var(--danger); }
+
+/* ── Пустое состояние / загрузка ─────────────────────────────────────── */
+.an-empty {
+  text-align:center; padding:48px 20px; color:var(--muted); font-size:14px;
+}
+.an-empty i { font-size:32px; margin-bottom:12px; display:block; color:var(--border2); }
+.an-loading { text-align:center; padding:48px; color:var(--muted); }
+.an-loading i { animation:an-spin 0.7s linear infinite; }
+@keyframes an-spin { to { transform:rotate(360deg); } }
+
+/* ── Адаптив ─────────────────────────────────────────────────────────── */
+@media (max-width:768px) {
+  .an-widgets { grid-template-columns:1fr; }
+  .an-summary { grid-template-columns:repeat(2, 1fr); }
+}

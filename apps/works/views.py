@@ -371,6 +371,17 @@ class AnalyticsPPSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
         return ctx
 
 
+class AnalyticsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """Единая SPA-страница аналитики с иерархическим drill-down."""
+    template_name = 'works/analytics_spa.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        return ctx
+
+
 # ── Демо-страницы (только DEBUG) ────────────────────────────────────────────
 class DemoDensityView(TemplateView):
     """Демо: переключатель плотности таблицы."""

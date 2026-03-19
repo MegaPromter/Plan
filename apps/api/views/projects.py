@@ -39,6 +39,25 @@ logger = logging.getLogger(__name__)
 #  Helpers
 # ---------------------------------------------------------------------------
 
+def _sync_pp_names_on_product_change(product, old_name, old_code):
+    """Обновляет PPProject.name при переименовании изделия.
+
+    Заменяет старое название/код изделия на новое в названии связанных ПП.
+    """
+    pp_plans = PPProject.objects.filter(up_product=product)
+    for pp in pp_plans:
+        new_pp_name = pp.name
+        # Заменяем старое название изделия на новое
+        if old_name and old_name in new_pp_name:
+            new_pp_name = new_pp_name.replace(old_name, product.name)
+        # Заменяем старый код изделия на новый
+        if old_code and old_code in new_pp_name:
+            new_pp_name = new_pp_name.replace(old_code, product.code or '')
+        if new_pp_name != pp.name:
+            pp.name = new_pp_name.strip()
+            pp.save(update_fields=['name'])
+
+
 def _serialize_project(proj, extra=None):
     """Сериализует Project (УП) в dict для JSON-ответа."""
     d = {
@@ -267,12 +286,18 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
             code = (d.get('code') or '').strip()
             if not name:
                 return JsonResponse({'error': 'Наименование обязательно'}, status=400)
+            # Запоминаем старое название для синхронизации ПП
+            old_name = prod.name
+            old_code = prod.code
             # Обновляем поля изделия
             prod.name = name
             prod.name_short = name_short  # краткое наименование
             prod.code = code
             # Сохраняем только изменённые поля
             prod.save(update_fields=['name', 'name_short', 'code'])
+            # Синхронизируем название связанных ПП (PPProject)
+            if old_name != name or old_code != code:
+                _sync_pp_names_on_product_change(prod, old_name, old_code)
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error('ProjectProductDetailView.put: %s', e, exc_info=True)

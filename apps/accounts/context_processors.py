@@ -16,6 +16,7 @@ def active_nav(request):
         ('/works/analytics-workload/', 'analytics_workload'),
         ('/works/analytics-employee/', 'analytics_employee'),
         ('/works/analytics-pp/', 'analytics_pp'),
+        ('/works/analytics/', 'analytics'),
         ('/works/audit-log/', 'audit_log'),
         ('/employees/vacations/', 'vacation_plan'),
         ('/employees/', 'employees'),

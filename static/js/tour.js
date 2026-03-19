@@ -875,14 +875,7 @@
       syncToServer(s);
       clearTourUI();
     };
-    backdrop.addEventListener('click', function(e) {
-      if (e.target === backdrop) {
-        var s = { step: 0, completed: true, skipped: true, version: 2 };
-        setState(s);
-        syncToServer(s);
-        clearTourUI();
-      }
-    });
+    // Клик по фону НЕ закрывает тур — только кнопки
 
     function escHandler(e) {
       if (e.key === 'Escape') {
@@ -916,9 +909,7 @@
     document.getElementById('tourDoneBtn').onclick = function() {
       clearTourUI();
     };
-    backdrop.addEventListener('click', function(e) {
-      if (e.target === backdrop) clearTourUI();
-    });
+    // Клик по фону НЕ закрывает тур — только кнопки
   }
 
   /* ═══════════════════════════════════════════════════════════════════════

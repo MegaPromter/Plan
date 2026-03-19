@@ -29,6 +29,8 @@ urlpatterns = [
     path('analytics-employee/', views.AnalyticsEmployeeSPAView.as_view(), name='analytics_employee'),
     # Аналитика: отчёты ПП
     path('analytics-pp/', views.AnalyticsPPSPAView.as_view(), name='analytics_pp'),
+    # Аналитика: единая страница (новая)
+    path('analytics/', views.AnalyticsSPAView.as_view(), name='analytics'),
 
     # ── Стандартные CRUD-маршруты для работ ────────────────────────────────────
 

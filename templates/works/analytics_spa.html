@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static employee_tags %}
+{% block title %}Аналитика — Система управления{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=1">
+{% endblock %}
+
+{% block breadcrumb %}
+<span>/</span>
+<span class="breadcrumb-current">Аналитика</span>
+{% endblock %}
+
+{% block content %}
+<div class="an-page">
+  <!-- Хлебные крошки drill-down -->
+  <div class="an-breadcrumb" id="anBreadcrumb"></div>
+
+  <!-- Тулбар фильтров -->
+  <div class="an-toolbar" id="anToolbar">
+    <div class="an-loading"><i class="fas fa-spinner"></i></div>
+  </div>
+
+  <!-- Основной контент -->
+  <div id="anContent">
+    <div class="an-loading"><i class="fas fa-spinner"></i> Загрузка...</div>
+  </div>
+</div>
+
+<script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
+<script id="an-config" type="application/json">{
+  "currentYear": {{ current_year }},
+  "role": "{{ role }}",
+  "deptCode": "{{ user_dept }}"
+}</script>
+<script src="{% static 'js/analytics.js' %}?v=1"></script>
+{% endblock %}

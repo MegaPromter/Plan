@@ -50,18 +50,9 @@
 
     <!-- 5. Аналитика -->
     <div class="nav-section">
-      <div class="nav-section-title">5. Аналитика</div>
-      <a href="{% url 'works:analytics_workload' %}" class="nav-item{% if active_nav == 'analytics_workload' %} active{% endif %}">
+      <a href="{% url 'works:analytics' %}" class="nav-item nav-section-btn{% if active_nav == 'analytics' %} active{% endif %}">
         <i class="fas fa-chart-bar"></i>
-        <span>Доска руководителя</span>
-      </a>
-      <a href="{% url 'works:analytics_employee' %}" class="nav-item{% if active_nav == 'analytics_employee' %} active{% endif %}">
-        <i class="fas fa-id-badge"></i>
-        <span>Доска сотрудника</span>
-      </a>
-      <a href="{% url 'works:analytics_pp' %}" class="nav-item{% if active_nav == 'analytics_pp' %} active{% endif %}">
-        <i class="fas fa-file-alt"></i>
-        <span>Отчёты ПП</span>
+        <span>5. Аналитика</span>
       </a>
     </div>
 
