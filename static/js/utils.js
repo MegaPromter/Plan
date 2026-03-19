@@ -274,8 +274,39 @@ function taskTypeBadgeHtml(taskType, opts) {
     var info = map[taskType];
     if (!info) return '<span class="task-type-badge">' + escapeHtml(taskType) + '</span>';
     var text = (opts && opts.short) ? info.short : taskType;
-    return '<span class="task-type-badge ' + info.cls + '" title="' + escapeHtml(taskType) + '">' + escapeHtml(text) + '</span>';
+    return '<span class="task-type-badge ' + info.cls + '" data-full="' + escapeHtml(taskType) + '">' + escapeHtml(text) + '</span>';
 }
+
+/* Тултип для бейджей task-type-badge (event delegation, position:fixed) */
+(function() {
+    var tip = null;
+    function show(badge) {
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.className = 'tt-tip';
+            document.body.appendChild(tip);
+        }
+        tip.textContent = badge.getAttribute('data-full');
+        // Цвет фона = color бейджа
+        tip.style.background = getComputedStyle(badge).color;
+        var r = badge.getBoundingClientRect();
+        tip.style.left = (r.right + 6) + 'px';
+        tip.style.top = (r.top + r.height / 2) + 'px';
+        tip.style.transform = 'translateY(-50%)';
+        tip.classList.add('visible');
+    }
+    function hide() {
+        if (tip) tip.classList.remove('visible');
+    }
+    document.addEventListener('mouseenter', function(e) {
+        var b = e.target.closest && e.target.closest('.task-type-badge[data-full]');
+        if (b) show(b);
+    }, true);
+    document.addEventListener('mouseleave', function(e) {
+        var b = e.target.closest && e.target.closest('.task-type-badge[data-full]');
+        if (b) hide();
+    }, true);
+})();
 
 /* ══════════════════════════════════════════════════════════════════════════
    Sticky Horizontal Scrollbar + Drag-to-Scroll

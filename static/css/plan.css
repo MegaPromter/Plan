@@ -101,10 +101,10 @@ thead tr.filter-row th   { top: 0; z-index: 10; }
 .th-num { background:color-mix(in srgb, var(--th-bg), var(--border2) 30%); min-width:40px; width:40px; }
 
 /* ── Ручка изменения ширины колонки ───────────────────────────────────── */
-.col-resize { width:10px; cursor:col-resize; flex-shrink:0;
+.col-resize { width:16px; cursor:col-resize; flex-shrink:0;
   border-right:2px solid transparent; transition:border-color 0.15s;
-  position:absolute; right:-5px; top:0; bottom:0; z-index:20; }
-.col-resize:hover { border-color:var(--accent); }
+  position:absolute; right:-8px; top:0; bottom:0; z-index:20; }
+.col-resize:hover { border-color:var(--accent); background:rgba(37,99,235,0.06); }
 
 /* ── Строки тела таблицы ──────────────────────────────────────────────── */
 tbody tr { border-bottom:1px solid var(--border2); transition:background 0.12s; }

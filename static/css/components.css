@@ -737,6 +737,21 @@
   font-size:11px; font-weight:600; letter-spacing:0.02em;
   white-space:nowrap; cursor:default; vertical-align:middle;
 }
+/* Тултип — JS-generated .tt-tip (fixed, справа от бейджа, в цвете бейджа) */
+.tt-tip {
+  position: fixed;
+  z-index: 10000;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: #fff;
+}
+.tt-tip.visible { opacity: 0.9; }
 .task-type-badge.tt-выпуск    { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
 .task-type-badge.tt-корректировка { background:#fff3e0; color:#e65100; border:1px solid #ffcc80; }
 .task-type-badge.tt-разработка { background:#e8eaf6; color:#283593; border:1px solid #9fa8da; }
