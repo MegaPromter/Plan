@@ -462,6 +462,8 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                 )
 
             with transaction.atomic():
+                # Блокируем строку для предотвращения гонки при параллельных запросах
+                work = Work.objects.select_for_update().get(pk=pk)
                 changes = {'date_start': latest_start.isoformat()}
                 if work.date_start and work.date_end:
                     duration = (work.date_end - work.date_start).days
@@ -524,6 +526,8 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                     earliest = candidate
 
             if earliest and succ.date_start != earliest:
+                # Блокируем строку для предотвращения гонки
+                succ = Work.objects.select_for_update().get(pk=succ.pk)
                 if succ.date_start and succ.date_end:
                     duration = (succ.date_end - succ.date_start).days
                     succ.date_end = earliest + timedelta(days=duration)

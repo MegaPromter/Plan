@@ -377,12 +377,15 @@ class TaskDependency(models.Model):
         db_table = 'work_task_dependency'
         verbose_name = 'Зависимость задач'
         verbose_name_plural = 'Зависимости задач'
-        unique_together = [('predecessor', 'successor')]
         indexes = [
             models.Index(fields=['predecessor']),
             models.Index(fields=['successor']),
         ]
         constraints = [
+            models.UniqueConstraint(
+                fields=['predecessor', 'successor'],
+                name='work_task_dependency_pred_succ_uniq',
+            ),
             models.CheckConstraint(
                 check=~models.Q(predecessor=models.F('successor')),
                 name='dep_no_self_link',
@@ -574,8 +577,13 @@ class WorkCalendar(models.Model):
         db_table         = 'work_calendar'
         verbose_name     = 'Норма рабочих часов'
         verbose_name_plural = 'Производственный календарь'
-        unique_together  = [('year', 'month')]
         ordering         = ['-year', 'month']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['year', 'month'],
+                name='work_calendar_year_month_uniq',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.year}-{self.month:02d}: {self.hours_norm}ч'

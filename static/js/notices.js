@@ -56,7 +56,7 @@ function _initJiDensity() {
       toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
       fetch('/api/col_settings/', {
         method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || ''},
+        headers: {'Content-Type':'application/json','X-CSRFToken': getCsrf()},
         body: JSON.stringify({ density: d })
       }).catch(function() {});
     });
@@ -326,14 +326,22 @@ function _fillModal(n) {
   _updateExpiresDisabled();
 }
 
+let _savedDateExpires = '';
 function _updateExpiresDisabled() {
   const iipi = document.getElementById('mf_ii_pi').value;
   const exp = document.getElementById('mf_date_expires');
-  exp.disabled = (iipi === 'ИИ');
-  if (iipi === 'ИИ') exp.value = '';
+  if (iipi === 'ИИ') {
+    if (exp.value) _savedDateExpires = exp.value;
+    exp.disabled = true;
+    exp.value = '';
+  } else {
+    exp.disabled = false;
+    if (!exp.value && _savedDateExpires) exp.value = _savedDateExpires;
+  }
 }
 
-document.getElementById('mf_ii_pi').addEventListener('change', _updateExpiresDisabled);
+const _mfIiPiEl = document.getElementById('mf_ii_pi');
+if (_mfIiPiEl) _mfIiPiEl.addEventListener('change', _updateExpiresDisabled);
 
 function openAddModal() {
   editingId = null;
@@ -513,8 +521,9 @@ async function deleteRow(id) {
       headers: {'X-CSRFToken': getCsrf()},
     });
     if (r.ok) {
-      jiData = jiData.filter(n => n.id !== id);
+      jiData = jiData.filter(x => x.id !== id);
       renderTable();
+      showToast('Запись удалена', 'success');
     } else {
       let d = {};
       try { d = await r.json(); } catch(_) {}

@@ -225,11 +225,37 @@ tr.pp-locked .cell-select:disabled {
   appearance: none; -webkit-appearance: none;
 }
 tr.pp-locked .pp-lock-badge {
-  font-size: 14px; color: var(--accent); opacity: 0.9;
+  font-size: 14px; color: #6b7280; opacity: 0.9;
   display: block; text-align: center; line-height: 1.2;
   margin-top: 4px; letter-spacing: 0.02em; cursor: default; font-weight: 600;
 }
-/* pp-tooltip удалён — используется нативный title */
+/* pp-tooltip — JS-тултип в стиле бейджа ПП (position:fixed, не обрезается overflow) */
+.pp-tooltip-float {
+  position: fixed;
+  z-index: 99999;
+  background: rgba(75, 85, 99, 0.25);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pp-tooltip-float.visible { opacity: 1; }
+.pp-tooltip-float::before {
+  content: '';
+  position: absolute;
+  left: -9px; top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: rgba(75, 85, 99, 0.25);
+}
 .pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
   border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
 .pp-edit-hint b { color:var(--accent); }

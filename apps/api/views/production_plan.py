@@ -243,6 +243,11 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 work.row_code = generate_row_code(up_project)
                 if work.row_code:
                     work.save(update_fields=['row_code'])
+                else:
+                    logger.warning(
+                        "row_code не сгенерирован для work=%s, project=%s",
+                        work.pk, up_project.pk,
+                    )
 
             # Применяем остальные поля без промежуточных save()
             detail_view = ProductionPlanDetailView()

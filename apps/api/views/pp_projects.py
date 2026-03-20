@@ -75,7 +75,9 @@ class PPProjectListView(LoginRequiredJsonMixin, View):
                 for p in projects
             ]
             # Возвращаем JSON-список (safe=False разрешает сериализацию списков)
-            return JsonResponse(result, safe=False)
+            resp = JsonResponse(result, safe=False)
+            resp['X-Total-Count'] = len(result)
+            return resp
         except Exception as e:
             # Логируем ошибку с полным трейсбеком
             logger.error("PPProjectListView.get error: %s", e, exc_info=True)

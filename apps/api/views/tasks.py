@@ -729,12 +729,15 @@ def _set_work_fk_fields(work, d, request):
                     sector, work.department.code,
                 )
         else:
-            # Попытка без привязки к отделу — ищем по коду
-            sec_obj = Sector.objects.filter(code=sector).first()
-            if sec_obj:
-                work.sector = sec_obj
+            # Без отдела — ищем по коду, но только если результат однозначный
+            candidates = Sector.objects.filter(code=sector)
+            if candidates.count() == 1:
+                work.sector = candidates.first()
             else:
-                logger.warning("Сектор '%s' не найден (отдел не задан)", sector)
+                logger.warning(
+                    "Сектор '%s' не привязан: отдел не задан, найдено %d совпадений",
+                    sector, candidates.count(),
+                )
 
     # project — УП-проект по названию
     project = d.get('project', '')

@@ -64,10 +64,15 @@ class Sector(models.Model):
         db_table     = 'emp_sector'
         verbose_name = 'Сектор'
         verbose_name_plural = 'Секторы'
-        # Пара (отдел, код) должна быть уникальной — код уникален внутри отдела
-        unique_together = [('department', 'code')]
         # Сортировка: сначала по отделу, затем по коду сектора
         ordering = ['department', 'code']
+        # Пара (отдел, код) должна быть уникальной — код уникален внутри отдела
+        constraints = [
+            models.UniqueConstraint(
+                fields=['department', 'code'],
+                name='emp_sector_dept_code_uniq',
+            ),
+        ]
 
     def __str__(self):
         # Строковое представление: «код отдела / код сектора»
@@ -481,10 +486,15 @@ class KPI(models.Model):
         db_table     = 'emp_kpi'
         verbose_name = 'KPI'
         verbose_name_plural = 'KPI'
-        # На одного сотрудника — одна запись за год+месяц
-        unique_together = [('employee', 'year', 'month')]
         # Сортировка: последние периоды первыми, внутри периода — по сотруднику
         ordering = ['-year', '-month', 'employee']
+        # На одного сотрудника — одна запись за год+месяц
+        constraints = [
+            models.UniqueConstraint(
+                fields=['employee', 'year', 'month'],
+                name='emp_kpi_employee_year_month_uniq',
+            ),
+        ]
 
     def __str__(self):
         # Строковое представление: «Фамилия И.О. — YYYY/MM»

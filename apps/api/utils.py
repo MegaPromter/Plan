@@ -543,11 +543,13 @@ def mcc_finish_data():
 # ── JSON-сериализация моделей ────────────────────────────────────────────────
 
 class DecimalEncoder(json.JSONEncoder):
-    """JSON-энкодер, обрабатывающий Decimal."""
+    """JSON-энкодер, обрабатывающий Decimal с сохранением точности."""
     def default(self, obj):
         if isinstance(obj, Decimal):
-            # Конвертируем Decimal в float для JSON-сериализации
-            return float(obj)
+            # int если целое, иначе float с ограниченной точностью
+            if obj == obj.to_integral_value():
+                return int(obj)
+            return round(float(obj), 10)
         if isinstance(obj, date):
             # Конвертируем date в строку ISO 8601 ('YYYY-MM-DD')
             return obj.isoformat()

@@ -741,7 +741,7 @@ function renderPPTable() {
 
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="19">
+    tbody.innerHTML = `<tr><td colspan="20">
       <div class="empty-state">
         <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
         <div class="empty-state-title">Нет записей</div>
@@ -1037,7 +1037,7 @@ async function handleCellChange(e) {
 
   // Автоматический пересчёт трудоёмкости при изменении листов/норматива/коэффициента
   if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
-    setTimeout(async () => { try {
+    try {
       const tr = input.closest('tr');
       let sheets = null, norm = null, coeff = null;
       // Читаем актуальные значения из DOM
@@ -1072,7 +1072,6 @@ async function handleCellChange(e) {
         cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
       }
     } catch (e) { console.error('Ошибка пересчёта трудоёмкости:', e); }
-    }, 50);
   }
 }
 
@@ -1212,11 +1211,19 @@ function openAddRowModal() {
     const saveBtn = document.getElementById('ppNewRowSave');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
 
+    let resp;
+    try {
     // POST /api/production_plan/create/
-    const resp = await fetchJson('/api/production_plan/create/', {
+    resp = await fetchJson('/api/production_plan/create/', {
       method: 'POST',
       body: JSON.stringify(body),
     });
+    } catch (e) {
+      console.error('Ошибка сохранения строки:', e);
+      showToast('Ошибка сети', 'error');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+      return;
+    }
 
     if (!resp._error) {
       _addingRow = false;
@@ -1256,6 +1263,7 @@ function openAddRowModal() {
       const newTr = document.querySelector(`#ppTableBody tr[data-id="${newId}"]`);
       if (newTr) newTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
+      showToast(resp.error || 'Ошибка сохранения строки', 'error');
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
     }
   }
@@ -1769,9 +1777,22 @@ function applyMfFilter(col, btn) {
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
   // Синхронизируем панель периода если изменён date_end-фильтр через дропдаун
   if (col === 'date_end') {
-    // Сбрасываем чипы периода — дропдаун теперь управляет
     ppSelectedMonth = null;
     document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+    // Если выбран один месяц — подсветить в панели периода
+    if (sel.size === 1) {
+      const val = [...sel][0];
+      const parts = val.split('-');
+      if (parts.length === 2) {
+        ppSelectedYear = parseInt(parts[0]) || ppSelectedYear;
+        ppSelectedMonth = parseInt(parts[1]) || null;
+        document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
+        if (ppSelectedMonth) {
+          const mEl = document.querySelector(`.pp-cal-month[data-m="${ppSelectedMonth}"]`);
+          if (mEl) mEl.classList.add('active');
+        }
+      }
+    }
   }
   // Синхронизируем чипы отделов если изменён dept-фильтр через дропдаун
   if (col === 'dept') {
@@ -1999,7 +2020,7 @@ function _ppHighlightDepsItem(items) {
 }
 
 (function initPPDepsDropdown() {
-  document.addEventListener('DOMContentLoaded', () => {
+  function _init() {
     const input = document.getElementById('ppDepsAddPredInput');
     const list = document.getElementById('ppDepsAddPredList');
     const hidden = document.getElementById('ppDepsAddPredSelect');
@@ -2027,7 +2048,12 @@ function _ppHighlightDepsItem(items) {
     document.addEventListener('click', e => {
       if (!e.target.closest('#ppDepsAddPredDropdown')) list.classList.remove('open');
     });
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init();
+  }
 })();
 
 /* ── Searchable successor dropdown (PP) ──────────────────── */
@@ -2070,7 +2096,7 @@ function _ppHighlightSuccItem(items) {
 }
 
 (function initPPSuccDropdown() {
-  document.addEventListener('DOMContentLoaded', () => {
+  function _init() {
     const input = document.getElementById('ppDepsAddSuccInput');
     const list = document.getElementById('ppDepsAddSuccList');
     const hidden = document.getElementById('ppDepsAddSuccSelect');
@@ -2098,7 +2124,12 @@ function _ppHighlightSuccItem(items) {
     document.addEventListener('click', e => {
       if (!e.target.closest('#ppDepsAddSuccDropdown')) list.classList.remove('open');
     });
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init();
+  }
 })();
 
 async function ppAddSuccessor() {

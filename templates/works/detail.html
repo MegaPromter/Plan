@@ -75,11 +75,10 @@
   </div>
 
   <!-- Детали задачи (для работ в плане) -->
-  {% if object.show_in_plan and object.stage or object.justification %}
+  {% if object.show_in_plan and object.justification %}
   <div class="section">
     <div class="section-header"><h2 class="section-title">Детали задачи (ПО)</h2></div>
     <table class="info-table">
-      <tr><th>Этап</th><td>{{ object.stage|default:"—" }}</td></tr>
       <tr><th>Обоснование</th><td>{{ object.justification|default:"—" }}</td></tr>
     </table>
   </div>

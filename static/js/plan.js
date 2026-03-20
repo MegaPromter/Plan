@@ -67,7 +67,8 @@ function _spGetStatus(t) {
   if (t.has_reports) return 'done';
   // is_overdue уже приходит из API, но проверим и вручную
   const dl = t.deadline || t.date_end || '';
-  if (dl && dl.slice(0,10) < new Date().toISOString().slice(0,10)) return 'overdue';
+  const _today = new Date(); const _todayStr = _today.getFullYear() + '-' + String(_today.getMonth()+1).padStart(2,'0') + '-' + String(_today.getDate()).padStart(2,'0');
+  if (dl && dl.slice(0,10) < _todayStr) return 'overdue';
   return 'inwork';
 }
 
@@ -113,6 +114,46 @@ function _spSkeletonRows(count, cols) {
   }
   return html;
 }
+
+/* ── Тултип для бейджа ПП (position:fixed, не обрезается overflow) ── */
+const _ppTip = (() => {
+  let el = null;
+  function ensure() {
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'pp-tooltip-float';
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  document.addEventListener('mouseover', e => {
+    const badge = e.target.closest('.pp-lock-badge');
+    if (!badge || !badge.dataset.tooltip) return;
+    const tip = ensure();
+    tip.textContent = badge.dataset.tooltip;
+    // Позиционируем за экраном для замера размеров
+    tip.style.left = '-9999px'; tip.style.top = '0';
+    tip.classList.add('visible');
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    const r = badge.getBoundingClientRect();
+    // Справа от бейджа, вертикально по центру
+    let left = r.right + 8;
+    let top = r.top + r.height / 2 - th / 2;
+    // Не дать выйти за правый край — тогда слева; если и слева не влезает — прижать к левому краю
+    if (left + tw > window.innerWidth - 8) left = r.left - tw - 8;
+    if (left < 8) left = 8;
+    if (top < 8) top = 8;
+    if (top + th > window.innerHeight - 8) top = window.innerHeight - th - 8;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    const badge = e.target.closest('.pp-lock-badge');
+    if (!badge) return;
+    if (el) el.classList.remove('visible');
+  });
+})();
 
 /* ── Переключатель плотности ───────────────────────────────────────── */
 function _initDensity() {
@@ -278,8 +319,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   const si = document.getElementById("searchInput");
   si.value = "";
-  setTimeout(() => { si.value = ""; }, 50);
-  setTimeout(() => { si.value = ""; }, 200);
   _initDensity();
   _syncToolbarHeight();
   window.addEventListener('resize', _syncToolbarHeight);
@@ -1348,7 +1387,7 @@ function makeRow(t, num) {
   if (isFromPP) {
     const lockBadge = document.createElement("span");
     lockBadge.className = "pp-lock-badge";
-    lockBadge.title = "Перенесено из ПП — редактирование заблокировано";
+    lockBadge.dataset.tooltip = "Перенесено из ПП — редактирование заблокировано";
     lockBadge.textContent = "🔒 пп";
     numTd.appendChild(lockBadge);
   }
@@ -1642,11 +1681,9 @@ function makeRow(t, num) {
               return;
             }
           }
-          // Обновляем ячейку плановых часов
-          updatePlanHoursCell(tr, t);
         }
         // Автосохранение задачи на сервер
-        saveTask(t.id, tr);
+        await saveTask(t.id, tr);
       });
       td.appendChild(inp);
     }
@@ -1693,8 +1730,6 @@ function makeRow(t, num) {
   return tr;
 }
 
-// Заглушка обновления ячейки часов — данные обновляются при следующем loadTasks
-function updatePlanHoursCell(tr, t) { /* placeholder — server returns updated data on next loadTasks */ }
 
 // Заполняет <select> вариантами из справочника dirs[dirKey]
 // parentVal/parentDirKey — фильтрация дочерних записей по родительскому значению
@@ -1762,7 +1797,7 @@ function getRowData(tr) {
   const badge = tr.querySelector(".type-badge");
   if (badge) data.task_type = badge.textContent;
   const phInp = tr.querySelector("input[data-field='plan_hours']");
-  if (phInp && selectedMonth) {
+  if (phInp && selectedMonth != null) {
     const key = `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`;
     data.plan_hours_update = {};
     data.plan_hours_update[key] = parseFloat(phInp.value) || 0;
@@ -2538,18 +2573,23 @@ async function submitNewTask() {
 
 // ── DIRS ──────────────────────────────────────────────────────────────────
 async function loadDirs() {
-  const res = await fetch("/api/directories/");
-  const raw = await res.json();
-  dirs = {};
-  for (const [type, items] of Object.entries(raw)) {
-    dirs[type] = Array.isArray(items) ? items.map(i => i.value) : [];
-    dirs[`_ids_${type}`] = items;
-  }
-  // Алиас: API возвращает секторы под ключом 'sector';
-  // для совместимости с логикой фильтрации также пишем в 'sector_head'
-  if (raw.sector) {
-    dirs['sector_head'] = dirs['sector'];
-    dirs['_ids_sector_head'] = dirs['_ids_sector'];
+  try {
+    const res = await fetch("/api/directories/");
+    if (!res.ok) { console.error("loadDirs HTTP", res.status); return; }
+    const raw = await res.json();
+    dirs = {};
+    for (const [type, items] of Object.entries(raw)) {
+      dirs[type] = Array.isArray(items) ? items.map(i => i.value) : [];
+      dirs[`_ids_${type}`] = items;
+    }
+    // Алиас: API возвращает секторы под ключом 'sector';
+    // для совместимости с логикой фильтрации также пишем в 'sector_head'
+    if (raw.sector) {
+      dirs['sector_head'] = dirs['sector'];
+      dirs['_ids_sector_head'] = dirs['_ids_sector'];
+    }
+  } catch (e) {
+    console.error("loadDirs error:", e);
   }
 }
 

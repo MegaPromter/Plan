@@ -145,7 +145,15 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
 
         # Права: is_writer может смотреть любого (в пределах visibility), user — только себя
         if emp and emp.is_writer and executor_id:
+            # Проверяем что целевой сотрудник виден текущему пользователю
+            vis_q = get_visibility_filter(request.user)
+            visible_depts = set(
+                Work.objects.filter(vis_q).values_list('department_id', flat=True).distinct()
+            )
             target_emp = Employee.objects.filter(pk=executor_id).select_related('department').first()
+            if target_emp and target_emp.department_id and target_emp.department_id not in visible_depts:
+                target_emp = emp  # Нет доступа — показываем данные текущего пользователя
+                executor_id = target_emp.pk if target_emp else None
         else:
             target_emp = emp
             if target_emp:

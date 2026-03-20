@@ -415,3 +415,8 @@ class DemoPPFilterView(TemplateView):
     def get_template_names(self):
         n = self.kwargs.get('num', 1)
         return [f'works/demo_pp_filter_{n}.html']
+
+
+class ERDiagramView(TemplateView):
+    """ER-диаграмма моделей приложения (standalone, без base.html)."""
+    template_name = 'works/er_diagram.html'
