@@ -3,7 +3,7 @@
 {% block title %}Аналитика — Система управления{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=2">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -17,8 +17,8 @@
   <div class="an-breadcrumb" id="anBreadcrumb"></div>
 
   <!-- Тулбар фильтров -->
-  <div class="an-toolbar" id="anToolbar">
-    <div class="an-loading"><i class="fas fa-spinner"></i></div>
+  <div class="an-toolbar-row" id="anToolbar">
+    <div class="an-toolbar-panel"><div class="an-loading"><i class="fas fa-spinner"></i></div></div>
   </div>
 
   <!-- Основной контент -->
@@ -30,8 +30,8 @@
 <script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
 <script id="an-config" type="application/json">{
   "currentYear": {{ current_year }},
-  "role": "{{ role }}",
-  "deptCode": "{{ user_dept }}"
+  "role": "{{ role|escapejs }}",
+  "deptCode": "{{ user_dept|escapejs }}"
 }</script>
-<script src="{% static 'js/analytics.js' %}?v=1"></script>
+<script src="{% static 'js/analytics.js' %}?v=2"></script>
 {% endblock %}

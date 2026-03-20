@@ -60,7 +60,12 @@ def _get_absences(employee_id, years):
         'sick': 'Больничный',
         'other': 'Прочее',
     }
-    for v in Vacation.objects.filter(employee_id=employee_id, date_start__year__in=years):
+    # Захватываем отсутствия, которые пересекаются с любым из выбранных годов
+    # (включая те, что начались в предыдущем году, но заканчиваются в выбранном)
+    year_q = Q()
+    for y in years:
+        year_q |= Q(date_start__year=y) | Q(date_end__year=y)
+    for v in Vacation.objects.filter(year_q, employee_id=employee_id):
         absences.append({
             'type': 'vacation',
             'label': vac_type_map.get(v.vac_type, 'Отпуск'),
@@ -68,8 +73,11 @@ def _get_absences(employee_id, years):
             'date_end': v.date_end.isoformat(),
         })
     trip_status_ok = (BusinessTrip.STATUS_PLAN, BusinessTrip.STATUS_ACTIVE, BusinessTrip.STATUS_DONE)
+    trip_year_q = Q()
+    for y in years:
+        trip_year_q |= Q(date_start__year=y) | Q(date_end__year=y)
     for bt in BusinessTrip.objects.filter(
-        employee_id=employee_id, date_start__year__in=years, status__in=trip_status_ok,
+        trip_year_q, employee_id=employee_id, status__in=trip_status_ok,
     ):
         absences.append({
             'type': 'trip',
@@ -89,6 +97,8 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
     """
     tasks = []
     monthly_hours = defaultdict(float)  # {(year, month): hours}
+    years_set = set(years)
+    months_filter_set = set(months_filter) if months_filter else None
 
     for w in works:
         ph = {}
@@ -107,8 +117,8 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
             try:
                 y_str, m_str = k.split('-')
                 y_int, m_int = int(y_str), int(m_str)
-                if y_int in years:
-                    if not months_filter or m_int in months_filter:
+                if y_int in years_set:
+                    if not months_filter_set or m_int in months_filter_set:
                         monthly_hours[(y_int, m_int)] += float(v) if v else 0
             except (ValueError, TypeError):
                 pass
@@ -178,7 +188,6 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         # ── Параметры (все мульти-выбор) ──
         years = _int_list_param(request, 'years') or [today.year]
         months_filter = _int_list_param(request, 'months')
-        months_set = set(months_filter)
         project_ids = _int_list_param(request, 'project_ids')
         product_ids = _int_list_param(request, 'product_ids')
         dept_codes = _str_list_param(request, 'dept_codes')
@@ -198,13 +207,16 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             .select_related('department', 'sector', 'executor', 'project')
         )
 
-        # Фильтр по годам
-        year_q = Q()
+        # Фильтр по годам: включаем работы с датами в выбранных годах
+        # и работы без дат (у них могут быть plan_hours для нужного года)
+        year_q = Q(date_start__isnull=True, date_end__isnull=True)
         for y in years:
             year_q |= (
                 Q(date_start__year__lte=y, date_end__year__gte=y)
                 | Q(date_start__year=y)
                 | Q(date_end__year=y)
+                | Q(date_start__isnull=True, date_end__year__gte=y)
+                | Q(date_end__isnull=True, date_start__year__lte=y)
             )
         base = base.filter(year_q)
 
@@ -478,6 +490,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
     def _collect_employees_for_works(self, works, sector_id=None):
         employees = {}
+        seen = set()  # (employee_id, work_id) — избегаем O(n) проверки `in list`
         for w in works:
             if w.executor_id:
                 e = w.executor
@@ -486,7 +499,10 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                 elif e:
                     if e.pk not in employees:
                         employees[e.pk] = {'name': e.short_name, 'works': []}
-                    employees[e.pk]['works'].append(w)
+                    pair = (e.pk, w.pk)
+                    if pair not in seen:
+                        seen.add(pair)
+                        employees[e.pk]['works'].append(w)
 
             for te in getattr(w, '_prefetched_executors', []):
                 if te.executor_id:
@@ -496,7 +512,9 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                     if e:
                         if e.pk not in employees:
                             employees[e.pk] = {'name': e.short_name, 'works': []}
-                        if w not in employees[e.pk]['works']:
+                        pair = (e.pk, w.pk)
+                        if pair not in seen:
+                            seen.add(pair)
                             employees[e.pk]['works'].append(w)
         return employees
 
@@ -553,12 +571,16 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         nav['nav_projects'] = [
             {'id': p.pk, 'name': p.name}
-            for p in Project.objects.all().order_by('name_short', 'name_full')
+            for p in Project.objects.only(
+                'pk', 'name_short', 'name_full'
+            ).order_by('name_short', 'name_full')
         ]
         nav['nav_products'] = [
             {'id': pp.pk, 'name': pp.name_short or pp.name,
              'project_id': pp.project_id}
-            for pp in ProjectProduct.objects.select_related('project').order_by('name')
+            for pp in ProjectProduct.objects.only(
+                'pk', 'name', 'name_short', 'project_id'
+            ).order_by('name')
         ]
 
         base_year = years[0] if years else timezone.now().date().year

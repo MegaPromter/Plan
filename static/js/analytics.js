@@ -102,13 +102,18 @@ function loadData() {
   })
   .then(function(data) {
     if (data.error) {
-      el.innerHTML = '<div class="an-empty"><i class="fas fa-exclamation-triangle"></i>' + esc(data.error) + '</div>';
+      el.innerHTML = '<div class="an-empty"><i class="fas fa-exclamation-triangle"></i> ' + esc(data.error) + '</div>';
       return;
     }
     lastData = data;
-    renderToolbar(data);
-    renderBreadcrumb(data);
-    renderContent(data);
+    try {
+      renderToolbar(data);
+      renderBreadcrumb(data);
+      renderContent(data);
+    } catch (renderErr) {
+      console.error('Analytics render error:', renderErr);
+      el.innerHTML = '<div class="an-empty"><i class="fas fa-exclamation-triangle"></i> Ошибка отображения данных</div>';
+    }
   })
   .catch(function(e) {
     console.error('Analytics error:', e);
@@ -124,7 +129,7 @@ window.anToggleMonth = function(m) { toggle(currentMonths, m); loadData(); };
 window.anClearMonths = function() { currentMonths = {}; loadData(); };
 
 window.anToggleProject = function(id) { toggle(currentProjectIds, id); _pruneProducts(); loadData(); };
-window.anClearProjects = function() { currentProjectIds = {}; loadData(); };
+window.anClearProjects = function() { currentProjectIds = {}; currentProductIds = {}; loadData(); };
 
 window.anToggleProduct = function(id) { toggle(currentProductIds, id); loadData(); };
 window.anClearProducts = function() { currentProductIds = {}; loadData(); };
@@ -506,17 +511,17 @@ function renderEmployee(el, data) {
       var statusCls = 'an-badge-status an-badge-' + t.status;
       var statusText = t.status === 'done' ? 'Готово' : (t.status === 'overdue' ? 'Просроч.' : 'В работе');
 
-      // Активные месяцы по date_start/date_end
+      // Активные месяцы по date_start/date_end (нужна хотя бы date_start)
       var activeMonths = {};
-      if (t.date_start || t.date_end) {
+      if (t.date_start) {
         selYears.forEach(function(y) {
           var yInt = parseInt(y);
-          var ds = t.date_start ? new Date(t.date_start) : null;
+          var ds = new Date(t.date_start);
           var de = t.date_end ? new Date(t.date_end) : null;
           for (var mm = 1; mm <= 12; mm++) {
             var mStart = new Date(yInt, mm - 1, 1);
             var mEnd = new Date(yInt, mm, 0);
-            if ((!ds || mEnd >= ds) && (!de || mStart <= de)) activeMonths[mm] = true;
+            if (mEnd >= ds && (!de || mStart <= de)) activeMonths[mm] = true;
           }
         });
       }
@@ -543,8 +548,9 @@ function renderEmployee(el, data) {
           if (t.plan_hours && t.plan_hours[key]) hrs += parseFloat(t.plan_hours[key]);
         });
         rowTotal += hrs;
-        var absCls = absMonths[m] ? (absMonths[m].vac ? ' an-cell-vac' : ' an-cell-trip') : '';
-        var absTitle = absMonths[m] ? ' title="' + esc(absMonths[m].titles.join('; ')) + '"' : '';
+        var absInfo = absMonths[m];
+        var absCls = absInfo ? (absInfo.vac && absInfo.trip ? ' an-cell-vac an-cell-trip' : (absInfo.vac ? ' an-cell-vac' : ' an-cell-trip')) : '';
+        var absTitle = absInfo ? ' title="' + esc(absInfo.titles.join('; ')) + '"' : '';
         if (hrs > 0) {
           html += '<td class="cell-num' + absCls + '"' + absTitle + '>' + hrs.toFixed(1) + '</td>';
         } else if (!hasPlanHours && activeMonths[m]) {
@@ -606,8 +612,11 @@ function renderEmployeesList(employees, title) {
     html += '<td><strong>' + esc(e.name) + '</strong></td>';
 
     var months = e.months || [];
-    for (var m = 0; m < 12; m++) {
-      var planned = months[m] ? months[m].planned : 0;
+    // Индексируем по номеру месяца для надёжности
+    var monthMap = {};
+    months.forEach(function(md) { monthMap[md.month] = md; });
+    for (var m = 1; m <= 12; m++) {
+      var planned = monthMap[m] ? monthMap[m].planned : 0;
       html += '<td class="cell-num">' + (planned > 0 ? planned.toFixed(1) : '') + '</td>';
     }
 
@@ -623,10 +632,10 @@ function renderEmployeesList(employees, title) {
 function renderMonthsTable(months) {
   var html = '<table class="an-months-table"><thead><tr><th></th><th>План</th><th>Норма</th><th>Загрузка</th></tr></thead><tbody>';
 
-  months.forEach(function(m, i) {
+  months.forEach(function(m) {
     var badgeCls = loadBadgeCls(m.load_pct);
     html += '<tr>';
-    html += '<td class="row-label">' + MONTHS_RU[i] + '</td>';
+    html += '<td class="row-label">' + MONTHS_RU[(m.month || 1) - 1] + '</td>';
     html += '<td>' + fmtHrs(m.planned) + '</td>';
     html += '<td>' + fmtHrs(m.norm) + '</td>';
     html += '<td><span class="an-load-badge ' + badgeCls + '">' + fmtPct(m.load_pct) + '</span></td>';

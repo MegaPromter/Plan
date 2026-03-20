@@ -8,6 +8,7 @@
 /* ── Ряд панелей фильтров ─────────────────────────────────────────────── */
 .an-toolbar-row {
   display:flex; gap:8px; flex-wrap:wrap;
+  max-height:300px; overflow-y:auto;
 }
 .an-toolbar-panel {
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -118,8 +119,7 @@
 .an-load-over .an-load-bar-fill { background:var(--danger); }
 
 /* ── Таблица сотрудников / секторов / отделов ────────────────────────── */
-.an-list-table { width:auto; border-collapse:collapse; font-size:13px; }
-.an-widget:has(.an-list-table) { width:fit-content; }
+.an-list-table { width:100%; border-collapse:collapse; font-size:13px; }
 .an-list-table th {
   text-align:left; font-size:11px; text-transform:uppercase;
   letter-spacing:0.04em; color:var(--muted); padding:8px;
@@ -175,6 +175,9 @@
 /* Заливка ячеек месяцев при отпуске/командировке */
 .an-cell-vac { background:rgba(34,197,94,0.08); }
 .an-cell-trip { background:rgba(168,85,247,0.08); }
+.an-cell-vac.an-cell-trip {
+  background:linear-gradient(135deg, rgba(34,197,94,0.1) 50%, rgba(168,85,247,0.1) 50%);
+}
 
 /* Легенда в заголовке таблицы задач */
 .an-legend {
