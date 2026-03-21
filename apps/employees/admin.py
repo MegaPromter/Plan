@@ -1,5 +1,6 @@
 # Импорт стандартного модуля администрирования Django
 from django.contrib import admin
+from django.utils.html import format_html
 # Импорт всех моделей, которые будут зарегистрированы в Admin
 from .models import (
     Department, Sector, NTCCenter,
@@ -80,52 +81,67 @@ class DocumentInline(admin.TabularInline):
 class EmployeeAdmin(admin.ModelAdmin):
     # Поля, отображаемые в списке сотрудников
     list_display  = (
-        'full_name', 'short_name', 'role', 'position',
+        'colored_full_name', 'short_name', 'role', 'position',
         'department', 'sector', 'ntc_center', 'date_joined', 'is_active',
     )
+
+    @admin.display(description='Full name', ordering='last_name')
+    def colored_full_name(self, obj):
+        """ФИО с подсветкой: оранжевый = самостоятельная регистрация."""
+        name = obj.full_name
+        if obj.created_by is None:
+            return format_html('<span style="color:#e67e22;font-weight:bold;" title="Самостоятельная регистрация">{}</span>', name)
+        return name
 
     @admin.display(description='Зарегистрирован', ordering='user__date_joined')
     def date_joined(self, obj):
         if obj.user and obj.user.date_joined:
             return obj.user.date_joined.strftime('%d.%m.%Y %H:%M')
         return '—'
-    # Боковые фильтры: по роли, отделу, НТЦ-центру и активности
+
+    # Боковые фильтры: по роли, отделу, НТЦ-центру, активности и способу создания
     list_filter   = ('role', 'department', 'ntc_center', 'is_active')
     # Поиск по ФИО и username учётной записи
     search_fields = ('last_name', 'first_name', 'patronymic', 'user__username')
     # Поля только для чтения — заполняются автоматически
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'created_by')
     # Встроенные редакторы: отпуска, KPI и документы
     inlines       = [VacationInline, KPIInline, DocumentInline]
     # Группировка полей по тематическим разделам
     fieldsets = (
         ('Учётная запись', {
-            # Связь с Django User, роль и служебные флаги
-            'fields': ('user', 'role', 'must_change_password', 'is_active'),
+            'fields': ('user', 'role', 'must_change_password', 'is_active', 'created_by'),
         }),
         ('ФИО', {
-            # Фамилия, имя и отчество сотрудника
             'fields': ('last_name', 'first_name', 'patronymic'),
         }),
         ('Должность и подразделение', {
-            # Штатная должность и принадлежность к структурным единицам
             'fields': ('position', 'ntc_center', 'department', 'sector'),
         }),
         ('Контакты', {
-            # Рабочий телефон и корпоративный email
             'fields': ('phone', 'email_corp'),
         }),
         ('Параметры работы', {
-            # Даты трудовых отношений и параметры нормирования часов
             'fields': ('hire_date', 'dismissal_date',
                        'monthly_hours_norm', 'personal_coeff'),
         }),
         ('Аудит', {
-            # Метки времени создания и обновления (свёрнуты по умолчанию)
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        """При создании через админку — запоминаем кто создал."""
+        if not change:  # новый объект
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'created_by')
+
+
+
 
 
 # ── Регистрация модели Vacation ────────────────────────────────────────────────

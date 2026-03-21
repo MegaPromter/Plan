@@ -227,6 +227,13 @@ class Employee(models.Model):
     # Флаг активности сотрудника в системе (False — заблокирован)
     is_active = models.BooleanField('Активен', default=True)
 
+    # ── Кем создан ────────────────────────────────────────────────────────
+    # NULL = сам зарегистрировался, FK = создан администратором
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='created_employees', verbose_name='Создан пользователем',
+    )
+
     # ── Настройки интерфейса (JSON) ───────────────────────────────────────
     # Хранит ширины колонок таблиц и флаг show_all_depts (для ntc_head/ntc_deputy)
     col_settings = models.JSONField('Настройки колонок', default=dict, blank=True)
