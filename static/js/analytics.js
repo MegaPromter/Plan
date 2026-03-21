@@ -36,6 +36,9 @@ function esc(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+function escAttr(s) {
+  return esc(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
 
 function getCSSVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -271,7 +274,7 @@ function renderToolbar(data) {
     html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Отдел:</span><div class="an-chips">';
     depts.forEach(function(code) {
       var cls = currentDeptCodes[code] ? 'an-chip active' : 'an-chip';
-      html += '<button class="' + cls + '" onclick="anToggleDept(\'' + esc(code) + '\')">' + esc(code) + '</button>';
+      html += '<button class="' + cls + '" onclick="anToggleDept(\'' + escAttr(code) + '\')">' + esc(code) + '</button>';
     });
     if (hasAny(currentDeptCodes)) {
       html += '<button class="an-chip-clear" onclick="anClearDepts()">сбросить</button>';
@@ -320,7 +323,7 @@ function renderBreadcrumb(data) {
     var deptCodes = idsToList(currentDeptCodes);
     if (deptCodes.length || (data.role_info && (role === 'dept_head' || role === 'dept_deputy'))) {
       var deptCode = deptCodes[0] || data.role_info.dept;
-      parts.push('<a class="an-breadcrumb-link" onclick="anGoDept(\'' + esc(deptCode) + '\')">' + esc(deptCode) + '</a>');
+      parts.push('<a class="an-breadcrumb-link" onclick="anGoDept(\'' + escAttr(deptCode) + '\')">' + esc(deptCode) + '</a>');
       parts.push('<span class="an-breadcrumb-sep">›</span>');
     }
     parts.push('<span style="font-weight:600;"><i class="fas fa-users" style="margin-right:4px;color:var(--accent);"></i>Сектор ' + esc(data.sector ? data.sector.name : '') + '</span>');
@@ -331,7 +334,7 @@ function renderBreadcrumb(data) {
     }
     var empInfo = data.employee || {};
     if (empInfo.dept) {
-      parts.push('<a class="an-breadcrumb-link" onclick="anGoDept(\'' + esc(empInfo.dept) + '\')">' + esc(empInfo.dept) + '</a>');
+      parts.push('<a class="an-breadcrumb-link" onclick="anGoDept(\'' + escAttr(empInfo.dept) + '\')">' + esc(empInfo.dept) + '</a>');
       parts.push('<span class="an-breadcrumb-sep">›</span>');
     }
     parts.push('<span style="font-weight:600;"><i class="fas fa-user" style="margin-right:4px;color:var(--accent);"></i>' + esc(empInfo.name) + '</span>');
@@ -404,7 +407,7 @@ function renderAllDeptsCharts(el, data) {
 
   depts.forEach(function(d) {
     var badgeCls = loadBadgeCls(d.total_load_pct);
-    html += '<tr onclick="anDrillDept(\'' + esc(d.code) + '\')">';
+    html += '<tr onclick="anDrillDept(\'' + escAttr(d.code) + '\')">';
     html += '<td><strong>' + esc(d.code) + '</strong></td>';
     html += '<td>' + esc(d.name) + '</td>';
     html += '<td class="cell-num">' + (d.employee_count || 0) + '</td>';
@@ -520,7 +523,7 @@ function renderAllDeptsTables(el, data) {
   depts.forEach(function(d) {
     var badgeCls = loadBadgeCls(d.total_load_pct);
     var barW = Math.min(d.total_load_pct || 0, 150);
-    html += '<div class="rpt-card" onclick="anDrillDept(\'' + esc(d.code) + '\')">';
+    html += '<div class="rpt-card" onclick="anDrillDept(\'' + escAttr(d.code) + '\')">';
     html += '<div class="rpt-card-header">';
     html += '<div class="rpt-card-title"><i class="fas fa-layer-group"></i>' + esc(d.code) + '</div>';
     html += '<span class="rpt-card-arrow"><i class="fas fa-chevron-right"></i></span>';

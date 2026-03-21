@@ -65,6 +65,8 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             | Q(date_start__year=year)
             | Q(date_end__year=year)
             | Q(date_start__isnull=True, date_end__isnull=True)
+            | Q(date_start__isnull=True, date_end__year=year)
+            | Q(date_start__year=year, date_end__isnull=True)
         )
         base = base.filter(year_q)
 
@@ -303,6 +305,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         scope_done_on_time = 0
         scope_overdue_days_sum = 0
         scope_overdue_days_count = 0
+        kpi_counted_ids = set()  # дедупликация KPI по task id
 
         for w in works:
             executors_on_work = set()
@@ -318,6 +321,9 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             is_done = getattr(w, '_done', False)
             is_overdue = not is_done and w.date_end and w.date_end < today
             status = 'done' if is_done else ('overdue' if is_overdue else 'inwork')
+
+            # KPI — считаем один раз на задачу, не на исполнителя
+            any_in_month = False
 
             for eid in executors_on_work:
                 ph = {}
@@ -343,31 +349,43 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                 in_month = hrs > 0
                 if not in_month and w.date_start and w.date_end:
                     in_month = w.date_end >= m_start and w.date_start <= m_end
+                if in_month:
+                    any_in_month = True
 
                 task_item = self._serialize_task(w, ph, status, today, year)
 
                 # Долги — все просроченные невыполненные (приоритет над месяцем)
                 if status == 'overdue':
                     emp_debts[eid].append(task_item)
-                    if w.date_end:
-                        scope_overdue_days_sum += (today - w.date_end).days
-                        scope_overdue_days_count += 1
                 elif in_month:
                     emp_tasks[eid].append(task_item)
-                    if status == 'done':
-                        scope_done_count += 1
-                    else:
-                        scope_inwork_count += 1
 
-                # Выполнено с просрочкой (scope level)
+                # Выполнено с просрочкой (per employee)
                 if is_done and w.date_end:
-                    scope_total_done += 1
                     report_date = getattr(w, '_report_date', None)
                     if report_date:
                         rd = report_date.date() if hasattr(report_date, 'date') else report_date
                         if rd > w.date_end:
                             emp_done_late[eid].append(task_item)
-                        else:
+
+            # KPI — один раз на задачу
+            if w.id not in kpi_counted_ids:
+                kpi_counted_ids.add(w.id)
+                if status == 'overdue':
+                    if w.date_end:
+                        scope_overdue_days_sum += (today - w.date_end).days
+                        scope_overdue_days_count += 1
+                elif any_in_month:
+                    if status == 'done':
+                        scope_done_count += 1
+                    else:
+                        scope_inwork_count += 1
+                if is_done and w.date_end:
+                    scope_total_done += 1
+                    report_date = getattr(w, '_report_date', None)
+                    if report_date:
+                        rd = report_date.date() if hasattr(report_date, 'date') else report_date
+                        if rd <= w.date_end:
                             scope_done_on_time += 1
                     else:
                         scope_done_on_time += 1
@@ -449,8 +467,16 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             dept_sectors[(dept_code, dept_name)][sector_key].append(emp_item)
 
         # Формируем иерархическую структуру
+        DEPT_ORDER = ['021', '022', '024', '027', '028', '029', '301', '082', '084', '086']
+        def _dept_sort_key(item):
+            code = item[0][0]  # (dept_code, dept_name)
+            try:
+                return DEPT_ORDER.index(code)
+            except ValueError:
+                return len(DEPT_ORDER)
+
         departments = []
-        for (dept_code, dept_name), sectors_dict in sorted(dept_sectors.items()):
+        for (dept_code, dept_name), sectors_dict in sorted(dept_sectors.items(), key=_dept_sort_key):
             dept_planned = 0
             dept_load_sum = 0
             dept_overdue = 0
@@ -497,8 +523,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                 'sectors': sector_list,
             })
 
-        # Сортировка отделов: сначала с просрочками
-        departments.sort(key=lambda d: (-d['overdue_count'], -d['avg_load_pct']))
+        # Порядок отделов определён DEPT_ORDER выше
 
         avg_load = round(total_load_sum / total_count, 1) if total_count else 0
 
