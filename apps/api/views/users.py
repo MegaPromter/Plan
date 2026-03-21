@@ -98,7 +98,7 @@ class UserListView(AdminRequiredJsonMixin, View):
                     password=password,
                 )
 
-                # Создаём профиль Employee
+                # Создаём профиль Employee (created_by = текущий admin)
                 emp = Employee.objects.create(
                     user=user,
                     role=role,
@@ -106,6 +106,7 @@ class UserListView(AdminRequiredJsonMixin, View):
                     first_name=data.get('first_name', ''),
                     patronymic=data.get('patronymic', ''),
                     position=_resolve_position_key(data.get('position', '')),
+                    created_by=request.user,
                 )
 
                 # Устанавливаем подразделение
