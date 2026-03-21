@@ -170,6 +170,28 @@
     </div>
     <!-- Тело секции: скрыто по умолчанию -->
     <div class="admin-card-body" id="card-users">
+      <!-- Недавно зарегистрированные (последние 7 дней) -->
+      <div id="recentUsersBlock" style="display:none;margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px;">
+          <i class="fas fa-user-clock"></i> Недавно зарегистрированные
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" style="font-size:13px;">
+            <thead>
+              <tr>
+                <th>Логин</th>
+                <th>ФИО</th>
+                <th>Роль</th>
+                <th>Отдел</th>
+                <th>Сектор</th>
+                <th>Дата регистрации</th>
+                <th style="width:100px;">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="recentUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
       <!-- Кнопка добавления нового пользователя -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm" onclick="openUserModal(null)">
@@ -394,7 +416,52 @@ async function loadUsers() {
   const data = await fetchJson('/api/users/');
   if (data._error) return;
   users = Array.isArray(data) ? data : (data.results || []);
+  renderRecentUsers();
   renderUsers();
+}
+
+// Отрисовывает блок «Недавно зарегистрированные» (за последние 7 дней)
+function renderRecentUsers() {
+  const block = document.getElementById('recentUsersBlock');
+  const tbody = document.getElementById('recentUsersBody');
+  if (!block || !tbody) return;
+
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const recent = users.filter(u => u.date_joined && new Date(u.date_joined) >= weekAgo)
+    .sort((a, b) => new Date(b.date_joined) - new Date(a.date_joined));
+
+  if (recent.length === 0) {
+    block.style.display = 'none';
+    return;
+  }
+
+  block.style.display = 'block';
+  tbody.innerHTML = '';
+  recent.forEach(u => {
+    const d = new Date(u.date_joined);
+    const dateStr = d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openUserModal(u);
+    });
+    tr.innerHTML = `
+      <td style="font-weight:500;">${escapeHtml(u.username || '')}</td>
+      <td>${escapeHtml(u.full_name || '')}</td>
+      <td><span class="badge badge-blue">${escapeHtml(u.role_display || u.role || '')}</span></td>
+      <td>${escapeHtml(u.dept || '')}</td>
+      <td>${escapeHtml(u.sector || '')}</td>
+      <td style="color:var(--muted);font-size:12px;">${dateStr}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openUserModal(findUser(${u.id}))" title="Редактировать">
+          <i class="fas fa-edit"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 // Отрисовывает таблицу пользователей

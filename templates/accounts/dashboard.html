@@ -1,133 +1,200 @@
 {% extends "base.html" %}
-{% load employee_tags %}
-<!-- Стартовая страница — главное меню системы -->
+{% load static employee_tags %}
 {% block title %}Стартовая страница — Система управления{% endblock %}
 
 {% block breadcrumb %}
 <span>/</span>
-<!-- Текущий раздел в хлебных крошках -->
 <span class="breadcrumb-current">Стартовая страница</span>
 {% endblock %}
 
-<!-- Пометить пункт «Стартовая страница» в сайдбаре как активный -->
 {% block nav_dashboard %}active{% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=6">
+<link rel="stylesheet" href="{% static 'css/reports.css' %}?v=2">
 <style>
-/* ── Стили стартовой страницы ─────────────────────────────────── */
-/* Основной контейнер дашборда: вертикальный стек секций */
-.dashboard { display:flex; flex-direction:column; gap:24px; }
-
-/* ── Hero-секция ─────────────────────────────────────────────── */
-.dashboard-hero {
+/* ── Hero ─────────────────────────────────────────────────────── */
+.dash-hero {
   background:linear-gradient(135deg, var(--nav-bg, #1a2744) 0%, var(--accent, #2563eb) 100%);
-  border-radius:16px; padding:36px 32px; color:#fff; position:relative; overflow:hidden;
+  border-radius:16px; padding:28px 28px; color:#fff; position:relative; overflow:hidden;
   box-shadow:var(--shadow-md);
 }
-.dashboard-hero::before {
+.dash-hero::before {
   content:''; position:absolute; top:-60%; right:-10%; width:400px; height:400px;
   background:radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
   border-radius:50%; pointer-events:none;
 }
-.dashboard-hero h1 { font-size:24px; font-weight:700; margin-bottom:6px; position:relative; }
-.dashboard-hero p { font-size:14px; opacity:0.75; position:relative; }
+.dash-hero h1 { font-size:22px; font-weight:700; margin-bottom:4px; position:relative; }
+.dash-hero-sub { font-size:13px; opacity:0.8; position:relative; }
 
-/* ── Сетка карточек модулей (адаптивная) ─────────────────────── */
-.modules-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
-
-/* ── Карточка модуля ─────────────────────────────────────────── */
-.module-card {
-  background:var(--surface); border:1px solid var(--border); border-radius:16px;
-  padding:24px; text-decoration:none; transition:all 0.25s ease; display:block;
-  border-top:3px solid; border-image:var(--accent-gradient, linear-gradient(135deg,#2563eb,#7c3aed)) 1;
-  box-shadow:var(--shadow-sm);
-  animation:fadeUp 0.4s ease backwards; animation-delay:calc(var(--i,0) * 0.08s);
+/* ── Секции ─────────────────────────────────────────────────── */
+.dash-section { margin-top:20px; }
+.dash-section-title {
+  font-size:15px; font-weight:700; color:var(--text);
+  display:flex; align-items:center; gap:8px; margin-bottom:12px;
+  cursor:pointer; user-select:none;
 }
-.module-card:hover {
-  transform:translateY(-4px); border-color:var(--accent);
-  box-shadow:var(--shadow-lg, 0 8px 32px rgba(59,130,246,0.15));
+.dash-section-title i { color:var(--accent); font-size:14px; }
+.dash-section-title .dash-toggle { color:var(--muted); font-size:11px; transition:transform 0.2s; }
+.dash-section-title .dash-toggle.collapsed { transform:rotate(-90deg); }
+.dash-section-body { }
+.dash-section-body.collapsed { display:none; }
+
+/* ── Переключатель года ───────────────────────────────────── */
+.dash-year-nav {
+  display:inline-flex; align-items:center; gap:4px; margin-right:12px;
+}
+.dash-year-nav button {
+  background:none; border:1px solid var(--border); border-radius:6px;
+  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:11px; color:var(--muted); transition:all 0.15s;
+}
+.dash-year-nav button:hover { border-color:var(--accent); color:var(--accent); }
+.dash-year-label { font-weight:700; font-size:14px; color:var(--text); min-width:40px; text-align:center; }
+
+/* ── KPI grid ──────────────────────────────────────────────── */
+.dash-kpi {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px;
 }
 
-/* Иконка модуля — gradient */
-.module-icon {
-  width:56px; height:56px; border-radius:14px;
-  display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:16px;
+/* ── Таблица команды (compact) ──────────────────────────────── */
+.dash-team-table { width:100%; border-collapse:collapse; font-size:13px; }
+.dash-team-table th {
+  text-align:left; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:6px 8px;
+  border-bottom:2px solid var(--border2); font-weight:600;
 }
-.module-icon.blue   { background:linear-gradient(135deg, rgba(59,130,246,0.2), rgba(124,58,237,0.15)); color:#3b82f6; }
-.module-icon.green  { background:linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.15)); color:#22c55e; }
-.module-icon.yellow { background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(234,88,12,0.15)); color:#f59e0b; }
-.module-icon.purple { background:linear-gradient(135deg, rgba(168,85,247,0.2), rgba(124,58,237,0.15)); color:#a855f7; }
+.dash-team-table th.cell-num { text-align:right; }
+.dash-team-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); color:var(--text);
+  vertical-align:middle;
+}
+.dash-team-table td.cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.dash-team-table tbody tr { cursor:pointer; transition:background 0.12s; }
+.dash-team-table tbody tr:hover { background:var(--row-hover); }
 
-/* Заголовок карточки модуля */
-.module-title { font-size:17px; font-weight:600; color:var(--text); margin-bottom:4px; }
-/* Описание */
-.module-desc { font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.5; }
+/* ── Таблица задач (compact) ────────────────────────────────── */
+.dash-tasks-table { width:100%; border-collapse:collapse; font-size:13px; }
+.dash-tasks-table th {
+  text-align:left; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:6px 8px;
+  border-bottom:2px solid var(--border2); font-weight:600;
+}
+.dash-tasks-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); color:var(--text);
+}
+.dash-tasks-table tbody tr { transition:background 0.12s; }
+.dash-tasks-table tbody tr:hover { background:var(--row-hover); }
 
-/* Стрелка «перейти» */
-.module-arrow { color:var(--accent); font-size:18px; transition:transform 0.2s; }
-.module-card:hover .module-arrow { transform:translateX(6px); }
+/* Бейдж дней */
+.dash-days-badge {
+  display:inline-block; padding:1px 6px; border-radius:8px;
+  font-size:11px; font-weight:600; font-variant-numeric:tabular-nums;
+}
+.dash-days-overdue { background:rgba(239,68,68,0.12); color:var(--danger); }
+.dash-days-left { background:rgba(59,130,246,0.12); color:var(--accent); }
+.dash-days-late { background:rgba(245,158,11,0.12); color:#d97706; }
+
+/* ── Отделы (dropdown) ────────────────────────────────────────── */
+.dash-dept { margin-bottom:6px; }
+.dash-dept-header {
+  display:flex; align-items:center; gap:8px; padding:8px 12px;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  cursor:pointer; user-select:none; transition:background 0.12s;
+  font-size:13px;
+}
+.dash-dept-header:hover { background:var(--row-hover); }
+.dash-dept-toggle {
+  font-size:10px; color:var(--muted); transition:transform 0.2s; flex-shrink:0;
+}
+.dash-dept-toggle.open { transform:rotate(90deg); }
+.dash-dept-name { color:var(--muted); font-weight:400; }
+.dash-dept-meta { color:var(--muted); font-size:12px; margin-left:auto; white-space:nowrap; }
+.dash-dept-body { padding:4px 0 4px 16px; }
+
+/* ── Сектора ──────────────────────────────────────────────────── */
+.dash-sector { margin-bottom:8px; }
+.dash-sector-header {
+  display:flex; align-items:center; gap:6px; padding:4px 8px;
+  font-size:13px; color:var(--text);
+}
+
+/* ── Сотрудники (dropdown) ────────────────────────────────────── */
+.dash-emp { margin-bottom:1px; }
+.dash-emp-header {
+  display:flex; align-items:center; gap:6px; padding:3px 8px;
+  font-size:12px; border-radius:4px; transition:background 0.12s;
+}
+.dash-emp-header.clickable { cursor:pointer; }
+.dash-emp-header.clickable:hover { background:var(--row-hover); }
+.dash-emp-toggle {
+  font-size:8px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; width:10px;
+}
+.dash-emp-toggle.open { transform:rotate(90deg); }
+.dash-emp-name { font-weight:600; flex:0 0 160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dash-emp-load { flex:0 0 52px; text-align:right; }
+.dash-emp-hrs { color:var(--muted); font-size:11px; white-space:nowrap; flex:0 0 50px; text-align:right; }
+.dash-emp-tag { font-size:11px; color:var(--muted); white-space:nowrap; flex:0 0 75px; text-align:right; }
+.dash-emp-tag.done { color:var(--success); }
+.dash-emp-tag.debt { color:var(--danger); font-weight:600; }
+.dash-emp-header .an-load-badge { font-size:10px; padding:1px 5px; }
+.dash-emp-body { padding:2px 0 6px 28px; }
+.dash-emp-label {
+  font-size:11px; font-weight:600; color:var(--accent); margin:2px 0;
+  display:flex; align-items:center; gap:4px;
+}
+.dash-emp-label.debt { color:var(--danger); }
+.dash-emp-label i { font-size:10px; }
+
+/* ── Компактный список задач ──────────────────────────────────── */
+.dash-compact-list {
+  list-style:none; margin:0 0 4px; padding:0;
+}
+.dash-compact-list li {
+  display:flex; align-items:center; gap:6px; padding:2px 0;
+  font-size:12px; color:var(--text);
+}
+.dcl-name { font-weight:500; flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dcl-project { color:var(--muted); font-size:11px; flex:0 0 80px; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dcl-date { color:var(--muted); font-size:11px; white-space:nowrap; flex:0 0 80px; text-align:right; }
+.dash-compact-list .an-badge-status { font-size:10px; padding:1px 5px; flex:0 0 65px; text-align:center; }
+.dash-compact-list .dash-days-badge { font-size:10px; padding:0 4px; flex:0 0 45px; text-align:right; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard">
-
-  <!-- Hero-секция -->
-  <div class="dashboard-hero">
+<div class="an-page">
+  <!-- Hero -->
+  <div class="dash-hero">
     <h1>Добро пожаловать, {{ display_name }}!</h1>
-    <p>
-      {% if my_overdue > 0 %}
-        <span style="background:rgba(239,68,68,0.25);padding:2px 10px;border-radius:8px;font-weight:600;">
-          <i class="fas fa-exclamation-circle"></i> Просрочено задач: {{ my_overdue }}
-        </span>
-      {% endif %}
-      {% if my_upcoming > 0 %}
-        <span style="background:rgba(245,158,11,0.25);padding:2px 10px;border-radius:8px;font-weight:600;{% if my_overdue > 0 %}margin-left:8px;{% endif %}">
-          <i class="fas fa-clock"></i> Дедлайн на этой неделе: {{ my_upcoming }}
-        </span>
-      {% endif %}
-      {% if my_overdue == 0 and my_upcoming == 0 %}
-        <span style="opacity:0.75;">Все задачи в порядке <i class="fas fa-check-circle"></i></span>
-      {% endif %}
-    </p>
+    <div class="dash-hero-sub" id="dashHeroSub"></div>
   </div>
 
-  <!-- Сетка карточек основных модулей системы -->
-  <div class="modules-grid">
+  <!-- Чипы месяцев (год — кнопки ◀ ▶ рядом) -->
+  <div class="an-toolbar-row" id="dashMonthChips"></div>
 
-    <!-- 1. Управление проектами (УП) -->
-    <a href="{% url 'works:projects' %}" class="module-card" style="--i:0">
-      <div class="module-icon blue"><i class="fas fa-project-diagram"></i></div>
-      <div class="module-title">Управление проектами</div>
-      <div class="module-desc">Создание и ведение проектов, изделий, кодов строк</div>
-      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </a>
+  <!-- KPI -->
+  <div class="dash-kpi" id="dashKPI"></div>
 
-    <!-- 2. Производственный план (ПП) -->
-    <a href="{% url 'works:production_plan' %}" class="module-card" style="--i:1">
-      <div class="module-icon green"><i class="fas fa-industry"></i></div>
-      <div class="module-title">Производственный план</div>
-      <div class="module-desc">Планирование работ, трудоёмкость, этапы и вехи</div>
-      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </a>
+  <!-- Команда (для руководителей) -->
+  <div id="dashTeam"></div>
 
-    <!-- 3. Сводное планирование (План/отчёт) -->
-    <a href="{% url 'works:plan' %}" class="module-card" style="--i:2">
-      <div class="module-icon yellow"><i class="fas fa-tasks"></i></div>
-      <div class="module-title">Сводное планирование</div>
-      <div class="module-desc">План-отчёт, назначение исполнителей, контроль сроков</div>
-      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </a>
+  <!-- Задачи текущего месяца -->
+  <div id="dashTasks"></div>
 
-    <!-- 4. Журнал извещений (ЖИ) -->
-    <a href="{% url 'works:notice_list' %}" class="module-card" style="--i:3">
-      <div class="module-icon purple"><i class="fas fa-file-alt"></i></div>
-      <div class="module-title">Журнал извещений</div>
-      <div class="module-desc">Учёт извещений об изменениях в документации</div>
-      <div class="module-arrow"><i class="fas fa-arrow-right"></i></div>
-    </a>
+  <!-- Долги -->
+  <div id="dashDebts"></div>
 
-  </div>
+  <!-- Выполнены с просрочкой -->
+  <div id="dashDoneLate"></div>
 
 </div>
+
+<script id="dash-config" type="application/json">{
+  "currentYear": {{ current_year }},
+  "currentMonth": {{ current_month }},
+  "role": "{{ role|escapejs }}",
+  "isWriter": {% if is_writer %}true{% else %}false{% endif %}
+}</script>
+<script src="{% static 'js/dashboard.js' %}?v=10"></script>
 {% endblock %}

@@ -132,7 +132,11 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
             'work_name': w.work_name or w.work_num or '',
             'work_num': w.work_num or '',
             'project': w.row_code or '',
-            'project_name': w.project.name if w.project else '',
+            'project_name': (
+                w.project.name if w.project else
+                (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
+                 (w.pp_project.name if w.pp_project else ''))
+            ),
             'date_start': w.date_start.isoformat() if w.date_start else '',
             'date_end': w.date_end.isoformat() if w.date_end else '',
             'labor': _float(w.labor),
@@ -146,21 +150,24 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
     total_norm = 0.0
     months_set = set(months_filter) if months_filter else None
     for m in range(1, 13):
-        # Если фильтр по месяцам — невыбранные месяцы обнуляем
-        if months_set and m not in months_set:
-            months_data.append({
-                'month': m, 'planned': 0, 'norm': 0, 'load_pct': 0,
-            })
-            continue
-        planned = 0.0
         norm = 0.0
         for y in years:
-            planned += monthly_hours.get((y, m), 0)
             norm += all_norms.get(y, {}).get(m, 0)
+        # Если фильтр по месяцам — невыбранные: план=0, но норма в months_data для графика
+        if months_set and m not in months_set:
+            months_data.append({
+                'month': m, 'planned': 0, 'norm': round(norm, 2),
+                'load_pct': 0, 'filtered': False,
+            })
+            continue
+        # Выбранный месяц (или все, если фильтра нет)
+        total_norm += norm
+        planned = 0.0
+        for y in years:
+            planned += monthly_hours.get((y, m), 0)
         planned = round(planned, 2)
         load_pct = round(planned / norm * 100, 1) if norm > 0 else 0
         total_planned += planned
-        total_norm += norm
         months_data.append({
             'month': m,
             'planned': planned,
@@ -204,7 +211,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
             .annotate(_done=has_reports)
-            .select_related('department', 'sector', 'executor', 'project')
+            .select_related('department', 'sector', 'executor', 'project', 'pp_project', 'pp_project__up_project')
         )
 
         # Фильтр по годам: включаем работы с датами в выбранных годах
@@ -278,13 +285,18 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         # Секторы выбраны через чипы
         if sector_ids:
-            if len(sector_ids) == 1 and not dept_codes:
+            if len(sector_ids) == 1:
                 return self._respond_sector(
                     request, sector_ids[0], works_list, all_norms, years,
                     months_filter, role_info, emp
                 )
-            # Несколько секторов — фильтруем работы по секторам и показываем все
+            # Несколько секторов — фильтруем работы по секторам и показываем отдел
             filtered = [w for w in works_list if w.sector_id in set(sector_ids)]
+            if dept_codes and len(dept_codes) == 1:
+                return self._respond_dept(
+                    request, dept_codes[0], filtered, all_norms, years,
+                    months_filter, role_info, emp
+                )
             return self._respond_all_depts(
                 request, filtered, all_norms, years, months_filter, role_info, emp
             )
@@ -419,7 +431,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         sectors_data = []
         for s_id in sorted(sectors_map.keys()):
             s_works = sectors_map[s_id]
-            employees = self._collect_employees_for_works(s_works)
+            employees = self._collect_employees_for_works(s_works, sector_id=s_id if s_id else None)
             emp_plans = []
             for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
                 plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
@@ -519,23 +531,27 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         return employees
 
     def _aggregate_months(self, items):
-        agg = defaultdict(lambda: {'planned': 0, 'norm': 0})
+        agg = defaultdict(lambda: {'planned': 0, 'norm': 0, 'filtered': True})
         for item in items:
             for m_data in item.get('months', []):
                 m = m_data['month']
                 agg[m]['planned'] += m_data.get('planned', 0)
                 agg[m]['norm'] += m_data.get('norm', 0)
+                if m_data.get('filtered') is False:
+                    agg[m]['filtered'] = False
 
         months = []
         total_planned = 0
         total_norm = 0
         for m in range(1, 13):
-            data = agg.get(m, {'planned': 0, 'norm': 0})
+            data = agg.get(m, {'planned': 0, 'norm': 0, 'filtered': True})
             planned = round(data['planned'], 2)
             norm = data['norm']
+            in_filter = data['filtered']
             load_pct = round(planned / norm * 100, 1) if norm > 0 else 0
             total_planned += planned
-            total_norm += norm
+            if in_filter:
+                total_norm += norm
             months.append({
                 'month': m, 'planned': planned,
                 'norm': round(norm, 2), 'load_pct': load_pct,

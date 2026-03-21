@@ -417,6 +417,13 @@ class DemoPPFilterView(TemplateView):
         return [f'works/demo_pp_filter_{n}.html']
 
 
+class ReportsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """Редирект /works/reports/ → /works/analytics/ (обратная совместимость)."""
+    def get(self, request, *args, **kwargs):
+        from django.shortcuts import redirect
+        return redirect('works:analytics')
+
+
 class ERDiagramView(TemplateView):
     """ER-диаграмма моделей приложения (standalone, без base.html)."""
     template_name = 'works/er_diagram.html'

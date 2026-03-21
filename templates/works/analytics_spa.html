@@ -3,7 +3,8 @@
 {% block title %}Аналитика — Система управления{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'css/reports.css' %}?v=2">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -11,8 +12,18 @@
 <span class="breadcrumb-current">Аналитика</span>
 {% endblock %}
 
+{% block topbar_actions %}
+<span id="anExportTop"></span>
+{% endblock %}
+
 {% block content %}
 <div class="an-page">
+  <!-- Переключатель режимов -->
+  <div class="an-mode-tabs" id="anModeTabs">
+    <button class="an-mode-tab active" data-mode="charts" onclick="anSetMode('charts')"><i class="fas fa-chart-bar"></i> Аналитика</button>
+    <button class="an-mode-tab" data-mode="tables" onclick="anSetMode('tables')"><i class="fas fa-table"></i> Отчёты</button>
+  </div>
+
   <!-- Хлебные крошки drill-down -->
   <div class="an-breadcrumb" id="anBreadcrumb"></div>
 
@@ -28,10 +39,11 @@
 </div>
 
 <script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
 <script id="an-config" type="application/json">{
   "currentYear": {{ current_year }},
   "role": "{{ role|escapejs }}",
   "deptCode": "{{ user_dept|escapejs }}"
 }</script>
-<script src="{% static 'js/analytics.js' %}?v=3"></script>
+<script src="{% static 'js/analytics.js' %}?v=7"></script>
 {% endblock %}

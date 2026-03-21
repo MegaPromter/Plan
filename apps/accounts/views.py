@@ -56,43 +56,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'accounts/dashboard.html'
 
     def get_context_data(self, **kwargs):
-        from datetime import timedelta
-        from django.db.models import Exists, OuterRef, Q
         from django.utils import timezone
-        from apps.works.models import Work, Notice, WorkReport
-        from apps.employees.models import Employee, Vacation
-        from apps.api.utils import get_visibility_filter
+        from apps.employees.models import Employee
         ctx = super().get_context_data(**kwargs)
-        vis_q = get_visibility_filter(self.request.user)
-        ctx['works_count']    = Work.objects.filter(vis_q).count()
-        ctx['tasks_count']    = Work.objects.filter(show_in_plan=True).filter(vis_q).count()
-        ctx['pp_count']       = Work.objects.filter(show_in_pp=True).count()
-        ctx['notices_count']  = Notice.objects.count()
-        ctx['employees_count']= Employee.objects.filter(is_active=True).count()
-        ctx['vacations_count']= Vacation.objects.count()
 
-        # Персональная статистика для hero-секции
         today = timezone.now().date()
         emp = getattr(self.request.user, 'employee', None)
-        if emp:
-            has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
-            my_tasks = Work.objects.filter(
-                show_in_plan=True, executor=emp
-            ).annotate(
-                _done=has_reports,
-                _eff_deadline=Coalesce('deadline', 'date_end'),
-            )
-            my_overdue = my_tasks.filter(_done=False, _eff_deadline__lt=today).count()
-            my_upcoming = my_tasks.filter(
-                _done=False,
-                _eff_deadline__gte=today,
-                _eff_deadline__lte=today + timedelta(days=7),
-            ).count()
-            ctx['my_overdue'] = my_overdue
-            ctx['my_upcoming'] = my_upcoming
-        else:
-            ctx['my_overdue'] = 0
-            ctx['my_upcoming'] = 0
 
         # Имя Отчество для приветствия (fallback на username)
         display_name = ''
@@ -104,6 +73,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         if not display_name:
             display_name = self.request.user.username
         ctx['display_name'] = display_name
+
+        # Контекст для JS-конфига
+        ctx['current_year'] = today.year
+        ctx['current_month'] = today.month
+        ctx['role'] = emp.role if emp else 'user'
+        ctx['is_writer'] = emp.is_writer if emp else False
+
         return ctx
 
 

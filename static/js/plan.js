@@ -72,14 +72,55 @@ function _spGetStatus(t) {
   return 'inwork';
 }
 
+// Фильтрует tasks по всем colFilters (без статус-фильтра) — для подсчёта в панели статусов
+function _spTasksWithoutStatusFilter() {
+  if (Object.keys(colFilters).length === 0) return tasks;
+  return tasks.filter(t => {
+    for (const [col, val] of Object.entries(colFilters)) {
+      if (col.startsWith("mf_")) {
+        const field = col.slice(3);
+        if (val.size > 0) {
+          if (field === "executor") {
+            const inSingle = val.has(t.executor || "");
+            const inList = (t.executors_list || []).some(ex => val.has(ex.name || ""));
+            if (!inSingle && !inList) return false;
+          } else if (field === "has_deps") {
+            const label = (t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей";
+            if (!val.has(label)) return false;
+          } else if (field === "task_type") {
+            if (!val.has(t.task_type || "ПП")) return false;
+          } else if (field === "date_start" || field === "date_end" || field === "deadline") {
+            const cellVal = (t[field] || "").slice(0, 7);
+            if (!val.has(cellVal)) return false;
+          } else {
+            if (!val.has(t[field] || "")) return false;
+          }
+        }
+        continue;
+      }
+      if (col === "plan_hours_total") {
+        const total = Object.values(t.plan_hours_all || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+        const threshold = parseFloat(val);
+        if (!isNaN(threshold) && total < threshold) return false;
+        continue;
+      }
+      const cellVal = (t[col] || "").toString().toLowerCase();
+      if (!cellVal.includes(val)) return false;
+    }
+    return true;
+  });
+}
+
 function spUpdateStatusPanel() {
   const panel = document.getElementById('spStatusPanel');
   if (!panel || tasks.length === 0) { if (panel) panel.style.display = 'none'; return; }
   panel.style.display = '';
 
+  // Считаем по задачам, прошедшим все фильтры кроме статусного
+  const base = _spTasksWithoutStatusFilter();
   let done = 0, overdue = 0, inwork = 0;
-  tasks.forEach(t => { const s = _spGetStatus(t); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
-  const total = tasks.length;
+  base.forEach(t => { const s = _spGetStatus(t); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
+  const total = base.length;
 
   document.getElementById('spCountAll').textContent = total;
   document.getElementById('spCountDone').textContent = done;
@@ -964,6 +1005,15 @@ function updatePlanSummary() {
     `${periodLabel} · ${filtered === all ? filtered + " зап." : filtered + " из " + all}`;
 }
 
+// ── Форматирование YYYY-MM → «Март 2026» ─────────────────────────────────
+const _SP_MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+function _spFormatYearMonth(ym) {
+  const [y, m] = ym.split('-');
+  const mi = parseInt(m, 10) - 1;
+  return (_SP_MONTH_NAMES[mi] || m) + ' ' + y;
+}
+
 // ── MULTI-SELECT FILTER ───────────────────────────────────────────────────
 const mfSelections = {};
 let activeMfBtn = null;
@@ -989,6 +1039,9 @@ function getMfValues(col) {
       vals.add((t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей");
     } else if (col === "task_type") {
       vals.add(t.task_type || "ПП");
+    } else if (col === "date_start" || col === "date_end" || col === "deadline") {
+      // Даты группируем по году-месяцу (YYYY-MM)
+      if (t[col] && t[col].length >= 7) vals.add(t[col].slice(0, 7));
     } else {
       if (t[col]) vals.add(t[col]);
     }
@@ -1009,11 +1062,13 @@ function buildMfDropdown(btn, col) {
   const searchInp = document.createElement("input");
   searchInp.placeholder = "Поиск...";
   searchInp.autocomplete = "off";
+  const _isDateCol = (col === "date_start" || col === "date_end" || col === "deadline");
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll(".mf-option").forEach(opt => {
       const rawVal = opt.dataset.val.toLowerCase();
-      opt.style.display = rawVal.includes(q) ? "" : "none";
+      const dispVal = (opt.textContent || '').toLowerCase();
+      opt.style.display = (rawVal.includes(q) || dispVal.includes(q)) ? "" : "none";
     });
   };
   searchWrap.appendChild(searchInp);
@@ -1068,8 +1123,9 @@ function buildMfDropdown(btn, col) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     };
     opt.appendChild(cb);
-    // Для сектора — показываем код + ФИО начальника
-    opt.appendChild(document.createTextNode(val));
+    // Для дат — показываем «Март 2026», для остальных — как есть
+    const displayText = _isDateCol ? _spFormatYearMonth(val) : val;
+    opt.appendChild(document.createTextNode(displayText));
     drop.appendChild(opt);
   });
 
@@ -1228,9 +1284,6 @@ function renderTable() {
   _spRenderedCount = 0;
   if (_spScrollDispose) { _spScrollDispose(); _spScrollDispose = null; }
 
-  // Обновляем панель статусов
-  spUpdateStatusPanel();
-
   _spFiltered = tasks.filter(t => {
     // Фильтр по статусу (прогресс-панель)
     if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
@@ -1249,6 +1302,10 @@ function renderTable() {
             if (!val.has(label)) return false;
           } else if (field === "task_type") {
             if (!val.has(t.task_type || "ПП")) return false;
+          } else if (field === "date_start" || field === "date_end" || field === "deadline") {
+            // Даты сравниваем по году-месяцу (YYYY-MM)
+            const cellVal = (t[field] || "").slice(0, 7);
+            if (!val.has(cellVal)) return false;
           } else {
             if (!val.has(t[field] || "")) return false;
           }
@@ -1266,6 +1323,9 @@ function renderTable() {
     }
     return true;
   });
+
+  // Обновляем панель статусов (считает по задачам с учётом фильтров, но без статус-фильтра)
+  spUpdateStatusPanel();
 
   const total = tasks.length;
   const shown = _spFiltered.length;
@@ -4003,7 +4063,7 @@ buildExportDropdown('exportBtnContainer', {
     { key: 'justification',header: 'Обоснование',     width: 200 },
   ],
   getAllData:      () => tasks,
-  getFilteredData: spGetFilteredRows,
+  getFilteredData: () => _spFiltered,
 });
 
 // Возвращает отфильтрованные задачи для экспорта (применяет colFilters + multi-select)

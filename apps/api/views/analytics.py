@@ -187,7 +187,7 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
 
         # Задачи
         tasks_list = []
-        for w in qs.select_related('department').order_by('date_end'):
+        for w in qs.select_related('department', 'project', 'pp_project', 'pp_project__up_project').order_by('date_end'):
             is_done = w._done
             is_overdue = not is_done and w.date_end and w.date_end < today
             if is_done:
@@ -204,6 +204,11 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
                 'deadline': w.date_end.isoformat() if w.date_end else '',
                 'labor': float(w.labor) if w.labor else 0,
                 'project': w.row_code or '',
+                'project_name': (
+                    w.project.name if w.project else
+                    (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
+                     (w.pp_project.name if w.pp_project else ''))
+                ),
             }
             if status == 'overdue' and w.date_end:
                 item['days_overdue'] = (today - w.date_end).days

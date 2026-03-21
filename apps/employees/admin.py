@@ -81,8 +81,14 @@ class EmployeeAdmin(admin.ModelAdmin):
     # Поля, отображаемые в списке сотрудников
     list_display  = (
         'full_name', 'short_name', 'role', 'position',
-        'department', 'sector', 'ntc_center', 'is_active',
+        'department', 'sector', 'ntc_center', 'date_joined', 'is_active',
     )
+
+    @admin.display(description='Зарегистрирован', ordering='user__date_joined')
+    def date_joined(self, obj):
+        if obj.user and obj.user.date_joined:
+            return obj.user.date_joined.strftime('%d.%m.%Y %H:%M')
+        return '—'
     # Боковые фильтры: по роли, отделу, НТЦ-центру и активности
     list_filter   = ('role', 'department', 'ntc_center', 'is_active')
     # Поиск по ФИО и username учётной записи

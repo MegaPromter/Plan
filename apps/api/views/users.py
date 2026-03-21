@@ -68,6 +68,7 @@ class UserListView(AdminRequiredJsonMixin, View):
                 'sector': emp.sector.code if emp.sector else '',
                 'center': emp.ntc_center.code if emp.ntc_center else '',
                 'position': emp.get_position_display() if emp.position else '',
+                'date_joined': emp.user.date_joined.isoformat(),
             })
         return JsonResponse(result, safe=False)
 

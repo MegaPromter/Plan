@@ -27,6 +27,7 @@ from .views.audit_log import AuditLogListView
 # Аналитика
 from .views.analytics import EmployeeAnalyticsView, PPAnalyticsView, WorkloadAnalyticsView
 from .views.analytics_plan import PlanAnalyticsView
+from .views.dashboard import DashboardAPIView
 # Вьюхи отчётных документов (WorkReport)
 from .views.reports import ReportListView, ReportCreateView, ReportDetailView
 # Вьюхи производственного плана (PPWork)
@@ -220,6 +221,10 @@ urlpatterns = [
     path('analytics/pp/', PPAnalyticsView.as_view()),
     # GET /api/analytics/plan/ — иерархическая аналитика личного плана (единая)
     path('analytics/plan/', PlanAnalyticsView.as_view()),
+
+    # ── Dashboard ─────────────────────────────────────────────────────
+    # GET /api/dashboard/ — личный план + сводка для руководителя
+    path('dashboard/', DashboardAPIView.as_view()),
 
 ]
 
