@@ -552,10 +552,13 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             total_planned += planned
             if in_filter:
                 total_norm += norm
-            months.append({
+            month_entry = {
                 'month': m, 'planned': planned,
                 'norm': round(norm, 2), 'load_pct': load_pct,
-            })
+            }
+            if not in_filter:
+                month_entry['filtered'] = False
+            months.append(month_entry)
 
         total_load = round(total_planned / total_norm * 100, 1) if total_norm > 0 else 0
         return {
