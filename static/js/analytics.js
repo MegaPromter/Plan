@@ -399,7 +399,7 @@ function renderAllDeptsCharts(el, data) {
 
   html += '<div class="an-widget an-widget-full" style="padding:0;">';
   html += '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-building"></i> Отделы</div>';
-  html += '<div style="overflow-x:auto;padding:0 20px 20px;">';
+  html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
   html += '<table class="an-list-table"><thead><tr>';
   html += '<th>Отдел</th><th>Название</th><th class="cell-num">Сотрудников</th>';
   html += '<th class="cell-num">План (ч)</th><th class="cell-num">Норма (ч)</th><th class="cell-num">Загрузка</th>';
@@ -433,7 +433,7 @@ function renderDeptCharts(el, data) {
   if (sectors.length > 0) {
     html += '<div class="an-widget an-widget-full" style="padding:0;">';
     html += '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-layer-group"></i> Секторы</div>';
-    html += '<div style="overflow-x:auto;padding:0 20px 20px;">';
+    html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
     html += '<table class="an-list-table"><thead><tr>';
     html += '<th>Сектор</th><th class="cell-num">Сотрудников</th>';
     html += '<th class="cell-num">План (ч)</th><th class="cell-num">Норма (ч)</th><th class="cell-num">Загрузка</th>';
@@ -782,7 +782,7 @@ function renderEmployeesList(employees, title) {
 
   var html = '<div class="an-widget an-widget-full" style="padding:0;">';
   html += '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-users"></i> ' + (title || 'Сотрудники') + '</div>';
-  html += '<div style="overflow-x:auto;padding:0 20px 20px;">';
+  html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
   html += '<table class="an-list-table"><thead><tr>';
   html += '<th>Сотрудник</th>';
   for (var m = 1; m <= 12; m++) {
@@ -816,11 +816,11 @@ function renderEmployeesList(employees, title) {
 /* Таблица сотрудников для табличного режима */
 function _renderEmpTable(employees, title) {
   if (!employees || !employees.length) return '';
-  var html = '<div class="rpt-tasks-wrap" style="margin-top:16px;">';
+  var html = '<div class="rpt-tasks-wrap" style="margin-top:10px;">';
   if (title) {
     html += '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-users"></i> ' + title + '</div></div>';
   }
-  html += '<div style="overflow-x:auto;padding:0 20px 20px;">';
+  html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
   html += '<table class="an-list-table">';
   html += '<colgroup><col style="width:140px;">';
   for (var m = 1; m <= 12; m++) html += '<col style="width:56px;">';
@@ -915,7 +915,7 @@ function renderTasksTableBody(data) {
     });
   });
 
-  var html = '<div style="overflow-x:auto;padding:0 20px 20px;">';
+  var html = '<div style="overflow-x:auto;padding:0 12px 10px;">';
   html += '<table class="an-tasks-table"><thead><tr>';
   html += '<th>Название</th><th>Проект</th><th>Начало</th><th>Окончание</th>';
   for (var m = 1; m <= 12; m++) {

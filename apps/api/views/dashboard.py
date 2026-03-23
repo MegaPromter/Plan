@@ -546,14 +546,17 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         executor_name = ''
         if w.executor:
             executor_name = w.executor.short_name
+        project_name = (
+            w.project.name if w.project else
+            (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
+             (w.pp_project.name if w.pp_project else ''))
+        )
         item = {
             'id': w.id,
             'work_name': w.work_name or w.work_num or '',
-            'project_name': (
-                w.project.name if w.project else
-                (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
-                 (w.pp_project.name if w.pp_project else ''))
-            ),
+            'work_designation': w.work_designation or '',
+            'project_name': project_name,
+            'project_sort': project_name.lower() if project_name else '',
             'executor_name': executor_name,
             'date_start': w.date_start.isoformat() if w.date_start else '',
             'date_end': w.date_end.isoformat() if w.date_end else '',

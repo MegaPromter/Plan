@@ -78,14 +78,14 @@
   overflow:hidden; box-shadow:var(--shadow-sm);
 }
 .rpt-tasks-header {
-  padding:16px 20px; border-bottom:1px solid var(--border);
+  padding:10px 16px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between; gap:12px;
 }
 .rpt-tasks-title {
-  font-size:14px; font-weight:700; color:var(--text);
-  display:flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:700; color:var(--text);
+  display:flex; align-items:center; gap:6px;
 }
-.rpt-tasks-title i { color:var(--accent); font-size:15px; }
+.rpt-tasks-title i { color:var(--accent); font-size:13px; }
 
 /* ── Секция экспорта ─────────────────────────────────────────────────── */
 .rpt-export-bar {

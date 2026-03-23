@@ -289,6 +289,7 @@ function _renderCompactList(tasks) {
 
     html += '<li>';
     html += '<span class="dcl-name">' + esc(t.work_name) + '</span>';
+    if (t.work_designation) html += '<span class="dcl-designation">' + esc(t.work_designation) + '</span>';
     if (t.project_name) html += '<span class="dcl-project">' + esc(t.project_name) + '</span>';
     html += '<span class="dcl-date">' + fmtDate(t.date_end) + '</span>';
     html += '<span class="' + statusCls + '">' + statusText + '</span>';
@@ -360,38 +361,34 @@ function renderDoneLate(items, showExecutor) {
   el.innerHTML = html;
 }
 
-/* ── Общая таблица задач ─────────────────────────────────────────── */
+/* ── Компактный список задач (основные секции) ─────────────────── */
 function _renderTasksTable(tasks, showExecutor) {
-  var html = '<div style="overflow-x:auto;">';
-  html += '<table class="dash-tasks-table"><thead><tr>';
-  html += '<th>Задача</th><th>Проект</th>';
-  if (showExecutor) html += '<th>Исполнитель</th>';
-  html += '<th>Срок</th><th>Статус</th><th></th>';
-  html += '</tr></thead><tbody>';
-
+  // Сортировка по проекту
+  tasks = tasks.slice().sort(function(a, b) {
+    var pa = (a.project_sort || a.project_name || '').toLowerCase();
+    var pb = (b.project_sort || b.project_name || '').toLowerCase();
+    return pa < pb ? -1 : pa > pb ? 1 : 0;
+  });
+  var html = '<ul class="dash-compact-list dash-section-list">';
   tasks.forEach(function(t) {
     var statusCls = 'an-badge-status an-badge-' + t.status;
     var statusText = t.status === 'done' ? 'Готово' : (t.status === 'overdue' ? 'Просроч.' : 'В работе');
+    var badge = '';
+    if (t.days_overdue) badge = '<span class="dash-days-badge dash-days-overdue">' + t.days_overdue + ' дн.</span>';
+    else if (t.days_left !== undefined && t.days_left >= 0) badge = '<span class="dash-days-badge dash-days-left">' + t.days_left + ' дн.</span>';
+    else if (t.days_late) badge = '<span class="dash-days-badge dash-days-late">+' + t.days_late + ' дн.</span>';
 
-    html += '<tr>';
-    html += '<td>' + esc(t.work_name) + '</td>';
-    html += '<td>' + esc(t.project_name) + '</td>';
-    if (showExecutor) html += '<td>' + esc(t.executor_name || '') + '</td>';
-    html += '<td style="white-space:nowrap">' + fmtDate(t.date_end) + '</td>';
-    html += '<td><span class="' + statusCls + '">' + statusText + '</span></td>';
-    html += '<td>';
-    if (t.days_overdue) {
-      html += '<span class="dash-days-badge dash-days-overdue">' + t.days_overdue + ' дн.</span>';
-    } else if (t.days_left !== undefined && t.days_left >= 0) {
-      html += '<span class="dash-days-badge dash-days-left">' + t.days_left + ' дн.</span>';
-    } else if (t.days_late) {
-      html += '<span class="dash-days-badge dash-days-late">+' + t.days_late + ' дн.</span>';
-    }
-    html += '</td>';
-    html += '</tr>';
+    html += '<li>';
+    html += '<span class="dcl-name">' + esc(t.work_name) + '</span>';
+    if (t.work_designation) html += '<span class="dcl-designation">' + esc(t.work_designation) + '</span>';
+    if (t.project_name) html += '<span class="dcl-project">' + esc(t.project_name) + '</span>';
+    if (showExecutor && t.executor_name) html += '<span class="dcl-executor">' + esc(t.executor_name) + '</span>';
+    html += '<span class="dcl-date">' + fmtDate(t.date_end) + '</span>';
+    html += '<span class="' + statusCls + '">' + statusText + '</span>';
+    if (badge) html += badge;
+    html += '</li>';
   });
-
-  html += '</tbody></table></div>';
+  html += '</ul>';
   return html;
 }
 

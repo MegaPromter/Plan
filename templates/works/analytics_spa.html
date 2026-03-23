@@ -3,8 +3,8 @@
 {% block title %}Аналитика — Система управления{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=5">
-<link rel="stylesheet" href="{% static 'css/reports.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=6">
+<link rel="stylesheet" href="{% static 'css/reports.css' %}?v=3">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -45,5 +45,5 @@
   "role": "{{ role|escapejs }}",
   "deptCode": "{{ user_dept|escapejs }}"
 }</script>
-<script src="{% static 'js/analytics.js' %}?v=8"></script>
+<script src="{% static 'js/analytics.js' %}?v=9"></script>
 {% endblock %}
