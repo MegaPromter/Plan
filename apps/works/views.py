@@ -424,6 +424,11 @@ class ReportsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
         return redirect('works:analytics')
 
 
+class FeedbackSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """Замечания и предложения."""
+    template_name = 'works/feedback_spa.html'
+
+
 class ERDiagramView(TemplateView):
     """ER-диаграмма моделей приложения (standalone, без base.html)."""
     template_name = 'works/er_diagram.html'

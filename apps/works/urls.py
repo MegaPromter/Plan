@@ -33,6 +33,8 @@ urlpatterns = [
     path('analytics/', views.AnalyticsSPAView.as_view(), name='analytics'),
     # Отчёты: drill-down по оргструктуре
     path('reports/', views.ReportsSPAView.as_view(), name='reports'),
+    # Замечания и предложения
+    path('feedback/', views.FeedbackSPAView.as_view(), name='feedback'),
     # ER-диаграмма моделей
     path('er-diagram/', views.ERDiagramView.as_view(), name='er_diagram'),
 

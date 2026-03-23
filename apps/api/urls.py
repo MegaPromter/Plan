@@ -51,6 +51,8 @@ from .views.vacations import (
 from .views.business_trips import BusinessTripListView, BusinessTripDetailView
 # Вьюхи журнала извещений
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
+# Вьюхи замечаний и предложений (Feedback)
+from .views.feedback import FeedbackListView, FeedbackDetailView, FeedbackAttachmentDeleteView
 # Вьюхи производственного календаря (WorkCalendar + Holiday)
 from .views.work_calendar import (
     WorkCalendarListView, WorkCalendarCreateView, WorkCalendarDetailView,
@@ -193,6 +195,14 @@ urlpatterns = [
     path('journal/create/',     JournalCreateView.as_view()),
     # PUT/DELETE /api/journal/<pk>/ — обновление/удаление записи журнала
     path('journal/<int:pk>/',   JournalDetailView.as_view()),
+
+    # ── Замечания и предложения ──────────────────────────────────────────────
+    # GET/POST /api/feedback/ — список + создание
+    path('feedback/',            FeedbackListView.as_view()),
+    # PUT/DELETE /api/feedback/<pk>/ — обновление/удаление
+    path('feedback/<int:pk>/',   FeedbackDetailView.as_view()),
+    # DELETE /api/feedback/attachment/<pk>/ — удаление вложения
+    path('feedback/attachment/<int:pk>/', FeedbackAttachmentDeleteView.as_view()),
 
     # ── Производственный календарь ───────────────────────────────────────
     # GET /api/work_calendar/ — список месячных норм рабочего времени

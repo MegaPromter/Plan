@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin          # встроенная административная панель Django
 from django.urls import path, include     # path — создание маршрута; include — подключение вложенных URLconf
 from django.views.generic import RedirectView  # класс-view для HTTP-редиректа без написания функции
@@ -20,3 +22,6 @@ urlpatterns = [
     # Временный редирект (302) с корневого URL '/' на дашборд; permanent=False → HTTP 302
     path('', RedirectView.as_view(url='/accounts/dashboard/', permanent=False)),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

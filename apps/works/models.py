@@ -10,6 +10,7 @@
 TaskExecutor — дополнительные исполнители задачи (FK → Work).
 WorkReport   — отчётные документы (FK → Work).
 """
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -669,3 +670,70 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f'[{self.get_action_display()}] {self.object_repr} ({self.created_at})'
+
+
+# ── Замечания и предложения ──────────────────────────────────────────────────
+
+class Feedback(models.Model):
+    """Замечания и предложения пользователей."""
+
+    CATEGORY_FUNCTIONALITY = 'functionality'
+    CATEGORY_LOGIC         = 'logic'
+    CATEGORY_DESIGN        = 'design'
+    CATEGORY_BUG           = 'bug'
+    CATEGORY_OTHER         = 'other'
+    CATEGORY_CHOICES = [
+        (CATEGORY_FUNCTIONALITY, 'Функционал'),
+        (CATEGORY_LOGIC,         'Логика / Алгоритмы'),
+        (CATEGORY_DESIGN,        'Оформление'),
+        (CATEGORY_BUG,           'Ошибка'),
+        (CATEGORY_OTHER,         'Другое'),
+    ]
+
+    STATUS_NEW          = 'new'
+    STATUS_ACCEPTED     = 'accepted'
+    STATUS_IMPLEMENTED  = 'implemented'
+    STATUS_REJECTED     = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_NEW,         'Новое'),
+        (STATUS_ACCEPTED,    'Принято'),
+        (STATUS_IMPLEMENTED, 'Выполнено'),
+        (STATUS_REJECTED,    'Отклонено'),
+    ]
+
+    user          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                      related_name='feedbacks')
+    category      = models.CharField(max_length=20, choices=CATEGORY_CHOICES,
+                                      default=CATEGORY_OTHER, verbose_name='Категория')
+    text          = models.TextField(verbose_name='Текст')
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES,
+                                      default=STATUS_NEW, verbose_name='Статус')
+    admin_comment = models.TextField(blank=True, default='', verbose_name='Комментарий администратора')
+    screenshot    = models.ImageField(upload_to='feedback/', blank=True, null=True,
+                                       verbose_name='Скриншот')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table     = 'work_feedback'
+        verbose_name = 'Замечание / Предложение'
+        verbose_name_plural = 'Замечания и предложения'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'[{self.get_category_display()}] {self.text[:50]}'
+
+
+class FeedbackAttachment(models.Model):
+    """Вложение (скриншот) к замечанию."""
+    feedback = models.ForeignKey(Feedback, on_delete=models.CASCADE,
+                                  related_name='attachments')
+    image    = models.ImageField(upload_to='feedback/', verbose_name='Изображение')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_feedback_attachment'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'Attachment #{self.pk} for Feedback #{self.feedback_id}'

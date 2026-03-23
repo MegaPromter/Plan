@@ -126,6 +126,10 @@ STATICFILES_DIRS = [BASE_DIR / 'static']                  # папки со ст
 STATIC_ROOT = BASE_DIR / 'staticfiles'                    # куда collectstatic собирает файлы для продакшна
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # WhiteNoise: сжатие + хеш в имени файла
 
+# --- Медиа (загруженные файлы) ------------------------------------------
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # --- Кэш (используется rate-limiting middleware) -----------------------
 _CACHE_BACKEND = env('CACHE_BACKEND', default='locmem')
 if _CACHE_BACKEND == 'redis':
