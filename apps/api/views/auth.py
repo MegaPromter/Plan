@@ -285,24 +285,4 @@ class RegisterPublicView(View):
         return JsonResponse({'ok': True, 'id': user.pk}, status=201)
 
 
-def _resolve_position_key(display_name):
-    """
-    Преобразует отображаемое название должности в ключ POSITION_CHOICES.
-    Если совпадение не найдено, возвращает пустую строку.
-    """
-    if not display_name:
-        # Пустая строка — нечего искать
-        return ''
-    # Нормализуем для регистронезависимого сравнения
-    display_lower = display_name.lower().strip()
-    for key, label in Employee.POSITION_CHOICES:
-        if label.lower() == display_lower:
-            # Нашли соответствие — возвращаем ключ (например 'eng_3')
-            return key
-    # Если пришёл сам ключ (например 'eng_3') — проверяем напрямую
-    valid_keys = {k for k, _ in Employee.POSITION_CHOICES}
-    if display_name in valid_keys:
-        # display_name — это уже ключ choices
-        return display_name
-    # Не найдено ни ключа, ни label — возвращаем пустую строку
-    return ''
+from apps.api.utils import resolve_position_key as _resolve_position_key

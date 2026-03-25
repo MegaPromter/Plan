@@ -13,26 +13,7 @@ var MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл',
 var MONTHS_FULL = ['Январь','Февраль','Март','Апрель','Май','Июнь',
                    'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
-/* ── Утилиты ─────────────────────────────────────────────────────── */
-function esc(s) {
-  if (!s) return '';
-  var d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-function loadBadgeCls(pct) {
-  if (pct <= 85) return 'ok';
-  if (pct <= 100) return 'warn';
-  return 'over';
-}
-
-function fmtPct(v) { return v > 0 ? v.toFixed(1) + '%' : '0%'; }
-function fmtHrs(v) { return v > 0 ? v.toFixed(1) : '0'; }
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return iso.slice(8,10) + '.' + iso.slice(5,7) + '.' + iso.slice(0,4);
-}
+/* ── Утилиты — в utils.js (esc, loadBadgeCls, fmtPct, fmtHrs, fmtDate) ── */
 
 /* ── API ─────────────────────────────────────────────────────────── */
 function loadDashboard() {

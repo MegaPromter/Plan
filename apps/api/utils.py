@@ -571,3 +571,20 @@ def model_to_dict_json(instance, fields=None, exclude=None):
             # date → строка ISO 8601
             d[k] = v.isoformat()
     return d
+
+
+def resolve_position_key(display_name):
+    """
+    Преобразует отображаемое название должности в ключ POSITION_CHOICES.
+    Если совпадение не найдено, возвращает пустую строку.
+    """
+    if not display_name:
+        return ''
+    display_lower = display_name.lower().strip()
+    for key, label in Employee.POSITION_CHOICES:
+        if label.lower() == display_lower:
+            return key
+    valid_keys = {k for k, _ in Employee.POSITION_CHOICES}
+    if display_name in valid_keys:
+        return display_name
+    return ''

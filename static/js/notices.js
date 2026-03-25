@@ -14,15 +14,12 @@ const USER_SECTOR = _cfg.userSector;
 
 /* ── Права ───────────────────────────────────────────────────────────────── */
 
+// canModifyRow(), isFullAccess() — в utils.js
 function _canModify(rowDept, rowSector) {
-  if (!IS_WRITER) return false;
-  if (IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy') return true;
-  if (USER_ROLE === 'sector_head') return !!rowSector && rowSector === USER_SECTOR;
-  return !!rowDept && rowDept === USER_DEPT;
+  return canModifyRow(IS_WRITER, IS_ADMIN, USER_ROLE, USER_DEPT, USER_SECTOR, rowDept, rowSector);
 }
-
 function _isFullAccess() {
-  return IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy';
+  return isFullAccess(IS_ADMIN, USER_ROLE);
 }
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */

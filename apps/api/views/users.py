@@ -26,18 +26,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def _resolve_position_key(display_name):
-    """Преобразует display-имя должности в ключ POSITION_CHOICES."""
-    if not display_name:
-        return ''
-    dl = display_name.lower().strip()
-    for key, label in Employee.POSITION_CHOICES:
-        if label.lower() == dl:
-            return key
-    valid_keys = {k for k, _ in Employee.POSITION_CHOICES}
-    if display_name in valid_keys:
-        return display_name
-    return ''
+from apps.api.utils import resolve_position_key as _resolve_position_key
 
 
 # ── GET / POST /api/users ────────────────────────────────────────────────────

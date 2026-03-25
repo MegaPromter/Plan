@@ -23,18 +23,9 @@ var STATUSES = {
   rejected: 'Отклонено'
 };
 
-function esc(s) {
-  if (!s) return '';
-  var d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-function fmtDate(iso) {
-  if (!iso) return '';
-  return iso.slice(8,10) + '.' + iso.slice(5,7) + '.' + iso.slice(0,4) +
-    ' ' + iso.slice(11,16);
-}
+// esc() — в utils.js
+// feedback.js fmtDate = fmtDateTime (дата + время)
+var fmtDate = fmtDateTime;
 
 var filterStatus = '';
 var filterCategory = '';

@@ -29,29 +29,13 @@ var lastData = null;
 var chartBar = null;
 var _exportData = [];
 
-/* ── Утилиты ─────────────────────────────────────────────────────────── */
-function esc(s) {
-  if (!s) return '';
-  var d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
+/* ── Утилиты — esc/loadBadgeCls/fmtPct/fmtHrs в utils.js ─────────────── */
 function escAttr(s) {
   return esc(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 }
-
 function getCSSVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
-
-function loadBadgeCls(pct) {
-  if (pct <= 85) return 'ok';
-  if (pct <= 100) return 'warn';
-  return 'over';
-}
-
-function fmtPct(v) { return v > 0 ? v.toFixed(1) + '%' : '0%'; }
-function fmtHrs(v) { return v > 0 ? v.toFixed(1) : '0'; }
 
 function idsToList(obj) {
   var arr = [];

@@ -606,6 +606,52 @@ function createLazyRender(opts) {
     };
 }
 
+/* ── Общие форматтеры ────────────────────────────────────────────────── */
+
+/** Алиас escapeHtml для краткости */
+var esc = escapeHtml;
+
+/** Форматирование процентов: 85.3% */
+function fmtPct(v) { return v > 0 ? v.toFixed(1) + '%' : '0%'; }
+
+/** Форматирование часов: 123.5 */
+function fmtHrs(v) { return v > 0 ? v.toFixed(1) : '0'; }
+
+/** Дата ISO → DD.MM.YYYY */
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return iso.slice(8,10) + '.' + iso.slice(5,7) + '.' + iso.slice(0,4);
+}
+
+/** Дата+время ISO → DD.MM.YYYY HH:MM */
+function fmtDateTime(iso) {
+    if (!iso) return '';
+    return iso.slice(8,10) + '.' + iso.slice(5,7) + '.' + iso.slice(0,4) +
+        ' ' + iso.slice(11,16);
+}
+
+/** CSS-класс бейджа загрузки по проценту */
+function loadBadgeCls(pct) {
+    if (pct <= 85) return 'ok';
+    if (pct <= 100) return 'warn';
+    return 'over';
+}
+
+/* ── Права доступа (общие) ───────────────────────────────────────────── */
+
+/** Может ли пользователь модифицировать строку (dept/sector) */
+function canModifyRow(isWriter, isAdmin, userRole, userDept, userSector, rowDept, rowSector) {
+    if (!isWriter) return false;
+    if (isAdmin || userRole === 'ntc_head' || userRole === 'ntc_deputy') return true;
+    if (userRole === 'sector_head') return !!rowSector && rowSector === userSector;
+    return !!rowDept && rowDept === userDept;
+}
+
+/** Полный доступ (admin/ntc_head/ntc_deputy) */
+function isFullAccess(isAdmin, userRole) {
+    return isAdmin || userRole === 'ntc_head' || userRole === 'ntc_deputy';
+}
+
 /* ── Переключатель плотности (общий) ─────────────────────────────────── */
 
 function initDensityToggle(wrapSelector, savedDensity) {

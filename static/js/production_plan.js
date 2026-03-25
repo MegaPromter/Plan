@@ -28,13 +28,9 @@ const USER_SECTOR   = _ppCfg.userSector;
 const USER_SECTOR_NAME = _ppCfg.userSectorName;
 const USER_CENTER = _ppCfg.userCenter;
 
-// Может ли текущий пользователь редактировать строку с данным dept/sector
+// canModifyRow() — в utils.js
 function _canModify(rowDept, rowSector) {
-  if (!IS_WRITER) return false;
-  if (IS_ADMIN || USER_ROLE === 'ntc_head' || USER_ROLE === 'ntc_deputy') return true;
-  if (USER_ROLE === 'sector_head') return !!rowSector && rowSector === USER_SECTOR;
-  // dept_head, dept_deputy — только свой отдел
-  return !!rowDept && rowDept === USER_DEPT;
+  return canModifyRow(IS_WRITER, IS_ADMIN, USER_ROLE, USER_DEPT, USER_SECTOR, rowDept, rowSector);
 }
 
 /* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */

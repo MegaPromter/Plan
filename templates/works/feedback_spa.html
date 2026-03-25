@@ -120,6 +120,7 @@
   "isAdmin": {% if role == 'admin' %}true{% else %}false{% endif %},
   "csrfToken": "{{ csrf_token }}"
 }</script>
+<script src="{% static 'js/utils.js' %}?v=9"></script>
 <script src="{% static 'js/modal.js' %}"></script>
-<script src="{% static 'js/feedback.js' %}?v=10"></script>
+<script src="{% static 'js/feedback.js' %}?v=11"></script>
 {% endblock %}
