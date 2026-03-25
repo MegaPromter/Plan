@@ -192,9 +192,9 @@ if not DEBUG:
     # Сообщаем Django, что запрос пришёл по HTTPS, если прокси выставил этот заголовок
     SECURE_PROXY_SSL_HEADER        = ('HTTP_X_FORWARDED_PROTO', 'https')
     # Передавать cookie сессии только по HTTPS (защита от перехвата)
-    SESSION_COOKIE_SECURE          = True
+    SESSION_COOKIE_SECURE          = env.bool('SESSION_COOKIE_SECURE', default=True)
     # Передавать CSRF cookie только по HTTPS (защита от перехвата)
-    CSRF_COOKIE_SECURE             = True
+    CSRF_COOKIE_SECURE             = env.bool('CSRF_COOKIE_SECURE', default=True)
     # Доверенные источники для CSRF (Django 4.0+ требует, но Django 3.2 тоже поддерживает)
     CSRF_TRUSTED_ORIGINS           = env.list('CSRF_TRUSTED_ORIGINS',
                                                default=['https://gukalo.ru'])
