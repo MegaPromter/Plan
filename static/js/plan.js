@@ -103,27 +103,12 @@ function _spTasksWithoutStatusFilter() {
 }
 
 function spUpdateStatusPanel() {
-  const panel = document.getElementById('spStatusPanel');
-  if (!panel || tasks.length === 0) { if (panel) panel.style.display = 'none'; return; }
-  panel.style.display = '';
-
-  // Считаем по задачам, прошедшим все фильтры кроме статусного
-  const base = _spTasksWithoutStatusFilter();
-  let done = 0, overdue = 0, inwork = 0;
-  base.forEach(t => { const s = _spGetStatus(t); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
-  const total = base.length;
-
-  document.getElementById('spCountAll').textContent = total;
-  document.getElementById('spCountDone').textContent = done;
-  document.getElementById('spCountOverdue').textContent = overdue;
-  document.getElementById('spCountInWork').textContent = inwork;
-
-  document.getElementById('spBarDone').style.width    = (done / total * 100) + '%';
-  document.getElementById('spBarOverdue').style.width  = (overdue / total * 100) + '%';
-  document.getElementById('spBarInWork').style.width   = (inwork / total * 100) + '%';
-
-  panel.querySelectorAll('.status-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.status === _spStatusFilter);
+  updateStatusPanel({
+    panelId: 'spStatusPanel',
+    prefix: 'sp',
+    data: _spTasksWithoutStatusFilter(),
+    getStatus: _spGetStatus,
+    activeFilter: _spStatusFilter
   });
 }
 

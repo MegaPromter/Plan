@@ -99,25 +99,12 @@ function _ppGetStatus(row) {
 }
 
 function ppUpdateStatusPanel() {
-  const panel = document.getElementById('ppStatusPanel');
-  if (!panel || rows.length === 0) { if (panel) panel.style.display = 'none'; return; }
-  panel.style.display = '';
-
-  let done = 0, overdue = 0, inwork = 0;
-  rows.forEach(r => { const s = _ppGetStatus(r); if (s === 'done') done++; else if (s === 'overdue') overdue++; else inwork++; });
-  const total = rows.length;
-
-  document.getElementById('ppCountAll').textContent = total;
-  document.getElementById('ppCountDone').textContent = done;
-  document.getElementById('ppCountOverdue').textContent = overdue;
-  document.getElementById('ppCountInWork').textContent = inwork;
-
-  document.getElementById('ppBarDone').style.width    = (done / total * 100) + '%';
-  document.getElementById('ppBarOverdue').style.width  = (overdue / total * 100) + '%';
-  document.getElementById('ppBarInWork').style.width   = (inwork / total * 100) + '%';
-
-  panel.querySelectorAll('.status-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.status === _ppStatusFilter);
+  updateStatusPanel({
+    panelId: 'ppStatusPanel',
+    prefix: 'pp',
+    data: rows,
+    getStatus: _ppGetStatus,
+    activeFilter: _ppStatusFilter
   });
 }
 

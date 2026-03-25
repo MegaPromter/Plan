@@ -718,3 +718,85 @@ function renderSortIndicators(container, state) {
         th.style.userSelect = 'none';
     });
 }
+
+/* ── StatusPanel — универсальная панель статусов ──────────────────────── */
+/**
+ * Обновляет панель статусов (progress bar + счётчики).
+ * @param {Object} opts
+ * @param {string} opts.panelId    — id панели (e.g. 'spStatusPanel')
+ * @param {string} opts.prefix     — префикс id элементов (e.g. 'sp' → spCountAll, spBarDone)
+ * @param {Array}  opts.data       — массив данных
+ * @param {Function} opts.getStatus — function(item) → 'done'|'overdue'|'inwork'
+ * @param {string} opts.activeFilter — текущий фильтр статуса
+ */
+function updateStatusPanel(opts) {
+    var panel = document.getElementById(opts.panelId);
+    if (!panel || !opts.data || opts.data.length === 0) {
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = '';
+
+    var done = 0, overdue = 0, inwork = 0;
+    opts.data.forEach(function(item) {
+        var s = opts.getStatus(item);
+        if (s === 'done') done++;
+        else if (s === 'overdue') overdue++;
+        else inwork++;
+    });
+    var total = opts.data.length;
+    var p = opts.prefix;
+
+    var el;
+    el = document.getElementById(p + 'CountAll'); if (el) el.textContent = total;
+    el = document.getElementById(p + 'CountDone'); if (el) el.textContent = done;
+    el = document.getElementById(p + 'CountOverdue'); if (el) el.textContent = overdue;
+    el = document.getElementById(p + 'CountInWork'); if (el) el.textContent = inwork;
+
+    el = document.getElementById(p + 'BarDone'); if (el) el.style.width = (done / total * 100) + '%';
+    el = document.getElementById(p + 'BarOverdue'); if (el) el.style.width = (overdue / total * 100) + '%';
+    el = document.getElementById(p + 'BarInWork'); if (el) el.style.width = (inwork / total * 100) + '%';
+
+    panel.querySelectorAll('.status-chip').forEach(function(c) {
+        c.classList.toggle('active', c.dataset.status === opts.activeFilter);
+    });
+}
+
+/* ── initColumnResize — ресайз столбцов таблицы ──────────────────────── */
+/**
+ * @param {string} tableSelector — CSS-селектор таблицы
+ * @param {string} handleSelector — CSS-селектор resize-ручек (default '.col-resize')
+ */
+function initColumnResize(tableSelector, handleSelector) {
+    var table = document.querySelector(tableSelector);
+    if (!table) return;
+    var handles = table.querySelectorAll(handleSelector || '.col-resize');
+    handles.forEach(function(handle) {
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var th = handle.closest('th');
+            if (!th) return;
+            var startX = e.clientX;
+            var startW = th.offsetWidth;
+            var ticking = false;
+
+            function onMove(ev) {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(function() {
+                    var newW = Math.max(40, startW + ev.clientX - startX);
+                    th.style.width = newW + 'px';
+                    th.style.minWidth = newW + 'px';
+                    ticking = false;
+                });
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    });
+}
