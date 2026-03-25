@@ -16,12 +16,7 @@ function _fixFilterRowTop() {
   for (var i = 0; i < ths.length; i++) ths[i].style.top = h + 'px';
 }
 
-// Экранирование строки для безопасной вставки в JS-строки внутри onclick-атрибутов
-function escapeJs(s) {
-  if (!s) return '';
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')
-          .replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-}
+// escapeJs() — в utils.js
 
 // Конфигурация страницы (подставляется Django-шаблоном через JSON-блок)
 const _ppCfg = JSON.parse(document.getElementById('pp-config').textContent);
@@ -42,41 +37,12 @@ function _canModify(rowDept, rowSector) {
   return !!rowDept && rowDept === USER_DEPT;
 }
 
-/* ── Skeleton-загрузка ─────────────────────────────────────────────── */
-function _ppSkeletonRows(count, cols) {
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += '<tr>';
-    for (let c = 0; c < cols; c++) {
-      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
-      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
-    }
-    html += '</tr>';
-  }
-  return html;
-}
+/* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */
+var _ppSkeletonRows = skeletonRows;
 
-/* ── Переключатель плотности ───────────────────────────────────────── */
+/* ── Переключатель плотности — в utils.js ─────────────────────────── */
 function _initPPDensity() {
-  const wrap = document.querySelector('.pp-table-wrap');
-  if (!wrap) return;
-  const saved = (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable';
-  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
-  const toggle = document.getElementById('densityToggle');
-  if (!toggle) return;
-  toggle.querySelectorAll('button').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.density === saved);
-    btn.addEventListener('click', function() {
-      const d = this.dataset.density;
-      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
-      if (d !== 'comfortable') wrap.classList.add('density-' + d);
-      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
-      fetch('/api/col_settings/', {
-        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
-        body: JSON.stringify({ density: d })
-      }).catch(function() {});
-    });
-  });
+  initDensityToggle('.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable');
 }
 
 /** Формирует стандартное название ПП:
@@ -699,7 +665,7 @@ function renderPPTable() {
   // Обновляем панель статусов
   ppUpdateStatusPanel();
 
-  // Применяем активные колоночные фильтры к массиву строк
+  // Применяем сортировку и активные колоночные фильтры к массиву строк
   _ppFiltered = rows.filter(row => {
     // Фильтр по статусу (прогресс-панель)
     if (_ppStatusFilter !== 'all' && _ppGetStatus(row) !== _ppStatusFilter) return false;
@@ -723,6 +689,13 @@ function renderPPTable() {
     }
     return true;
   });
+
+  // Сортировка
+  if (_ppSortState.col) {
+    _ppFiltered = applySortToArray(_ppFiltered, _ppSortState, function(r, col) {
+      return r[col] || '';
+    });
+  }
 
   // Обновляем счётчик строк
   const hasFiltersActive = Object.keys(colFilters).length > 0;
@@ -1451,6 +1424,25 @@ async function syncToTasks() {
   }
 }
 
+/* ── Сортировка столбцов ─────────────────────────────────────────────── */
+var _ppSortState = { col: null, dir: 'asc' };
+
+function _ppInitSort() {
+    var thead = document.querySelector('#ppTable thead');
+    if (!thead) return;
+    thead.querySelectorAll('th[data-sort]').forEach(function(th) {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+        th.addEventListener('click', function(e) {
+            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger')) return;
+            toggleSort(_ppSortState, th.getAttribute('data-sort'));
+            renderSortIndicators(thead, _ppSortState);
+            renderPPTable();
+        });
+    });
+    renderSortIndicators(thead, _ppSortState);
+}
+
 /* ── Мультифильтры по столбцам ───────────────────────────────────────── */
 // Активные фильтры: { 'mf_<col>': Set<значений> }
 let colFilters = {};
@@ -1908,6 +1900,7 @@ window.addEventListener('popstate', async () => {
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
   _initPPDensity();
+  _ppInitSort();
   // Параллельно загружаем справочники и список ПП-проектов
   await Promise.all([loadDirs(), loadProjects()]);
 

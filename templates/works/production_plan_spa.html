@@ -145,30 +145,30 @@
 
   <div class="pp-table-wrap" id="ppTableView">
     <!-- Таблица производственного плана с инлайн-редактированием -->
-    <table class="pp-table">
+    <table class="pp-table" id="ppTable">
       <thead>
         <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
           <th style="width:40px;" rowspan="2">No</th>
-          <th style="width:100px;" rowspan="2">Код строки</th>
-          <th style="width:110px;" rowspan="2">Наряд-заказ</th>
-          <th style="width:90px;" rowspan="2">No этапа</th>
-          <th style="width:100px;" rowspan="2">No вехи</th>
-          <th style="width:90px;" rowspan="2">No работы</th>
+          <th style="width:100px;" rowspan="2" data-sort="row_code">Код строки</th>
+          <th style="width:110px;" rowspan="2" data-sort="work_order">Наряд-заказ</th>
+          <th style="width:90px;" rowspan="2" data-sort="stage_num">No этапа</th>
+          <th style="width:100px;" rowspan="2" data-sort="milestone_num">No вехи</th>
+          <th style="width:90px;" rowspan="2" data-sort="work_num">No работы</th>
           <th colspan="2" style="text-align:center;">Группа</th>
-          <th style="width:130px;" rowspan="2">Сроки выполнения</th>
+          <th style="width:130px;" rowspan="2" data-sort="date_end">Сроки выполнения</th>
           <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
-          <th style="width:100px;" rowspan="2">Подразделение</th>
-          <th style="width:60px;" rowspan="2">Отдел</th>
-          <th style="width:130px;" rowspan="2">Сектор /<br>Нач. сектора</th>
-          <th style="width:140px;" rowspan="2">Разработчик</th>
-          <th style="width:120px;" rowspan="2">Тип задачи</th>
+          <th style="width:100px;" rowspan="2" data-sort="ntc_center">Подразделение</th>
+          <th style="width:60px;" rowspan="2" data-sort="department">Отдел</th>
+          <th style="width:130px;" rowspan="2" data-sort="sector">Сектор /<br>Нач. сектора</th>
+          <th style="width:140px;" rowspan="2" data-sort="executor">Разработчик</th>
+          <th style="width:120px;" rowspan="2" data-sort="task_type">Тип задачи</th>
           <th style="width:70px;" rowspan="2">Действия</th>
         </tr>
         <!-- Вторая строка заголовков: детализация -->
         <tr>
-          <th style="width:300px;">Обозначение</th>
-          <th style="width:350px;">Наименование</th>
+          <th style="width:300px;" data-sort="work_designation">Обозначение</th>
+          <th style="width:350px;" data-sort="work_name">Наименование</th>
           <th style="width:100px;">Ф, А4</th>
           <th style="width:100px;">Норматив</th>
           <th style="width:100px;">Коэфф</th>
@@ -297,7 +297,7 @@
 
 {% block scripts %}
 <!-- Утилиты: fetchJson, escapeHtml, showToast, confirmDialog, getCsrfToken -->
-<script src="{% static 'js/utils.js' %}?v=6"></script>
+<script src="{% static 'js/utils.js' %}?v=8"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <!-- Модальные окна: openModal, modalStack -->
 <script src="{% static 'js/modal.js' %}"></script>
@@ -313,7 +313,7 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/production_plan.js' %}"></script>
+<script src="{% static 'js/production_plan.js' %}?v=3"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 // Вызывается после openProject, когда таблица видима

@@ -32,7 +32,7 @@
 </div>
 
 <div class="ji-wrap">
-  <table class="ji-table">
+  <table class="ji-table" id="jiTable">
     <colgroup>
       <col style="width:30px;">  <!-- № -->
       <col style="width:62px;">  <!-- ИИ/ПИ -->
@@ -51,21 +51,21 @@
     <thead>
       <tr>
         <th rowspan="2">&#8470;</th>
-        <th rowspan="2">ИИ/ПИ</th>
-        <th rowspan="2">Номер изв.</th>
+        <th rowspan="2" data-sort="ii_pi">ИИ/ПИ</th>
+        <th rowspan="2" data-sort="notice_number">Номер изв.</th>
         <th colspan="2" style="text-align:center;">Группа</th>
-        <th rowspan="2">Дата выпуска</th>
-        <th rowspan="2">Срок действия</th>
-        <th rowspan="2">Отдел</th>
-        <th rowspan="2">Сектор</th>
-        <th rowspan="2">Разработчик</th>
-        <th rowspan="2">Описание</th>
-        <th rowspan="2">Статус</th>
+        <th rowspan="2" data-sort="date_issued">Дата выпуска</th>
+        <th rowspan="2" data-sort="date_expires">Срок действия</th>
+        <th rowspan="2" data-sort="dept">Отдел</th>
+        <th rowspan="2" data-sort="sector">Сектор</th>
+        <th rowspan="2" data-sort="developer">Разработчик</th>
+        <th rowspan="2" data-sort="description">Описание</th>
+        <th rowspan="2" data-sort="status">Статус</th>
         <th rowspan="2" class="col-actions"></th>
       </tr>
       <tr>
-        <th>Наименование</th>
-        <th>Обозначение</th>
+        <th data-sort="subject">Наименование</th>
+        <th data-sort="doc_designation">Обозначение</th>
       </tr>
       <tr class="filter-row">
         <th></th>
@@ -214,7 +214,7 @@
   </div>
 </div>
 
-<script src="{% static 'js/utils.js' %}?v=6"></script>
+<script src="{% static 'js/utils.js' %}?v=8"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script id="page-config" type="application/json">{
@@ -225,5 +225,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}?v=4"></script>
+<script src="{% static 'js/notices.js' %}?v=6"></script>
 {% endblock %}

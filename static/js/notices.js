@@ -26,41 +26,12 @@ function _isFullAccess() {
 }
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
-function _jiSkeletonRows(count, cols) {
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += '<tr>';
-    for (let c = 0; c < cols; c++) {
-      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
-      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
-    }
-    html += '</tr>';
-  }
-  return html;
-}
+// skeletonRows() — в utils.js
+var _jiSkeletonRows = skeletonRows;
 
-/* ── Переключатель плотности ───────────────────────────────────────── */
+/* ── Переключатель плотности — в utils.js ─────────────────────────── */
 function _initJiDensity() {
-  const wrap = document.querySelector('.ji-wrap');
-  if (!wrap) return;
-  const saved = (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable';
-  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
-  const toggle = document.getElementById('densityToggle');
-  if (!toggle) return;
-  toggle.querySelectorAll('button').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.density === saved);
-    btn.addEventListener('click', function() {
-      const d = this.dataset.density;
-      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
-      if (d !== 'comfortable') wrap.classList.add('density-' + d);
-      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
-      fetch('/api/col_settings/', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken': getCsrf()},
-        body: JSON.stringify({ density: d })
-      }).catch(function() {});
-    });
-  });
+  initDensityToggle('.ji-wrap', (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable');
 }
 
 /* ── Состояние ───────────────────────────────────────────────────────────── */
@@ -173,6 +144,7 @@ async function loadJournal() {
     const r = await fetch('/api/journal/?per_page=100000');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     jiData = await r.json();
+    _jiInitSort();
     renderTable();
   } catch(e) {
     document.getElementById('jiBody').innerHTML =
@@ -193,6 +165,25 @@ function applyFilters() {
   });
 }
 
+/* ── Сортировка столбцов ─────────────────────────────────────────────────── */
+var _jiSortState = { col: null, dir: 'asc' };
+
+function _jiInitSort() {
+    var thead = document.querySelector('#jiTable thead');
+    if (!thead) return;
+    thead.querySelectorAll('th[data-sort]').forEach(function(th) {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+        th.addEventListener('click', function(e) {
+            if (e.target.classList.contains('mf-trigger')) return;
+            toggleSort(_jiSortState, th.getAttribute('data-sort'));
+            renderSortIndicators(thead, _jiSortState);
+            renderTable();
+        });
+    });
+    renderSortIndicators(thead, _jiSortState);
+}
+
 /* ── Infinite scroll: ленивая отрисовка ──────────────────────────────────── */
 
 const JI_CHUNK = 50;
@@ -202,6 +193,12 @@ let _jiScrollDispose = null;
 
 function renderTable() {
   _jiFiltered = applyFilters();
+  // Сортировка
+  if (_jiSortState.col) {
+    _jiFiltered = applySortToArray(_jiFiltered, _jiSortState, function(n, col) {
+      return n[col] || '';
+    });
+  }
   _jiRenderedCount = 0;
   if (_jiScrollDispose) { _jiScrollDispose(); _jiScrollDispose = null; }
 
@@ -301,12 +298,7 @@ function _jiAttachScrollListener() {
   );
 }
 
-function escapeHtml(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
+// escapeHtml() — в utils.js
 const esc = escapeHtml;
 
 /* ── Модал добавления/редактирования ─────────────────────────────────────── */

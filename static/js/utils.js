@@ -512,3 +512,116 @@ function taskTypeBadgeHtml(taskType, opts) {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 })();
+
+/* ── Переключатель плотности (общий) ─────────────────────────────────── */
+
+function initDensityToggle(wrapSelector, savedDensity) {
+    var wrap = document.querySelector(wrapSelector);
+    if (!wrap) return;
+    var saved = savedDensity || 'comfortable';
+    if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
+    var toggle = document.getElementById('densityToggle');
+    if (!toggle) return;
+    toggle.querySelectorAll('button').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.density === saved);
+        btn.addEventListener('click', function() {
+            var d = this.dataset.density;
+            wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
+            if (d !== 'comfortable') wrap.classList.add('density-' + d);
+            toggle.querySelectorAll('button').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.density === d);
+            });
+            fetch('/api/col_settings/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+                body: JSON.stringify({density: d})
+            }).catch(function() {});
+        });
+    });
+}
+
+/* ── Skeleton rows (общая заглушка загрузки таблицы) ──────────────────── */
+
+function skeletonRows(count, cols) {
+    var html = '';
+    for (var i = 0; i < count; i++) {
+        html += '<tr>';
+        for (var c = 0; c < cols; c++) {
+            var w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
+            html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+
+/* ── escapeJs (экранирование строки для JS-литерала) ─────────────────── */
+
+function escapeJs(s) {
+    if (!s) return '';
+    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')
+                     .replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
+/* ── Универсальная сортировка массива данных по столбцу ────────────────── */
+/**
+ * Состояние сортировки: {col: string, dir: 'asc'|'desc'}
+ * Использование:
+ *   1. Вызвать toggleSort(state, colKey) при клике на заголовок
+ *   2. Вызвать applySortToArray(array, state, getVal) для сортировки
+ *   3. Вызвать renderSortIndicators(thElements, state) для отрисовки стрелок
+ */
+
+function toggleSort(state, colKey) {
+    if (state.col === colKey) {
+        state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.col = colKey;
+        state.dir = 'asc';
+    }
+}
+
+function applySortToArray(arr, state, getVal) {
+    if (!state.col) return arr;
+    var col = state.col;
+    var dir = state.dir === 'desc' ? -1 : 1;
+    return arr.slice().sort(function(a, b) {
+        var va = getVal(a, col);
+        var vb = getVal(b, col);
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        // Числа
+        if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+        // Даты (YYYY-MM-DD)
+        if (typeof va === 'string' && /^\d{4}-\d{2}/.test(va)) {
+            return va.localeCompare(vb) * dir;
+        }
+        // Строки
+        va = String(va).toLowerCase();
+        vb = String(vb).toLowerCase();
+        return va.localeCompare(vb, 'ru') * dir;
+    });
+}
+
+function renderSortIndicators(container, state) {
+    var ths = container.querySelectorAll('th[data-sort]');
+    ths.forEach(function(th) {
+        var key = th.getAttribute('data-sort');
+        // Удаляем старые индикаторы
+        var old = th.querySelector('.sort-ind');
+        if (old) old.remove();
+        // Добавляем новый
+        var span = document.createElement('span');
+        span.className = 'sort-ind';
+        span.style.cssText = 'margin-left:4px;font-size:10px;opacity:0.5;';
+        if (state.col === key) {
+            span.style.opacity = '1';
+            span.textContent = state.dir === 'asc' ? '▲' : '▼';
+        } else {
+            span.textContent = '⇅';
+        }
+        th.appendChild(span);
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+    });
+}

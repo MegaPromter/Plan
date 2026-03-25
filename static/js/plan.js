@@ -16,16 +16,7 @@ async function fetchJson(url, opts={}) {
   const txt = await res.text();
   return txt ? JSON.parse(txt) : {};
 }
-function escapeHtml(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-function escapeJs(s) {
-  if (!s) return '';
-  return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'\\r');
-}
+// escapeHtml(), escapeJs() — в utils.js
 const _now = new Date();
 let selectedYear  = parseInt(localStorage.getItem("plan_year")  || _now.getFullYear());
 let selectedMonth = localStorage.getItem("plan_month") !== null
@@ -143,18 +134,8 @@ function spFilterStatus(status) {
 }
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
-function _spSkeletonRows(count, cols) {
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += '<tr>';
-    for (let c = 0; c < cols; c++) {
-      const w = c === 0 ? 'sk-id' : (c < 3 ? 'sk-text' : (c % 3 === 0 ? 'sk-text-sm' : 'sk-text-md'));
-      html += '<td><span class="skeleton ' + w + '" style="animation-delay:' + (i * 0.08) + 's"></span></td>';
-    }
-    html += '</tr>';
-  }
-  return html;
-}
+// skeletonRows() — в utils.js
+var _spSkeletonRows = skeletonRows;
 
 /* ── Тултип для бейджа ПП (position:fixed, не обрезается overflow) ── */
 const _ppTip = (() => {
@@ -196,29 +177,9 @@ const _ppTip = (() => {
   });
 })();
 
-/* ── Переключатель плотности ───────────────────────────────────────── */
+/* ── Переключатель плотности — в utils.js ─────────────────────────── */
 function _initDensity() {
-  const wrap = document.querySelector('.table-wrap');
-  if (!wrap) return;
-  const saved = (colSettings && colSettings.density) || 'comfortable';
-  if (saved !== 'comfortable') wrap.classList.add('density-' + saved);
-  // Кнопки переключателя в тулбаре
-  const toggle = document.getElementById('densityToggle');
-  if (!toggle) return;
-  toggle.querySelectorAll('button').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.density === saved);
-    btn.addEventListener('click', function() {
-      const d = this.dataset.density;
-      wrap.classList.remove('density-compact', 'density-comfortable', 'density-spacious');
-      if (d !== 'comfortable') wrap.classList.add('density-' + d);
-      toggle.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.dataset.density === d); });
-      // Сохраняем на сервер
-      fetch('/api/col_settings/', {
-        method: 'POST', headers: apiHeaders(),
-        body: JSON.stringify({ density: d })
-      }).catch(function() {});
-    });
-  });
+  initDensityToggle('.table-wrap', (colSettings && colSettings.density) || 'comfortable');
 }
 
 let currentTaskId = null;
@@ -376,6 +337,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   initColResize();
   applyColSettings();
   initFilterMode();
+  _spInitSort();
   runMonthCheckIfNeeded();
   // Ошибки планирования проверяются только по запросу пользователя (кнопка)
 });
@@ -1222,6 +1184,26 @@ function initFilterMode() {
   if (cb) { cb.checked = instant; toggleFilterMode(cb); }
 }
 
+// ── COLUMN SORT ───────────────────────────────────────────────────────────
+var _spSortState = { col: null, dir: 'asc' };
+
+function _spInitSort() {
+    var thead = document.querySelector('#mainTable thead');
+    if (!thead) return;
+    thead.querySelectorAll('th[data-sort]').forEach(function(th) {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+        th.addEventListener('click', function(e) {
+            // Не сортируем если кликнули на resize-handle или mf-trigger
+            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger')) return;
+            toggleSort(_spSortState, th.getAttribute('data-sort'));
+            renderSortIndicators(thead, _spSortState);
+            renderTable();
+        });
+    });
+    renderSortIndicators(thead, _spSortState);
+}
+
 // ── COLUMN FILTERS ────────────────────────────────────────────────────────
 let colFilters = {};
 
@@ -1323,6 +1305,13 @@ function renderTable() {
     }
     return true;
   });
+
+  // Сортировка
+  if (_spSortState.col) {
+    _spFiltered = applySortToArray(_spFiltered, _spSortState, function(t, col) {
+      return t[col] || '';
+    });
+  }
 
   // Обновляем панель статусов (считает по задачам с учётом фильтров, но без статус-фильтра)
   spUpdateStatusPanel();

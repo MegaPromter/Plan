@@ -123,23 +123,23 @@
 <thead>
 <tr>
   <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-project" rowspan="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-stage" rowspan="2"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-project" rowspan="2" data-sort="project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-stage" rowspan="2" data-sort="stage"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum" rowspan="2" data-sort="work_number"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just" rowspan="2" data-sort="justification"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
-  <th id="th-dept" rowspan="2"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-exec" rowspan="2"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
-  <th id="th-ds" rowspan="2"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
-  <th id="th-de" rowspan="2"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
-  <th id="th-dead" rowspan="2"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
+  <th id="th-dept" rowspan="2" data-sort="department"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2" data-sort="sector"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-exec" rowspan="2" data-sort="executor"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-ds" rowspan="2" data-sort="date_start"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
+  <th id="th-de" rowspan="2" data-sort="date_end"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
+  <th id="th-dead" rowspan="2" data-sort="deadline"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
   <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
-  <th id="th-desc"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-desc" data-sort="description"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname" data-sort="work_name"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
 </tr>
 <tr class="filter-row" id="filterRow">
   <th class="th-num"></th>
@@ -536,7 +536,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=6"></script>
+<script src="{% static 'js/utils.js' %}?v=8"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script id="sp-config" type="application/json">{
@@ -548,7 +548,7 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}?v=4"></script>
+<script src="{% static 'js/plan.js' %}?v=6"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){
