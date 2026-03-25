@@ -168,21 +168,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 .btn-deps:hover { background:rgba(139,92,246,0.1); }
 /* dep-badge — базовые стили в components.css */
 .deps-modal { max-width:700px; width:95vw; }
-.deps-table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
-.deps-table th, .deps-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
-.deps-table th { background:var(--surface2); font-weight:600; color:var(--text2); font-size:13px; }
-.deps-table td { color:var(--text); }
-.deps-table .dep-type-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:12px;
-  font-weight:600; font-family:var(--mono); background:rgba(37,99,235,0.1); color:var(--accent); }
-.deps-add-form { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; padding:12px; background:var(--surface2); border-radius:8px; margin-top:12px; }
-.deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
-.deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
-  font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); }
-.deps-section-title { font-size:15px; font-weight:600; color:var(--text); margin:16px 0 8px; display:flex; align-items:center; gap:6px; }
-.deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
-  border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
-.deps-align-bar .warn-icon { font-size:20px; }
-.deps-align-bar .warn-text { flex:1; font-size:14px; color:var(--text2); }
+/* .deps-table, .deps-add-form, .deps-section-title, .deps-align-bar — в components.css */
 
 /* Searchable dropdown — базовые стили в components.css */
 

@@ -130,67 +130,12 @@
 }
 .pp-table thead th:first-child { position:sticky; left:0; z-index:13; }
 
-/* ── Инлайн-редактирование ячеек ───────────────────────────────────── */
-.cell-edit {
-  width: 100%;
-  min-height: 28px;
-  padding: 4px 6px;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 13px;
-  resize: none;
-  overflow: hidden;
-  text-align: center;
-  box-sizing: border-box;
-}
-.cell-edit:focus { background: rgba(59,130,246,0.06); border-radius: 3px; }
-select.cell-edit {
-  background-color: transparent !important;
-  color: var(--text) !important;
-  border: none;
-  border-radius: 0;
-  padding: 4px 6px;
-  width: 100%;
-  cursor: pointer;
-}
-select.cell-edit:focus { background: rgba(59,130,246,0.06) !important; }
-select.cell-edit option {
-  background-color: var(--surface2) !important;
-  color: var(--text) !important;
-}
-.cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+/* .cell-edit, .cell-num — в tables.css */
 
-/* ── Кнопка удаления строки ────────────────────────────────────────── */
-.btn-delete {
-  background: transparent;
-  color: var(--danger);
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.15s;
-  opacity: 0.55;
-}
+/* .btn-delete — в tables.css; pp-специфичный hover: */
 .pp-table tbody tr:hover .btn-delete { opacity: 1; }
-.btn-delete:hover { background: rgba(239,68,68,0.12); opacity: 1; }
 
-/* ── Зависимости (таблица, форма, выравнивание) ────────────────────── */
-.deps-table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
-.deps-table th, .deps-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
-.deps-table th { background:var(--surface2); font-weight:600; color:var(--text2); font-size:13px; }
-.deps-table .dep-type-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:12px;
-  font-weight:600; font-family:var(--mono); background:rgba(37,99,235,0.1); color:var(--accent); }
-.deps-add-form { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; padding:12px; background:var(--surface2); border-radius:8px; margin-top:12px; }
-.deps-add-form label { font-size:13px; color:var(--text2); font-weight:500; }
-.deps-add-form select, .deps-add-form input { padding:6px 10px; border:1px solid var(--border); border-radius:6px;
-  font-size:14px; font-family:var(--font); }
-.deps-section-title { font-size:15px; font-weight:600; color:var(--text); margin:16px 0 8px; display:flex; align-items:center; gap:6px; }
-.deps-align-bar { display:flex; gap:8px; align-items:center; padding:12px; background:rgba(245,158,11,0.08);
-  border:1px solid rgba(245,158,11,0.25); border-radius:8px; margin-top:16px; }
+/* .deps-* — в components.css */
 
 /* ── Панель периода (год + месяцы) ─────────────────────────────────── */
 .pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
@@ -256,16 +201,7 @@ th .resize-handle:hover,
 th .resize-handle.resizing { background: var(--accent); opacity: 0.5; }
 th.resizing { background: rgba(59,130,246,0.2) !important; }
 
-/* ── Ошибка валидации ──────────────────────────────────────────────── */
-.cell-error {
-  outline: 2px solid var(--danger) !important;
-  background: rgba(239,68,68,0.12) !important;
-  animation: pulse-error 1s ease-in-out 2;
-}
-@keyframes pulse-error {
-  0%,100% { outline-color: var(--danger); }
-  50% { outline-color: rgba(239,68,68,0.4); }
-}
+/* .cell-error — в tables.css */
 
 /* ── Панель статусов (ПП-специфичные размеры) ─────────────────────── */
 /* Базовые .status-chip, .status-bar-mini, .status-bar-* в components.css */
