@@ -195,6 +195,9 @@ if not DEBUG:
     SESSION_COOKIE_SECURE          = True
     # Передавать CSRF cookie только по HTTPS (защита от перехвата)
     CSRF_COOKIE_SECURE             = True
+    # Доверенные источники для CSRF (Django 4.0+ требует, но Django 3.2 тоже поддерживает)
+    CSRF_TRUSTED_ORIGINS           = env.list('CSRF_TRUSTED_ORIGINS',
+                                               default=['https://gukalo.ru'])
 
 # --- Email -----------------------------------------------------------------
 # Для отправки писем (сброс пароля и др.)

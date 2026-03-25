@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # (ключ-префикс, URL-префикс, макс.запросов, окно в секундах, is_api)
 # is_api=True — вернуть JSON 429; is_api=False — вернуть HTML-текст 429
 _RATE_RULES = [
-    ('rl_login',    '/accounts/login/',       10,  60,  False),  # страница входа
+    ('rl_login',    '/accounts/login/',      100,  60,  False),  # страница входа
     ('rl_reg',      '/api/register_public/',   5, 300,  True),   # регистрация
     ('rl_api',      '/api/',                 300,  60,  True),   # весь API
 ]

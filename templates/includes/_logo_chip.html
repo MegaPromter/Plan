@@ -1,0 +1,60 @@
+{# Логотип ManageSystems.ru — микрочип с билдами #}
+{# Параметры: size (small/medium/large), show_text (true/false) #}
+{% if size == "large" %}
+<div class="ms-logo ms-logo-lg">
+  <div class="ms-chip">
+    <div class="ms-pins-t"><span></span><span></span><span></span></div>
+    <div class="ms-pins-l"><span></span><span></span><span></span></div>
+    <div class="ms-chip-body">
+      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
+      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
+      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
+    </div>
+    <div class="ms-pins-r"><span></span><span></span><span></span></div>
+    <div class="ms-pins-b"><span></span><span></span><span></span></div>
+  </div>
+  {% if show_text != "false" %}
+  <div class="ms-brand-text">
+    <div class="ms-brand-title">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
+    <div class="ms-brand-sub">SMART INFRASTRUCTURE</div>
+  </div>
+  {% endif %}
+</div>
+{% elif size == "small" %}
+<div class="ms-logo ms-logo-sm">
+  <div class="ms-chip">
+    <div class="ms-pins-l"><span></span><span></span><span></span></div>
+    <div class="ms-chip-body">
+      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
+      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
+      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
+    </div>
+    <div class="ms-pins-r"><span></span><span></span><span></span></div>
+  </div>
+  {% if show_text != "false" %}
+  <div class="ms-brand-text">
+    <div class="ms-brand-title">MANAGE<br>SYSTEMS<span class="ms-ru">.ru</span></div>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="ms-logo ms-logo-md">
+  <div class="ms-chip">
+    <div class="ms-pins-t"><span></span><span></span><span></span></div>
+    <div class="ms-pins-l"><span></span><span></span><span></span></div>
+    <div class="ms-chip-body">
+      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
+      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
+      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
+    </div>
+    <div class="ms-pins-r"><span></span><span></span><span></span></div>
+    <div class="ms-pins-b"><span></span><span></span><span></span></div>
+  </div>
+  {% if show_text != "false" %}
+  <div class="ms-brand-text">
+    <div class="ms-brand-title">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
+    <div class="ms-brand-sub">SMART INFRASTRUCTURE</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
