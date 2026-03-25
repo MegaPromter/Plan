@@ -168,15 +168,7 @@
   background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
 .pp-view-tab:hover { color:var(--text); background:var(--surface2); }
 .pp-view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-.gantt-scale-group { display:inline-flex; gap:0; margin-left:auto; align-items:stretch; }
-.gantt-scale-btn { padding:0 12px; font-size:12px; font-weight:500; color:var(--text2); cursor:pointer;
-  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
-.gantt-scale-btn:hover { color:var(--text); background:var(--surface2); }
-.gantt-scale-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.gantt-filter-btn { padding:0 14px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer;
-  border:none; background:transparent; font-family:var(--font); transition:all 0.15s; border-bottom:3px solid transparent; }
-.gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
-.gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
+/* gantt-scale-btn, gantt-filter-btn — в components.css */
 #ppGanttContainer { height:calc(100vh - 200px); display:none; }
 
 /* ── Строка фильтров ───────────────────────────────────────────────── */
