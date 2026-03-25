@@ -15,7 +15,7 @@ def has_employee(user):
         # Обращаемся к reverse OneToOne-связи user.employee.
         # Если профиль существует — bool() возвращает True.
         return bool(user.employee)
-    except Exception:
+    except (AttributeError, TypeError):
         # Если профиля нет (RelatedObjectDoesNotExist) или пользователь анонимный — возвращаем False
         return False
 
@@ -30,7 +30,7 @@ def is_writer(user):
         # Делегируем проверку свойству is_writer модели Employee
         # is_writer возвращает True для всех ролей, кроме 'user'
         return user.employee.is_writer
-    except Exception:
+    except (AttributeError, TypeError):
         # Профиль Employee отсутствует или пользователь не аутентифицирован
         return False
 
@@ -46,7 +46,7 @@ def is_admin_role(user):
         from apps.employees.models import Employee
         # Сравниваем строковое значение роли с константой ROLE_ADMIN ('admin')
         return user.employee.role == Employee.ROLE_ADMIN
-    except Exception:
+    except (AttributeError, TypeError):
         # Профиль Employee отсутствует или пользователь анонимный
         return False
 
@@ -59,7 +59,7 @@ def employee_initial(context):
         return '?'
     try:
         name = request.user.employee.short_name or request.user.username
-    except Exception:
+    except (AttributeError, TypeError):
         name = request.user.username
     return name[0].upper() if name else '?'
 
@@ -76,7 +76,7 @@ def employee_name(context):
         # short_name — свойство Employee, обычно «Фамилия И.О.»
         # Если short_name пустой/None — используем username как запасной вариант
         return request.user.employee.short_name or request.user.username
-    except Exception:
+    except (AttributeError, TypeError):
         # Профиль Employee отсутствует — возвращаем username как безопасный fallback
         return request.user.username
 
@@ -93,7 +93,7 @@ def employee_role(context):
         # get_role_display() возвращает человекочитаемое название роли из choices
         # (например, 'admin' → 'Администратор', 'user' → 'Пользователь')
         return request.user.employee.get_role_display()
-    except Exception:
+    except (AttributeError, TypeError):
         # Профиль Employee отсутствует: для суперпользователя показываем специальную метку,
         # для обычного пользователя без профиля — пустую строку
         return 'Суперпользователь' if request.user.is_superuser else ''

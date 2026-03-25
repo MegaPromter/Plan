@@ -28,8 +28,9 @@ from apps.api.mixins import (
     parse_json_body,
 )
 # Модели: Project (УП-проект), ProjectProduct (изделие проекта),
-# PPProject (план ПП, связанный с УП-проектом)
-from apps.works.models import Project, ProjectProduct, PPProject
+# PPProject (план ПП, связанный с УП-проектом), Work (задача)
+from apps.works.models import Project, ProjectProduct, PPProject, Work
+from datetime import date
 
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)
@@ -119,6 +120,122 @@ class ProjectListView(LoginRequiredJsonMixin, View):
         except Exception as e:
             logger.error('ProjectListView.get: %s', e, exc_info=True)
             return JsonResponse({'error': 'Ошибка сервера'}, status=500)
+
+
+# ---------------------------------------------------------------------------
+#  GET /api/projects/<id>/metrics/
+# ---------------------------------------------------------------------------
+
+class ProjectMetricsView(LoginRequiredJsonMixin, View):
+    """GET — метрики проекта: задачи, исполнители, сроки, загрузка."""
+
+    def get(self, request, project_id):
+        try:
+            proj = Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return JsonResponse({'error': 'Проект не найден'}, status=404)
+
+        today = date.today()
+
+        # ПП-планы проекта
+        pp_projects = PPProject.objects.filter(up_project=proj)
+        pp_ids = list(pp_projects.values_list('id', flat=True))
+
+        # Все задачи проекта: через прямую связь ИЛИ через ПП
+        from django.db.models import Q, Exists, OuterRef
+        from apps.works.models import WorkReport
+        works = Work.objects.filter(
+            Q(project=proj) | Q(pp_project_id__in=pp_ids)
+        ).select_related(
+            'executor', 'pp_project'
+        ).prefetch_related(
+            'task_executors'
+        ).annotate(
+            has_reports=Exists(WorkReport.objects.filter(work=OuterRef('pk')))
+        ).distinct()
+
+        total = works.count()
+        done = 0
+        in_work = 0
+        overdue = 0
+        total_hours = 0.0
+        executors_set = set()
+        date_min = None
+        date_max = None
+        pp_set = set()
+
+        for w in works:
+            is_done = w.has_reports
+
+            if is_done:
+                done += 1
+            elif w.date_end and w.date_end < today:
+                overdue += 1
+                in_work += 1
+            else:
+                in_work += 1
+
+            # Часы
+            if hasattr(w, 'plan_hours') and w.plan_hours:
+                total_hours += sum(float(v) for v in w.plan_hours.values())
+            for te in w.task_executors.all():
+                if te.plan_hours:
+                    total_hours += sum(float(v) for v in te.plan_hours.values())
+                if te.executor_id:
+                    executors_set.add((te.executor_id, te.executor_name))
+
+            # Исполнитель основной
+            if w.executor_id:
+                name = ''
+                if w.executor:
+                    name = w.executor.short_name or str(w.executor)
+                executors_set.add((w.executor_id, name))
+
+            # Сроки
+            if w.date_start:
+                if date_min is None or w.date_start < date_min:
+                    date_min = w.date_start
+            if w.date_end:
+                if date_max is None or w.date_end > date_max:
+                    date_max = w.date_end
+
+            # ПП
+            if w.pp_project_id:
+                pp_set.add((w.pp_project_id, str(w.pp_project) if w.pp_project else ''))
+
+        # Изделия
+        products = list(proj.products.values('id', 'name', 'code'))
+
+        # ПП планы — из задач + из прямой связи
+        for pp in pp_projects:
+            pp_set.add((pp.id, pp.name or str(pp)))
+        pp_plans = []
+        for pp_id, pp_name in sorted(pp_set, key=lambda x: x[1]):
+            pp_plans.append({'id': pp_id, 'name': pp_name})
+
+        # Исполнители
+        executors = []
+        for eid, ename in sorted(executors_set, key=lambda x: x[1]):
+            executors.append({'id': eid, 'name': ename})
+
+        return JsonResponse({
+            'id': proj.id,
+            'name_full': proj.name_full or '',
+            'name_short': proj.name_short or '',
+            'code': proj.code or '',
+            'tasks': {
+                'total': total,
+                'done': done,
+                'in_work': in_work,
+                'overdue': overdue,
+            },
+            'total_hours': round(total_hours, 1),
+            'date_start': date_min.isoformat() if date_min else None,
+            'date_end': date_max.isoformat() if date_max else None,
+            'products': products,
+            'pp_plans': pp_plans,
+            'executors': executors,
+        })
 
 
 # ---------------------------------------------------------------------------
