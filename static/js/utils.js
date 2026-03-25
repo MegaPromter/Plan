@@ -513,6 +513,99 @@ function taskTypeBadgeHtml(taskType, opts) {
     }
 })();
 
+/* ── LazyRender — ленивая отрисовка таблицы с infinite scroll ─────────── */
+/**
+ * Создаёт контроллер ленивой отрисовки.
+ * @param {Object} opts
+ * @param {string} opts.tbodyId       — id tbody
+ * @param {string} opts.scrollWrap    — CSS-селектор контейнера с прокруткой
+ * @param {string} opts.spinnerId     — id элемента спиннера
+ * @param {number} opts.chunkSize     — размер порции (default 50)
+ * @param {number} opts.colSpan       — colspan для спиннера
+ * @param {Function} opts.makeRow     — function(item, idx) → HTMLElement | string
+ * @param {Function} [opts.onBatch]   — callback после каждой порции
+ * @returns {Object} controller с методами reset(filtered), appendBatch(), dispose()
+ */
+function createLazyRender(opts) {
+    var chunkSize = opts.chunkSize || 50;
+    var filtered = [];
+    var renderedCount = 0;
+    var scrollDispose = null;
+
+    function appendBatch(count) {
+        var tbody = document.getElementById(opts.tbodyId);
+        if (!tbody) return;
+        var end = Math.min(renderedCount + (count || chunkSize), filtered.length);
+        var spinner = document.getElementById(opts.spinnerId);
+        if (spinner) spinner.remove();
+
+        var frag = document.createDocumentFragment();
+        for (var i = renderedCount; i < end; i++) {
+            var row = opts.makeRow(filtered[i], i + 1);
+            if (typeof row === 'string') {
+                var tmp = document.createElement('tbody');
+                tmp.innerHTML = row;
+                while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+            } else if (row) {
+                frag.appendChild(row);
+            }
+        }
+        tbody.appendChild(frag);
+        renderedCount = end;
+
+        if (opts.onBatch) opts.onBatch(renderedCount, filtered.length);
+
+        // Спиннер если ещё есть строки
+        if (renderedCount < filtered.length) {
+            var spinnerTr = document.createElement('tr');
+            spinnerTr.id = opts.spinnerId;
+            spinnerTr.innerHTML = '<td colspan="' + (opts.colSpan || 15) + '" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+            tbody.appendChild(spinnerTr);
+        }
+    }
+
+    function attachScroll() {
+        if (scrollDispose) { scrollDispose(); scrollDispose = null; }
+        if (renderedCount >= filtered.length) return;
+        var wrap = document.querySelector(opts.scrollWrap);
+        if (!wrap) return;
+        scrollDispose = createScrollLoader(wrap, function() {
+            if (renderedCount < filtered.length) {
+                appendBatch(chunkSize);
+                if (renderedCount >= filtered.length && scrollDispose) {
+                    scrollDispose(); scrollDispose = null;
+                }
+            }
+        }, 200);
+    }
+
+    function dispose() {
+        if (scrollDispose) { scrollDispose(); scrollDispose = null; }
+    }
+
+    return {
+        reset: function(data) {
+            dispose();
+            filtered = data || [];
+            renderedCount = 0;
+            var tbody = document.getElementById(opts.tbodyId);
+            if (tbody) tbody.innerHTML = '';
+        },
+        render: function(data) {
+            this.reset(data);
+            if (filtered.length > 0) {
+                appendBatch(chunkSize);
+                attachScroll();
+            }
+        },
+        appendBatch: appendBatch,
+        attachScroll: attachScroll,
+        dispose: dispose,
+        getRenderedCount: function() { return renderedCount; },
+        getFiltered: function() { return filtered; }
+    };
+}
+
 /* ── Переключатель плотности (общий) ─────────────────────────────────── */
 
 function initDensityToggle(wrapSelector, savedDensity) {
