@@ -197,7 +197,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE             = env.bool('CSRF_COOKIE_SECURE', default=True)
     # Доверенные источники для CSRF (Django 4.0+ требует, но Django 3.2 тоже поддерживает)
     CSRF_TRUSTED_ORIGINS           = env.list('CSRF_TRUSTED_ORIGINS',
-                                               default=['https://gukalo.ru'])
+                                               default=['https://managesystems.ru'])
 
 # --- Email -----------------------------------------------------------------
 # Для отправки писем (сброс пароля и др.)
