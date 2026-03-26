@@ -58,17 +58,7 @@
     <!-- Пустой блок для выравнивания элементов topbar -->
     <div class="topbar-spacer"></div>
     <!-- Дополнительные кнопки в topbar (определяются в дочерних шаблонах) -->
-    <!-- Глобальный поиск (Ctrl+K) -->
-    <button class="cmd-k-hint" onclick="toggleCommandPalette()" title="Ctrl+K">
-      <i class="fas fa-search"></i>
-      <span class="cmd-k-hint-text">Поиск</span>
-      <kbd>⌘K</kbd>
-    </button>
-    <!-- Горячие клавиши — подсказка -->
-    <button class="cmd-k-hint" onclick="showShortcutsHelp()" title="Горячие клавиши (?)" style="margin-left:4px;">
-      <i class="fas fa-keyboard"></i>
-      <span class="cmd-k-hint-text">?</span>
-    </button>
+    <!-- Уведомления далее -->
     <!-- Уведомления (колокольчик) -->
     <div class="notif-wrap" id="notifWrap">
       <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Уведомления" aria-label="Уведомления">
@@ -126,7 +116,6 @@
     <script src="{% static 'js/modal.js' %}?v=2"></script>
     <script src="{% static 'js/export.js' %}?v=2"></script>
     <script src="{% static 'js/column-picker.js' %}?v=1"></script>
-    <script src="{% static 'js/command-palette.js' %}?v=2"></script>
     <script src="{% static 'js/pdf-export.js' %}?v=1"></script>
     <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
     <!-- Блок контента — заполняется дочерними шаблонами -->
