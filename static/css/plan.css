@@ -73,6 +73,7 @@
 .main-content.sidebar-collapsed .searchbar { left:0; }
 .search-icon { color:var(--muted); font-size:16px; }
 .search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
+.search-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
 .search-input::placeholder { color:var(--muted); }
 .search-count { font-size:13px; color:var(--muted); font-family:var(--mono); }
 
@@ -128,6 +129,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 .cell-edit { width:100%; min-height:36px; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
   color:var(--text); font-family:var(--font); font-size:var(--td-font); resize:none; overflow:hidden; display:block; text-align:center; }
 .cell-edit:focus { background:rgba(59,130,246,0.06); }
+.cell-edit:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 .cell-edit.date { font-family:var(--mono); font-size:13px; min-width:130px; }
 .cell-edit.date::-webkit-calendar-picker-indicator { display:none; }
 .cell-edit.date-pick::-webkit-calendar-picker-indicator { display:inline-block; cursor:pointer; }
@@ -140,6 +142,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
 .cell-select:focus { background-color:rgba(59,130,246,0.06); }
+.cell-select:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 .cell-select option { background:var(--surface); color:var(--text); }
 
 /* ── Кнопки действий в строке таблицы ─────────────────────────────────── */

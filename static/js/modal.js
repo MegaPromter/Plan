@@ -80,11 +80,49 @@ function openModal(options = {}) {
         dialog.appendChild(footerDiv);
     }
 
+    // A11y: dialog role
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    if (title) {
+        const titleEl = header.querySelector('h3');
+        const titleId = id + '-title';
+        titleEl.id = titleId;
+        dialog.setAttribute('aria-labelledby', titleId);
+    }
+
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
 
     // Блокируем прокрутку страницы за модалкой
     document.body.style.overflow = 'hidden';
+
+    // A11y: сохраняем элемент, с которого открыли, для восстановления фокуса
+    const previousFocus = document.activeElement;
+
+    // A11y: focus trap — фокус циклически внутри модалки
+    function trapFocus(e) {
+        if (e.key !== 'Tab') return;
+        const focusable = dialog.querySelectorAll(
+            'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault(); first.focus();
+        }
+    }
+    dialog.addEventListener('keydown', trapFocus);
+
+    // A11y: авто-фокус на первый input или на кнопку закрытия
+    requestAnimationFrame(() => {
+        const firstInput = dialog.querySelector('input:not([type="hidden"]), select, textarea');
+        if (firstInput) { firstInput.focus(); } else {
+            const closeBtn = header.querySelector('.modal-close-btn');
+            if (closeBtn) closeBtn.focus();
+        }
+    });
 
     // Закрытие
     let closed = false;
@@ -92,12 +130,17 @@ function openModal(options = {}) {
         if (closed) return;
         closed = true;
         document.removeEventListener('keydown', onKey);
+        dialog.removeEventListener('keydown', trapFocus);
         backdrop.style.animation = 'modalFadeOut 0.15s ease-in forwards';
         setTimeout(() => {
             backdrop.remove();
             // Восстанавливаем прокрутку если все модалки закрыты
             if (!document.querySelector('.modal-backdrop')) {
                 document.body.style.overflow = '';
+            }
+            // A11y: возвращаем фокус на элемент-инициатор
+            if (previousFocus && previousFocus.focus) {
+                previousFocus.focus();
             }
             if (onClose) onClose();
         }, 150);

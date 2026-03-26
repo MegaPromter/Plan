@@ -7,11 +7,11 @@
     {% include "includes/_logo_chip.html" with size="small" show_text="true" %}
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Основная навигация">
     <!-- Обзор -->
     <div class="nav-section">
       <a href="{% url 'accounts:dashboard' %}" class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}">
-        <i class="fas fa-th-large"></i>
+        <i class="fas fa-th-large" aria-hidden="true"></i>
         <span>Стартовая страница</span>
       </a>
     </div>
@@ -19,7 +19,7 @@
     <!-- 1. Управление проектами -->
     <div class="nav-section">
       <a href="{% url 'works:projects' %}" class="nav-item nav-section-btn{% if active_nav == 'projects' %} active{% endif %}">
-        <i class="fas fa-project-diagram"></i>
+        <i class="fas fa-project-diagram" aria-hidden="true"></i>
         <span>1. Управление проектами</span>
       </a>
     </div>
@@ -27,7 +27,7 @@
     <!-- 2. Производственный план -->
     <div class="nav-section">
       <a href="{% url 'works:production_plan' %}" class="nav-item nav-section-btn{% if active_nav == 'pp' %} active{% endif %}">
-        <i class="fas fa-industry"></i>
+        <i class="fas fa-industry" aria-hidden="true"></i>
         <span>2. Производственный план</span>
       </a>
     </div>
@@ -35,7 +35,7 @@
     <!-- 3. Сводное планирование -->
     <div class="nav-section">
       <a href="{% url 'works:plan' %}" class="nav-item nav-section-btn{% if active_nav == 'plan' %} active{% endif %}">
-        <i class="fas fa-tasks"></i>
+        <i class="fas fa-tasks" aria-hidden="true"></i>
         <span>3. Сводное планирование (План/отчёт)</span>
       </a>
     </div>
@@ -43,7 +43,7 @@
     <!-- 4. Журнал извещений -->
     <div class="nav-section">
       <a href="{% url 'works:notice_list' %}" class="nav-item nav-section-btn{% if active_nav == 'notices' %} active{% endif %}">
-        <i class="fas fa-envelope"></i>
+        <i class="fas fa-envelope" aria-hidden="true"></i>
         <span>4. Журнал извещений</span>
       </a>
     </div>
@@ -51,7 +51,7 @@
     <!-- 5. Аналитика -->
     <div class="nav-section">
       <a href="{% url 'works:analytics' %}" class="nav-item nav-section-btn{% if active_nav == 'analytics' %} active{% endif %}">
-        <i class="fas fa-chart-bar"></i>
+        <i class="fas fa-chart-bar" aria-hidden="true"></i>
         <span>5. Аналитика</span>
       </a>
     </div>
@@ -59,18 +59,18 @@
     <!-- 6. Справочники -->
     <div class="nav-section">
       <div class="nav-dropdown">
-        <button class="nav-item nav-section-btn nav-dropdown-toggle{% if active_nav == 'work_calendar' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Справочники" aria-expanded="false">
-          <i class="fas fa-book"></i>
+        <button class="nav-item nav-section-btn nav-dropdown-toggle{% if active_nav == 'work_calendar' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Справочники" aria-expanded="false" aria-controls="nav-dd-ref">
+          <i class="fas fa-book" aria-hidden="true"></i>
           <span>6. Справочники</span>
-          <i class="fas fa-chevron-down nav-chevron"></i>
+          <i class="fas fa-chevron-down nav-chevron" aria-hidden="true"></i>
         </button>
-        <div class="nav-dropdown-menu">
+        <div class="nav-dropdown-menu" id="nav-dd-ref">
           <a href="{% url 'works:work_calendar' %}" class="nav-item nav-subitem{% if active_nav == 'work_calendar' %} active{% endif %}">
-            <i class="fas fa-calendar-check"></i>
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
             <span>Производственный календарь</span>
           </a>
           <a href="{% url 'accounts:stub' 'norms' %}" class="nav-item nav-subitem">
-            <i class="fas fa-ruler"></i>
+            <i class="fas fa-ruler" aria-hidden="true"></i>
             <span>Нормативы</span>
           </a>
         </div>
@@ -81,37 +81,37 @@
     <div class="nav-section">
       <div class="nav-section-title">7. Администрирование</div>
       <div class="nav-dropdown">
-        <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' or active_nav == 'business_trips' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false">
-          <i class="fas fa-users"></i>
+        <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' or active_nav == 'business_trips' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false" aria-controls="nav-dd-emp">
+          <i class="fas fa-users" aria-hidden="true"></i>
           <span>Сотрудники</span>
-          <i class="fas fa-chevron-down nav-chevron"></i>
+          <i class="fas fa-chevron-down nav-chevron" aria-hidden="true"></i>
         </button>
-        <div class="nav-dropdown-menu">
+        <div class="nav-dropdown-menu" id="nav-dd-emp">
           <a href="{% url 'employees:list' %}" class="nav-item nav-subitem{% if active_nav == 'employees' %} active{% endif %}">
-            <i class="fas fa-list"></i>
+            <i class="fas fa-list" aria-hidden="true"></i>
             <span>Список сотрудников</span>
           </a>
           <a href="{% url 'employees:vacation_plan' %}" class="nav-item nav-subitem{% if active_nav == 'vacation_plan' %} active{% endif %}">
-            <i class="fas fa-calendar-alt"></i>
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
             <span>План отпусков</span>
           </a>
           <a href="{% url 'works:business_trips' %}" class="nav-item nav-subitem{% if active_nav == 'business_trips' %} active{% endif %}">
-            <i class="fas fa-plane"></i>
+            <i class="fas fa-plane" aria-hidden="true"></i>
             <span>План командировок</span>
           </a>
         </div>
       </div>
       <a href="{% url 'accounts:stub' 'subdivisions' %}" class="nav-item{% if active_nav == 'subdivisions' %} active{% endif %}">
-        <i class="fas fa-sitemap"></i>
+        <i class="fas fa-sitemap" aria-hidden="true"></i>
         <span>Подразделения</span>
       </a>
       {% if request.user|is_admin_role %}
       <a href="{% url 'works:audit_log' %}" class="nav-item{% if active_nav == 'audit_log' %} active{% endif %}">
-        <i class="fas fa-clipboard-list"></i>
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         <span>Журнал аудита</span>
       </a>
       <a href="/admin/" class="nav-item">
-        <i class="fas fa-cogs"></i>
+        <i class="fas fa-cogs" aria-hidden="true"></i>
         <span>Настройки системы</span>
       </a>
       {% endif %}
@@ -123,7 +123,7 @@
     <a href="{% url 'works:feedback' %}"
        class="nav-item {% block nav_feedback %}{% endblock %}"
        style="color:#fbbf24;font-size:15px;font-weight:600;">
-      <i class="fas fa-lightbulb"></i>
+      <i class="fas fa-lightbulb" aria-hidden="true"></i>
       <span>Замечания и предложения</span>
     </a>
   </div>
@@ -136,14 +136,14 @@
         <div class="user-name">{% employee_name %}</div>
         <div class="user-role">{% employee_role %}</div>
       </div>
-      <a href="{% url 'accounts:logout' %}" class="logout-btn" title="Выйти">
-        <i class="fas fa-sign-out-alt"></i>
+      <a href="{% url 'accounts:logout' %}" class="logout-btn" title="Выйти" aria-label="Выйти из системы">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
       </a>
     </div>
     {% endif %}
   </div>
 </aside>
-<div class="sidebar-toast" id="sidebarToast"></div>
+<div class="sidebar-toast" id="sidebarToast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script>
 function showSidebarToast(msg, e) {
   var t = document.getElementById('sidebarToast');

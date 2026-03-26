@@ -87,6 +87,9 @@ function showToast(message, type = 'info', duration = 4000) {
         max-width: 480px; min-width: 240px; word-wrap: break-word;
         box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     `;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-atomic', 'true');
     toast.textContent = message;
     container.appendChild(toast);
 

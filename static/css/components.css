@@ -98,6 +98,12 @@
 .modal-form-group input:focus,
 .modal-form-group select:focus,
 .modal-form-group textarea:focus { border-color: var(--accent); }
+.modal-form-group input:focus-visible,
+.modal-form-group select:focus-visible,
+.modal-form-group textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+}
 
 /* ── Slideout-панель ─────────────────────────────────────────────── */
 .slideout-overlay {
@@ -243,6 +249,9 @@
   transition: border-color 0.15s;
   box-sizing: border-box;
   position: relative;
+}
+.mf-trigger:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
 }
 .mf-trigger.active {
   border-color: var(--accent);
