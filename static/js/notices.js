@@ -201,7 +201,7 @@ function renderTable() {
 
   const tbody = document.getElementById('jiBody');
   if (!_jiFiltered.length) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Нет данных</td></tr>';
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-envelope-open', title:'Нет извещений', desc:'Попробуйте изменить фильтры или добавьте новое извещение', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Новое извещение</button>' : '', colspan:13});
     document.getElementById('jiFooter').textContent = 'Записей: 0';
     return;
   }

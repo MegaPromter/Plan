@@ -4,9 +4,9 @@
 {% block title %}{{ object.full_name }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Краткое имя сотрудника (Фамилия И.О.) в хлебных крошках -->
 <span class="breadcrumb-current">{{ object.short_name }}</span>
 {% endblock %}
@@ -17,7 +17,7 @@
 <!-- Кнопка редактирования в topbar (только для пользователей с правом записи) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <a href="{% url 'employees:edit' object.pk %}" class="btn btn-outline"><i class="fas fa-edit"></i> Редактировать</a>
+  <a href="{% url 'employees:edit' object.pk %}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
 {% endif %}
 {% endblock %}
 

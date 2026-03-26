@@ -47,7 +47,7 @@
 /* ── Чипы (год, месяц, отдел, сектор, проект) ───────────────────────── */
 .an-chips { display:flex; gap:4px; flex-wrap:wrap; }
 .an-chip {
-  padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer;
+  padding:6px 12px; border-radius:6px; font-size:13px; cursor:pointer; min-height:32px;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s;
   font-family:var(--font); font-weight:500; background:transparent;
   white-space:nowrap;

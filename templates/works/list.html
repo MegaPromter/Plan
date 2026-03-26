@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Название текущего раздела в хлебных крошках зависит от типа источника -->
 <span class="breadcrumb-current">
   {% if request.GET.source == 'pp' %}Производственный план{% else %}План/отчёт{% endif %}

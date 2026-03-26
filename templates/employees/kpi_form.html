@@ -3,13 +3,13 @@
 {% block title %}{% if form.instance.pk %}Редактировать KPI{% else %}Добавить KPI{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:detail' employee.pk %}">{{ employee.short_name }}</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:kpi_list' employee.pk %}">KPI</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Режим зависит от наличия существующего pk -->
 {% if form.instance.pk %}
 <span class="breadcrumb-current">Редактировать</span>

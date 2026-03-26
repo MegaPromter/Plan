@@ -12,8 +12,8 @@
 {% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
-<span class="breadcrumb-current">3. Сводное планирование (План/отчёт)</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
+<span class="breadcrumb-current" id="breadcrumbTitle">Сводное планирование (План/отчёт)</span>
 {% endblock %}
 
 {% block topbar_actions %}
@@ -30,8 +30,89 @@
 {% endblock %}
 
 {% block content %}
-<!-- ══ Тулбар: строка фильтрации по периоду ══════════════════════════════ -->
-<div class="toolbar" id="toolbar">
+<!-- ── Компактный тулбар (З3) ─────────────────────────────────────── -->
+<div class="plan-toolbar-compact" id="toolbarCompact">
+  <!-- Навигация по дате -->
+  <div class="ptc-date">
+    <button class="ptc-arrow" id="prevYear" title="Предыдущий год"><i class="fas fa-chevron-left"></i></button>
+    <span class="ptc-year" id="currentYear">2026</span>
+    <button class="ptc-arrow" id="nextYear" title="Следующий год"><i class="fas fa-chevron-right"></i></button>
+    <div class="ptc-month-dd" id="monthDropdown">
+      <button class="ptc-month-btn" id="monthBtn">Все месяцы <i class="fas fa-caret-down"></i></button>
+      <div class="ptc-month-panel" id="monthPanel">
+        <label class="ptc-month-opt"><input type="checkbox" value="0" checked> Все</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="1"> Янв</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="2"> Фев</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="3"> Мар</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="4"> Апр</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="5"> Май</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="6"> Июн</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="7"> Июл</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="8"> Авг</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="9"> Сен</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="10"> Окт</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="11"> Ноя</label>
+        <label class="ptc-month-opt"><input type="checkbox" value="12"> Дек</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Кнопка сворачивания фильтров -->
+  <button class="ptc-filters-toggle" id="filtersToggle" title="Показать/скрыть фильтры">
+    <i class="fas fa-filter"></i> <span id="filtersToggleLabel">Фильтры</span> <i class="fas fa-caret-down ptc-toggle-arrow" id="filtersToggleArrow"></i>
+  </button>
+
+  <div class="ptc-sep"></div>
+
+  <!-- Сворачиваемая секция фильтров -->
+  <div class="ptc-filters-collapsible" id="filtersCollapsible">
+    <!-- Фильтр отделов -->
+    <div class="ptc-dept-dd" id="deptDropdown">
+      <button class="ptc-dept-btn" id="deptBtn">Все отделы <span class="ptc-dept-badge" id="deptBadge" style="display:none;">0</span> <i class="fas fa-caret-down"></i></button>
+      <div class="ptc-dept-panel" id="deptPanel">
+        <input class="ptc-dept-search" type="text" placeholder="Поиск отдела..." id="deptSearch">
+        <div class="ptc-dept-list" id="deptList"></div>
+      </div>
+    </div>
+
+    <div class="ptc-sep"></div>
+
+    <!-- Статус-фильтры (всегда цветные) -->
+    <div class="ptc-statuses" id="statusFilters">
+      <button class="ptc-status sp-all active" data-status="all">Все <span class="ptc-status-count" id="cntAll">0</span></button>
+      <button class="ptc-status sp-done" data-status="done">Выполнено <span class="ptc-status-count" id="cntDone">0</span></button>
+      <button class="ptc-status sp-overdue" data-status="overdue">Просрочено <span class="ptc-status-count" id="cntOverdue">0</span></button>
+      <button class="ptc-status sp-inwork" data-status="inwork">В работе <span class="ptc-status-count" id="cntInwork">0</span></button>
+    </div>
+  </div>
+
+  <div class="ptc-spacer"></div>
+
+  <!-- Поиск (сворачиваемый) -->
+  <div class="ptc-search" id="ptcSearch">
+    <button class="ptc-search-toggle" id="searchToggle" title="Поиск"><i class="fas fa-search"></i></button>
+    <input class="ptc-search-input" type="text" id="searchInputCompact" placeholder="Поиск задач...">
+  </div>
+
+  <!-- Переключатель плотности -->
+  <div class="density-toggle" id="densityToggleCompact" title="Плотность таблицы">
+    <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
+    <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
+    <button data-density="spacious" title="Просторно"><i class="fas fa-expand-alt"></i></button>
+  </div>
+
+  <!-- Пресеты фильтров -->
+  <span id="spFilterPresetsWrap"></span>
+
+  <!-- Сводка -->
+  <div class="ptc-summary" id="ptcSummary">
+    <span class="ptc-summary-item"><strong id="totalTasks">0</strong> задач</span>
+    <span class="ptc-summary-item"><strong id="totalHours">0</strong> ч</span>
+  </div>
+</div>
+
+<!-- ══ Тулбар: строка фильтрации по периоду (OLD — hidden, kept for comparison) ══ -->
+<div class="toolbar" id="toolbar" style="display:none;">
   <span class="cal-label">Период:</span>
   <div class="cal-block">
     <button class="cal-nav" onclick="changeYear(-1)">‹</button>
@@ -65,8 +146,8 @@
   </div>
 </div>
 
-<!-- ══ Строка поиска (под тулбаром) ══════════════════════════════════════ -->
-<div class="searchbar" id="searchbar">
+<!-- ══ Строка поиска (OLD — hidden, kept for comparison) ════════════════ -->
+<div class="searchbar" id="searchbar" style="display:none;"
   <span class="search-icon">🔍</span>
   <input class="search-input" id="searchInput" placeholder="Поиск по всем полям..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
   <span class="search-count" id="searchCount"></span>
@@ -77,8 +158,8 @@
   </div>
 </div>
 
-<!-- ══ Переключатель видов + статус-панель (fixed) ═════════════════════ -->
-<div class="view-tabs" id="viewTabs">
+<!-- ══ Переключатель видов + статус-панель (OLD — hidden, kept for comparison) ══ -->
+<div class="view-tabs" id="viewTabs" style="display:none;"
   <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
   <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
   <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
@@ -110,11 +191,12 @@
   </div>
 </div>
 
-<!-- ══ Панель массовых операций ═══════════════════════════════════════════ -->
-<div id="bulkBar" style="display:none;padding:10px 16px;background:var(--accent-light);border:1px solid var(--accent);border-radius:10px;margin-bottom:12px;align-items:center;gap:12px;">
-  <button class="btn btn-sm btn-outline" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Выбрать все</button>
-  <span style="font-size:13px;color:var(--text2);">Выбрано: <strong id="bulkCount">0</strong></span>
-  <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()"><i class="fas fa-trash"></i> Удалить выбранные</button>
+<!-- ══ Floating Bulk Actions Bar ══════════════════════════════════════════ -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-bar-count"><span id="bulkCount">0</span> выбрано</span>
+  <button class="btn btn-danger-outline btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> Удалить</button>
+  <button class="btn btn-outline btn-sm" onclick="bulkExport()"><i class="fas fa-download"></i> Экспорт</button>
+  <button class="bulk-bar-close" onclick="bulkDeselectAll()" title="Снять выбор"><i class="fas fa-times"></i></button>
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
@@ -533,12 +615,33 @@
     </div>
   </div>
 </div>
+
+<!-- Activity slideout panel -->
+<div class="slideout-overlay" id="activityOverlay" onclick="closeActivityPanel()"></div>
+<div class="slideout" id="activityPanel">
+  <div class="slideout-header">
+    <h3 id="activityTitle">Задача</h3>
+    <button class="slideout-close" onclick="closeActivityPanel()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="slideout-tabs">
+    <button class="slideout-tab active" data-tab="details" onclick="switchActivityTab('details')">Детали</button>
+    <button class="slideout-tab" data-tab="activity" onclick="switchActivityTab('activity')">Активность</button>
+  </div>
+  <div class="slideout-body" id="activityBody">
+    <div id="activityDetails"></div>
+    <div id="activityFeed" style="display:none;"></div>
+  </div>
+  <div class="slideout-footer" id="activityFooter" style="display:none;">
+    <div class="comment-input-wrap">
+      <textarea id="commentInput" placeholder="Написать комментарий..." rows="2"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="postComment()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=8"></script>
-<script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
+<script src="{% static 'js/filters.js' %}?v=1"></script>
 <script id="sp-config" type="application/json">{
   "isWriter": {{ is_writer|yesno:"true,false" }},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
@@ -549,6 +652,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/plan.js' %}?v=6"></script>
+<script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){
@@ -584,6 +688,122 @@
   } else {
     schedule();
   }
+})();
+
+// Страничные горячие клавиши: N — новая задача
+if (typeof registerShortcut === 'function') {
+  registerShortcut('n', 'Новая задача', function() {
+    if (typeof openInlineNewRow === 'function') openInlineNewRow();
+  });
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initFilterPresets('plan', 'spFilterPresetsWrap',
+    function() {
+      var state = {};
+      if (typeof mfSelections !== 'undefined') {
+        var mf = {};
+        for (var k in mfSelections) {
+          if (mfSelections[k] && mfSelections[k].size > 0) mf[k] = Array.from(mfSelections[k]);
+        }
+        state.mfSelections = mf;
+      }
+      if (typeof colFilters !== 'undefined') {
+        var cf = {};
+        for (var k in colFilters) {
+          if (colFilters[k] instanceof Set) cf[k] = Array.from(colFilters[k]);
+          else cf[k] = colFilters[k];
+        }
+        state.colFilters = cf;
+      }
+      if (typeof selectedYear !== 'undefined') state.selectedYear = selectedYear;
+      if (typeof selectedMonth !== 'undefined') state.selectedMonth = selectedMonth;
+      if (typeof selectedDept !== 'undefined') state.selectedDept = selectedDept;
+      if (typeof _spStatusFilter !== 'undefined') state.spStatusFilter = _spStatusFilter;
+      return state;
+    },
+    function(state) {
+      if (typeof clearAllColFilters === 'function') clearAllColFilters();
+      if (state.mfSelections && typeof mfSelections !== 'undefined') {
+        for (var k in state.mfSelections) {
+          mfSelections[k] = new Set(state.mfSelections[k]);
+          colFilters['mf_' + k] = new Set(state.mfSelections[k]);
+        }
+        document.querySelectorAll('.mf-trigger').forEach(function(btn) {
+          var col = btn.dataset.col;
+          var sel = mfSelections[col];
+          if (sel && sel.size > 0) {
+            btn.textContent = sel.size + ' \u0432\u044b\u0431\u0440.';
+            btn.classList.add('active');
+          }
+        });
+      }
+      if (state.colFilters) {
+        for (var k in state.colFilters) {
+          if (Array.isArray(state.colFilters[k])) colFilters[k] = new Set(state.colFilters[k]);
+          else {
+            colFilters[k] = state.colFilters[k];
+            var inp = document.querySelector('.col-filter[data-col="' + k + '"]');
+            if (inp) { inp.value = state.colFilters[k]; inp.classList.add('active'); var cb = inp.nextElementSibling; if (cb) cb.classList.add('visible'); }
+          }
+        }
+      }
+      if (state.selectedYear !== undefined) {
+        selectedYear = state.selectedYear;
+        localStorage.setItem('plan_year', selectedYear);
+        var yd = document.getElementById('currentYear');
+        if (yd) yd.textContent = selectedYear;
+      }
+      if (state.selectedMonth !== undefined) {
+        selectedMonth = state.selectedMonth;
+        localStorage.setItem('plan_month', selectedMonth === null ? 'null' : selectedMonth);
+      }
+      if (state.selectedDept !== undefined && typeof selectDept === 'function') {
+        selectDept(state.selectedDept);
+      }
+      if (state.spStatusFilter && state.spStatusFilter !== 'all') {
+        _spStatusFilter = state.spStatusFilter;
+      }
+      var hasFilters = Object.keys(colFilters).length > 0;
+      var badge = document.getElementById('filtersActiveBadge');
+      if (badge) badge.classList.toggle('visible', hasFilters);
+      if (typeof renderTable === 'function') renderTable();
+    }
+  );
+});
+</script>
+<script>
+// Сворачиваемая секция фильтров (отдел + статусы)
+(function() {
+  var STORAGE_KEY = 'plan_filters_collapsed';
+  var toggleBtn = document.getElementById('filtersToggle');
+  var collapsible = document.getElementById('filtersCollapsible');
+  var arrow = document.getElementById('filtersToggleArrow');
+  if (!toggleBtn || !collapsible) return;
+
+  function applyState(collapsed) {
+    if (collapsed) {
+      collapsible.classList.add('collapsed');
+      toggleBtn.classList.add('collapsed');
+      toggleBtn.classList.remove('active');
+    } else {
+      collapsible.classList.remove('collapsed');
+      toggleBtn.classList.remove('collapsed');
+      toggleBtn.classList.add('active');
+    }
+  }
+
+  // Restore saved state
+  var saved = localStorage.getItem(STORAGE_KEY);
+  applyState(saved === 'true');
+
+  toggleBtn.addEventListener('click', function() {
+    var isCollapsed = collapsible.classList.contains('collapsed');
+    var newState = !isCollapsed;
+    applyState(newState);
+    localStorage.setItem(STORAGE_KEY, newState ? 'true' : 'false');
+  });
 })();
 </script>
 {% endblock %}

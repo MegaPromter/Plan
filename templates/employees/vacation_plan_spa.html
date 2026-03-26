@@ -8,7 +8,7 @@
 {% block nav_vacation_plan %}active{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">План отпусков</span>
 {% endblock %}
 
@@ -206,16 +206,6 @@
   transition: all 0.15s;
 }
 .vac-btn-delete:hover { background: rgba(239,68,68,0.15); }
-
-/* ── Пустое состояние таблицы ────────────────────────────────────────────── */
-.vac-empty-state {
-  text-align: center;
-  padding: 48px 20px;
-  color: var(--muted);
-}
-.vac-empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
-.vac-empty-state-text { font-size: 15px; }
-.vac-empty-state-sub { font-size: 13px; margin-top: 6px; opacity: 0.7; }
 
 /* ── Кнопка «Ошибки отпусков» (меняет стиль через JS) ───────────────────── */
 .err-badge {
@@ -496,10 +486,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Вспомогательные JS-модули -->
-<script src="{% static 'js/utils.js' %}?v=6"></script>       <!-- fetchJson, escapeHtml, showToast, debounce -->
-<script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>       <!-- openModal, confirmDialog -->
 <script src="{% static 'js/inline_edit.js' %}"></script>  <!-- InlineEditor (не используется напрямую здесь) -->
 <script>
 /* ========================================================================
@@ -547,8 +533,15 @@ async function loadDirs() {
 async function loadVacations() {
   // GET /api/vacations/ — все записи (видимость зависит от роли)
   const data = await fetchJson('/api/vacations/');
-  if (data._error) return;
-  vacations = Array.isArray(data) ? data : (data.results || []);
+  if (data._error) {
+    // При ошибке API — очищаем массив и показываем пустое состояние
+    vacations = [];
+    renderTable();
+    return;
+  }
+  const raw = Array.isArray(data) ? data : (data.results || []);
+  // Отбрасываем записи-«призраки» (без ФИО и без дат) — они отображаются как пустые строки
+  vacations = raw.filter(v => v.executor || v.date_start || v.date_end);
   // Обновляем чипы, select-год и перерисовываем таблицу
   buildDeptChips();
   buildYearSelect();
@@ -747,13 +740,12 @@ function renderTable() {
   // Пустое состояние
   if (totalCount === 0) {
     const hasFilters = search || yearF || monthF || errFilter || selectedDepts.size > 0;
-    tbody.innerHTML = `<tr><td colspan="8" style="padding:0;border:none;">
-      <div class="vac-empty-state">
-        <div class="vac-empty-state-icon">${hasFilters ? '<i class="fas fa-search"></i>' : '<i class="fas fa-calendar-times"></i>'}</div>
-        <div class="vac-empty-state-text">${hasFilters ? 'Ничего не найдено' : 'Нет записей об отпусках'}</div>
-        <div class="vac-empty-state-sub">${hasFilters ? 'Попробуйте изменить фильтры' : 'Нажмите "Добавить отпуск" чтобы создать запись'}</div>
-      </div>
-    </td></tr>`;
+    tbody.innerHTML = emptyStateHtml({
+      icon:    hasFilters ? 'fas fa-search' : 'fas fa-calendar-times',
+      title:   hasFilters ? 'Ничего не найдено' : 'Нет записей об отпусках',
+      desc:    hasFilters ? 'Попробуйте изменить фильтры' : 'Нажмите «Добавить отпуск» чтобы создать запись',
+      colspan: 8
+    });
     renderPagination(0, 0);
     return;
   }
@@ -1183,6 +1175,8 @@ document.getElementById('vacErrOverlay').addEventListener('click', e => {
 
 /* ── Инициализация SPA ───────────────────────────────────────────────────── */
 (async function init() {
+  // Skeleton-заглушка пока данные грузятся
+  document.getElementById('vacationTableBody').innerHTML = skeletonRows(6, 8);
   updateSortHeaders();     // Отображаем начальные стрелки сортировки
   await loadDirs();        // Загружаем сотрудников и строим чипы отделов
   await loadVacations();   // Загружаем отпуска и рендерим таблицу

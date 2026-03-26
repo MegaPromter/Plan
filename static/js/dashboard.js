@@ -15,8 +15,30 @@ var MONTHS_FULL = ['Январь','Февраль','Март','Апрель','М
 
 /* ── Утилиты — в utils.js (esc, loadBadgeCls, fmtPct, fmtHrs, fmtDate) ── */
 
+/* ── Skeleton-заглушки для дашборда ──────────────────────────────── */
+function _dashShowSkeletons() {
+  var kpiEl = document.getElementById('dashKPI');
+  if (kpiEl) {
+    kpiEl.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">' +
+      '<div class="skeleton-card skeleton-shimmer"></div>'.repeat(4) +
+      '</div>';
+  }
+  var tasksEl = document.getElementById('dashTasks');
+  if (tasksEl) {
+    tasksEl.innerHTML =
+      '<div class="skeleton-card skeleton-shimmer skeleton-card-lg" style="margin-bottom:12px;"></div>';
+  }
+  var debtsEl = document.getElementById('dashDebts');
+  if (debtsEl) {
+    debtsEl.innerHTML =
+      '<div class="skeleton-card skeleton-shimmer skeleton-card-lg" style="margin-bottom:12px;"></div>';
+  }
+}
+
 /* ── API ─────────────────────────────────────────────────────────── */
 function loadDashboard() {
+  _dashShowSkeletons();
   fetch('/api/dashboard/?year=' + currentYear + '&month=' + currentMonth)
   .then(function(r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -25,7 +47,8 @@ function loadDashboard() {
   .then(function(data) {
     if (data.error) {
       document.getElementById('dashKPI').innerHTML =
-        '<div class="an-empty"><i class="fas fa-exclamation-triangle"></i> ' + esc(data.error) + '</div>';
+        '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+        '<div class="empty-state-title">' + esc(data.error) + '</div></div>';
       return;
     }
     lastData = data;
@@ -41,7 +64,9 @@ function loadDashboard() {
   .catch(function(e) {
     console.error('Dashboard error:', e);
     document.getElementById('dashKPI').innerHTML =
-      '<div class="an-empty"><i class="fas fa-exclamation-triangle"></i> Ошибка загрузки</div>';
+      '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+      '<div class="empty-state-title">Ошибка загрузки</div>' +
+      '<div class="empty-state-desc">Попробуйте обновить страницу</div></div>';
   });
 }
 
@@ -148,22 +173,15 @@ function renderKPI(kpi) {
 /* ── Команда: отделы → сектора → сотрудники (с задачами) ────────── */
 function renderTeam(team) {
   var el = document.getElementById('dashTeam');
+  var widget = el.closest('.dash-widget');
   if (!team || !team.departments || !team.departments.length) {
     el.innerHTML = '';
+    if (widget) widget.style.display = 'none';
     return;
   }
+  if (widget) { widget.style.display = ''; _updateWidgetHeader(widget, '<i class="fas fa-users" style="color:var(--accent);margin-right:6px;"></i>Команда (' + team.total_employees + ') &nbsp; <span class="an-load-badge ' + loadBadgeCls(team.avg_load_pct) + '">' + fmtPct(team.avg_load_pct) + ' ср.загрузка</span>' + (team.total_overdue > 0 ? ' &nbsp; <span class="an-load-badge over">' + team.total_overdue + ' просроч.</span>' : '')); }
 
-  var html = '<div class="dash-section">';
-  html += '<div class="dash-section-title" onclick="dashToggle(this)">';
-  html += '<i class="fas fa-users"></i> Команда (' + team.total_employees + ')';
-  html += ' &nbsp; <span class="an-load-badge ' + loadBadgeCls(team.avg_load_pct) + '">' + fmtPct(team.avg_load_pct) + ' ср.загрузка</span>';
-  if (team.total_overdue > 0) {
-    html += ' &nbsp; <span class="an-load-badge over">' + team.total_overdue + ' просроч.</span>';
-  }
-  html += '<i class="fas fa-chevron-down dash-toggle collapsed"></i>';
-  html += '</div>';
-
-  html += '<div class="dash-section-body collapsed">';
+  var html = '';
 
   team.departments.forEach(function(dept) {
     html += '<div class="dash-dept">';
@@ -206,7 +224,6 @@ function renderTeam(team) {
     html += '</div>'; // dash-dept
   });
 
-  html += '</div></div>'; // dash-section-body, dash-section
   el.innerHTML = html;
 }
 
@@ -228,6 +245,7 @@ function _renderEmployeeDropdown(e) {
   } else {
     html += '<span style="width:12px;display:inline-block;"></span>';
   }
+  html += avatarHtml(e.name, 'sm') + ' ';
   html += '<span class="dash-emp-name">' + esc(e.name) + '</span>';
   html += '<span class="dash-emp-load"><span class="an-load-badge ' + badgeCls + '">' + fmtPct(e.load_pct) + '</span></span>';
   html += '<span class="dash-emp-hrs">' + fmtHrs(e.planned) + ' ч</span>';
@@ -284,62 +302,48 @@ function _renderCompactList(tasks) {
 /* ── Задачи текущего месяца ──────────────────────────────────────── */
 function renderTasks(tasks, showExecutor) {
   var el = document.getElementById('dashTasks');
+  var widget = el.closest('.dash-widget');
+  if (widget) _updateWidgetHeader(widget, '<i class="fas fa-tasks" style="color:var(--accent);margin-right:6px;"></i>Задачи — ' + MONTHS_FULL[currentMonth - 1] + (tasks && tasks.length ? ' (' + tasks.length + ')' : ''));
   if (!tasks || !tasks.length) {
-    el.innerHTML = '<div class="dash-section"><div class="dash-section-title"><i class="fas fa-tasks"></i> Задачи — ' +
-      MONTHS_FULL[currentMonth - 1] + '</div><div class="an-empty"><i class="fas fa-clipboard-check"></i>Нет задач на этот месяц</div></div>';
+    el.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="empty-state-icon"><i class="fas fa-clipboard-check"></i></div>' +
+        '<div class="empty-state-title">Нет задач на этот месяц</div>' +
+        '<div class="empty-state-desc">Все задачи выполнены или ещё не запланированы</div>' +
+        '<div class="empty-state-action"><a class="btn btn-primary btn-sm" href="/plan/"><i class="fas fa-calendar-alt"></i> Перейти к плану</a></div>' +
+      '</div>';
     return;
   }
 
-  var html = '<div class="dash-section">';
-  html += '<div class="dash-section-title" onclick="dashToggle(this)">';
-  html += '<i class="fas fa-tasks"></i> Задачи — ' + MONTHS_FULL[currentMonth - 1] + ' (' + tasks.length + ')';
-  html += '<i class="fas fa-chevron-down dash-toggle collapsed"></i>';
-  html += '</div>';
-
-  html += '<div class="dash-section-body collapsed">';
-  html += _renderTasksTable(tasks, showExecutor);
-  html += '</div></div>';
-  el.innerHTML = html;
+  el.innerHTML = _renderTasksTable(tasks, showExecutor);
 }
 
 /* ── Долги ────────────────────────────────────────────────────────── */
 function renderDebts(debts, showExecutor) {
   var el = document.getElementById('dashDebts');
+  var widget = el.closest('.dash-widget');
   if (!debts || !debts.length) {
     el.innerHTML = '';
+    if (widget) widget.style.display = 'none';
     return;
   }
+  if (widget) { widget.style.display = ''; _updateWidgetHeader(widget, '<i class="fas fa-exclamation-triangle" style="color:var(--danger);margin-right:6px;"></i>Долги — просроченные задачи (' + debts.length + ')'); }
 
-  var html = '<div class="dash-section">';
-  html += '<div class="dash-section-title" onclick="dashToggle(this)">';
-  html += '<i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> Долги — просроченные задачи (' + debts.length + ')';
-  html += '<i class="fas fa-chevron-down dash-toggle collapsed"></i>';
-  html += '</div>';
-
-  html += '<div class="dash-section-body collapsed">';
-  html += _renderTasksTable(debts, showExecutor);
-  html += '</div></div>';
-  el.innerHTML = html;
+  el.innerHTML = _renderTasksTable(debts, showExecutor);
 }
 
 /* ── Выполнены с просрочкой ──────────────────────────────────────── */
 function renderDoneLate(items, showExecutor) {
   var el = document.getElementById('dashDoneLate');
+  var widget = el.closest('.dash-widget');
   if (!items || !items.length) {
     el.innerHTML = '';
+    if (widget) widget.style.display = 'none';
     return;
   }
+  if (widget) { widget.style.display = ''; _updateWidgetHeader(widget, '<i class="fas fa-clock" style="color:#d97706;margin-right:6px;"></i>Выполнены с просрочкой (' + items.length + ')'); }
 
-  var html = '<div class="dash-section">';
-  html += '<div class="dash-section-title" onclick="dashToggle(this)">';
-  html += '<i class="fas fa-clock" style="color:#d97706"></i> Выполнены с просрочкой (' + items.length + ')';
-  html += '<i class="fas fa-chevron-down dash-toggle collapsed"></i>';
-  html += '</div>';
-
-  html += '<div class="dash-section-body collapsed">';
-  html += _renderTasksTable(items, showExecutor);
-  html += '</div></div>';
-  el.innerHTML = html;
+  el.innerHTML = _renderTasksTable(items, showExecutor);
 }
 
 /* ── Компактный список задач (основные секции) ─────────────────── */
@@ -363,7 +367,7 @@ function _renderTasksTable(tasks, showExecutor) {
     html += '<span class="dcl-name">' + esc(t.work_name) + '</span>';
     if (t.work_designation) html += '<span class="dcl-designation">' + esc(t.work_designation) + '</span>';
     if (t.project_name) html += '<span class="dcl-project">' + esc(t.project_name) + '</span>';
-    if (showExecutor && t.executor_name) html += '<span class="dcl-executor">' + esc(t.executor_name) + '</span>';
+    if (showExecutor && t.executor_name) html += '<span class="dcl-executor">' + avatarHtml(t.executor_name, 'sm') + ' ' + esc(t.executor_name) + '</span>';
     html += '<span class="dcl-date">' + fmtDate(t.date_end) + '</span>';
     html += '<span class="' + statusCls + '">' + statusText + '</span>';
     if (badge) html += badge;
@@ -401,7 +405,167 @@ window.dashToggleEmp = function(headerEl) {
   if (toggle) toggle.classList.toggle('open', !isOpen);
 };
 
+/* ── Обновление заголовка виджета ──────────────────────────────── */
+function _updateWidgetHeader(widget, html) {
+  var span = widget.querySelector('.dash-widget-header > span');
+  if (span) span.innerHTML = html;
+}
+
+/* ── Dashboard Widget Customization ──────────────────────────────── */
+var DASH_LAYOUT_KEY = 'dashboard_layout';
+
+function getDashLayout() {
+  try { return JSON.parse(localStorage.getItem(DASH_LAYOUT_KEY)); }
+  catch(e) { return null; }
+}
+
+function saveDashLayout(layout) {
+  localStorage.setItem(DASH_LAYOUT_KEY, JSON.stringify(layout));
+}
+
+window.toggleDashCustomize = function() {
+  var grid = document.getElementById('dashGrid');
+  grid.classList.toggle('customize-mode');
+  var btn = document.getElementById('dashCustomizeBtn');
+  if (grid.classList.contains('customize-mode')) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Готово';
+    btn.classList.add('btn-primary');
+    btn.classList.remove('btn-outline');
+    // Show all widgets (including empty ones) so user can toggle visibility
+    document.querySelectorAll('.dash-widget').forEach(function(w) {
+      w.setAttribute('draggable', 'true');
+    });
+  } else {
+    btn.innerHTML = '<i class="fas fa-th"></i> Настроить';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-outline');
+    document.querySelectorAll('.dash-widget').forEach(function(w) {
+      w.removeAttribute('draggable');
+    });
+    saveDashLayout(getCurrentLayout());
+  }
+};
+
+window.toggleWidgetVisibility = function(btnEl) {
+  var widget = btnEl.closest('.dash-widget');
+  if (!widget) return;
+  widget.classList.toggle('widget-hidden');
+  var icon = btnEl.querySelector('i');
+  if (widget.classList.contains('widget-hidden')) {
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    icon.className = 'fas fa-eye';
+  }
+};
+
+function getCurrentLayout() {
+  var widgets = document.querySelectorAll('.dash-widget');
+  return Array.from(widgets).map(function(w, i) {
+    return {
+      id: w.dataset.widget,
+      visible: !w.classList.contains('widget-hidden'),
+      order: i
+    };
+  });
+}
+
+function applyDashLayout(layout) {
+  if (!layout || !layout.length) return;
+  var grid = document.getElementById('dashGrid');
+  if (!grid) return;
+
+  // Sort widgets by saved order
+  var widgetMap = {};
+  grid.querySelectorAll('.dash-widget').forEach(function(w) {
+    widgetMap[w.dataset.widget] = w;
+  });
+
+  layout.sort(function(a, b) { return a.order - b.order; });
+
+  layout.forEach(function(item) {
+    var widget = widgetMap[item.id];
+    if (!widget) return;
+    grid.appendChild(widget); // re-appending reorders
+    if (!item.visible) {
+      widget.classList.add('widget-hidden');
+      var icon = widget.querySelector('.dash-widget-toggle i');
+      if (icon) icon.className = 'fas fa-eye-slash';
+    } else {
+      widget.classList.remove('widget-hidden');
+    }
+  });
+}
+
+/* ── Drag-and-drop for widgets in customize mode ─────────────────── */
+function initWidgetDrag() {
+  var grid = document.getElementById('dashGrid');
+  if (!grid) return;
+  var dragWidget = null;
+
+  grid.addEventListener('dragstart', function(e) {
+    if (!grid.classList.contains('customize-mode')) return;
+    var widget = e.target.closest('.dash-widget');
+    if (!widget) { e.preventDefault(); return; }
+    dragWidget = widget;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', widget.dataset.widget);
+    requestAnimationFrame(function() {
+      if (dragWidget) dragWidget.classList.add('dragging-widget');
+    });
+  });
+
+  grid.addEventListener('dragover', function(e) {
+    if (!dragWidget) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var target = e.target.closest('.dash-widget');
+    if (!target || target === dragWidget) return;
+    // Clear previous highlights
+    grid.querySelectorAll('.drag-over-widget').forEach(function(w) {
+      w.classList.remove('drag-over-widget');
+    });
+    target.classList.add('drag-over-widget');
+
+    // Determine insert position
+    var rect = target.getBoundingClientRect();
+    var midY = rect.top + rect.height / 2;
+    if (e.clientY < midY) {
+      grid.insertBefore(dragWidget, target);
+    } else {
+      var next = target.nextElementSibling;
+      if (next) grid.insertBefore(dragWidget, next);
+      else grid.appendChild(dragWidget);
+    }
+  });
+
+  grid.addEventListener('dragleave', function(e) {
+    var target = e.target.closest('.dash-widget');
+    if (target) target.classList.remove('drag-over-widget');
+  });
+
+  grid.addEventListener('drop', function(e) {
+    e.preventDefault();
+    cleanupDrag();
+  });
+
+  grid.addEventListener('dragend', function() {
+    cleanupDrag();
+  });
+
+  function cleanupDrag() {
+    if (dragWidget) {
+      dragWidget.classList.remove('dragging-widget');
+      dragWidget = null;
+    }
+    grid.querySelectorAll('.drag-over-widget').forEach(function(w) {
+      w.classList.remove('drag-over-widget');
+    });
+  }
+}
+
 /* ── Init ─────────────────────────────────────────────────────────── */
 loadDashboard();
+applyDashLayout(getDashLayout());
+initWidgetDrag();
 
 })();

@@ -5,7 +5,7 @@
 {% block title %}Журнал извещений — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Журнал извещений</span>
 {% endblock %}
 
@@ -141,9 +141,6 @@ td[data-editable="true"]:hover { background:rgba(59,130,246,0.06); }
 <!-- Контейнер пагинации: заполняется из renderPagination() -->
 <div class="spa-pagination" id="paginationBar" style="display:none;"></div>
 
-<!-- Вспомогательные JS-модули -->
-<script src="{% static 'js/utils.js' %}?v=6"></script>    <!-- fetchJson, escapeHtml, formatDate, showToast -->
-<script src="{% static 'js/modal.js' %}"></script>    <!-- openModal, confirmDialog -->
 <script src="{% static 'js/inline_edit.js' %}"></script>  <!-- InlineEditor.init() -->
 <script>
 /* ── Состояние SPA ────────────────────────────────────────────────────────── */

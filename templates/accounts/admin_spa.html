@@ -5,7 +5,7 @@
 {% block title %}Администрирование{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Администрирование</span>
 {% endblock %}
 
@@ -362,10 +362,6 @@
   <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">На главную</a>
 </div>
 {% endif %}
-
-<!-- Вспомогательные JS-модули -->
-<script src="{% static 'js/utils.js' %}?v=6"></script>  <!-- fetchJson, escapeHtml, showToast, formatDate -->
-<script src="{% static 'js/modal.js' %}"></script>  <!-- openModal, confirmDialog -->
 
 <!-- Скрипт администрирования — только для администраторов -->
 {% if request.user|is_admin_role %}

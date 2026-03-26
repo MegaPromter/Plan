@@ -3,14 +3,14 @@
 {% block title %}{% if object %}Редактировать документ{% else %}Добавить документ{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Ссылка назад к списку работ -->
 <a href="{% url 'works:list' %}">Работы</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- При редактировании: ссылка на родительскую работу по work_id -->
 {% if object %}
 <a href="{% url 'works:detail' object.work_id %}">Работа</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Редактировать документ</span>
 {% else %}
 <!-- При добавлении: просто текст -->

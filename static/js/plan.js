@@ -110,6 +110,7 @@ function spFilterStatus(status) {
   _spStatusFilter = (_spStatusFilter === status) ? 'all' : status;
   spUpdateStatusPanel();
   renderTable();
+  _spSyncFiltersToUrl();
 }
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
@@ -172,12 +173,49 @@ const MONTH_NAMES = ["","Янв","Фев","Мар","Апр","Май","Июн","�
 
 let showAll = false;
 
+// ── Синхронизация фильтров СП с URL ────────────────────────────────────────
+const _SP_URL_FILTER_KEYS = ['year', 'month', 'dept', 'status'];
+
+function _spSyncFiltersToUrl() {
+  syncFiltersToUrl({
+    year:   selectedYear,
+    month:  showAll ? 'all' : (selectedMonth || null),
+    dept:   selectedDept || null,
+    status: _spStatusFilter !== 'all' ? _spStatusFilter : null,
+  });
+}
+
+function _spRestoreFiltersFromUrl() {
+  const f = readFiltersFromUrl(_SP_URL_FILTER_KEYS);
+  let changed = false;
+  if (f.year) {
+    const y = parseInt(f.year);
+    if (!isNaN(y)) { selectedYear = y; changed = true; }
+  }
+  if (f.month === 'all') {
+    selectedMonth = null; showAll = true; changed = true;
+  } else if (f.month && f.month !== 'null') {
+    const m = parseInt(f.month);
+    if (!isNaN(m) && m >= 1 && m <= 12) { selectedMonth = m; showAll = false; changed = true; }
+  } else if (f.month === 'null' || ('month' in f && !f.month)) {
+    selectedMonth = null; changed = true;
+  }
+  if (f.dept) {
+    selectedDept = f.dept; changed = true;
+  }
+  if (f.status && ['done', 'overdue', 'inwork'].includes(f.status)) {
+    _spStatusFilter = f.status; changed = true;
+  }
+  return changed;
+}
+
 // ── CALENDAR ──────────────────────────────────────────────────────────────
 function changeYear(d) {
   selectedYear += d;
   showAll = false;
   localStorage.setItem("plan_year", selectedYear);
   document.getElementById("yearDisplay").textContent = selectedYear;
+  _spSyncFiltersToUrl();
   loadTasks();
 }
 function selectMonth(m) {
@@ -187,6 +225,7 @@ function selectMonth(m) {
     el.classList.toggle("active", parseInt(el.dataset.m) === selectedMonth);
   });
   localStorage.setItem("plan_month", selectedMonth === null ? "null" : selectedMonth);
+  _spSyncFiltersToUrl();
   loadTasks();
 }
 
@@ -195,6 +234,7 @@ function clearFilter() {
   showAll = true;
   localStorage.setItem("plan_month", "null");
   document.querySelectorAll(".cal-month").forEach(e => e.classList.remove("active"));
+  _spSyncFiltersToUrl();
   loadTasks();
 }
 
@@ -207,18 +247,39 @@ function _syncToolbarHeight() {
   document.documentElement.style.setProperty('--toolbar-h', h + 'px');
 }
 
-// ── DEPT CHIPS (переключатель отделов) ────────────────────────────────────
+// ── DEPT FILTER (чипы ≤5 / выпадающий список >5) ──────────────────────────
+const DEPT_CHIP_LIMIT = 5;         // порог: чипы → select
+let _deptMode = 'chips';           // 'chips' | 'select'
+
 function initDeptChips() {
   const depts = [...new Set(tasks.map(t => t.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
   if (depts.length < 2) return;
   const bar = document.getElementById('deptBar');
   const wrap = document.getElementById('deptChips');
-  // Кнопка «Все»
-  let html = `<span class="dept-chip${!selectedDept ? ' active' : ''}" onclick="selectDept(null)">Все</span>`;
-  depts.forEach(d => {
-    html += `<span class="dept-chip${selectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
-  });
-  wrap.innerHTML = html;
+
+  if (depts.length > DEPT_CHIP_LIMIT) {
+    // ── Режим select ──
+    _deptMode = 'select';
+    let html = '<select class="filter-select" id="deptSelect" onchange="selectDept(this.value || null)">';
+    html += '<option value="">Все отделы</option>';
+    depts.forEach(d => {
+      const sel = selectedDept === d ? ' selected' : '';
+      html += `<option value="${escapeHtml(d)}"${sel}>${escapeHtml(d)}</option>`;
+    });
+    html += '</select>';
+    wrap.innerHTML = html;
+    // Подсветка active-стиля для select
+    const sel = document.getElementById('deptSelect');
+    if (sel) sel.classList.toggle('active', !!selectedDept);
+  } else {
+    // ── Режим chips ──
+    _deptMode = 'chips';
+    let html = `<span class="dept-chip${!selectedDept ? ' active' : ''}" onclick="selectDept(null)">Все</span>`;
+    depts.forEach(d => {
+      html += `<span class="dept-chip${selectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
+    });
+    wrap.innerHTML = html;
+  }
   bar.style.display = '';
   // Пересчитываем --toolbar-h по реальной высоте
   _syncToolbarHeight();
@@ -235,12 +296,22 @@ function selectDept(dept) {
   selectedDept = dept;
   if (dept) localStorage.setItem('sp_selected_dept', dept);
   else localStorage.removeItem('sp_selected_dept');
-  // Подсветка активного чипа
-  document.querySelectorAll('.dept-chip').forEach(c => {
-    c.classList.toggle('active', dept ? c.dataset.dept === dept : !c.dataset.dept);
-  });
+  _updateDeptUI(dept);
   _syncDeptFilter(dept);
   renderTable();
+  _spSyncFiltersToUrl();
+}
+
+/** Обновляет визуальное состояние dept-фильтра (чипы или select) */
+function _updateDeptUI(dept) {
+  if (_deptMode === 'select') {
+    const sel = document.getElementById('deptSelect');
+    if (sel) { sel.value = dept || ''; sel.classList.toggle('active', !!dept); }
+  } else {
+    document.querySelectorAll('.dept-chip').forEach(c => {
+      c.classList.toggle('active', dept ? c.dataset.dept === dept : !c.dataset.dept);
+    });
+  }
 }
 
 function _syncDeptFilter(dept) {
@@ -292,6 +363,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Tooltip для бейджей типа задачи — используем нативный title (не зависает)
+
+  // Восстанавливаем фильтры из URL (для расшаренных ссылок) — URL приоритетнее localStorage
+  _spRestoreFiltersFromUrl();
 
   document.getElementById("yearDisplay").textContent = selectedYear;
   if (selectedMonth) {
@@ -1109,9 +1183,7 @@ function applyMfFilter(col, btn) {
       selectedDept = null;
       localStorage.removeItem('sp_selected_dept');
     }
-    document.querySelectorAll('.dept-chip').forEach(c => {
-      c.classList.toggle('active', selectedDept ? c.dataset.dept === selectedDept : !c.dataset.dept);
-    });
+    _updateDeptUI(selectedDept);
     // Сбрасываем фильтр секторов при смене отдела
     if (mfSelections['sector'] && mfSelections['sector'].size > 0) {
       mfSelections['sector'] = new Set();
@@ -1217,10 +1289,10 @@ function clearAllColFilters() {
   });
   if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
   document.getElementById("filtersActiveBadge").classList.remove("visible");
-  // Сброс dept-чипов
+  // Сброс dept-фильтра
   selectedDept = null;
   localStorage.removeItem('sp_selected_dept');
-  document.querySelectorAll('.dept-chip').forEach(c => c.classList.toggle('active', !c.dataset.dept));
+  _updateDeptUI(null);
   renderTable();
 }
 
@@ -1308,6 +1380,9 @@ function renderTable() {
         <div class="empty-state-icon"><i class="fas fa-search"></i></div>
         <div class="empty-state-title">Ничего не найдено</div>
         <div class="empty-state-desc">Попробуйте изменить фильтры или сбросить поиск</div>
+        <div class="empty-state-action">
+          <button class="btn btn-primary btn-sm" onclick="openNewTaskModal('task')"><i class="fas fa-plus"></i> Новая задача</button>
+        </div>
       </div>
     </td></tr>`;
     updatePlanSummary();
@@ -1411,7 +1486,10 @@ function makeRow(t, num) {
 
   // ── Колонка «№» с бейджем 🔒 ПП для перенесённых задач ──
   const numTd = document.createElement("td");
-  numTd.className = "num-cell"; numTd.textContent = num;
+  numTd.className = "num-cell"; numTd.textContent = num; numTd.dataset.label = "№";
+  numTd.style.cursor = "pointer";
+  numTd.title = "Открыть детали задачи";
+  numTd.addEventListener("click", function(e) { e.stopPropagation(); openActivityPanel(t.id); });
   if (isFromPP) {
     const lockBadge = document.createElement("span");
     lockBadge.className = "pp-lock-badge";
@@ -1423,6 +1501,7 @@ function makeRow(t, num) {
 
   // ── Колонка «Код строки» — бейдж типа задачи + row_code ──
   const rcTd = document.createElement("td");
+  rcTd.dataset.label = "Код строки";
   rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
   if (t.row_code) {
     const rcSpan = document.createElement("div");
@@ -1443,18 +1522,18 @@ function makeRow(t, num) {
   // dirKey — ключ справочника для select, parentField/parentDirKey — каскадная фильтрация,
   // extraField — дополнительное отображение (напр. ФИО руководителя сектора)
   const cols = [
-    {field:"project",      type:"select", dirKey:"project", readOnly:true},
-    {field:"stage",        type:"select", dirKey:"stage",   readOnly:true},
-    {field:"work_number",  type:"text"},
-    {field:"justification",type:"text"},
-    {field:"description",  type:"text"},
-    {field:"work_name",    type:"text"},
-    {field:"dept",         type:"select", dirKey:"dept"},
-    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head"},
-    {field:"executor",     type:"select", dirKey:"executor"},
-    {field:"date_start",   type:"date"},
-    {field:"date_end",     type:"date"},
-    {field:"deadline",     type:"date"},
+    {field:"project",      type:"select", dirKey:"project", readOnly:true, label:"Проект"},
+    {field:"stage",        type:"select", dirKey:"stage",   readOnly:true, label:"№ Этапа"},
+    {field:"work_number",  type:"text",   label:"№ работы"},
+    {field:"justification",type:"text",   label:"Обоснование"},
+    {field:"description",  type:"text",   label:"Обозначение"},
+    {field:"work_name",    type:"text",   label:"Наименование"},
+    {field:"dept",         type:"select", dirKey:"dept", label:"Отдел"},
+    {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head", label:"Сектор"},
+    {field:"executor",     type:"select", dirKey:"executor", label:"Разработчик"},
+    {field:"date_start",   type:"date",   label:"Дата начала"},
+    {field:"date_end",     type:"date",   label:"Дата окончания"},
+    {field:"deadline",     type:"date",   label:"Срок выполнения"},
   ];
   // Сокращённые ключи колонок — для привязки ширин через th-элементы
   const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ds","de","dead"];
@@ -1462,6 +1541,7 @@ function makeRow(t, num) {
   // ── Цикл по колонкам: создание ячеек данных ──
   cols.forEach((col, idx) => {
     const td = document.createElement("td");
+    if (col.label) td.dataset.label = col.label;
     if (col.type === "date") td.classList.add("td-date");
     // Синхронизируем ширину ячейки с заголовком таблицы
     const thEl = document.getElementById(`th-${colKeys[idx]}`);
@@ -1497,7 +1577,7 @@ function makeRow(t, num) {
               totalHours = Object.values(hours).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
             }
             grandTotal += totalHours;
-            execItem.innerHTML = `<strong>${escapeHtml(ex.name)}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
+            execItem.innerHTML = avatarHtml(ex.name, 'sm') + ` <strong>${escapeHtml(ex.name)}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
             container.appendChild(execItem);
           });
           wrapper.appendChild(container);
@@ -1510,8 +1590,13 @@ function makeRow(t, num) {
           }
           td.appendChild(wrapper);
         } else {
-          // Нет исполнителей — просто текст поля
-          td.textContent = t[col.field] || '';
+          // Нет исполнителей — аватар + текст поля
+          const name = t[col.field] || '';
+          if (name) {
+            td.innerHTML = avatarHtml(name, 'sm') + ' ' + escapeHtml(name);
+          } else {
+            td.textContent = '';
+          }
         }
       } else if (col.type === "date") {
         // Даты: преобразуем YYYY-MM-DD → DD.MM.YYYY
@@ -1567,7 +1652,7 @@ function makeRow(t, num) {
             totalHours = Object.values(hours).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
           }
           grandTotal += totalHours;
-          execItem.innerHTML = `<strong>${escapeHtml(ex.name)}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
+          execItem.innerHTML = avatarHtml(ex.name, 'sm') + ` <strong>${escapeHtml(ex.name)}</strong>${totalHours > 0 ? ` <span style="color:var(--muted);font-family:var(--mono);">(${totalHours}ч)</span>` : ''}`;
           container.appendChild(execItem);
         });
 
@@ -1723,6 +1808,7 @@ function makeRow(t, num) {
   // User:   📄 отчёт, 🔗 зависимости (только просмотр)
   const actTd = document.createElement("td");
   actTd.className = "actions-cell";
+  actTd.dataset.label = "Действия";
   actTd.style.display = "table-cell";
   // Кнопка «Редактировать» — открывает полный модал редактирования задачи
   // Для ПП-записей: частичное редактирование (иконка 🔒 ✏️)
@@ -1895,8 +1981,6 @@ function toggleBulkMode() {
   _bulkSelected.clear();
   var btn = document.getElementById('bulkModeBtn');
   if (btn) btn.classList.toggle('active', _bulkMode);
-  var bar = document.getElementById('bulkBar');
-  if (bar) bar.style.display = _bulkMode ? 'flex' : 'none';
   // Добавляем/убираем чекбоксы в num-cell
   document.querySelectorAll('#taskBody tr').forEach(function(tr) {
     var numCell = tr.querySelector('.num-cell');
@@ -1922,8 +2006,11 @@ function toggleBulkMode() {
 function updateBulkBar() {
   var count = document.getElementById('bulkCount');
   if (count) count.textContent = _bulkSelected.size;
-  var delBtn = document.getElementById('bulkDeleteBtn');
-  if (delBtn) delBtn.disabled = _bulkSelected.size === 0;
+  var bar = document.getElementById('bulkBar');
+  if (bar) {
+    if (_bulkMode && _bulkSelected.size > 0) bar.classList.add('visible');
+    else bar.classList.remove('visible');
+  }
 }
 
 function bulkSelectAll() {
@@ -1935,6 +2022,28 @@ function bulkSelectAll() {
     if (!allChecked) _bulkSelected.add(id); else _bulkSelected.delete(id);
   });
   updateBulkBar();
+}
+
+function bulkDeselectAll() {
+  _bulkSelected.clear();
+  document.querySelectorAll('#taskBody .bulk-cb').forEach(function(cb) { cb.checked = false; });
+  updateBulkBar();
+}
+
+function bulkExport() {
+  if (_bulkSelected.size === 0) return;
+  var selected = tasks.filter(function(t) { return _bulkSelected.has(t.id); });
+  // Fallback CSV export for selected rows
+  var cols = ['row_code','dept','project','work_name','executor','date_start','date_end'];
+  var headers = ['Код строки','Отдел','Проект','Наименование','Исполнитель','Дата начала','Дата окончания'];
+  var csv = '\uFEFF' + headers.join(';') + '\n';
+  selected.forEach(function(r) {
+    csv += cols.map(function(c) { return '"' + String(r[c]||'').replace(/"/g,'""') + '"'; }).join(';') + '\n';
+  });
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'СП_выбранные.csv'; a.click(); URL.revokeObjectURL(a.href);
+  notify('Экспортировано задач: ' + selected.length, 'ok');
 }
 
 async function bulkDelete() {
@@ -1956,7 +2065,7 @@ async function bulkDelete() {
     var btn = document.getElementById('bulkModeBtn');
     if (btn) btn.classList.remove('active');
     var bar = document.getElementById('bulkBar');
-    if (bar) bar.style.display = 'none';
+    if (bar) bar.classList.remove('visible');
     await loadTasks();
   } catch(e) {
     notify('Ошибка сети: ' + e.message, 'err');
@@ -2588,7 +2697,7 @@ async function submitNewTask() {
     if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
     document.getElementById("filtersActiveBadge").classList.remove("visible");
     selectedDept = null; localStorage.removeItem('sp_selected_dept');
-    document.querySelectorAll('.dept-chip').forEach(c => c.classList.toggle('active', !c.dataset.dept));
+    _updateDeptUI(null);
     await loadTasks();
     notify("✓ Задача создана", "ok");
     // Прокрутка к первой строке (новая задача — вверху, API сортирует по -id)
@@ -3825,8 +3934,14 @@ function switchView(view) {
   if (view === 'table') {
     tableEl.style.display = '';
     if (addRow) addRow.style.display = '';
+    tableEl.classList.remove('spa-fade-in');
+    void tableEl.offsetWidth;
+    tableEl.classList.add('spa-fade-in');
   } else {
     ganttEl.style.display = 'block';
+    ganttEl.classList.remove('spa-fade-in');
+    void ganttEl.offsetWidth;
+    ganttEl.classList.add('spa-fade-in');
     if (filterBtn) filterBtn.style.display = '';
     if (scaleGroup) scaleGroup.style.display = '';
     if (!ganttLoaded) {
@@ -4068,3 +4183,205 @@ function spGetFilteredRows() {
 }
 
 /* PP-бейдж тултип — используется нативный title (кастомный удалён) */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Activity / Comments slideout panel  (UX audit #15)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+let _activityWorkId = null;
+
+function openActivityPanel(workId) {
+  _activityWorkId = workId;
+  const task = tasks.find(t => t.id === workId);
+  if (!task) return;
+
+  // Title
+  document.getElementById('activityTitle').textContent =
+    task.work_name || task.description || ('Задача #' + workId);
+
+  // Render details tab
+  _renderActivityDetails(task);
+
+  // Load comments
+  _loadComments(workId);
+
+  // Reset to details tab
+  switchActivityTab('details');
+
+  // Open panel
+  document.getElementById('activityOverlay').classList.add('open');
+  document.getElementById('activityPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeActivityPanel() {
+  document.getElementById('activityOverlay').classList.remove('open');
+  document.getElementById('activityPanel').classList.remove('open');
+  document.body.style.overflow = '';
+  _activityWorkId = null;
+}
+
+function switchActivityTab(tab) {
+  // Toggle tab buttons
+  document.querySelectorAll('#activityPanel .slideout-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  // Toggle tab content
+  document.getElementById('activityDetails').style.display = tab === 'details' ? '' : 'none';
+  document.getElementById('activityFeed').style.display = tab === 'activity' ? '' : 'none';
+  // Show/hide comment input footer
+  document.getElementById('activityFooter').style.display = tab === 'activity' ? '' : 'none';
+}
+
+function _renderActivityDetails(t) {
+  const h = escapeHtml;
+  const fmtDate = d => d ? d.slice(0, 10).split('-').reverse().join('.') : '—';
+  const status = _spGetStatus(t);
+  const statusLabels = {done: 'Выполнено', overdue: 'Просрочено', inwork: 'В работе'};
+  const statusClasses = {done: 'sp-done', overdue: 'sp-overdue', inwork: 'sp-inwork'};
+
+  let html = '<div class="activity-detail-grid">';
+  html += `<div class="activity-detail-row">
+    <span class="activity-detail-label">Статус</span>
+    <span class="ptc-status ${statusClasses[status]}" style="display:inline-block;padding:3px 10px;font-size:12px;pointer-events:none;">${statusLabels[status]}</span>
+  </div>`;
+  if (t.task_type) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Тип работы</span>
+      <span class="activity-detail-value">${h(t.task_type)}</span>
+    </div>`;
+  }
+  if (t.project) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Проект</span>
+      <span class="activity-detail-value">${h(t.project)}</span>
+    </div>`;
+  }
+  if (t.dept) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Отдел</span>
+      <span class="activity-detail-value">${h(t.dept)}</span>
+    </div>`;
+  }
+  if (t.sector) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Сектор</span>
+      <span class="activity-detail-value">${h(t.sector)}</span>
+    </div>`;
+  }
+  if (t.executor) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Исполнитель</span>
+      <span class="activity-detail-value">${avatarHtml(t.executor, 'sm')} ${h(t.executor)}</span>
+    </div>`;
+  }
+  html += `<div class="activity-detail-row">
+    <span class="activity-detail-label">Начало</span>
+    <span class="activity-detail-value">${fmtDate(t.date_start)}</span>
+  </div>`;
+  html += `<div class="activity-detail-row">
+    <span class="activity-detail-label">Окончание</span>
+    <span class="activity-detail-value">${fmtDate(t.date_end)}</span>
+  </div>`;
+  if (t.deadline) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Контрольный срок</span>
+      <span class="activity-detail-value">${fmtDate(t.deadline)}</span>
+    </div>`;
+  }
+  if (t.work_name) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Наименование</span>
+      <span class="activity-detail-value">${h(t.work_name)}</span>
+    </div>`;
+  }
+  if (t.description) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Описание</span>
+      <span class="activity-detail-value">${h(t.description)}</span>
+    </div>`;
+  }
+  if (t.justification) {
+    html += `<div class="activity-detail-row">
+      <span class="activity-detail-label">Основание</span>
+      <span class="activity-detail-value">${h(t.justification)}</span>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('activityDetails').innerHTML = html;
+}
+
+async function _loadComments(workId) {
+  try {
+    const comments = await fetchJson('/api/comments/?work_id=' + workId);
+    renderActivityFeed(comments);
+  } catch (e) {
+    document.getElementById('activityFeed').innerHTML =
+      '<div style="padding:20px;color:var(--muted);text-align:center;">Не удалось загрузить комментарии</div>';
+  }
+}
+
+function renderActivityFeed(comments) {
+  const container = document.getElementById('activityFeed');
+  if (!comments || comments.length === 0) {
+    container.innerHTML = '<div class="activity-empty">Комментариев пока нет. Будьте первым!</div>';
+    return;
+  }
+  const h = escapeHtml;
+  let html = '';
+  comments.forEach(c => {
+    const dt = c.created_at ? new Date(c.created_at) : null;
+    const timeStr = dt ? (dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})) : '';
+    html += `<div class="comment-item" data-comment-id="${c.id}">
+      <div class="comment-header">
+        <span class="comment-author">${h(c.author || 'Аноним')}</span>
+        <span class="comment-time">${timeStr}</span>
+        <button class="comment-delete" onclick="deleteComment(${c.id})" title="Удалить"><i class="fas fa-trash-alt"></i></button>
+      </div>
+      <div class="comment-text">${h(c.text)}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+async function postComment() {
+  if (!_activityWorkId) return;
+  const input = document.getElementById('commentInput');
+  const text = (input.value || '').trim();
+  if (!text) return;
+
+  try {
+    const comment = await fetchJson('/api/comments/', {
+      method: 'POST',
+      body: JSON.stringify({work_id: _activityWorkId, text: text}),
+    });
+    input.value = '';
+    // Reload comments
+    _loadComments(_activityWorkId);
+  } catch (e) {
+    alert('Ошибка при сохранении комментария: ' + e.message);
+  }
+}
+
+async function deleteComment(commentId) {
+  if (!confirm('Удалить комментарий?')) return;
+  try {
+    await fetchJson('/api/comments/' + commentId + '/', {method: 'DELETE'});
+    if (_activityWorkId) _loadComments(_activityWorkId);
+  } catch (e) {
+    alert('Ошибка при удалении: ' + e.message);
+  }
+}
+
+// Ctrl+Enter to submit comment
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'Enter' && document.activeElement && document.activeElement.id === 'commentInput') {
+    postComment();
+  }
+  // Escape closes panel
+  if (e.key === 'Escape' && _activityWorkId) {
+    closeActivityPanel();
+  }
+});

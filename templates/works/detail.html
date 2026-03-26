@@ -4,12 +4,12 @@
 {% block title %}{{ object.work_name|default:"Работа" }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Ссылка назад на список с учётом типа работы (pp или task) -->
 <a href="{% url 'works:list' %}{% if object.show_in_pp %}?source=pp{% elif object.show_in_plan %}?source=task{% endif %}">
   {% if object.show_in_pp %}Производственный план{% else %}План/отчёт{% endif %}
 </a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Название работы (обрезано до 40 символов) -->
 <span class="breadcrumb-current">{{ object.work_name|default:"Работа"|truncatechars:40 }}</span>
 {% endblock %}

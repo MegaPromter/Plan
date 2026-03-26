@@ -4,10 +4,10 @@
 {% block title %}Извещение #{{ object.pk }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Ссылка назад на журнал извещений -->
 <a href="{% url 'works:notice_list' %}">Журнал извещений</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Текущее извещение — PK как идентификатор -->
 <span class="breadcrumb-current">#{{ object.pk }}</span>
 {% endblock %}
@@ -18,7 +18,7 @@
 <!-- Кнопка редактирования в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <a href="{% url 'works:notice_edit' object.pk %}" class="btn btn-outline"><i class="fas fa-edit"></i> Редактировать</a>
+  <a href="{% url 'works:notice_edit' object.pk %}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
 {% endif %}
 {% endblock %}
 

@@ -8,7 +8,7 @@
 {% block nav_pp %}active{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Динамический заголовок хлебной крошки: меняется при открытии конкретного плана -->
 <span class="breadcrumb-current" id="breadcrumbTitle">Производственный план</span>
 {% endblock %}
@@ -38,6 +38,15 @@
   <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
     <i class="fas fa-plus"></i> Добавить строку
   </button>
+  <button class="btn btn-outline btn-sm" id="ppBulkModeBtn" onclick="ppToggleBulkMode()" data-tip="Массовое выделение">
+    <i class="fas fa-check-square"></i>
+  </button>
+  {% endif %}
+  <!-- Песочница -->
+  {% if request.user|is_writer %}
+  <button class="btn btn-outline btn-sm" id="sandboxToggleBtn" onclick="toggleSandboxMode()">
+    <i class="fas fa-flask"></i> <span id="sandboxToggleLabel">Песочница</span>
+  </button>
   {% endif %}
   <span id="exportBtnContainer"></span>
   <!-- Кнопка статистики с дропдауном -->
@@ -55,16 +64,21 @@
   </button>
   <!-- Счётчик строк без активных фильтров -->
   <span id="ppRowsCounterPlain" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
+  <!-- Пресеты фильтров -->
+  <span id="ppFilterPresetsWrap"></span>
 </div>
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=7">
 {% endblock %}
 
 {% block content %}
 <!-- CSRF-токен Django: используется js-функцией getCsrfToken() для PUT/POST/DELETE запросов -->
 {% csrf_token %}
+
+<!-- Индикатор песочницы: фиолетовая бегущая полоса вверху экрана -->
+<div class="sandbox-topbar-indicator" id="sandboxTopbarIndicator"></div>
 
 <!-- Режим лендинга: список карточек ПП-проектов -->
 <div id="landingView">
@@ -79,6 +93,36 @@
 
 <!-- Режим просмотра плана: таблица строк ПП (скрыта по умолчанию) -->
 <div id="projectView" style="display:none;">
+  <!-- ── Песочница: баннер-панель (внутри projectView, чтобы быть видимым) ── -->
+  <div id="sandboxPanel" style="display:none;">
+    <div class="sandbox-banner" id="sandboxBanner">
+      <i class="fas fa-flask"></i>
+      <span style="font-weight:600;">ПЕСОЧНИЦА</span>
+      <span style="margin:0 4px;">—</span>
+      <span id="sandboxBannerTitle">Песочница</span>
+      <span class="sandbox-badge" id="sandboxStatusBadge"></span>
+      <div style="flex:1;"></div>
+      <button class="btn btn-sm btn-outline" onclick="openChangesetList()" title="Все наборы">
+        <i class="fas fa-list"></i> Наборы
+      </button>
+      <button class="btn btn-sm btn-primary" id="sandboxSubmitBtn" onclick="submitChangeset()" style="display:none;">
+        <i class="fas fa-paper-plane"></i> На согласование
+      </button>
+      <button class="btn btn-sm btn-success" id="sandboxApproveBtn" onclick="approveChangeset()" style="display:none;">
+        <i class="fas fa-check"></i> Утвердить
+      </button>
+      <button class="btn btn-sm btn-danger" id="sandboxRejectBtn" onclick="openRejectDialog()" style="display:none;">
+        <i class="fas fa-times"></i> Отклонить
+      </button>
+      <button class="btn btn-sm btn-outline" id="sandboxDiffBtn" onclick="showChangesetDiff()" style="display:none;">
+        <i class="fas fa-code-branch"></i> Изменения
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="exitSandbox()">
+        <i class="fas fa-sign-out-alt"></i> Выйти
+      </button>
+    </div>
+  </div>
+
   <!-- Панель периода (год + месяцы) -->
   <div class="pp-period-bar" id="ppPeriodBar" style="display:none;">
     <span class="pp-cal-label">Период:</span>
@@ -116,23 +160,18 @@
     <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')">📋 Таблица</button>
     <button class="pp-view-tab" data-view="gantt" onclick="ppSwitchView('gantt')">📊 Диаграмма Ганта</button>
     <!-- Статус-панель по центру окна -->
-    <div class="pp-status-center" id="ppStatusPanel" style="display:none;">
-      <div class="status-bar-mini" id="ppStatusBar">
-        <div class="status-bar-done" id="ppBarDone"></div>
-        <div class="status-bar-overdue" id="ppBarOverdue"></div>
-        <div class="status-bar-inwork" id="ppBarInWork"></div>
-      </div>
-      <button class="status-chip" data-status="all" onclick="ppFilterStatus('all')">
-        Все <span class="status-chip-count" id="ppCountAll"></span>
+    <div class="status-pills" id="ppStatusPanel" style="display:none;">
+      <button class="sp sp-all active" onclick="ppFilterByStatus('all')">
+        Все <span class="num" id="ppCountAll">0</span>
       </button>
-      <button class="status-chip chip-done" data-status="done" onclick="ppFilterStatus('done')">
-        <i class="fas fa-check"></i> Выполнено <span class="status-chip-count" id="ppCountDone"></span>
+      <button class="sp sp-done" onclick="ppFilterByStatus('done')">
+        ✓ <span class="num" id="ppCountDone">0</span>
       </button>
-      <button class="status-chip chip-overdue" data-status="overdue" onclick="ppFilterStatus('overdue')">
-        <i class="fas fa-exclamation-triangle"></i> Просрочено <span class="status-chip-count" id="ppCountOverdue"></span>
+      <button class="sp sp-overdue" onclick="ppFilterByStatus('overdue')">
+        ⚠ <span class="num" id="ppCountOverdue">0</span>
       </button>
-      <button class="status-chip chip-inwork" data-status="inwork" onclick="ppFilterStatus('inwork')">
-        <i class="fas fa-spinner"></i> В работе <span class="status-chip-count" id="ppCountInWork"></span>
+      <button class="sp sp-inwork" onclick="ppFilterByStatus('inwork')">
+        ⟳ <span class="num" id="ppCountInWork">0</span>
       </button>
     </div>
     <span class="gantt-scale-group" id="ppGanttScaleGroup" style="display:none;">
@@ -293,19 +332,94 @@
 </div>
 </div>
 
+<!-- ── Модал: список наборов изменений ──────────────────────────── -->
+<div class="modal-overlay" id="changesetListModal" style="display:none;">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title">Наборы изменений</div>
+      <button class="modal-close" onclick="closeModal('changesetListModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-primary btn-sm" onclick="openCreateChangesetModal()">
+          <i class="fas fa-plus"></i> Новый набор
+        </button>
+      </div>
+      <div id="changesetListBody">Загрузка...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал: создание набора ────────────────────────────────────── -->
+<div class="modal-overlay" id="createChangesetModal" style="display:none;">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">Новый набор изменений</div>
+      <button class="modal-close" onclick="closeModal('createChangesetModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Название</label>
+      <input type="text" class="form-input" id="csTitle" placeholder="Например: Корректировки за Март 2026">
+      <label class="form-label" style="margin-top:12px;">Описание (необязательно)</label>
+      <textarea class="form-input" id="csDescription" rows="3" placeholder="Что планируется изменить..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('createChangesetModal')">Отмена</button>
+      <button class="btn btn-primary btn-sm" onclick="createChangeset()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал: просмотр diff ──────────────────────────────────────── -->
+<div class="modal-overlay" id="changesetDiffModal" style="display:none;">
+  <div class="modal" style="max-width:900px;max-height:80vh;">
+    <div class="modal-header">
+      <div class="modal-title">Просмотр изменений</div>
+      <button class="modal-close" onclick="closeModal('changesetDiffModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="changesetDiffBody" style="overflow-y:auto;max-height:60vh;">
+      Загрузка...
+    </div>
+    <div class="modal-footer" id="changesetDiffFooter"></div>
+  </div>
+</div>
+
+<!-- ── Модал: причина отклонения ─────────────────────────────────── -->
+<div class="modal-overlay" id="rejectModal" style="display:none;">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">Отклонить набор изменений</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Причина отклонения</label>
+      <textarea class="form-input" id="rejectComment" rows="3" placeholder="Укажите причину..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('rejectModal')">Отмена</button>
+      <button class="btn btn-danger btn-sm" onclick="rejectChangeset()">Отклонить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Floating Bulk Actions Bar (ПП) ════════════════════════════════════ -->
+<div class="bulk-bar" id="ppBulkBar">
+  <span class="bulk-bar-count"><span id="ppBulkCount">0</span> выбрано</span>
+  <button class="btn btn-danger-outline btn-sm" onclick="ppBulkDelete()"><i class="fas fa-trash"></i> Удалить</button>
+  <button class="btn btn-outline btn-sm" onclick="ppBulkExport()"><i class="fas fa-download"></i> Экспорт</button>
+  <button class="bulk-bar-close" onclick="ppBulkDeselectAll()" title="Снять выбор"><i class="fas fa-times"></i></button>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
-<!-- Утилиты: fetchJson, escapeHtml, showToast, confirmDialog, getCsrfToken -->
-<script src="{% static 'js/utils.js' %}?v=8"></script>
-<script src="{% static 'js/export.js' %}"></script>
-<!-- Модальные окна: openModal, modalStack -->
-<script src="{% static 'js/modal.js' %}"></script>
 <!-- Инлайн-редактирование ячеек (не используется напрямую, но подключён для совместимости) -->
+<script src="{% static 'js/filters.js' %}?v=1"></script>
 <script src="{% static 'js/inline_edit.js' %}"></script>
 <script id="pp-config" type="application/json">{
   "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
+  "canApprove": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
   "userRole": "{{ request.user.employee.role|default:''|escapejs }}",
   "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
   "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
@@ -313,7 +427,9 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/production_plan.js' %}?v=3"></script>
+<script src="{% static 'js/production_plan.js' %}?v=5"></script>
+<script src="{% static 'js/sandbox.js' %}?v=5"></script>
+<script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 // Вызывается после openProject, когда таблица видима
@@ -367,5 +483,89 @@
     requestAnimationFrame(function(){ requestAnimationFrame(fixStickyOffsets); });
   };
 })();
+
+// Страничные горячие клавиши: N — добавить строку в ПП
+if (typeof registerShortcut === 'function') {
+  registerShortcut('n', 'Добавить строку', function() {
+    // Только когда открыт конкретный план (projectView виден)
+    var pv = document.getElementById('projectView');
+    if (pv && pv.style.display !== 'none' && typeof openAddRowModal === 'function') {
+      openAddRowModal();
+    }
+  });
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initFilterPresets('production_plan', 'ppFilterPresetsWrap',
+    function() {
+      var state = {};
+      if (typeof mfSelections !== 'undefined') {
+        var mf = {};
+        for (var k in mfSelections) {
+          if (mfSelections[k] && mfSelections[k].size > 0) mf[k] = Array.from(mfSelections[k]);
+        }
+        state.mfSelections = mf;
+      }
+      if (typeof colFilters !== 'undefined') {
+        var cf = {};
+        for (var k in colFilters) {
+          if (colFilters[k] instanceof Set) cf[k] = Array.from(colFilters[k]);
+          else cf[k] = colFilters[k];
+        }
+        state.colFilters = cf;
+      }
+      if (typeof ppSelectedYear !== 'undefined') state.ppSelectedYear = ppSelectedYear;
+      if (typeof ppSelectedMonth !== 'undefined') state.ppSelectedMonth = ppSelectedMonth;
+      if (typeof ppSelectedDept !== 'undefined') state.ppSelectedDept = ppSelectedDept;
+      if (typeof _ppStatusFilter !== 'undefined') state.ppStatusFilter = _ppStatusFilter;
+      return state;
+    },
+    function(state) {
+      if (typeof clearAllColFilters === 'function') clearAllColFilters();
+      if (state.mfSelections && typeof mfSelections !== 'undefined') {
+        for (var k in state.mfSelections) {
+          mfSelections[k] = new Set(state.mfSelections[k]);
+          colFilters['mf_' + k] = new Set(state.mfSelections[k]);
+        }
+        document.querySelectorAll('.mf-trigger').forEach(function(btn) {
+          var col = btn.dataset.col;
+          var sel = mfSelections[col];
+          if (sel && sel.size > 0) {
+            btn.textContent = sel.size + ' \u0432\u044b\u0431\u0440.';
+            btn.classList.add('active');
+          }
+        });
+      }
+      if (state.colFilters) {
+        for (var k in state.colFilters) {
+          if (Array.isArray(state.colFilters[k])) colFilters[k] = new Set(state.colFilters[k]);
+          else colFilters[k] = state.colFilters[k];
+        }
+      }
+      if (state.ppSelectedYear !== undefined) {
+        ppSelectedYear = state.ppSelectedYear;
+        var yd = document.getElementById('ppYearDisplay');
+        if (yd) yd.textContent = ppSelectedYear;
+      }
+      if (state.ppSelectedMonth !== undefined) {
+        ppSelectedMonth = state.ppSelectedMonth;
+        document.querySelectorAll('.pp-cal-month').forEach(function(el) {
+          el.classList.toggle('active', parseInt(el.dataset.m) === ppSelectedMonth);
+        });
+      }
+      if (state.ppSelectedDept !== undefined && typeof selectPPDept === 'function') {
+        selectPPDept(state.ppSelectedDept);
+      }
+      if (state.ppStatusFilter && state.ppStatusFilter !== 'all') {
+        _ppStatusFilter = state.ppStatusFilter;
+      }
+      var hasFilters = Object.keys(colFilters).length > 0;
+      var badge = document.getElementById('filtersActiveBadge');
+      if (badge) badge.style.display = hasFilters ? '' : 'none';
+      if (typeof renderPPTable === 'function') renderPPTable();
+    }
+  );
+});
 </script>
 {% endblock %}

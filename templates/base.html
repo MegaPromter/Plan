@@ -5,7 +5,7 @@
 <html lang="ru">
 <head>
 <!-- Применяем тему до рендера, чтобы избежать мерцания -->
-<script>!function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t)}()</script>
+<script>!function(){var t=localStorage.getItem('theme')||'light';if(t==='system'){try{t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}catch(e){t='light'}}document.documentElement.setAttribute('data-theme',t)}()</script>
 <!-- Кодировка и мета для корректного отображения на мобильных устройствах -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,449 +17,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Font Awesome — иконки в навигации и кнопках -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<!-- Стили сайдбара (единый источник) -->
-<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=2">
-<style>
-/* Сброс отступов и задание box-sizing для всех элементов */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  /* ── Светлый фон (основной контент) ── */
-  --bg:       #f0f2f5;   /* цвет фона страницы */
-  --surface:  #ffffff;   /* цвет карточек и панелей */
-  --surface2: #f8f9fb;   /* вторичный фон (чередующиеся строки, шапки таблиц) */
-  --border:   #e2e6ed;   /* основной цвет рамок */
-  --border2:  #c8d0dc;   /* более тёмный цвет рамок */
-
-  /* ── Тёмно-синий (сайдбар + шапка) ── */
-  --nav-bg:       #1a2744;                    /* фон сайдбара */
-  --nav-border:   #243358;                    /* рамки в сайдбаре */
-  --nav-text:     #a8bbd4;                    /* обычный текст пунктов меню */
-  --nav-text2:    #cddaeb;                    /* более светлый текст меню */
-  --nav-active-bg: rgba(255,255,255,0.10);    /* фон активного пункта */
-  --nav-active-color: #ffffff;                /* цвет активного пункта */
-  --nav-hover-bg: rgba(255,255,255,0.06);     /* фон при наведении */
-  --topbar-bg:    #1e2e50;                    /* фон верхней панели */
-
-  /* ── Акцент (синий) ── */
-  --accent:      #2563eb;                  /* основной акцентный цвет (кнопки, ссылки) */
-  --accent2:     #1d4ed8;                  /* более тёмный акцент (hover) */
-  --accent-glow: rgba(37,99,235,0.12);     /* полупрозрачное свечение */
-  --accent-light: #eff6ff;                 /* очень светлый синий (фон при hover строки) */
-
-  /* ── Текст ── */
-  --text:  #1e293b;   /* основной цвет текста */
-  --text2: #475569;   /* вторичный текст */
-  --muted: #94a3b8;   /* приглушённый текст (подсказки, метки) */
-
-  /* ── Статусы ── */
-  --danger:  #dc2626;   /* красный (ошибка, удаление) */
-  --success: #16a34a;   /* зелёный (успех, активный) */
-  --warning: #d97706;   /* жёлто-оранжевый (предупреждение) */
-
-  --radius: 12px;  /* скругление углов */
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* основной шрифт */
-}
-/* Базовые стили тела страницы */
-body { min-height:100vh; background:var(--bg); font-family:var(--font); color:var(--text); font-size:14px; line-height:1.5; }
-
-/* ── Sidebar ─────────────────────────────────────────────────────────── */
-/* Боковая панель навигации фиксирована слева, занимает всю высоту экрана */
-/* Стили сайдбара — в static/css/sidebar.css */
-
-/* ── Main Layout ─────────────────────────────────────────────────────── */
-/* Основной контент — отступ слева равен ширине сайдбара */
-.main-content { margin-left:260px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left 0.3s ease; }
-/* Верхняя панель (topbar) — прилипает к верху при прокрутке */
-.topbar {
-  position:sticky; top:0; height:60px;
-  background:var(--topbar-bg); border-bottom:1px solid var(--nav-border);
-  display:flex; align-items:center; padding:0 24px; gap:16px;
-  z-index:50;
-}
-/* Хлебные крошки (навигационная цепочка) */
-.breadcrumb { display:flex; align-items:center; gap:6px; font-size:14px; }
-.breadcrumb a { color:var(--nav-text); text-decoration:none; transition:all .15s; }
-.breadcrumb a:hover { color:#fff; }
-/* Chevron-разделители */
-.breadcrumb span:not(.breadcrumb-current) { color:var(--nav-text); opacity:0.4; font-size:11px; }
-.breadcrumb span:not(.breadcrumb-current)::before { content:''; }
-/* Текущий раздел в хлебных крошках */
-.breadcrumb-current { color:#fff; font-weight:600; }
-/* Растяжка для выравнивания (толкает правые элементы к краю) */
-.topbar-spacer { flex:1; }
-/* Основная область контента страницы */
-.page-content { flex:1; padding:24px; }
-
-/* sidebar-toggle, sidebar.collapsed, sidebar-overlay — в sidebar.css */
-/* Кнопка открытия сайдбара на мобильных (скрыта на десктопе) */
-.mobile-toggle {
-  display:none; width:36px; height:36px; border:none; background:rgba(255,255,255,0.08);
-  color:var(--nav-text2); border-radius:8px; cursor:pointer; font-size:16px;
-  align-items:center; justify-content:center;
-}
-/* При свёрнутом сайдбаре основной контент занимает всю ширину */
-.main-content.sidebar-collapsed { margin-left:0; }
-
-/* ── Topbar btn выйти ────────────────────────────────────────────────── */
-/* Кнопка «Выйти» в topbar адаптирована под тёмный фон */
-.topbar .btn-outline {
-  border-color:rgba(255,255,255,0.2); color:var(--nav-text2); background:transparent;
-}
-.topbar .btn-outline:hover {
-  border-color:rgba(255,255,255,0.45); color:#fff; background:rgba(255,255,255,0.06);
-}
-
-/* ── Toast ───────────────────────────────────────────────────────────── */
-/* Контейнер всплывающих уведомлений (toast) — фиксирован в правом верхнем углу */
-.toast-container { position:fixed; top:72px; right:24px; z-index:1000; display:flex; flex-direction:column; gap:12px; }
-/* Отдельный toast — белая карточка с цветной полосой слева */
-.toast {
-  padding:14px 18px; background:#fff; border:1px solid var(--border);
-  border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.12);
-  display:flex; align-items:center; gap:12px; animation:slideIn 0.3s ease; min-width:300px;
-}
-/* Цветовые варианты toast по типу */
-.toast.success { border-left:4px solid var(--success); }
-.toast.error   { border-left:4px solid var(--danger); }
-.toast.warning { border-left:4px solid var(--warning); }
-/* Иконка в toast */
-.toast-icon { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
-.toast.success .toast-icon { background:rgba(34,197,94,0.2);  color:var(--success); }
-.toast.error   .toast-icon { background:rgba(239,68,68,0.2);  color:var(--danger); }
-.toast.warning .toast-icon { background:rgba(245,158,11,0.2); color:var(--warning); }
-/* Текст уведомления */
-.toast-message { flex:1; font-size:14px; }
-/* Анимация появления toast справа */
-@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
-
-/* ── Buttons ─────────────────────────────────────────────────────────── */
-/* Базовый стиль кнопки */
-.btn {
-  display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
-  font-size:14px; font-weight:600; font-family:var(--font);
-  text-decoration:none; cursor:pointer; border:none; transition:all 0.2s ease;
-  position:relative; overflow:hidden;
-}
-/* Ripple-эффект при клике */
-.btn::after {
-  content:''; position:absolute; inset:0; background:rgba(255,255,255,0.3);
-  border-radius:inherit; transform:scale(0); opacity:0; transition:none;
-}
-.btn:active::after { transform:scale(2.5); opacity:0; animation:btnRipple 0.5s ease-out; }
-@keyframes btnRipple { from{transform:scale(0);opacity:0.4} to{transform:scale(2.5);opacity:0} }
-/* Иконки в кнопках — сдвиг при hover */
-.btn i, .btn .fas, .btn .far { transition:transform 0.2s ease; }
-.btn:hover i, .btn:hover .fas, .btn:hover .far { transform:translateX(1px); }
-/* Основная кнопка (gradient) */
-.btn-primary  { background:var(--accent-gradient, var(--accent)); color:#fff; }
-.btn-primary:hover  { transform:translateY(-1px); box-shadow:var(--shadow-accent); filter:brightness(1.08); }
-/* Вторичная кнопка (светлая) */
-.btn-secondary{ background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-.btn-secondary:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
-/* Опасная кнопка (красная, для удаления) */
-.btn-danger   { background:var(--danger);   color:#fff; }
-.btn-danger:hover   { background:#dc2626; transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.35); }
-/* Кнопка-контур (прозрачный фон) */
-.btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
-.btn-outline:hover  { border-color:var(--border2); color:var(--text); transform:translateY(-1px); }
-/* Маленький размер кнопки */
-.btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
-/* Неактивная кнопка */
-.btn:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
-
-/* ── Page header ─────────────────────────────────────────────────────── */
-/* Заголовок страницы с возможными действиями справа */
-.page-header {
-  display:flex; align-items:center; justify-content:space-between;
-  flex-wrap:wrap; gap:12px; margin-bottom:24px;
-}
-.page-header h1 { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-0.01em; }
-
-/* ── Section card ────────────────────────────────────────────────────── */
-/* Секция-карточка — белый блок с рамкой и скруглёнными углами */
-.section { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
-/* Шапка секции с заголовком и действиями */
-.section-header {
-  padding:20px 24px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-}
-.section-title { font-size:18px; font-weight:600; color:var(--text); }
-/* Ссылка «Смотреть все» или аналогичная в шапке секции */
-.section-link { font-size:13px; color:var(--accent); text-decoration:none; display:flex; align-items:center; gap:6px; }
-.section-link:hover { color:var(--accent2); }
-
-/* ── Tables ──────────────────────────────────────────────────────────── */
-/* Универсальные стили таблицы данных */
-.data-table { width:100%; border-collapse:collapse; }
-/* Шапка таблицы прилипает при прокрутке (ниже topbar) */
-.data-table thead { position:sticky; top:60px; z-index:2; box-shadow:var(--shadow-sticky); }
-.data-table th {
-  text-align:left; padding:11px 16px;
-  font-size:11px; font-weight:700; color:var(--text2);
-  text-transform:uppercase; letter-spacing:.06em;
-  background:var(--surface2); border-bottom:2px solid var(--border); white-space:nowrap;
-}
-.data-table td { padding:13px 16px; border-bottom:1px solid var(--border); font-size:14px; color:var(--text); }
-/* Чередующийся фон строк таблицы */
-.data-table tbody tr:nth-child(even) td { background:var(--surface2); }
-.data-table tbody tr:nth-child(odd)  td { background:var(--surface); }
-.data-table tr:last-child td { border-bottom:none; }
-/* Подсветка строки при наведении */
-.data-table tbody tr:hover td { background:var(--accent-light) !important; }
-/* Строка «ничего не найдено» */
-.data-table .empty td { text-align:center; color:var(--muted); padding:40px; background:var(--surface) !important; }
-/* Обёртка с горизонтальной прокруткой для широких таблиц */
-.table-wrap { overflow-x:auto; }
-
-/* ── Forms ───────────────────────────────────────────────────────────── */
-/* Контейнер формы (ограниченная ширина, белый фон) */
-.form-container { max-width:760px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; }
-/* Группа поля формы */
-.form-group { margin-bottom:20px; }
-/* Двухколоночный ряд в форме */
-.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.form-row .form-group { margin-bottom:20px; }
-/* Метка поля формы */
-label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
-/* Стили всех полей ввода, выбора и textarea */
-input[type=text],input[type=date],input[type=password],input[type=number],
-input[type=email],input[type=url],textarea,select {
-  width:100%; padding:10px 14px; background:var(--bg);
-  border:1px solid var(--border); border-radius:8px;
-  color:var(--text); font-family:var(--font); font-size:14px;
-  transition:border-color 0.2s; outline:none;
-}
-/* Подсветка активного поля */
-input:focus,textarea:focus,select:focus { border-color:var(--accent); }
-select option { background:var(--bg); }
-textarea { resize:vertical; min-height:80px; }
-/* Текст ошибки под полем */
-.field-error { font-size:12px; color:var(--danger); margin-top:4px; display:block; }
-/* Блок кнопок в конце формы */
-.form-actions { display:flex; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
-
-/* ── Alerts ──────────────────────────────────────────────────────────── */
-/* Блок алертов (уведомлений над формой) */
-.alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px; }
-.alert-error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--danger); }
-.alert-success { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:#22c55e; }
-.alert-warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
-
-/* ── Badges ──────────────────────────────────────────────────────────── */
-/* Бейджи для отображения статусов, ролей и т.п. */
-.badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; }
-.badge-blue   { background:rgba(59,130,246,0.15);  color:var(--accent); }    /* синий */
-.badge-green  { background:rgba(34,197,94,0.15);   color:var(--success); }   /* зелёный */
-.badge-red    { background:rgba(239,68,68,0.15);   color:var(--danger); }    /* красный */
-.badge-yellow { background:rgba(245,158,11,0.15);  color:var(--warning); }   /* жёлтый */
-.badge-gray   { background:var(--surface2);        color:var(--text2); }     /* серый */
-
-/* ── Empty state ─────────────────────────────────────────────────────── */
-/* Состояние «нет данных» с иконкой и текстом */
-.empty-state { padding:60px 24px; text-align:center; }
-.empty-icon { width:80px; height:80px; margin:0 auto 20px; background:var(--surface2); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:32px; color:var(--muted); }
-.empty-title { font-size:18px; font-weight:600; color:var(--text); margin-bottom:8px; }
-.empty-desc  { font-size:14px; color:var(--muted); margin-bottom:24px; }
-
-/* ── Filter bar ──────────────────────────────────────────────────────── */
-/* Панель фильтров над таблицей */
-.filter-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
-.filter-bar input,.filter-bar select { width:auto; flex:1; min-width:140px; max-width:240px; }
-
-/* ── Info table (detail page) ────────────────────────────────────────── */
-/* Таблица с детальной информацией об объекте (страница просмотра) */
-.info-table { width:100%; border-collapse:collapse; }
-.info-table tr { border-bottom:1px solid var(--border); }
-.info-table tr:last-child { border-bottom:none; }
-.info-table th { width:200px; padding:12px 16px; text-align:left; font-size:13px; font-weight:500; color:var(--muted); background:var(--surface2); white-space:nowrap; }
-.info-table td { padding:12px 16px; font-size:14px; color:var(--text); }
-
-/* ── Confirm box ─────────────────────────────────────────────────────── */
-/* Блок подтверждения опасного действия (удаление) */
-.confirm-box { max-width:560px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; }
-.confirm-box p { color:var(--text2); margin-bottom:16px; }
-.confirm-details { padding-left:20px; margin-bottom:16px; color:var(--text2); }
-.confirm-details li { margin-bottom:6px; }
-.confirm-details strong { color:var(--text); }
-/* Красное предупреждение о необратимости действия */
-.confirm-warning { color:var(--danger) !important; font-size:13px; }
-
-/* ── Pagination ──────────────────────────────────────────────────────── */
-/* Пагинация (навигация по страницам) */
-.pagination { display:flex; align-items:center; gap:8px; margin-top:20px; }
-.pagination a,.pagination span {
-  display:inline-flex; align-items:center; justify-content:center;
-  min-width:36px; height:36px; padding:0 10px; border-radius:8px;
-  font-size:14px; text-decoration:none; border:1px solid var(--border); color:var(--text2); transition:all 0.15s;
-}
-.pagination a:hover { border-color:var(--accent); color:var(--accent); }
-/* Активная (текущая) страница */
-.pagination .current { background:var(--accent); color:#fff; border-color:var(--accent); }
-/* Недоступная ссылка (нет следующей/предыдущей страницы) */
-.pagination .disabled { opacity:.4; cursor:default; }
-
-/* ── Extra form helpers ──────────────────────────────────────────────── */
-/* Заголовок смысловой секции внутри формы */
-.form-section-title {
-  font-size:13px; font-weight:600; color:var(--muted);
-  text-transform:uppercase; letter-spacing:.06em;
-  margin:24px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border);
-}
-.form-section-title:first-child { margin-top:0; }
-/* Ошибка под полем формы */
-.form-error  { font-size:12px; color:var(--danger);  margin-top:4px; display:block; }
-/* Подсказка под полем формы */
-.form-help   { font-size:12px; color:var(--muted);   margin-top:4px; display:block; }
-/* Поле с ошибкой — красная рамка */
-.has-error input,.has-error select,.has-error textarea { border-color:var(--danger); }
-/* Обёртка чекбокса с текстовой меткой */
-.checkbox-wrap { display:flex; align-items:center; gap:10px; padding:10px 0; }
-.checkbox-wrap input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); }
-.checkbox-wrap span { font-size:14px; color:var(--text2); }
-
-/* ── Filter extras ───────────────────────────────────────────────────── */
-/* Поля ввода и выбора в строке фильтров */
-.filter-input  { flex:1; min-width:140px; max-width:240px; }
-.filter-input--sm { max-width:140px; }  /* узкое поле фильтра */
-.filter-select { flex:1; min-width:140px; max-width:200px; }
-
-/* ── Section header actions ──────────────────────────────────────────── */
-/* Заголовок и группа действий в шапке секции */
-.section-header h2 { font-size:17px; font-weight:600; color:var(--text); }
-.section-header-actions { display:flex; gap:8px; align-items:center; }
-
-/* ── Text helpers ────────────────────────────────────────────────────── */
-/* Вспомогательный класс для приглушённого текста */
-.text-muted { color:var(--muted); font-size:13px; }
-
-/* ── Skeleton loader ────────────────────────────────────────────────── */
-.skeleton{background:linear-gradient(90deg,var(--border) 25%,var(--bg) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.skeleton-row{height:40px;margin-bottom:2px}
-.btn-loading .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-/* Спиннер бесконечной прокрутки */
-.scroll-spinner{text-align:center;padding:16px;color:var(--muted);font-size:13px}
-.scroll-spinner i{animation:spin 1s linear infinite}
-
-/* ── Page header actions ─────────────────────────────────────────────── */
-/* Блок кнопок в заголовке страницы */
-.page-header-actions { display:flex; gap:8px; align-items:center; }
-
-/* ── Empty state icon ────────────────────────────────────────────────── */
-/* Альтернативный вариант пустого состояния */
-.empty-state { text-align:center; padding:60px 24px; }
-.empty-state-icon {
-  width:72px; height:72px; margin:0 auto 20px;
-  background:var(--surface2); border-radius:20px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:28px; color:var(--muted);
-}
-.empty-state p { color:var(--text2); margin-bottom:20px; font-size:15px; }
-
-/* ── Pagination page-link ────────────────────────────────────────────── */
-/* Стиль ссылок пагинации (альтернативный вариант с .page-link) */
-.page-link {
-  display:inline-flex; align-items:center; justify-content:center;
-  min-width:36px; height:36px; padding:0 10px; border-radius:8px;
-  font-size:14px; text-decoration:none; border:1px solid var(--border);
-  color:var(--text2); transition:all 0.15s;
-}
-.page-link:hover { border-color:var(--accent); color:var(--accent); }
-/* Активная страница */
-.page-link.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-/* Текстовая информация о текущей странице */
-.page-info { font-size:13px; color:var(--muted); margin-left:8px; }
-
-/* ── Skip link (accessibility) ───────────────────────────────────────── */
-.skip-link{position:absolute;left:-9999px;top:auto;z-index:10001;padding:8px 16px;background:var(--accent);color:#fff;border-radius:0 0 8px 0;font-size:14px;text-decoration:none}
-.skip-link:focus{left:0;top:0}
-
-/* ── Responsive ──────────────────────────────────────────────────────── */
-/* Адаптивность: на мобильных устройствах сайдбар скрыт, появляется по кнопке */
-@media (max-width:768px) {
-  .sidebar { transform:translateX(-100%); }         /* скрыт по умолчанию */
-  .sidebar.open { transform:translateX(0); }         /* открыт */
-  .main-content { margin-left:0; }                   /* контент на всю ширину */
-  .mobile-toggle { display:flex !important; }        /* показать мобильную кнопку */
-  .sidebar-toggle { display:none; }                  /* скрыть десктопную кнопку */
-  .sidebar-overlay.open { display:block; }           /* затемнение за открытым сайдбаром */
-  .page-content { padding:16px; }                    /* меньше отступы контента */
-  .form-row { grid-template-columns:1fr; }           /* однколоночная форма на мобильных */
-}
-/* ── Дропдаун карточки пользователя в topbar (base) ──────────────── */
-.base-user-menu-wrap { position:relative; }
-.base-topbar-user { display:flex; flex-direction:row; align-items:center; gap:8px;
-  padding:5px 10px; border-radius:6px; cursor:pointer; user-select:none;
-  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
-  transition:background 0.15s; }
-.base-topbar-user:hover { background:rgba(255,255,255,0.14); }
-.base-topbar-user-text { display:flex; flex-direction:column; align-items:flex-end; gap:1px; max-width:160px; }
-.base-topbar-user-name { font-size:14px; font-weight:600; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-.base-topbar-user-sub  { font-size:11px; color:rgba(255,255,255,0.45); white-space:nowrap; }
-.base-topbar-user-chevron { font-size:10px; color:rgba(255,255,255,0.5); transition:transform 0.2s; }
-.base-user-dropdown.open ~ * .base-topbar-user-chevron,
-#baseUserDropdown.open + * .base-topbar-user-chevron { transform:rotate(180deg); }
-.base-topbar-user.menu-open .base-topbar-user-chevron { transform:rotate(180deg); }
-.base-user-dropdown { position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
-  background:var(--surface); border:1px solid var(--border); border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.12); overflow:hidden;
-  display:none; flex-direction:column; z-index:9999; }
-.base-user-dropdown.open { display:flex; }
-.base-user-dropdown a { display:flex; align-items:center; gap:10px;
-  padding:10px 16px; font-size:14px; color:var(--text); text-decoration:none;
-  transition:background 0.12s; }
-.base-user-dropdown a:hover { background:var(--surface2); }
-.base-user-dropdown .ud-sep { height:1px; background:var(--border); margin:2px 0; }
-.base-user-dropdown .ud-danger { color:var(--danger); }
-
-/* ── Кастомные скроллбары ──────────────────────────────────────────── */
-/* Тонкие, скруглённые, accent при hover */
-::-webkit-scrollbar { width:6px; height:6px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-::-webkit-scrollbar-thumb:hover { background:var(--accent); }
-/* Firefox */
-* { scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
-
-/* ── Микроанимация fadeUp ──────────────────────────────────────────── */
-@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-
-/* ── Print stylesheet ──────────────────────────────────────────────── */
-@media print {
-  .sidebar, .sidebar-overlay, .topbar, .toast-container,
-  .skip-link, .sidebar-toggle, .btn, .breadcrumb-nav,
-  .tour-tooltip, .tour-spotlight, .tour-info-backdrop, .tour-modal-backdrop { display:none !important; }
-  .main-content { margin-left:0 !important; padding:0 !important; }
-  body { background:#fff !important; color:#000 !important; font-size:12px; }
-  .section { border:1px solid #ccc; box-shadow:none !important; break-inside:avoid; }
-  .data-table th { background:#eee !important; color:#333 !important; }
-  .data-table td { border-bottom:1px solid #ddd; }
-  .data-table thead { position:static !important; }
-  a { color:#000 !important; text-decoration:none !important; }
-}
-
-/* ── Предупреждение таймаута сессии ────────────────────────────────── */
-.session-warn-overlay {
-  position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5);
-  display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-}
-.session-warn-card {
-  background:var(--surface); border:2px solid var(--warning); border-radius:16px;
-  padding:32px; max-width:400px; width:90%; text-align:center;
-  box-shadow:0 20px 60px rgba(0,0,0,0.3);
-}
-.session-warn-card h3 { color:var(--text); font-size:18px; margin-bottom:8px; }
-.session-warn-card p { color:var(--muted); font-size:14px; margin-bottom:20px; }
-.session-warn-card .btn { margin:0 6px; }
-</style>
-<!-- Общие CSS-файлы: переменные, таблицы, компоненты -->
+<!-- Переменные дизайн-системы (должны загружаться первыми) -->
 <link rel="stylesheet" href="{% static 'css/variables.css' %}?v=2">
+<!-- Базовые стили (извлечены из inline <style>) -->
+<link rel="stylesheet" href="{% static 'css/base.css' %}?v=2">
+<!-- Стили сайдбара -->
+<link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=2">
+<!-- Таблицы и компоненты -->
 <link rel="stylesheet" href="{% static 'css/tables.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=7">
 {% block styles %}{% endblock %}
-<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=7">
+<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=8">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 <a href="#main-content" class="skip-link">Перейти к основному содержанию</a>
@@ -475,21 +43,48 @@ textarea { resize:vertical; min-height:80px; }
   <!-- Верхняя панель (topbar) с навигацией и действиями -->
   <header class="topbar">
     <!-- Кнопка сворачивания/разворачивания сайдбара (десктоп) -->
-    <button class="sidebar-toggle" id="sidebarToggle" title="Скрыть/показать меню">
-      <i class="fas fa-bars"></i>
+    <button class="sidebar-toggle" id="sidebarToggle" title="Скрыть/показать меню" aria-label="Скрыть/показать меню">
+      <i class="fas fa-bars" aria-hidden="true"></i>
     </button>
     <!-- Кнопка открытия сайдбара на мобильных -->
-    <button class="mobile-toggle" id="mobileToggle">
-      <i class="fas fa-bars"></i>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Открыть меню навигации">
+      <i class="fas fa-bars" aria-hidden="true"></i>
     </button>
     <!-- Хлебные крошки: «Главная / [текущий раздел]» -->
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" aria-label="Хлебные крошки">
       <a href="{% url 'accounts:dashboard' %}">Главная</a>
       {% block breadcrumb %}{% endblock %}
     </nav>
     <!-- Пустой блок для выравнивания элементов topbar -->
     <div class="topbar-spacer"></div>
     <!-- Дополнительные кнопки в topbar (определяются в дочерних шаблонах) -->
+    <!-- Глобальный поиск (Ctrl+K) -->
+    <button class="cmd-k-hint" onclick="toggleCommandPalette()" title="Ctrl+K">
+      <i class="fas fa-search"></i>
+      <span class="cmd-k-hint-text">Поиск</span>
+      <kbd>⌘K</kbd>
+    </button>
+    <!-- Горячие клавиши — подсказка -->
+    <button class="cmd-k-hint" onclick="showShortcutsHelp()" title="Горячие клавиши (?)" style="margin-left:4px;">
+      <i class="fas fa-keyboard"></i>
+      <span class="cmd-k-hint-text">?</span>
+    </button>
+    <!-- Уведомления (колокольчик) -->
+    <div class="notif-wrap" id="notifWrap">
+      <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Уведомления" aria-label="Уведомления">
+        <i class="fas fa-bell"></i>
+        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel" role="region" aria-label="Панель уведомлений">
+        <div class="notif-panel-header">
+          <span class="notif-panel-title">Уведомления</span>
+          <button class="notif-mark-all" id="notifMarkAll" onclick="markAllNotifRead()">Прочитать все</button>
+        </div>
+        <div class="notif-panel-list" id="notifList">
+          <div class="notif-empty">Нет новых уведомлений</div>
+        </div>
+      </div>
+    </div>
     {% block topbar_actions %}{% endblock %}
     {% block extra_context %}{% endblock %}
     {% block topbar_theme %}{% endblock %}
@@ -509,6 +104,7 @@ textarea { resize:vertical; min-height:80px; }
         <a href="{% url 'accounts:stub' 'delegation' %}"><i class="fas fa-people-arrows"></i> Делегирование</a>
         <div class="ud-sep"></div>
         <a href="{% url 'accounts:profile' %}"><i class="fas fa-cog"></i> Настройки</a>
+        <a href="#" onclick="restartTour();return false;"><i class="fas fa-graduation-cap"></i> Пройти обзор</a>
         <div class="ud-sep"></div>
         <a href="{% url 'accounts:logout' %}" class="ud-danger"><i class="fas fa-sign-out-alt"></i> Выйти</a>
       </div>
@@ -525,13 +121,21 @@ textarea { resize:vertical; min-height:80px; }
              data-type="{{ message.tags }}">{{ message }}</div>
       {% endfor %}
     {% endif %}
+    <!-- Общие JS-утилиты — загружаются ДО блока контента, чтобы page-specific скрипты могли их использовать -->
+    <script src="{% static 'js/utils.js' %}?v=10"></script>
+    <script src="{% static 'js/modal.js' %}?v=2"></script>
+    <script src="{% static 'js/export.js' %}?v=2"></script>
+    <script src="{% static 'js/column-picker.js' %}?v=1"></script>
+    <script src="{% static 'js/command-palette.js' %}?v=2"></script>
+    <script src="{% static 'js/pdf-export.js' %}?v=1"></script>
+    <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
     <!-- Блок контента — заполняется дочерними шаблонами -->
     {% block content %}{% endblock %}
   </div>
 </main>
 
 <!-- Контейнер для всплывающих уведомлений (Toast) — заполняется через JS -->
-<div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true" role="status"></div>
 
 <script>
 // ── Получение DOM-элементов сайдбара и topbar ───────────────────────────
@@ -569,21 +173,26 @@ if (mobileToggle) {
   });
 }
 
-// ── Функция показа всплывающего уведомления (Toast) ─────────────────────
-function showToast(message, type) {
-  type = type || 'success'; // тип по умолчанию — успех
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-  toast.className = 'toast ' + type;
-  const icons = {success:'✓', error:'✕', warning:'!'}; // иконки по типу
-  toast.innerHTML = '<div class="toast-icon">' + (icons[type]||'!') + '</div><div class="toast-message"></div>';
-  toast.querySelector('.toast-message').textContent = message;
-  container.appendChild(toast);
-  // Автоматически скрываем toast через 4 секунды с анимацией
-  setTimeout(function() {
-    toast.style.animation = 'slideIn 0.3s ease reverse';
-    setTimeout(function() { toast.remove(); }, 300);
-  }, 4000);
+// showToast — единый источник в utils.js (загружается ниже)
+// Резервная функция на случай загрузки до utils.js (для Django-messages)
+if (typeof showToast !== 'function') {
+  window.showToast = function(message, type) {
+    type = type || 'success';
+    var container = document.getElementById('toastContainer');
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-atomic', 'true');
+    var icons = {success:'✓', error:'✕', warning:'!'};
+    toast.innerHTML = '<div class="toast-icon">' + (icons[type]||'!') + '</div><div class="toast-message"></div>';
+    toast.querySelector('.toast-message').textContent = message;
+    container.appendChild(toast);
+    setTimeout(function() {
+      toast.style.animation = 'slideIn 0.3s ease reverse';
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 4000);
+  };
 }
 
 // ── Функция переключения раскрывающегося пункта меню (дропдаун) ─────────
@@ -695,21 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(showNextTip, 1200);
 })();
 
-// ESC закрывает любое открытое модальное окно (.modal-overlay.open или .modal-backdrop)
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Escape') return;
-  // Сначала .modal-backdrop (от modal.js) — последний добавленный
-  var backdrops = document.querySelectorAll('.modal-backdrop');
-  if (backdrops.length) {
-    // modal.js сам обрабатывает ESC через свой listener — не дублируем
-    return;
-  }
-  // Legacy: .modal-overlay.open — закрываем последнее открытое модальное окно
-  var open = document.querySelectorAll('.modal-overlay.open');
-  if (open.length === 0) return;
-  open[open.length - 1].classList.remove('open'); // убираем класс open у верхнего модала
-  e.preventDefault();
-});
+// ESC обработка перенесена в utils.js (Keyboard Shortcuts Manager)
 
 // Клик по фону (оверлею) закрывает модальное окно
 document.addEventListener('click', function(e) {
@@ -735,17 +330,125 @@ document.addEventListener('click', function(e) {
     if (btn) btn.classList.remove('menu-open');
   }
 });
+
+// ── Notification center ──────────────────────────────────────────────
+function toggleNotifPanel() {
+  var panel = document.getElementById('notifPanel');
+  var isOpen = panel.classList.toggle('open');
+  if (isOpen) loadNotifications();
+}
+
+function loadNotifications() {
+  fetch('/api/notifications/', {credentials:'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      var list = document.getElementById('notifList');
+      if (!data.items || !data.items.length) {
+        list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash"></i><br>Нет новых уведомлений</div>';
+        return;
+      }
+      list.innerHTML = data.items.map(n =>
+        '<div class="notif-item' + (n.is_read ? '' : ' unread') + '" data-id="' + n.id + '" onclick="readNotif(' + n.id + ', \'' + (n.link || '') + '\')">' +
+        '<div class="notif-item-icon"><i class="fas fa-' + notifIcon(n.type) + '"></i></div>' +
+        '<div class="notif-item-body">' +
+        '<div class="notif-item-title">' + n.title + '</div>' +
+        '<div class="notif-item-msg">' + n.message + '</div>' +
+        '<div class="notif-item-time">' + timeAgo(n.created_at) + '</div>' +
+        '</div></div>'
+      ).join('');
+    });
+}
+
+function notifIcon(type) {
+  return {info:'info-circle', warning:'exclamation-triangle', success:'check-circle', task:'tasks', overdue:'clock', sandbox:'flask'}[type] || 'bell';
+}
+
+function timeAgo(isoStr) {
+  var d = new Date(isoStr);
+  var diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60) return 'только что';
+  if (diff < 3600) return Math.floor(diff/60) + ' мин. назад';
+  if (diff < 86400) return Math.floor(diff/3600) + ' ч. назад';
+  return d.toLocaleDateString('ru-RU');
+}
+
+function readNotif(id, link) {
+  fetch('/api/notifications/' + id + '/read/', {method:'POST', headers:{'X-CSRFToken':getCsrfToken()}, credentials:'same-origin'});
+  var el = document.querySelector('.notif-item[data-id="'+id+'"]');
+  if (el) el.classList.remove('unread');
+  updateNotifBadge();
+  if (link) window.location.href = link;
+}
+
+function markAllNotifRead() {
+  fetch('/api/notifications/read_all/', {method:'POST', headers:{'X-CSRFToken':getCsrfToken()}, credentials:'same-origin'})
+    .then(() => {
+      document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+      updateNotifBadge();
+    });
+}
+
+function updateNotifBadge() {
+  fetch('/api/notifications/unread_count/', {credentials:'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      var badge = document.getElementById('notifBadge');
+      if (data.count > 0) {
+        badge.textContent = data.count > 99 ? '99+' : data.count;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+}
+
+// Initial load + polling every 60s
+updateNotifBadge();
+setInterval(updateNotifBadge, 60000);
+
+// Close notification panel on outside click
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('notifWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var panel = document.getElementById('notifPanel');
+    if (panel) panel.classList.remove('open');
+  }
+});
 </script>
-<!-- Переключатель темы: свет / тёмная / система -->
+<!-- Переключатель темы: свет / тёмная / сумерки / система -->
 <script>
 (function() {
-  function applyTheme(t) {
-    document.documentElement.setAttribute('data-theme', t);
-    var btns = document.querySelectorAll('#themeToggle button');
-    btns.forEach(function(b) { b.classList.toggle('active', b.dataset.theme === t); });
+  var mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function resolveSystemTheme() {
+    return mql.matches ? 'dark' : 'light';
   }
+
+  function applyTheme(stored) {
+    var effective = stored === 'system' ? resolveSystemTheme() : stored;
+    document.documentElement.setAttribute('data-theme', effective);
+    var btns = document.querySelectorAll('#themeToggle button');
+    btns.forEach(function(b) { b.classList.toggle('active', b.dataset.theme === stored); });
+    // Update system button label to show which theme is actually applied
+    var sysBtn = document.querySelector('#themeToggle button[data-theme="system"]');
+    if (sysBtn) {
+      var label = stored === 'system'
+        ? (effective === 'dark' ? 'Авто (тёмная)' : 'Авто (светлая)')
+        : 'Авто';
+      sysBtn.title = label;
+    }
+  }
+
   var saved = localStorage.getItem('theme') || 'light';
   applyTheme(saved);
+
+  // Listen for OS theme changes — only matters when 'system' is selected
+  mql.addEventListener('change', function() {
+    if (localStorage.getItem('theme') === 'system') {
+      applyTheme('system');
+    }
+  });
+
   var toggle = document.getElementById('themeToggle');
   if (toggle) toggle.addEventListener('click', function(e) {
     var btn = e.target.closest('button');
@@ -794,6 +497,6 @@ document.addEventListener('click', function(e) {
 })();
 </script>
 <!-- Скрипт интерактивного тура по интерфейсу -->
-<script src="{% static 'js/tour.js' %}?v=11"></script>
+<script src="{% static 'js/tour.js' %}?v=12"></script>
 </body>
 </html>

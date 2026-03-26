@@ -8,10 +8,17 @@
 {% block nav_projects %}active{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current" id="breadcrumbTitle">Управление проектами</span>
 {% endblock %}
 
+{% block topbar_actions %}
+{% if request.user|is_admin_role %}
+  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
+    <i class="fas fa-plus"></i> Создать проект
+  </button>
+{% endif %}
+{% endblock %}
 
 {% block styles %}
 <style>
@@ -106,14 +113,9 @@
 <!-- CSRF-токен для fetch-запросов (POST/PUT/DELETE) -->
 {% csrf_token %}
 
-<!-- Заголовок страницы с кнопкой создания проекта -->
+<!-- Заголовок страницы -->
 <div class="page-header">
   <h1>Управление проектами</h1>
-  {% if request.user|is_admin_role %}
-  <button class="btn btn-primary" onclick="openCreateProjectModal()">
-    <i class="fas fa-plus"></i> Создать проект
-  </button>
-  {% endif %}
 </div>
 
 <!-- Сетка карточек проектов: заполняется из renderProjects() -->
@@ -123,9 +125,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Вспомогательные JS-модули -->
-<script src="{% static 'js/utils.js' %}?v=6"></script>   <!-- fetchJson, escapeHtml, showToast -->
-<script src="{% static 'js/modal.js' %}"></script>   <!-- openModal, confirmDialog -->
 <script>
 // Экранирование строки для безопасной вставки в JS-строки внутри onclick-атрибутов
 function escapeJs(s) {
@@ -154,8 +153,9 @@ function renderProjects() {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon"><i class="fas fa-project-diagram"></i></div>
-        <p>Проектов пока нет</p>
-        ${IS_ADMIN ? '<button class="btn btn-primary" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button>' : ''}
+        <div class="empty-state-title">Проектов пока нет</div>
+        <div class="empty-state-desc">Создайте первый проект для организации задач и управления командой</div>
+        ${IS_ADMIN ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button></div>' : ''}
       </div>`;
     return;
   }

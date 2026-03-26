@@ -53,8 +53,24 @@ function renderFilterChips() {
 window.fbSetStatus = function(s) { filterStatus = s; renderFilterChips(); fbLoad(); };
 window.fbSetCategory = function(c) { filterCategory = c; renderFilterChips(); fbLoad(); };
 
+/* ── Skeleton-заглушки для списка замечаний ────────────────────── */
+function _fbShowSkeletons() {
+  var el = document.getElementById('fbList');
+  if (!el) return;
+  var html = '';
+  for (var i = 0; i < 5; i++) {
+    html += '<div class="fb-card" style="padding:20px;">' +
+      '<div class="skeleton-shimmer" style="height:16px;width:60%;border-radius:4px;margin-bottom:12px;"></div>' +
+      '<div class="skeleton-shimmer" style="height:14px;width:90%;border-radius:4px;margin-bottom:8px;"></div>' +
+      '<div class="skeleton-shimmer" style="height:14px;width:75%;border-radius:4px;"></div>' +
+      '</div>';
+  }
+  el.innerHTML = html;
+}
+
 /* ── Загрузка ──────────────────────────────────────────────────────── */
 function fbLoad() {
+  _fbShowSkeletons();
   var params = [];
   if (filterStatus) params.push('status=' + filterStatus);
   if (filterCategory) params.push('category=' + filterCategory);
@@ -68,7 +84,12 @@ window.fbLoad = fbLoad;
 function renderList(items) {
   var el = document.getElementById('fbList');
   if (!items.length) {
-    el.innerHTML = '<div class="fb-empty"><i class="fas fa-clipboard-check"></i><br>Нет замечаний</div>';
+    el.innerHTML = '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i class="fas fa-clipboard-check"></i></div>' +
+      '<div class="empty-state-title">Нет замечаний</div>' +
+      '<div class="empty-state-desc">Здесь будут отображаться замечания и обращения</div>' +
+      '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="fbOpenCreate()"><i class="fas fa-plus"></i> Создать обращение</button></div>' +
+      '</div>';
     return;
   }
   var html = '';

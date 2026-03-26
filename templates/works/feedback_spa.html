@@ -3,11 +3,17 @@
 {% block title %}Замечания и предложения — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Замечания и предложения</span>
 {% endblock %}
 
 {% block nav_feedback %}active{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" onclick="fbOpenCreate()">
+    <i class="fas fa-plus"></i> Добавить
+  </button>
+{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=7">
@@ -106,9 +112,6 @@
 <div class="fb-page">
   <div class="fb-header">
     <h1><i class="fas fa-lightbulb" style="color:#fbbf24;"></i> Замечания и предложения</h1>
-    <button class="btn btn-primary btn-sm" onclick="fbOpenCreate()">
-      <i class="fas fa-plus"></i> Добавить
-    </button>
   </div>
 
   <div class="fb-filters" id="fbFilters"></div>
@@ -120,7 +123,5 @@
   "isAdmin": {% if role == 'admin' %}true{% else %}false{% endif %},
   "csrfToken": "{{ csrf_token }}"
 }</script>
-<script src="{% static 'js/utils.js' %}?v=9"></script>
-<script src="{% static 'js/modal.js' %}"></script>
 <script src="{% static 'js/feedback.js' %}?v=11"></script>
 {% endblock %}

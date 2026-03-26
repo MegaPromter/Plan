@@ -5,7 +5,7 @@
 {% block title %}Производственный календарь — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Производственный календарь</span>
 {% endblock %}
 
@@ -100,7 +100,12 @@
   color:var(--text); cursor:default; position:relative;
   font-weight:600; font-size:13px;
 }
-.cal-day.weekend { color:#e53e3e; }
+.cal-day.work {
+  background:#c6f6d5; color:#22543d; font-weight:600; border-radius:4px;
+}
+.cal-day.weekend {
+  background:#fed7d7; color:#e53e3e; font-weight:600; border-radius:4px;
+}
 .cal-day.holiday {
   background:#e53e3e; color:#fff; font-weight:600; border-radius:4px;
 }
@@ -253,9 +258,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=6"></script>
-<script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
 <script>
 /* ── Константы ────────────────────────────────────────────────────────────── */
 const IS_ADMIN = {{ request.user|is_admin_role|yesno:"true,false" }};
@@ -428,6 +430,10 @@ function renderMiniCalendars(year, byMonth) {
         title = 'Сокращённый день';
       } else if (isWeekend(year, m, d)) {
         classes.push('weekend');
+        title = 'Выходной';
+      } else {
+        classes.push('work');
+        title = 'Рабочий день';
       }
 
       if (ds === todayStr) classes.push('today');
@@ -455,10 +461,11 @@ function renderMiniCalendars(year, byMonth) {
 /* ── Легенда ──────────────────────────────────────────────────────────────── */
 function renderLegend() {
   return `<div class="cal-legend">
-    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#e53e3e;"></span> Праздник / выходной</div>
-    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#f6e05e;"></span> Сокращённый день</div>
+    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#c6f6d5;border:1px solid #9ae6b4;"></span> Рабочий день</div>
+    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#fed7d7;border:1px solid #feb2b2;"></span> Выходной (сб, вс)</div>
+    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#e53e3e;"></span> Праздник</div>
+    <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:#f6e05e;border:1px solid #ecc94b;"></span> Сокращённый день</div>
     <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--accent);"></span> Сегодня</div>
-    <div class="cal-legend-item"><span style="color:#e53e3e;font-weight:600;">6 7</span> Выходные (сб, вс)</div>
   </div>`;
 }
 

@@ -187,6 +187,56 @@ function setUrlParams(params) {
     window.history.replaceState({}, '', url);
 }
 
+/* ── Синхронизация фильтров с URL (для расшаренных ссылок) ──────────────── */
+
+/**
+ * Записывает объект фильтров в URL query-параметры (без перезагрузки).
+ * Пустые / null / undefined значения удаляются из URL.
+ * @param {Object} params — например {year: 2026, month: 3, dept: '021', status: 'overdue'}
+ */
+function syncFiltersToUrl(params) {
+    const url = new URL(window.location);
+    Object.entries(params).forEach(([k, v]) => {
+        if (v === null || v === undefined || v === '') {
+            url.searchParams.delete(k);
+        } else {
+            url.searchParams.set(k, v);
+        }
+    });
+    window.history.replaceState({}, '', url);
+}
+
+/**
+ * Считывает фильтры из текущих URL query-параметров.
+ * Возвращает объект только с ключами из переданного списка.
+ * @param {string[]} keys — список ожидаемых ключей (фильтрация мусора)
+ * @returns {Object} — например {year: '2026', month: '3', dept: '021'}
+ */
+function readFiltersFromUrl(keys) {
+    const sp = new URLSearchParams(window.location.search);
+    const result = {};
+    (keys || []).forEach(k => {
+        if (sp.has(k)) result[k] = sp.get(k);
+    });
+    if (!keys) return Object.fromEntries(sp);
+    return result;
+}
+
+/* ── Avatar helper ───────────────────────────────────────────────────────── */
+
+function avatarHtml(fullName, size) {
+    var parts = (fullName || '').trim().split(/\s+/);
+    var initials = parts.length >= 2
+        ? (parts[0][0] + parts[1][0]).toUpperCase()
+        : (parts[0] || '?').substring(0, 2).toUpperCase();
+    var colors = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#5a67d8','#805ad5','#d53f8c'];
+    var hash = 0;
+    for (var i = 0; i < fullName.length; i++) hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
+    var color = colors[Math.abs(hash) % colors.length];
+    var cls = 'avatar-circle' + (size ? ' ' + size : '');
+    return '<span class="' + cls + '" style="background:' + color + '" title="' + escapeHtml(fullName) + '">' + initials + '</span>';
+}
+
 /* ── Escape HTML ─────────────────────────────────────────────────────────── */
 
 function escapeHtml(str) {
@@ -849,3 +899,418 @@ function initColumnResize(tableSelector, handleSelector) {
         });
     });
 }
+
+/* ── Универсальный empty-state HTML ─────────────────────────────────────── */
+
+/**
+ * Генерирует HTML пустого состояния.
+ * @param {Object} opts
+ * @param {string} [opts.icon='fas fa-inbox'] — класс FA-иконки
+ * @param {string} [opts.title='Нет данных'] — заголовок
+ * @param {string} [opts.desc=''] — описание / подсказка
+ * @param {number} [opts.colspan] — если внутри таблицы, сколько колонок
+ * @returns {string} HTML
+ */
+function emptyStateHtml(opts) {
+    opts = opts || {};
+    var icon  = opts.icon  || 'fas fa-inbox';
+    var title = opts.title || 'Нет данных';
+    var desc  = opts.desc  || '';
+    var action = opts.action || '';   // HTML кнопки-действия
+    var inner =
+        '<div class="empty-state">' +
+          '<div class="empty-state-icon"><i class="' + icon + '"></i></div>' +
+          '<div class="empty-state-title">' + title + '</div>' +
+          (desc ? '<div class="empty-state-desc">' + desc + '</div>' : '') +
+          (action ? '<div class="empty-state-action">' + action + '</div>' : '') +
+        '</div>';
+    if (opts.colspan) {
+        return '<tr><td colspan="' + opts.colspan + '">' + inner + '</td></tr>';
+    }
+    return inner;
+}
+
+/* ── Staggered fade-in ──────────────────────────────────────────────────── */
+function initFadeUp(selector) {
+    var els = document.querySelectorAll(selector || '.page-content > .section, .page-content > .page-header, .page-content > .filter-bar, .page-content > .data-table-wrap, .page-content > h1, .page-content > .ji-wrap');
+    els.forEach(function(el) { el.classList.add('fade-up'); });
+}
+document.addEventListener('DOMContentLoaded', function() { initFadeUp(); });
+
+/* ── URL filter state persistence ───────────────────────────────────────── */
+
+/**
+ * Записывает фильтры в URL query string (без перезагрузки страницы).
+ * @param {Object} filters — ключ-значение фильтров (пустые значения удаляются)
+ */
+function saveFiltersToUrl(filters) {
+    var params = new URLSearchParams(window.location.search);
+    Object.keys(filters).forEach(function(key) {
+        var val = filters[key];
+        if (val === '' || val === null || val === undefined || (Array.isArray(val) && val.length === 0)) {
+            params.delete(key);
+        } else if (Array.isArray(val)) {
+            params.set(key, val.join(','));
+        } else {
+            params.set(key, val);
+        }
+    });
+    var qs = params.toString();
+    var newUrl = window.location.pathname + (qs ? '?' + qs : '');
+    window.history.replaceState(null, '', newUrl);
+}
+
+/**
+ * Читает фильтры из URL query string.
+ * @param {string[]} keys — список ключей для чтения
+ * @returns {Object} — ключ-значение (отсутствующие ключи = '')
+ */
+function loadFiltersFromUrl(keys) {
+    var params = new URLSearchParams(window.location.search);
+    var result = {};
+    keys.forEach(function(key) {
+        result[key] = params.get(key) || '';
+    });
+    return result;
+}
+
+/* ── Employee avatar helper ─────────────────────────────────────────────── */
+var _avatarColors = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626','#0891b2','#4f46e5','#be123c','#15803d'];
+function empAvatarHtml(fullName) {
+    if (!fullName) return '';
+    var parts = fullName.trim().split(/\s+/);
+    var initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]) : parts[0].substring(0,2);
+    var hash = 0;
+    for (var i = 0; i < fullName.length; i++) hash = ((hash << 5) - hash) + fullName.charCodeAt(i);
+    var color = _avatarColors[Math.abs(hash) % _avatarColors.length];
+    return '<span class="emp-avatar">' +
+           '<span class="emp-avatar-circle" style="background:' + color + '">' + escapeHtml(initials.toUpperCase()) + '</span>' +
+           '<span>' + escapeHtml(fullName) + '</span></span>';
+}
+
+/* ── Inline field validation ────────────────────────────────────────────── */
+
+/**
+ * Инициализирует inline-валидацию для формы.
+ * @param {HTMLElement} form — DOM-элемент формы или контейнера
+ * @param {Object} rules — {fieldId: {required: bool, minLength: N, pattern: RegExp, message: string}}
+ * @returns {Function} validate() — вызвать для проверки всех полей, возвращает true если всё ок
+ */
+function initInlineValidation(form, rules) {
+    Object.keys(rules).forEach(function(fieldId) {
+        var input = form.querySelector('#' + fieldId);
+        if (!input) return;
+        input.addEventListener('blur', function() { _validateField(input, rules[fieldId]); });
+        input.addEventListener('input', function() {
+            if (input.classList.contains('invalid')) _validateField(input, rules[fieldId]);
+        });
+    });
+    function _validateField(input, rule) {
+        var val = input.value.trim();
+        var msg = '';
+        if (rule.required && !val) msg = rule.message || 'Обязательное поле';
+        else if (rule.minLength && val.length < rule.minLength) msg = 'Минимум ' + rule.minLength + ' символов';
+        else if (rule.pattern && !rule.pattern.test(val)) msg = rule.message || 'Некорректный формат';
+        // Remove old message
+        var existing = input.parentElement.querySelector('.field-msg');
+        if (existing) existing.remove();
+        if (msg) {
+            input.classList.add('invalid');
+            input.classList.remove('valid');
+            var span = document.createElement('span');
+            span.className = 'field-msg error';
+            span.textContent = msg;
+            input.parentElement.appendChild(span);
+            return false;
+        } else if (val) {
+            input.classList.remove('invalid');
+            input.classList.add('valid');
+        } else {
+            input.classList.remove('invalid', 'valid');
+        }
+        return true;
+    }
+    return function validate() {
+        var allOk = true;
+        Object.keys(rules).forEach(function(fieldId) {
+            var input = form.querySelector('#' + fieldId);
+            if (input && !_validateField(input, rules[fieldId])) allOk = false;
+        });
+        return allOk;
+    };
+}
+
+/* ── Keyboard Shortcuts Manager ─────────────────────────────────────────── */
+
+/**
+ * Глобальный менеджер горячих клавиш.
+ * Позволяет регистрировать/отменять шорткаты из любых страниц.
+ *
+ * Использование:
+ *   registerShortcut('n', 'Добавить запись', function(e) { ... });
+ *   registerShortcut('ctrl+k', 'Поиск / Командная палитра', function(e) { ... });
+ *   unregisterShortcut('n');
+ */
+
+var _shortcuts = {};
+
+function registerShortcut(key, desc, handler) {
+    _shortcuts[key.toLowerCase()] = { desc: desc, handler: handler };
+}
+
+function unregisterShortcut(key) {
+    delete _shortcuts[key.toLowerCase()];
+}
+
+function showShortcutsHelp() {
+    // Если уже открыт — закрываем
+    var existing = document.querySelector('.kb-help-overlay');
+    if (existing) { existing.remove(); return; }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'kb-help-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:80vh;overflow-y:auto;';
+
+    // Заголовок
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;';
+    header.innerHTML = '<h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0;">Горячие клавиши</h3>';
+    var closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = 'background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);';
+    closeBtn.onclick = function() { overlay.remove(); };
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // Таблица шорткатов
+    var table = document.createElement('table');
+    table.style.cssText = 'width:100%;border-collapse:collapse;';
+    var kbdStyle = 'background:var(--surface2);padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid var(--border);font-family:monospace;';
+
+    // Собираем записи; ? и Esc обрабатываются отдельно — добавляем вручную
+    var entries = [{ key: '?', desc: 'Показать эту справку' }];
+    var keys = Object.keys(_shortcuts);
+    for (var i = 0; i < keys.length; i++) {
+        entries.push({ key: keys[i], desc: _shortcuts[keys[i]].desc });
+    }
+    entries.push({ key: 'Esc', desc: 'Закрыть окно / справку' });
+
+    for (var j = 0; j < entries.length; j++) {
+        var item = entries[j];
+        var tr = document.createElement('tr');
+        var tdKey = document.createElement('td');
+        tdKey.style.cssText = 'padding:8px 12px;white-space:nowrap;';
+        // Форматируем клавишу: ctrl+k → Ctrl + K
+        var keyLabel = item.key.replace(/ctrl\+/i, 'Ctrl + ').replace(/shift\+/i, 'Shift + ');
+        keyLabel = keyLabel.charAt(0).toUpperCase() + keyLabel.slice(1);
+        var parts = keyLabel.split(' + ');
+        var kbdHtml = '';
+        for (var p = 0; p < parts.length; p++) {
+            if (p > 0) kbdHtml += ' + ';
+            kbdHtml += '<kbd style="' + kbdStyle + '">' + parts[p].trim() + '</kbd>';
+        }
+        tdKey.innerHTML = kbdHtml;
+
+        var tdDesc = document.createElement('td');
+        tdDesc.style.cssText = 'padding:8px 12px;color:var(--text);font-size:14px;';
+        tdDesc.textContent = item.desc;
+
+        tr.appendChild(tdKey);
+        tr.appendChild(tdDesc);
+        table.appendChild(tr);
+    }
+
+    card.appendChild(table);
+    overlay.appendChild(card);
+
+    // Клик по оверлею (фону) закрывает
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+}
+
+// ── Глобальный keydown-обработчик ──────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+    // Esc — закрываем справку, модальные окна, слайдауты
+    if (e.key === 'Escape') {
+        var help = document.querySelector('.kb-help-overlay');
+        if (help) { help.remove(); return; }
+        // Командная палитра (command-palette.js закрывает себя сам)
+        var palette = document.querySelector('.cmd-palette-overlay');
+        if (palette) return;
+        // modal-backdrop (modal.js обрабатывает сам)
+        var backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length) return;
+        // .modal-overlay.open — закрываем верхнее
+        var openModals = document.querySelectorAll('.modal-overlay.open');
+        if (openModals.length) {
+            openModals[openModals.length - 1].classList.remove('open');
+            e.preventDefault();
+            return;
+        }
+        // Слайдауты и другие панели
+        var slideout = document.querySelector('.slideout.open, .panel-overlay.open');
+        if (slideout) { slideout.classList.remove('open'); e.preventDefault(); return; }
+        return;
+    }
+
+    // Не срабатываем в полях ввода
+    if (['INPUT', 'TEXTAREA', 'SELECT'].indexOf(e.target.tagName) >= 0) return;
+    if (e.target.isContentEditable) return;
+
+    // ? — показ справки (обрабатываем до lookup в _shortcuts)
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        showShortcutsHelp();
+        e.preventDefault();
+        return;
+    }
+
+    // Строим строку-ключ шортката
+    var key = '';
+    if (e.ctrlKey || e.metaKey) key += 'ctrl+';
+    if (e.shiftKey && e.key !== '?') key += 'shift+';
+    key += e.key.toLowerCase();
+
+    var shortcut = _shortcuts[key];
+    if (shortcut) {
+        e.preventDefault();
+        shortcut.handler(e);
+    }
+});
+
+// ── Стандартные шорткаты ──────────────────────────────────────────────
+
+registerShortcut('ctrl+k', 'Поиск / Командная палитра', function() {
+    // command-palette.js уже слушает Ctrl+K — дублирующий вызов безвреден
+});
+
+registerShortcut('/', 'Фокус на поиск', function() {
+    var search = document.querySelector('.search-input, .searchbar input, input[type="search"], #searchInput, .filter-bar input[type="text"]');
+    if (search) search.focus();
+});
+
+registerShortcut('n', 'Добавить запись', function() {
+    var addBtn = document.querySelector('.topbar .btn-primary, .page-header .btn-primary');
+    if (addBtn) addBtn.click();
+});
+
+registerShortcut('d', 'Удалить выбранное', function() {
+    var delBtn = document.querySelector('.btn-delete.active, .toolbar .btn-danger, button[data-action="delete"]');
+    if (delBtn) delBtn.click();
+});
+
+registerShortcut('e', 'Редактировать выбранное', function() {
+    var editBtn = document.querySelector('.btn-edit.active, .toolbar .btn-edit, button[data-action="edit"]');
+    if (editBtn) editBtn.click();
+});
+
+/* ── Breadcrumbs — динамическое обновление хлебных крошек ──────────────────── */
+
+/**
+ * updateBreadcrumbs(items)
+ * Перестраивает навигационные хлебные крошки.
+ * @param {Array<{label:string, url?:string, icon?:string}>} items
+ *   Первый элемент — обычно «Главная» с url:'/'.
+ *   Последний элемент без url — текущая страница (не ссылка).
+ *   icon (необяз.) — класс Font Awesome, например 'fas fa-home'.
+ *
+ * Пример:
+ *   updateBreadcrumbs([
+ *     {label:'Главная', url:'/', icon:'fas fa-home'},
+ *     {label:'Производственный план', url:'/works/production-plan/'},
+ *     {label:'Проект Альфа'}
+ *   ]);
+ */
+function updateBreadcrumbs(items) {
+    var nav = document.querySelector('.breadcrumb[aria-label="Хлебные крошки"]');
+    if (!nav) return;
+
+    // Сохраняем кнопки sidebar-toggle / mobile-toggle — они вне nav
+    // Очищаем только содержимое <nav class="breadcrumb">
+    nav.innerHTML = '';
+
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var isLast = (i === items.length - 1);
+
+        // Разделитель «/» между элементами (кроме первого)
+        if (i > 0) {
+            var sep = document.createElement('span');
+            sep.className = 'breadcrumb-sep';
+            sep.setAttribute('aria-hidden', 'true');
+            sep.textContent = '/';
+            nav.appendChild(sep);
+        }
+
+        if (isLast || !item.url) {
+            // Текущая страница — не ссылка
+            var span = document.createElement('span');
+            span.className = 'breadcrumb-current';
+            span.id = 'breadcrumbTitle';
+            if (item.icon) {
+                var ic = document.createElement('i');
+                ic.className = item.icon;
+                ic.setAttribute('aria-hidden', 'true');
+                ic.style.marginRight = '5px';
+                span.appendChild(ic);
+            }
+            span.appendChild(document.createTextNode(item.label));
+            nav.appendChild(span);
+        } else {
+            // Промежуточная ссылка
+            var a = document.createElement('a');
+            a.href = item.url;
+            if (item.icon) {
+                var ic2 = document.createElement('i');
+                ic2.className = item.icon;
+                ic2.setAttribute('aria-hidden', 'true');
+                ic2.style.marginRight = '4px';
+                a.appendChild(ic2);
+            }
+            a.appendChild(document.createTextNode(item.label));
+            // Для SPA-переходов: если есть onclick, не перезагружаем страницу
+            if (item.onclick) {
+                a.href = '#';
+                a.addEventListener('click', (function(fn) {
+                    return function(e) { e.preventDefault(); fn(); };
+                })(item.onclick));
+            }
+            nav.appendChild(a);
+        }
+    }
+}
+
+/**
+ * resetBreadcrumbs(pageLabel)
+ * Сбрасывает хлебные крошки к начальному состоянию «Главная / pageLabel».
+ */
+function resetBreadcrumbs(pageLabel) {
+    updateBreadcrumbs([
+        {label: 'Главная', url: '/'},
+        {label: pageLabel}
+    ]);
+}
+
+(function() {
+    var NAV_URLS = [
+        '/works/projects/',
+        '/works/production-plan/',
+        '/works/plan/',
+        '/works/notices/',
+        '/works/analytics/',
+        '/works/work-calendar/',
+        '/employees/'
+    ];
+    for (var i = 0; i < NAV_URLS.length; i++) {
+        (function(idx) {
+            registerShortcut(String(idx + 1), 'Перейти к разделу ' + (idx + 1), function() {
+                window.location.href = NAV_URLS[idx];
+            });
+        })(i);
+    }
+})();

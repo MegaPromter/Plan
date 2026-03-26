@@ -118,7 +118,12 @@ function renderGantt() {
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = '<div class="bt-empty"><i class="fas fa-plane-slash"></i><p>Нет командировок в ' + MONTHS[curMonth] + ' ' + curYear + '</p></div>';
+    container.innerHTML = '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i class="fas fa-plane-slash"></i></div>' +
+      '<div class="empty-state-title">Нет командировок в ' + MONTHS[curMonth] + ' ' + curYear + '</div>' +
+      '<div class="empty-state-desc">Добавьте командировку, чтобы она отобразилась на графике</div>' +
+      (IS_WRITER ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button></div>' : '') +
+      '</div>';
     return;
   }
 
@@ -184,7 +189,12 @@ function renderMatrix() {
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = '<div class="bt-empty"><i class="fas fa-plane-slash"></i><p>Нет командировок в ' + curYear + '</p></div>';
+    container.innerHTML = '<div class="empty-state">' +
+      '<div class="empty-state-icon"><i class="fas fa-plane-slash"></i></div>' +
+      '<div class="empty-state-title">Нет командировок в ' + curYear + '</div>' +
+      '<div class="empty-state-desc">Добавьте командировку, чтобы она отобразилась в матрице</div>' +
+      (IS_WRITER ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button></div>' : '') +
+      '</div>';
     return;
   }
 

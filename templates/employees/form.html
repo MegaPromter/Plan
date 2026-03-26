@@ -3,13 +3,13 @@
 {% block title %}{% if object %}Редактировать сотрудника{% else %}Новый сотрудник{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 {% if object %}
 <!-- При редактировании: ссылка на детальную страницу -->
 <a href="{% url 'employees:detail' object.pk %}">{{ object.short_name }}</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Редактировать</span>
 {% else %}
 <!-- При создании: просто метка «Новый сотрудник» -->

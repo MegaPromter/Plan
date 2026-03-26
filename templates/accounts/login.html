@@ -158,6 +158,19 @@ select option{background:var(--surface);}
   font-size:15px;padding:4px;line-height:1;
 }
 .pw-toggle:hover{color:var(--text2)}
+
+/* ── Inline field validation ─────────────────────────────────────────── */
+.field-error{
+  color:var(--danger);font-size:12px;margin-top:4px;display:none;
+}
+.field-error.visible{display:block}
+input.invalid,select.invalid,textarea.invalid{
+  border-color:var(--danger)!important;
+  box-shadow:0 0 0 2px rgba(220,38,38,0.15);
+}
+input.valid,select.valid{
+  border-color:var(--success)!important;
+}
 </style>
 </head>
 <body>
@@ -197,6 +210,7 @@ select option{background:var(--surface);}
       <div class="form-group">
         <label for="id_username">Логин</label>
         <input type="text" name="username" id="id_username" placeholder="Введите логин" autofocus autocomplete="username">
+        <span class="field-error" id="err-login-username"></span>
       </div>
       <!-- Поле «Пароль» -->
       <div class="form-group">
@@ -205,6 +219,7 @@ select option{background:var(--surface);}
           <input type="password" name="password" id="id_password" placeholder="Введите пароль" autocomplete="current-password">
           <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
         </div>
+        <span class="field-error" id="err-login-password"></span>
       </div>
       <!-- Скрытое поле next: куда перенаправить после успешного входа (если задано) -->
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
@@ -234,14 +249,17 @@ select option{background:var(--surface);}
       <div class="field">
         <label>Фамилия <span style="color:var(--danger)">*</span></label>
         <input type="text" id="regLastName" placeholder="Иванов">
+        <span class="field-error" id="err-regLastName"></span>
       </div>
       <div class="field">
         <label>Имя <span style="color:var(--danger)">*</span></label>
         <input type="text" id="regFirstName" placeholder="Иван">
+        <span class="field-error" id="err-regFirstName"></span>
       </div>
       <div class="field">
         <label>Отчество <span style="color:var(--danger)">*</span></label>
         <input type="text" id="regPatronymic" placeholder="Иванович">
+        <span class="field-error" id="err-regPatronymic"></span>
       </div>
     </div>
 
@@ -252,6 +270,7 @@ select option{background:var(--surface);}
       <label>Должность <span style="color:var(--danger)">*</span></label>
       <!-- Список должностей заполняется динамически через API /api/dirs_public/ -->
       <select id="regPosition"><option value="">— выберите —</option></select>
+      <span class="field-error" id="err-regPosition"></span>
     </div>
 
     <hr class="reg-divider">
@@ -261,6 +280,7 @@ select option{background:var(--surface);}
     <div class="field" id="fieldCenter" style="display:none">
       <label>НТЦ <span style="color:var(--danger)">*</span></label>
       <select id="regCenter"><option value="">— выберите —</option></select>
+      <span class="field-error" id="err-regCenter"></span>
     </div>
     <!-- Поля Отдел и Сектор в одном ряду; отображаются по правилу POS_FIELDS -->
     <div class="reg-row">
@@ -268,11 +288,13 @@ select option{background:var(--surface);}
         <label>Отдел <span style="color:var(--danger)">*</span></label>
         <!-- Отделы загружаются динамически при выборе НТЦ -->
         <select id="regDept"><option value="">— выберите —</option></select>
+        <span class="field-error" id="err-regDept"></span>
       </div>
       <div class="field" id="fieldSector" style="display:none">
         <label>Сектор <span style="color:var(--danger)">*</span></label>
         <!-- Секторы загружаются динамически при выборе отдела -->
         <select id="regSector"><option value="">— выберите —</option></select>
+        <span class="field-error" id="err-regSector"></span>
       </div>
     </div>
 
@@ -283,10 +305,12 @@ select option{background:var(--surface);}
       <div class="field">
         <label>Логин <span style="color:var(--danger)">*</span></label>
         <input type="text" id="regUsername" placeholder="Логин" autocomplete="username">
+        <span class="field-error" id="err-regUsername"></span>
       </div>
       <div class="field">
         <label>Корп. email</label>
         <input type="email" id="regEmail" placeholder="user@corp.ru" autocomplete="email">
+        <span class="field-error" id="err-regEmail"></span>
       </div>
     </div>
     <div class="reg-row">
@@ -296,6 +320,7 @@ select option{background:var(--surface);}
           <input type="password" id="regPassword" placeholder="Мин. 8 символов" autocomplete="new-password">
           <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
         </div>
+        <span class="field-error" id="err-regPassword"></span>
       </div>
       <div class="field">
         <label>Повтор пароля <span style="color:var(--danger)">*</span></label>
@@ -303,6 +328,7 @@ select option{background:var(--surface);}
           <input type="password" id="regPassword2" placeholder="Повторите пароль" autocomplete="new-password">
           <button type="button" class="pw-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Показать пароль"><i class="fas fa-eye"></i></button>
         </div>
+        <span class="field-error" id="err-regPassword2"></span>
       </div>
     </div>
 
@@ -452,6 +478,7 @@ async function openRegModal() {
   _applyPositionFields(''); // скрываем все поля подразделения
   document.getElementById('regError').style.display   = 'none';
   document.getElementById('regSuccess').style.display = 'none';
+  _clearAllRegErrors(); // сброс inline-ошибок всех полей
   document.getElementById('regLastName').focus(); // фокус на первом поле
 
   // Загрузить справочники с сервера (публичный API — не требует авторизации)
@@ -525,7 +552,146 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { closeRegModal(); }
 });
 
-// Отправить форму регистрации через API
+/* ── Inline field validation helpers ──────────────────────────────────── */
+// Показать ошибку под конкретным полем
+function _showFieldError(fieldId, msg) {
+  const el = document.getElementById('err-' + fieldId);
+  const inp = document.getElementById(fieldId);
+  if (el) { el.textContent = msg; el.classList.add('visible'); }
+  if (inp) { inp.classList.add('invalid'); inp.classList.remove('valid'); }
+}
+// Скрыть ошибку и пометить поле как валидное
+function _clearFieldError(fieldId) {
+  const el = document.getElementById('err-' + fieldId);
+  const inp = document.getElementById(fieldId);
+  if (el) { el.textContent = ''; el.classList.remove('visible'); }
+  if (inp) { inp.classList.remove('invalid'); inp.classList.add('valid'); }
+}
+// Скрыть ошибку без пометки «valid» (нейтральное состояние)
+function _resetField(fieldId) {
+  const el = document.getElementById('err-' + fieldId);
+  const inp = document.getElementById(fieldId);
+  if (el) { el.textContent = ''; el.classList.remove('visible'); }
+  if (inp) { inp.classList.remove('invalid', 'valid'); }
+}
+
+// Валидация одного поля регистрации; возвращает true если ошибка
+function _validateRegField(fieldId) {
+  const inp = document.getElementById(fieldId);
+  if (!inp) return false;
+  const val = inp.value.trim();
+
+  switch (fieldId) {
+    case 'regLastName':
+      if (!val) { _showFieldError(fieldId, 'Введите фамилию'); return true; }
+      break;
+    case 'regFirstName':
+      if (!val) { _showFieldError(fieldId, 'Введите имя'); return true; }
+      break;
+    case 'regPatronymic':
+      if (!val) { _showFieldError(fieldId, 'Введите отчество'); return true; }
+      break;
+    case 'regPosition':
+      if (!val) { _showFieldError(fieldId, 'Выберите должность'); return true; }
+      break;
+    case 'regCenter': {
+      const pos = document.getElementById('regPosition').value;
+      const rule = POS_FIELDS[pos] || '';
+      if (rule === 'ntc' && !val) { _showFieldError(fieldId, 'Выберите НТЦ'); return true; }
+      break;
+    }
+    case 'regDept': {
+      const pos = document.getElementById('regPosition').value;
+      const rule = POS_FIELDS[pos] || '';
+      if ((rule === 'dept' || rule === 'both') && !val) { _showFieldError(fieldId, 'Выберите отдел'); return true; }
+      break;
+    }
+    case 'regSector': {
+      const pos = document.getElementById('regPosition').value;
+      const rule = POS_FIELDS[pos] || '';
+      if (rule === 'both' && !val) { _showFieldError(fieldId, 'Выберите сектор'); return true; }
+      break;
+    }
+    case 'regUsername':
+      if (!val) { _showFieldError(fieldId, 'Введите логин'); return true; }
+      if (val.length < 3) { _showFieldError(fieldId, 'Минимум 3 символа'); return true; }
+      break;
+    case 'regEmail':
+      // Email необязателен, но если заполнен — должен быть корректным
+      if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { _showFieldError(fieldId, 'Некорректный email'); return true; }
+      break;
+    case 'regPassword':
+      if (inp.value.length < 8) { _showFieldError(fieldId, 'Минимум 8 символов'); return true; }
+      break;
+    case 'regPassword2':
+      if (inp.value !== document.getElementById('regPassword').value) { _showFieldError(fieldId, 'Пароли не совпадают'); return true; }
+      if (!inp.value) { _showFieldError(fieldId, 'Повторите пароль'); return true; }
+      break;
+  }
+  _clearFieldError(fieldId);
+  return false;
+}
+
+// Привязка blur-обработчиков на поля регистрации
+['regLastName','regFirstName','regPatronymic','regPosition',
+ 'regCenter','regDept','regSector',
+ 'regUsername','regEmail','regPassword','regPassword2'].forEach(function(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const evtName = el.tagName === 'SELECT' ? 'change' : 'blur';
+  el.addEventListener(evtName, function() { _validateRegField(id); });
+  // Для password2 — также перевалидировать при вводе в password
+  if (id === 'regPassword') {
+    el.addEventListener('blur', function() {
+      const pw2 = document.getElementById('regPassword2');
+      if (pw2 && pw2.value) _validateRegField('regPassword2');
+    });
+  }
+});
+
+// Сбросить все inline-ошибки регистрации (вызывается при открытии модала)
+function _clearAllRegErrors() {
+  ['regLastName','regFirstName','regPatronymic','regPosition',
+   'regCenter','regDept','regSector',
+   'regUsername','regEmail','regPassword','regPassword2'].forEach(_resetField);
+}
+
+/* ── Login form validation (blur — required fields only) ─────────────── */
+(function() {
+  const loginForm = document.querySelector('.login-card form');
+  if (!loginForm) return;
+
+  function validateLoginField(inputId, errId, msg) {
+    const inp = document.getElementById(inputId);
+    const errEl = document.getElementById(errId);
+    if (!inp || !errEl) return false;
+    if (!inp.value.trim()) {
+      errEl.textContent = msg; errEl.classList.add('visible');
+      inp.classList.add('invalid'); inp.classList.remove('valid');
+      return true;
+    }
+    errEl.textContent = ''; errEl.classList.remove('visible');
+    inp.classList.remove('invalid'); inp.classList.add('valid');
+    return false;
+  }
+
+  document.getElementById('id_username').addEventListener('blur', function() {
+    validateLoginField('id_username', 'err-login-username', 'Введите логин');
+  });
+  document.getElementById('id_password').addEventListener('blur', function() {
+    validateLoginField('id_password', 'err-login-password', 'Введите пароль');
+  });
+
+  // При submit — проверить оба поля
+  loginForm.addEventListener('submit', function(e) {
+    let hasErr = false;
+    hasErr = validateLoginField('id_username', 'err-login-username', 'Введите логин') || hasErr;
+    hasErr = validateLoginField('id_password', 'err-login-password', 'Введите пароль') || hasErr;
+    if (hasErr) e.preventDefault();
+  });
+})();
+
+/* ── Отправить форму регистрации через API (с inline-валидацией) ─────── */
 async function submitReg() {
   // Считываем значения всех полей
   const lastName   = document.getElementById('regLastName').value.trim();
@@ -542,36 +708,27 @@ async function submitReg() {
 
   const errEl = document.getElementById('regError');
   const okEl  = document.getElementById('regSuccess');
-  // Скрываем блоки ошибок и успеха перед валидацией
   errEl.style.display = 'none';
   okEl.style.display  = 'none';
 
-  // Вспомогательная функция показа ошибки
-  const err = s => { errEl.textContent = s; errEl.style.display = 'block'; };
-
-  // Клиентская валидация обязательных полей
-  if (!lastName)   return err('Введите фамилию');
-  if (!firstName)  return err('Введите имя');
-  if (!patronymic) return err('Введите отчество');
-  if (!position)   return err('Выберите должность');
-
-  // Проверка полей подразделения согласно правилу для выбранной должности
-  const rule = POS_FIELDS[position] || '';
-  if ((rule === 'ntc')  && !center) return err('Выберите НТЦ');
-  if ((rule === 'dept' || rule === 'both') && !dept) return err('Выберите отдел');
-  if (rule === 'both' && !sector) return err('Выберите сектор');
-
-  if (!username)           return err('Введите логин');
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Некорректный email');
-  if (password.length < 8) return err('Пароль — минимум 8 символов');
-  if (password !== password2) return err('Пароли не совпадают');
+  // Валидация всех полей с inline-ошибками
+  const fieldsToCheck = ['regLastName','regFirstName','regPatronymic','regPosition',
+    'regCenter','regDept','regSector',
+    'regUsername','regEmail','regPassword','regPassword2'];
+  let hasErrors = false;
+  fieldsToCheck.forEach(function(id) {
+    if (_validateRegField(id)) hasErrors = true;
+  });
+  if (hasErrors) return; // не отправляем — ошибки показаны inline
 
   // Блокируем кнопку на время отправки
   const btn = document.getElementById('regSubmitBtn');
   btn.disabled = true; btn.textContent = 'Сохранение...';
 
+  // Вспомогательная функция показа общей ошибки (серверные ошибки)
+  const showGeneralErr = s => { errEl.textContent = s; errEl.style.display = 'block'; };
+
   try {
-    // Отправляем данные на сервер (публичный API регистрации)
     const res = await fetch('/api/register_public/', {
       method: 'POST',
       headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
@@ -580,17 +737,14 @@ async function submitReg() {
     });
     const data = await res.json();
     if (!res.ok) {
-      // Сервер вернул ошибку — показываем сообщение
-      err(data.error || 'Ошибка сервера');
+      showGeneralErr(data.error || 'Ошибка сервера');
     } else {
-      // Успешная регистрация — показываем сообщение и закрываем модал
       okEl.style.display = 'block';
       setTimeout(closeRegModal, 1500);
     }
   } catch(e) {
-    err('Ошибка соединения с сервером');
+    showGeneralErr('Ошибка соединения с сервером');
   } finally {
-    // Разблокируем кнопку в любом случае
     btn.disabled = false; btn.textContent = 'Зарегистрироваться';
   }
 }

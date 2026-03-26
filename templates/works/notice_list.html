@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Журнал извещений</span>
 {% endblock %}
 
@@ -15,7 +15,7 @@
 
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <button class="btn btn-primary" onclick="openAddModal()">+ Добавить</button>
+  <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Добавить</button>
 {% endif %}
 <span id="exportBtnContainer"></span>
 {% endblock %}
@@ -84,7 +84,12 @@
       </tr>
     </thead>
     <tbody id="jiBody">
-      <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Загрузка...</td></tr>
+      <!-- Skeleton-загрузка (заменяется JS при получении данных) -->
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
     </tbody>
   </table>
 </div>
@@ -214,9 +219,6 @@
   </div>
 </div>
 
-<script src="{% static 'js/utils.js' %}?v=8"></script>
-<script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
 <script id="page-config" type="application/json">{
   "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},

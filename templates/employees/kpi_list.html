@@ -4,11 +4,11 @@
 {% block title %}KPI — {{ employee.full_name }} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:list' %}">Сотрудники</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'employees:detail' employee.pk %}">{{ employee.short_name }}</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">KPI</span>
 {% endblock %}
 
@@ -18,7 +18,7 @@
 <!-- Кнопка добавления KPI в topbar (только для редакторов) -->
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <a href="{% url 'employees:kpi_add' employee.pk %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить KPI</a>
+  <a href="{% url 'employees:kpi_add' employee.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Добавить KPI</a>
 {% endif %}
 {% endblock %}
 

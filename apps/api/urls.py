@@ -54,6 +54,13 @@ from .views.business_trips import BusinessTripListView, BusinessTripDetailView
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
 # Вьюхи замечаний и предложений (Feedback)
 from .views.feedback import FeedbackListView, FeedbackDetailView, FeedbackAttachmentDeleteView
+# Вьюхи наборов изменений (Changeset / Песочница)
+from .views.changesets import (
+    ChangesetListView, ChangesetCreateView, ChangesetDetailView,
+    ChangesetItemCreateView, ChangesetItemDetailView,
+    ChangesetSubmitView, ChangesetApproveView, ChangesetRejectView,
+    ChangesetDiffView, ChangesetReopenView,
+)
 # Вьюхи производственного календаря (WorkCalendar + Holiday)
 from .views.work_calendar import (
     WorkCalendarListView, WorkCalendarCreateView, WorkCalendarDetailView,
@@ -69,8 +76,15 @@ from .views.dependencies import (
     TaskDependencyListView, TaskDependencyDetailView,
     AllDependenciesView, AlignDatesView,
 )
+# Вьюхи комментариев к задачам (WorkComment)
+from .views.comments import CommentListView, CommentDetailView
 # Health check
 from .views.health import HealthCheckView
+# Уведомления
+from .views.notifications import (
+    NotificationListView, NotificationReadView,
+    NotificationReadAllView, NotificationUnreadCountView,
+)
 
 # ── Основные URL-паттерны API ─────────────────────────────────────────────────
 urlpatterns = [
@@ -207,6 +221,28 @@ urlpatterns = [
     # DELETE /api/feedback/attachment/<pk>/ — удаление вложения
     path('feedback/attachment/<int:pk>/', FeedbackAttachmentDeleteView.as_view()),
 
+    # ── Песочница (Наборы изменений) ──────────────────────────────────────
+    # GET /api/changesets/ — список наборов
+    path('changesets/',                         ChangesetListView.as_view()),
+    # POST /api/changesets/create/ — создание набора
+    path('changesets/create/',                  ChangesetCreateView.as_view()),
+    # GET/PUT/DELETE /api/changesets/<pk>/ — детали, обновление, удаление
+    path('changesets/<int:pk>/',                ChangesetDetailView.as_view()),
+    # POST /api/changesets/<pk>/items/ — добавление элемента
+    path('changesets/<int:pk>/items/',          ChangesetItemCreateView.as_view()),
+    # POST /api/changesets/<pk>/submit/ — отправка на согласование
+    path('changesets/<int:pk>/submit/',         ChangesetSubmitView.as_view()),
+    # POST /api/changesets/<pk>/approve/ — утверждение
+    path('changesets/<int:pk>/approve/',        ChangesetApproveView.as_view()),
+    # POST /api/changesets/<pk>/reject/ — отклонение
+    path('changesets/<int:pk>/reject/',         ChangesetRejectView.as_view()),
+    # GET /api/changesets/<pk>/diff/ — просмотр diff
+    path('changesets/<int:pk>/diff/',           ChangesetDiffView.as_view()),
+    # POST /api/changesets/<pk>/reopen/ — переоткрытие
+    path('changesets/<int:pk>/reopen/',         ChangesetReopenView.as_view()),
+    # PUT/DELETE /api/changeset_items/<pk>/ — операции с элементом
+    path('changeset_items/<int:pk>/',           ChangesetItemDetailView.as_view()),
+
     # ── Производственный календарь ───────────────────────────────────────
     # GET /api/work_calendar/ — список месячных норм рабочего времени
     path('work_calendar/',          WorkCalendarListView.as_view()),
@@ -220,6 +256,13 @@ urlpatterns = [
     path('holidays/',          HolidayListView.as_view()),
     # DELETE /api/holidays/<pk>/ — удаление нерабочего дня (admin)
     path('holidays/<int:pk>/', HolidayDetailView.as_view()),
+
+    # ── Комментарии к задачам ────────────────────────────────────────────
+    # GET /api/comments/?work_id=N — список комментариев к задаче
+    # POST /api/comments/ — создание комментария
+    path('comments/',            CommentListView.as_view()),
+    # DELETE /api/comments/<pk>/ — удаление комментария
+    path('comments/<int:pk>/',   CommentDetailView.as_view()),
 
     # ── Журнал аудита ──────────────────────────────────────────────────
     # GET /api/audit_log/ — список записей аудита (admin)
@@ -238,6 +281,16 @@ urlpatterns = [
     # ── Dashboard ─────────────────────────────────────────────────────
     # GET /api/dashboard/ — личный план + сводка для руководителя
     path('dashboard/', DashboardAPIView.as_view()),
+
+    # ── Уведомления ────────────────────────────────────────────────────
+    # GET /api/notifications/ — список последних 20 уведомлений
+    path('notifications/', NotificationListView.as_view()),
+    # POST /api/notifications/<pk>/read/ — пометить как прочитанное
+    path('notifications/<int:pk>/read/', NotificationReadView.as_view()),
+    # POST /api/notifications/read_all/ — пометить все как прочитанные
+    path('notifications/read_all/', NotificationReadAllView.as_view()),
+    # GET /api/notifications/unread_count/ — количество непрочитанных
+    path('notifications/unread_count/', NotificationUnreadCountView.as_view()),
 
 ]
 

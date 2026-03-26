@@ -300,3 +300,96 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     transition: none !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Responsive: Table → Card layout on mobile
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Hide table header on mobile */
+  .data-table thead { display:none; }
+
+  .data-table tbody tr {
+    display:block;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    margin-bottom:12px;
+    padding:12px;
+    box-shadow:var(--shadow-sm);
+  }
+
+  .data-table tbody td {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 0;
+    border:none;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    text-align:left;
+  }
+  .data-table tbody td:last-child { border-bottom:none; }
+
+  /* Show field label from data-label attribute */
+  .data-table tbody td::before {
+    content: attr(data-label);
+    font-weight:600;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    flex-shrink:0;
+    margin-right:12px;
+  }
+
+  /* PP table specific */
+  .pp-table thead { display:none; }
+  .pp-table tbody tr {
+    display:block;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    margin-bottom:12px;
+    padding:12px;
+    box-shadow:var(--shadow-sm);
+  }
+  .pp-table tbody td {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 0;
+    border:none;
+    border-bottom:1px solid var(--border);
+  }
+  .pp-table tbody td:last-child { border-bottom:none; }
+  .pp-table tbody td::before {
+    content: attr(data-label);
+    font-weight:600; color:var(--muted); font-size:11px;
+    text-transform:uppercase; flex-shrink:0; margin-right:8px;
+  }
+  .pp-table tbody td:first-child::before { content:'#'; }
+
+  /* Hide resize handles on mobile */
+  .resize-handle { display:none !important; }
+
+  /* Stack filter bars vertically */
+  .pp-period-bar { flex-direction:column; align-items:flex-start; }
+  .pp-dept-bar { flex-wrap:wrap; }
+  .pp-cal-months { flex-wrap:wrap; }
+
+  /* Sidebar full overlay on mobile */
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.mobile-open { transform:translateX(0); }
+
+  /* Topbar responsive */
+  .topbar { padding:0 12px; gap:8px; }
+  .cmd-k-hint-text { display:none; }
+
+  /* Bulk bar responsive */
+  .bulk-bar { padding:10px 16px; gap:10px; }
+}
+
+@media (max-width: 480px) {
+  .page-content { padding:12px; }
+  .pp-projects-grid { grid-template-columns:1fr; }
+}

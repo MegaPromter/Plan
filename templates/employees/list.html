@@ -4,7 +4,7 @@
 {% block title %}Сотрудники — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Текущий раздел в хлебных крошках -->
 <span class="breadcrumb-current">Сотрудники</span>
 {% endblock %}
@@ -15,7 +15,7 @@
 <!-- Кнопка «Добавить» в topbar (только для администраторов) -->
 {% block topbar_actions %}
 {% if request.user|is_admin_role %}
-  <a href="{% url 'employees:create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</a>
+  <a href="{% url 'employees:create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Добавить</a>
 {% endif %}
 {% endblock %}
 
@@ -57,8 +57,11 @@
     <tr>
       <!-- Порядковый номер строки -->
       <td class="text-muted">{{ forloop.counter }}</td>
-      <!-- ФИО — ссылка на детальную страницу сотрудника -->
-      <td><a href="{% url 'employees:detail' emp.pk %}">{{ emp.full_name }}</a></td>
+      <!-- ФИО — аватар + ссылка на детальную страницу сотрудника -->
+      <td style="white-space:nowrap;">
+        <span class="emp-avatar-placeholder" data-name="{{ emp.full_name }}"></span>
+        <a href="{% url 'employees:detail' emp.pk %}">{{ emp.full_name }}</a>
+      </td>
       <!-- Роль — бейдж с цветом по роли -->
       <td>
         {% if emp.role == 'admin' %}
@@ -133,4 +136,13 @@
   {% endif %}
 </div>
 {% endif %}
+
+<script>
+document.querySelectorAll('.emp-avatar-placeholder').forEach(function(el) {
+    var name = el.getAttribute('data-name');
+    if (name && typeof avatarHtml === 'function') {
+        el.innerHTML = avatarHtml(name, 'sm');
+    }
+});
+</script>
 {% endblock %}

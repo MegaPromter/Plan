@@ -3,14 +3,14 @@
 {% block title %}{% if object %}Редактировать извещение{% else %}Новое извещение{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Ссылка назад на журнал извещений -->
 <a href="{% url 'works:notice_list' %}">Журнал извещений</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- При редактировании показываем ссылку на детальную страницу извещения -->
 {% if object %}
 <a href="{% url 'works:notice_detail' object.pk %}">#{{ object.pk }}</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">Редактировать</span>
 {% else %}
 <!-- При создании — просто текст -->

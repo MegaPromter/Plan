@@ -237,7 +237,7 @@
      4. DOM-утилиты
      ═══════════════════════════════════════════════════════════════════════ */
   function clearTourUI() {
-    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourArrow2', 'tourSidebarArrow', 'tourInfoBackdrop', 'tourModalBackdrop'];
+    var ids = ['tourSpotlight', 'tourSpotlight2', 'tourTooltip', 'tourArrow', 'tourArrow2', 'tourSidebarArrow', 'tourInfoBackdrop', 'tourModalBackdrop', 'tourWelcomeBackdrop'];
     ids.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.remove();
@@ -311,10 +311,15 @@
   function goPrev() { goStep(currentIdx - 1); }
 
   function skipTour() {
+    var stepWas = currentIdx;
     var s = { step: currentIdx, completed: true, skipped: true, version: 2 };
     setState(s);
     syncToServer(s);
     clearTourUI();
+    // Show widget so user can resume later (only if not at the end)
+    if (stepWas < TOTAL - 1) {
+      setTimeout(function() { showProgressWidget(stepWas); }, 300);
+    }
   }
 
   function completeTour() {
@@ -849,23 +854,29 @@
      ═══════════════════════════════════════════════════════════════════════ */
   function showWelcomeModal() {
     var backdrop = document.createElement('div');
-    backdrop.id = 'tourModalBackdrop';
-    backdrop.className = 'tour-modal-backdrop';
+    backdrop.id = 'tourWelcomeBackdrop';
+    backdrop.className = 'tour-welcome-backdrop';
     backdrop.innerHTML =
-      '<div class="tour-modal-card">' +
-        '<div class="tour-modal-emoji">\uD83C\uDF93</div>' +
-        '<div class="tour-modal-title">Добро пожаловать!</div>' +
-        '<div class="tour-modal-text">' +
-          'Пройдите короткое обучение из ' + TOTAL + ' шагов, чтобы узнать все возможности системы планирования.' +
+      '<div class="tour-welcome-card">' +
+        '<div class="tour-welcome-header">' +
+          '<div class="tour-welcome-emoji">\uD83C\uDF89</div>' +
+          '<div class="tour-welcome-title">\u0414\u043E\u0431\u0440\u043E \u043F\u043E\u0436\u0430\u043B\u043E\u0432\u0430\u0442\u044C \u0432 ManageSystems!</div>' +
+          '<div class="tour-welcome-subtitle">\u0414\u0430\u0432\u0430\u0439\u0442\u0435 \u043F\u043E\u0437\u043D\u0430\u043A\u043E\u043C\u0438\u043C\u0441\u044F \u0441 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u043C\u0438 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u044F\u043C\u0438 \u0441\u0438\u0441\u0442\u0435\u043C\u044B.</div>' +
         '</div>' +
-        '<div class="tour-modal-actions">' +
-          '<button class="tour-btn tour-btn-next" id="tourWelcomeStart">Начать обучение</button>' +
-          '<button class="tour-btn tour-btn-skip" id="tourWelcomeSkip">Пропустить</button>' +
+        '<div class="tour-welcome-features">' +
+          '<div class="tour-welcome-feature"><i class="fas fa-folder-open"></i><span>\u041F\u0440\u043E\u0435\u043A\u0442\u044B</span></div>' +
+          '<div class="tour-welcome-feature"><i class="fas fa-table-list"></i><span>\u041F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435</span></div>' +
+          '<div class="tour-welcome-feature"><i class="fas fa-chart-bar"></i><span>\u041E\u0442\u0447\u0451\u0442\u044B</span></div>' +
+        '</div>' +
+        '<div class="tour-welcome-actions">' +
+          '<button class="tour-btn tour-btn-next" id="tourWelcomeStart">\u041D\u0430\u0447\u0430\u0442\u044C \u043E\u0431\u0437\u043E\u0440</button>' +
+          '<button class="tour-btn tour-btn-skip" id="tourWelcomeSkip">\u041F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(backdrop);
 
     document.getElementById('tourWelcomeStart').onclick = function() {
+      removeWelcomeBackdrop();
       clearTourUI();
       goStep(0);
     };
@@ -873,15 +884,21 @@
       var s = { step: 0, completed: true, skipped: true, version: 2 };
       setState(s);
       syncToServer(s);
+      removeWelcomeBackdrop();
       clearTourUI();
     };
-    // Клик по фону НЕ закрывает тур — только кнопки
+
+    function removeWelcomeBackdrop() {
+      var el = document.getElementById('tourWelcomeBackdrop');
+      if (el) el.remove();
+    }
 
     function escHandler(e) {
       if (e.key === 'Escape') {
         var s = { step: 0, completed: true, skipped: true, version: 2 };
         setState(s);
         syncToServer(s);
+        removeWelcomeBackdrop();
         clearTourUI();
         document.removeEventListener('keydown', escHandler);
       }
@@ -913,6 +930,59 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
+     11b. Progress widget — floating indicator for incomplete tours
+     ═══════════════════════════════════════════════════════════════════════ */
+  var WIDGET_DISMISS_KEY = 'tour_widget_dismissed';
+
+  function showProgressWidget(stepIdx) {
+    removeProgressWidget();
+    // Don't show if explicitly dismissed this session
+    if (sessionStorage.getItem(WIDGET_DISMISS_KEY) === '1') return;
+
+    var pct = ((stepIdx) / TOTAL * 100).toFixed(0);
+    var widget = document.createElement('div');
+    widget.id = 'tourProgressWidget';
+    widget.className = 'tour-progress-widget';
+    widget.innerHTML =
+      '<div class="tour-progress-widget-header">' +
+        '<div class="tour-progress-widget-title"><i class="fas fa-graduation-cap"></i> \u041E\u0431\u0437\u043E\u0440 \u0441\u0438\u0441\u0442\u0435\u043C\u044B</div>' +
+        '<div class="tour-progress-widget-actions">' +
+          '<button class="tour-progress-widget-btn" id="tourWidgetMinimize" title="\u0421\u0432\u0435\u0440\u043D\u0443\u0442\u044C"><i class="fas fa-minus"></i></button>' +
+          '<button class="tour-progress-widget-btn" id="tourWidgetDismiss" title="\u0421\u043A\u0440\u044B\u0442\u044C"><i class="fas fa-times"></i></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tour-progress-widget-body">' +
+        '<div class="tour-progress-widget-status">\u041E\u0431\u0437\u043E\u0440 \u0441\u0438\u0441\u0442\u0435\u043C\u044B: ' + stepIdx + ' \u0438\u0437 ' + TOTAL + '</div>' +
+        '<div class="tour-progress-widget-bar"><div class="tour-progress-widget-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<button class="tour-progress-widget-resume" id="tourWidgetResume">\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u043E\u0431\u0437\u043E\u0440</button>' +
+      '</div>';
+    document.body.appendChild(widget);
+
+    document.getElementById('tourWidgetResume').onclick = function() {
+      removeProgressWidget();
+      goStep(stepIdx);
+    };
+    document.getElementById('tourWidgetMinimize').onclick = function() {
+      widget.classList.toggle('minimized');
+      var icon = widget.querySelector('#tourWidgetMinimize i');
+      if (widget.classList.contains('minimized')) {
+        icon.className = 'fas fa-chevron-up';
+      } else {
+        icon.className = 'fas fa-minus';
+      }
+    };
+    document.getElementById('tourWidgetDismiss').onclick = function() {
+      sessionStorage.setItem(WIDGET_DISMISS_KEY, '1');
+      removeProgressWidget();
+    };
+  }
+
+  function removeProgressWidget() {
+    var el = document.getElementById('tourProgressWidget');
+    if (el) el.remove();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
      12. Public API
      ═══════════════════════════════════════════════════════════════════════ */
   window.startTour = function() {
@@ -923,6 +993,8 @@
   window.restartTour = function() {
     localStorage.removeItem(LS_KEY);
     localStorage.removeItem('tour_seen');
+    sessionStorage.removeItem(WIDGET_DISMISS_KEY);
+    removeProgressWidget();
     clearTourUI();
     showWelcomeModal();
   };
@@ -940,10 +1012,22 @@
     }
 
     if (!state.completed && typeof state.step === 'number' && state.step >= 0 && state.step < TOTAL) {
-      setTimeout(function() {
-        goStep(state.step);
-      }, 600);
+      // Tour is in progress — check if current page matches the step's page
+      var step = STEPS[state.step];
+      if (step.page && !matchPage(step.page)) {
+        // On a different page — show widget instead of navigating away
+        setTimeout(function() { showProgressWidget(state.step); }, 800);
+      } else {
+        setTimeout(function() {
+          goStep(state.step);
+        }, 600);
+      }
       return;
+    }
+
+    // Tour was skipped — show widget so user can resume
+    if (state.skipped && typeof state.step === 'number' && state.step < TOTAL) {
+      setTimeout(function() { showProgressWidget(state.step); }, 800);
     }
   });
 

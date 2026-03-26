@@ -628,6 +628,10 @@ class AuditLog(models.Model):
     ACTION_DEP_UPDATE    = 'dep_update'
     ACTION_DEP_DELETE    = 'dep_delete'
     ACTION_DEP_ALIGN     = 'dep_align'
+    ACTION_CS_CREATE     = 'cs_create'
+    ACTION_CS_SUBMIT     = 'cs_submit'
+    ACTION_CS_APPROVE    = 'cs_approve'
+    ACTION_CS_REJECT     = 'cs_reject'
 
     ACTION_CHOICES = [
         (ACTION_TASK_CREATE, 'Создание задачи'),
@@ -644,6 +648,10 @@ class AuditLog(models.Model):
         (ACTION_DEP_UPDATE,  'Изменение зависимости'),
         (ACTION_DEP_DELETE,  'Удаление зависимости'),
         (ACTION_DEP_ALIGN,   'Выравнивание дат'),
+        (ACTION_CS_CREATE,   'Создание набора изменений'),
+        (ACTION_CS_SUBMIT,   'Отправка на согласование'),
+        (ACTION_CS_APPROVE,  'Утверждение набора изменений'),
+        (ACTION_CS_REJECT,   'Отклонение набора изменений'),
     ]
 
     user       = models.ForeignKey(
@@ -737,3 +745,185 @@ class FeedbackAttachment(models.Model):
 
     def __str__(self):
         return f'Attachment #{self.pk} for Feedback #{self.feedback_id}'
+
+
+# ── Песочница (Changeset) ────────────────────────────────────────────────────
+
+class Changeset(models.Model):
+    """
+    Набор изменений (песочница).
+    Подразделение собирает правки в changeset, затем отправляет
+    на согласование. После утверждения изменения применяются атомарно.
+    """
+
+    STATUS_DRAFT    = 'draft'
+    STATUS_REVIEW   = 'review'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_DRAFT,    'Черновик'),
+        (STATUS_REVIEW,   'На согласовании'),
+        (STATUS_APPROVED, 'Утверждён'),
+        (STATUS_REJECTED, 'Отклонён'),
+    ]
+
+    pp_project = models.ForeignKey(
+        PPProject, on_delete=models.CASCADE,
+        related_name='changesets', verbose_name='Проект ПП',
+    )
+    department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='changesets', verbose_name='Подразделение',
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='authored_changesets', verbose_name='Автор',
+    )
+    title = models.CharField('Название', max_length=255)
+    description = models.TextField('Описание', blank=True, default='')
+    status = models.CharField(
+        'Статус', max_length=20,
+        choices=STATUS_CHOICES, default=STATUS_DRAFT,
+    )
+    reject_comment = models.TextField(
+        'Причина отклонения', blank=True, default='',
+    )
+
+    created_at   = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at   = models.DateTimeField('Обновлён', auto_now=True)
+    submitted_at = models.DateTimeField('Отправлен', null=True, blank=True)
+    reviewed_by  = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_changesets', verbose_name='Рецензент',
+    )
+    reviewed_at  = models.DateTimeField('Дата рецензии', null=True, blank=True)
+    published_at = models.DateTimeField('Дата применения', null=True, blank=True)
+
+    class Meta:
+        db_table = 'work_changeset'
+        verbose_name = 'Набор изменений'
+        verbose_name_plural = 'Наборы изменений'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['department']),
+            models.Index(fields=['pp_project']),
+        ]
+
+    def __str__(self):
+        return f'[{self.get_status_display()}] {self.title}'
+
+    @property
+    def items_count(self):
+        return self.items.count()
+
+
+class ChangesetItem(models.Model):
+    """
+    Отдельное изменение внутри набора.
+    action='create' — новая строка (target_row=NULL, данные в field_changes).
+    action='update' — правка существующей строки (diff в field_changes).
+    action='delete' — удаление строки.
+    """
+
+    ACTION_CREATE = 'create'
+    ACTION_UPDATE = 'update'
+    ACTION_DELETE = 'delete'
+    ACTION_CHOICES = [
+        (ACTION_CREATE, 'Создание'),
+        (ACTION_UPDATE, 'Изменение'),
+        (ACTION_DELETE, 'Удаление'),
+    ]
+
+    changeset = models.ForeignKey(
+        Changeset, on_delete=models.CASCADE,
+        related_name='items', verbose_name='Набор изменений',
+    )
+    target_row = models.ForeignKey(
+        Work, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='changeset_items', verbose_name='Строка ПП',
+    )
+    action = models.CharField(
+        'Действие', max_length=10, choices=ACTION_CHOICES,
+    )
+    field_changes = models.JSONField(
+        'Изменения полей', default=dict, blank=True,
+        help_text='Для create: все поля новой строки. Для update: только изменённые поля.',
+    )
+    original_data = models.JSONField(
+        'Исходные данные', default=dict, blank=True,
+        help_text='Снимок оригинальных значений для обнаружения конфликтов.',
+    )
+    order = models.PositiveIntegerField('Порядок', default=0)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        db_table = 'work_changeset_item'
+        verbose_name = 'Элемент набора изменений'
+        verbose_name_plural = 'Элементы набора изменений'
+        ordering = ['order', 'created_at']
+        indexes = [
+            models.Index(fields=['changeset']),
+            models.Index(fields=['target_row']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_action_display()} #{self.target_row_id or "new"}'
+
+
+# ── Комментарии к работе (Activity feed) ────────────────────────────────────
+
+class WorkComment(models.Model):
+    """Комментарий / запись активности к задаче (Work)."""
+
+    work = models.ForeignKey(
+        Work, on_delete=models.CASCADE,
+        related_name='comments', verbose_name='Работа',
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='work_comments', verbose_name='Автор',
+    )
+    text = models.TextField('Текст комментария')
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+
+    class Meta:
+        db_table = 'work_comment'
+        verbose_name = 'Комментарий к работе'
+        verbose_name_plural = 'Комментарии к работам'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['work']),
+        ]
+
+    def __str__(self):
+        return f'Комментарий #{self.pk} к работе #{self.work_id}'
+
+
+# ── Уведомления пользователям ────────────────────────────────────────────────
+
+class Notification(models.Model):
+    """Уведомление пользователю."""
+    TYPES = [
+        ('info', 'Информация'),
+        ('warning', 'Предупреждение'),
+        ('success', 'Успех'),
+        ('task', 'Задача'),
+        ('overdue', 'Просрочка'),
+        ('sandbox', 'Песочница'),
+    ]
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=20, choices=TYPES, default='info')
+    title = models.CharField(max_length=200)
+    message = models.TextField(blank=True, default='')
+    link = models.CharField(max_length=500, blank=True, default='')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notification'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.title} → {self.user}'

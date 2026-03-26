@@ -3,7 +3,7 @@
 {% block title %}План командировок — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current">План командировок</span>
 {% endblock %}
 
@@ -283,8 +283,6 @@
   </div>
 </div>
 
-<script src="{% static 'js/utils.js' %}?v=6"></script>
-<script src="{% static 'js/export.js' %}"></script>
 <script id="bt-config" type="application/json">{
   "is_writer": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "current_year": {{ current_year }}

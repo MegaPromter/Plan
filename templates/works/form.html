@@ -3,9 +3,9 @@
 {% block title %}{% if object %}Редактировать работу{% else %}Новая работа{% endif %} — Система управления{% endblock %}
 
 {% block breadcrumb %}
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <a href="{% url 'works:list' %}">Работы</a>
-<span>/</span>
+<span class="breadcrumb-sep" aria-hidden="true">/</span>
 <!-- Текущий режим в хлебных крошках -->
 <span class="breadcrumb-current">{% if object %}Редактировать{% else %}Добавить{% endif %}</span>
 {% endblock %}

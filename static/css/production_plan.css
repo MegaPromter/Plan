@@ -81,6 +81,7 @@
   border-radius: 10px;
   box-shadow: 0 1px 6px rgba(0,0,0,0.07);
   border: 1px solid var(--border2);
+  position: relative;
 }
 .pp-table {
   border-collapse: separate;
@@ -141,14 +142,14 @@
 .pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
 .pp-cal-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
 .pp-cal-block { display:flex; align-items:center; gap:6px; }
-.pp-cal-nav { width:24px; height:24px; border-radius:5px; border:1px solid var(--border);
+.pp-cal-nav { width:32px; height:32px; border-radius:5px; border:1px solid var(--border);
   background:transparent; color:var(--text2); cursor:pointer;
-  display:flex; align-items:center; justify-content:center; font-size:14px; transition:all 0.15s; }
+  display:flex; align-items:center; justify-content:center; font-size:15px; transition:all 0.15s; }
 .pp-cal-nav:hover { border-color:var(--accent); color:var(--accent); }
 .pp-cal-display { min-width:60px; text-align:center; font-size:14px; font-weight:600;
   background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:3px 10px; color:var(--text); }
 .pp-cal-months { display:flex; gap:4px; flex-wrap:wrap; }
-.pp-cal-month { padding:3px 10px; border-radius:5px; font-size:12px; cursor:pointer;
+.pp-cal-month { padding:6px 12px; border-radius:5px; font-size:13px; cursor:pointer; min-height:32px;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s; }
 .pp-cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .pp-cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -157,7 +158,7 @@
 
 /* ── Чипы отделов ──────────────────────────────────────────────────── */
 .pp-dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-.pp-dept-chip { padding:3px 10px; border-radius:5px; font-size:12px; cursor:pointer;
+.pp-dept-chip { padding:6px 12px; border-radius:5px; font-size:13px; cursor:pointer; min-height:32px;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap; }
 .pp-dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .pp-dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -195,17 +196,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 
 /* .cell-error — в tables.css */
 
-/* ── Панель статусов (ПП-специфичные размеры) ─────────────────────── */
-/* Базовые .status-chip, .status-bar-mini, .status-bar-* в components.css */
-.pp-status-center {
-  display:flex; align-items:center; gap:12px; margin:0 auto; padding:0 20px;
-}
-.pp-status-center .status-bar-mini {
-  width:600px; height:16px;
-}
-.pp-status-center .status-chip {
-  padding:5px 14px; font-size:13px;
-}
+/* ── Панель статусов (ПП) — используются общие .status-pills / .sp из components.css ── */
 
 /* ── Подсветка строк по статусу ────────────────────────────────────── */
 .pp-table tbody tr.row-done    { background:rgba(34,197,94,0.15) !important; }
@@ -214,3 +205,269 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .pp-table tbody tr.row-done:hover    { background:rgba(34,197,94,0.25) !important; }
 .pp-table tbody tr.row-overdue:hover { background:rgba(239,68,68,0.24) !important; }
 .pp-table tbody tr.row-inwork:hover  { background:rgba(234,179,8,0.18) !important; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Песочница (Sandbox / Changeset)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Баннер песочницы ──────────────────────────────────────────────── */
+.sandbox-banner {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 18px;
+  background:linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+  border:none;
+  border-radius:10px;
+  margin-bottom:12px;
+  font-size:14px;
+  font-weight:500;
+  color:#fff;
+  box-shadow:0 4px 16px rgba(124,58,237,0.35);
+  position:relative;
+  overflow:hidden;
+}
+.sandbox-banner::before {
+  content:'';
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(
+    -45deg, transparent, transparent 10px,
+    rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px
+  );
+  pointer-events:none;
+}
+.sandbox-banner > i { color:#fff; font-size:20px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2)); }
+.sandbox-banner .btn { border-color:rgba(255,255,255,0.3); color:#fff; }
+.sandbox-banner .btn:hover { background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.5); }
+.sandbox-banner .btn.btn-primary { background:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.4); }
+.sandbox-banner .btn.btn-success { background:rgba(34,197,94,0.7); border-color:rgba(34,197,94,0.9); }
+.sandbox-banner .btn.btn-danger  { background:rgba(239,68,68,0.7); border-color:rgba(239,68,68,0.9); }
+.sandbox-badge {
+  display:inline-flex; align-items:center;
+  padding:3px 10px; border-radius:10px;
+  font-size:11px; font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+}
+.sandbox-badge.draft    { background:rgba(255,255,255,0.2); color:#fff; }
+.sandbox-badge.review   { background:rgba(59,130,246,0.8); color:#fff; }
+.sandbox-badge.approved { background:rgba(34,197,94,0.8); color:#fff; }
+.sandbox-badge.rejected { background:rgba(239,68,68,0.8); color:#fff; }
+
+/* ── Кнопка песочницы активна ──────────────────────────────────────── */
+#sandboxToggleBtn.active {
+  background:#8b5cf6;
+  border-color:#7c3aed;
+  color:#fff;
+  box-shadow:0 2px 8px rgba(139,92,246,0.4);
+  animation:sandboxBtnPulse 2s ease-in-out infinite;
+}
+@keyframes sandboxBtnPulse {
+  0%, 100% { box-shadow:0 2px 8px rgba(139,92,246,0.4); }
+  50%      { box-shadow:0 2px 16px rgba(139,92,246,0.7); }
+}
+
+/* ── Фиолетовая полоса на topbar в режиме песочницы ────────────────── */
+.sandbox-topbar-indicator {
+  display:none;
+  position:fixed; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, #7c3aed 0%, #a78bfa 50%, #7c3aed 100%);
+  background-size:200% 100%;
+  animation:sandboxTopbarSlide 3s linear infinite;
+  z-index:999;
+}
+.sandbox-topbar-indicator.active { display:block; }
+@keyframes sandboxTopbarSlide {
+  0%   { background-position:200% 0; }
+  100% { background-position:-200% 0; }
+}
+
+/* ── Рамка таблицы в режиме песочницы ─────────────────────────────── */
+.sandbox-active .pp-table-wrap {
+  outline:3px solid #8b5cf6;
+  outline-offset:2px;
+  border-radius:10px;
+  box-shadow:0 0 20px rgba(139,92,246,0.2);
+  animation:sandboxGlow 3s ease-in-out infinite;
+  position:relative;
+}
+@keyframes sandboxGlow {
+  0%, 100% { box-shadow:0 0 20px rgba(139,92,246,0.15); }
+  50%      { box-shadow:0 0 30px rgba(139,92,246,0.30); }
+}
+.sandbox-active .pp-table thead th {
+  background:linear-gradient(180deg, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.06) 100%) !important;
+  color:#5b21b6;
+}
+
+/* ── Водяной знак «ПЕСОЧНИЦА» по диагонали поверх таблицы ─────────── */
+.sandbox-active .pp-table-wrap::after {
+  content:'ПЕСОЧНИЦА';
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%) rotate(-25deg);
+  font-size:80px; font-weight:900;
+  letter-spacing:12px;
+  text-transform:uppercase;
+  color:rgba(139,92,246,0.06);
+  pointer-events:none;
+  z-index:1;
+  white-space:nowrap;
+  user-select:none;
+}
+
+/* ── Лейбл «Песочница» в углу таблицы ────────────────────────────── */
+.sandbox-table-label {
+  display:none;
+  position:sticky; left:0; top:0; z-index:14;
+  background:#7c3aed; color:#fff;
+  padding:4px 14px; border-radius:0 0 10px 0;
+  font-size:11px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase;
+  box-shadow:2px 2px 8px rgba(124,58,237,0.3);
+}
+.sandbox-active .sandbox-table-label { display:inline-block; }
+
+/* ── Строки sandbox в таблице ─────────────────────────────────────── */
+.pp-table tbody tr.sandbox-create {
+  border-left:5px solid #22c55e;
+  background:rgba(34,197,94,0.15) !important;
+  animation: sandboxFadeIn 0.4s ease;
+}
+.pp-table tbody tr.sandbox-create:hover { background:rgba(34,197,94,0.25) !important; }
+.pp-table tbody tr.sandbox-create td {
+  color:var(--text);
+  font-style:italic;
+}
+.pp-table tbody tr.sandbox-create td:first-child {
+  background:rgba(34,197,94,0.2) !important;
+  font-style:normal;
+}
+@keyframes sandboxFadeIn {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.pp-table tbody tr.sandbox-update {
+  border-left:5px solid #eab308;
+  background:rgba(234,179,8,0.12) !important;
+}
+.pp-table tbody tr.sandbox-update:hover { background:rgba(234,179,8,0.20) !important; }
+
+.pp-table tbody tr.sandbox-delete {
+  border-left:5px solid #ef4444;
+  background:rgba(239,68,68,0.10) !important;
+  opacity:0.5;
+}
+.pp-table tbody tr.sandbox-delete td { text-decoration:line-through; }
+.pp-table tbody tr.sandbox-delete:hover { background:rgba(239,68,68,0.16) !important; }
+
+.sandbox-cell-changed {
+  background:rgba(234,179,8,0.25) !important;
+  position:relative;
+  box-shadow:inset 0 0 0 2px #eab308;
+  border-radius:2px;
+}
+.sandbox-cell-changed::after {
+  content:'✏';
+  position:absolute;
+  top:-2px; right:1px;
+  font-size:9px;
+  line-height:1;
+  z-index:3;
+  pointer-events:none;
+}
+/* Подсветка input внутри изменённой ячейки */
+.sandbox-cell-changed input,
+.sandbox-cell-changed select {
+  background:rgba(234,179,8,0.12) !important;
+  border-color:#eab308 !important;
+}
+
+/* ── Бейдж действия на строке ─────────────────────────────────────── */
+.sandbox-action-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  padding:2px 8px; border-radius:8px;
+  font-size:10px; font-weight:700;
+  text-transform:uppercase;
+  margin-left:4px;
+  white-space:nowrap;
+}
+.sandbox-action-badge.create { background:#22c55e; color:#fff; }
+.sandbox-action-badge.update { background:#eab308; color:#fff; }
+.sandbox-action-badge.delete { background:#ef4444; color:#fff; }
+
+/* ── Список наборов ───────────────────────────────────────────────── */
+.cs-list-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  margin-bottom:6px;
+  cursor:pointer;
+  transition:background 0.15s;
+}
+.cs-list-item:hover { background:var(--hover); }
+.cs-list-item .cs-title { flex:1; font-weight:500; }
+.cs-list-item .cs-meta { font-size:11px; color:var(--muted); }
+.cs-list-item .cs-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:22px; height:22px; border-radius:11px;
+  background:rgba(139,92,246,0.12); color:#8b5cf6;
+  font-size:11px; font-weight:600;
+}
+
+/* ── Diff-таблица ─────────────────────────────────────────────────── */
+.diff-section {
+  border:1px solid var(--border);
+  border-radius:8px;
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.diff-section-header {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 12px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  font-size:13px; font-weight:600;
+}
+.diff-field-row {
+  display:flex; align-items:center;
+  padding:6px 12px;
+  font-size:13px;
+  border-bottom:1px solid var(--border-light, var(--border));
+}
+.diff-field-row:last-child { border-bottom:none; }
+.diff-field-name { width:160px; color:var(--muted); font-weight:500; }
+.diff-field-old {
+  flex:1; padding:3px 8px; border-radius:4px;
+  background:rgba(239,68,68,0.08); color:var(--danger);
+  text-decoration:line-through;
+}
+.diff-field-new {
+  flex:1; padding:3px 8px; border-radius:4px; margin-left:8px;
+  background:rgba(34,197,94,0.08); color:var(--success);
+}
+.diff-field-conflict {
+  flex:none; padding:2px 6px; border-radius:4px;
+  background:rgba(239,68,68,0.15); color:var(--danger);
+  font-size:11px; font-weight:600;
+  margin-left:6px;
+}
+.diff-summary {
+  display:flex; gap:16px;
+  padding:12px 16px;
+  background:var(--surface);
+  border-radius:8px;
+  margin-bottom:12px;
+  font-size:13px;
+}
+.diff-summary-item { display:flex; align-items:center; gap:4px; }
+.diff-summary-count { font-weight:700; font-size:15px; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Responsive: PP-specific mobile overrides
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .pp-table-wrap { max-height:none; overflow:visible; }
+  .pp-table { min-width:auto; table-layout:auto; }
+  .status-pills { flex-wrap:wrap; gap:4px; }
+}

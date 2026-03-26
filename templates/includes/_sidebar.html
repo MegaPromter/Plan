@@ -2,7 +2,7 @@
 {# _sidebar.html — Единый сайдбар для всех страниц. #}
 {# Подключается через include "includes/_sidebar.html" #}
 {# active_nav: dashboard, projects, pp, plan, notices, work_calendar, employees, vacation_plan, subdivisions #}
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar" id="sidebar" aria-label="Боковое меню">
   <div class="sidebar-header">
     {% include "includes/_logo_chip.html" with size="small" show_text="true" %}
   </div>
@@ -16,52 +16,52 @@
       </a>
     </div>
 
-    <!-- 1. Управление проектами -->
+    <!-- Управление проектами -->
     <div class="nav-section">
       <a href="{% url 'works:projects' %}" class="nav-item nav-section-btn{% if active_nav == 'projects' %} active{% endif %}">
         <i class="fas fa-project-diagram" aria-hidden="true"></i>
-        <span>1. Управление проектами</span>
+        <span>Управление проектами</span>
       </a>
     </div>
 
-    <!-- 2. Производственный план -->
+    <!-- Производственный план -->
     <div class="nav-section">
       <a href="{% url 'works:production_plan' %}" class="nav-item nav-section-btn{% if active_nav == 'pp' %} active{% endif %}">
         <i class="fas fa-industry" aria-hidden="true"></i>
-        <span>2. Производственный план</span>
+        <span>Производственный план</span>
       </a>
     </div>
 
-    <!-- 3. Сводное планирование -->
+    <!-- Сводное планирование -->
     <div class="nav-section">
       <a href="{% url 'works:plan' %}" class="nav-item nav-section-btn{% if active_nav == 'plan' %} active{% endif %}">
         <i class="fas fa-tasks" aria-hidden="true"></i>
-        <span>3. Сводное планирование (План/отчёт)</span>
+        <span>Сводное планирование (План/отчёт)</span>
       </a>
     </div>
 
-    <!-- 4. Журнал извещений -->
+    <!-- Журнал извещений -->
     <div class="nav-section">
       <a href="{% url 'works:notice_list' %}" class="nav-item nav-section-btn{% if active_nav == 'notices' %} active{% endif %}">
         <i class="fas fa-envelope" aria-hidden="true"></i>
-        <span>4. Журнал извещений</span>
+        <span>Журнал извещений</span>
       </a>
     </div>
 
-    <!-- 5. Аналитика -->
+    <!-- Аналитика -->
     <div class="nav-section">
       <a href="{% url 'works:analytics' %}" class="nav-item nav-section-btn{% if active_nav == 'analytics' %} active{% endif %}">
         <i class="fas fa-chart-bar" aria-hidden="true"></i>
-        <span>5. Аналитика</span>
+        <span>Аналитика</span>
       </a>
     </div>
 
-    <!-- 6. Справочники -->
+    <!-- Справочники -->
     <div class="nav-section">
       <div class="nav-dropdown">
         <button class="nav-item nav-section-btn nav-dropdown-toggle{% if active_nav == 'work_calendar' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Справочники" aria-expanded="false" aria-controls="nav-dd-ref">
           <i class="fas fa-book" aria-hidden="true"></i>
-          <span>6. Справочники</span>
+          <span>Справочники</span>
           <i class="fas fa-chevron-down nav-chevron" aria-hidden="true"></i>
         </button>
         <div class="nav-dropdown-menu" id="nav-dd-ref">
@@ -77,9 +77,9 @@
       </div>
     </div>
 
-    <!-- 7. Администрирование -->
+    <!-- Администрирование -->
     <div class="nav-section">
-      <div class="nav-section-title">7. Администрирование</div>
+      <div class="nav-section-title">Администрирование</div>
       <div class="nav-dropdown">
         <button class="nav-item nav-dropdown-toggle{% if active_nav == 'employees' or active_nav == 'vacation_plan' or active_nav == 'business_trips' %} active{% endif %}" onclick="toggleNavDropdown(this)" aria-label="Сотрудники" aria-expanded="false" aria-controls="nav-dd-emp">
           <i class="fas fa-users" aria-hidden="true"></i>
@@ -110,7 +110,7 @@
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         <span>Журнал аудита</span>
       </a>
-      <a href="/admin/" class="nav-item">
+      <a href="/admin/" class="nav-item" aria-label="Настройки системы (панель администратора)">
         <i class="fas fa-cogs" aria-hidden="true"></i>
         <span>Настройки системы</span>
       </a>
@@ -145,6 +145,12 @@
 </aside>
 <div class="sidebar-toast" id="sidebarToast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script>
+// Set title attributes on nav items for collapsed tooltip
+document.querySelectorAll('.sidebar-nav .nav-item, .sidebar-nav .nav-section-btn').forEach(function(el) {
+  var span = el.querySelector('span');
+  if (span && !el.title) el.title = span.textContent.trim();
+});
+
 function showSidebarToast(msg, e) {
   var t = document.getElementById('sidebarToast');
   t.textContent = msg;
