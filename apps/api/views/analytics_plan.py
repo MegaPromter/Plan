@@ -139,6 +139,7 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
             ),
             'date_start': w.date_start.isoformat() if w.date_start else '',
             'date_end': w.date_end.isoformat() if w.date_end else '',
+            'deadline': (w.date_end or w.deadline).isoformat() if (w.date_end or w.deadline) else '',
             'labor': _float(w.labor),
             'plan_hours': {k: _float(v) for k, v in ph.items()},
             'status': 'done' if is_done else ('overdue' if is_overdue else 'inwork'),
@@ -182,6 +183,91 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
         'total_planned': round(total_planned, 2),
         'total_norm': round(total_norm, 2),
         'total_load_pct': total_load,
+    }
+
+
+def _build_works_summary(works, years, months_filter):
+    """
+    Сводка по задачам для уровня НТЦ/отдела.
+    Возвращает dict с planned/overdue/done/not_done + списки задач.
+    """
+    today = timezone.now().date()
+    cur_year, cur_month = today.year, today.month
+    years_set = set(years)
+    months_set = set(months_filter) if months_filter else None
+
+    planned = []    # Запланировано на выбранный месяц
+    overdue = []    # Ранее просроченные
+    done = []       # Выполнено
+    not_done = []   # Не выполнено (в работе)
+
+    for w in works:
+        is_done = getattr(w, '_done', False)
+        is_overdue = not is_done and w.date_end and w.date_end < today
+
+        # Проверяем, попадает ли задача в выбранный период по plan_hours
+        has_hours_in_period = False
+        ph = w.plan_hours or {}
+        for k, v in ph.items():
+            try:
+                y_str, m_str = k.split('-')
+                y_int, m_int = int(y_str), int(m_str)
+                if y_int in years_set and (not months_set or m_int in months_set):
+                    if v and float(v) > 0:
+                        has_hours_in_period = True
+                        break
+            except (ValueError, TypeError):
+                pass
+
+        # Определяем, попадает ли задача в период по датам
+        in_period = False
+        if months_set and len(months_set) == 1:
+            m = list(months_set)[0]
+            for y in years:
+                from datetime import date
+                sel_start = date(y, m, 1)
+                sel_end = date(y, m + 1, 1) if m < 12 else date(y + 1, 1, 1)
+                if w.date_start and w.date_end:
+                    if w.date_start < sel_end and w.date_end >= sel_start:
+                        in_period = True
+                elif w.date_end and w.date_end >= sel_start:
+                    in_period = True
+        else:
+            in_period = True  # все месяцы — все задачи в периоде
+
+        task_item = {
+            'id': w.id,
+            'work_name': w.work_name or w.work_num or '',
+            'project_name': (
+                w.project.name if w.project else
+                (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
+                 (w.pp_project.name if w.pp_project else ''))
+            ),
+            'executor': w.executor.short_name if w.executor else '',
+            'date_end': w.date_end.isoformat() if w.date_end else '',
+            'deadline': (w.date_end or w.deadline).isoformat() if (w.date_end or w.deadline) else '',
+            'status': 'done' if is_done else ('overdue' if is_overdue else 'inwork'),
+        }
+
+        if is_done:
+            done.append(task_item)
+        elif is_overdue:
+            overdue.append(task_item)
+        elif in_period or has_hours_in_period:
+            planned.append(task_item)
+            not_done.append(task_item)
+
+    return {
+        'summary': {
+            'planned_count': len(planned),
+            'overdue_count': len(overdue),
+            'done_count': len(done),
+            'not_done_count': len(not_done),
+            'planned': planned,
+            'overdue': overdue,
+            'done': done,
+            'not_done': not_done,
+        }
     }
 
 
@@ -313,7 +399,8 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                 if w.department and w.department.code in set(dept_codes)
             ]
             return self._respond_all_depts(
-                request, filtered, all_norms, years, months_filter, role_info, emp
+                request, filtered, all_norms, years, months_filter, role_info, emp,
+                show_sectors=True,
             )
 
         # Верхний уровень — все отделы
@@ -446,6 +533,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             })
 
         dept_agg = self._aggregate_months(sectors_data)
+        summary = _build_works_summary(dept_works, years, months_filter)
 
         return JsonResponse({
             'view': 'dept',
@@ -455,38 +543,66 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             'dept': {'code': dept_code, 'name': dept_name},
             'sectors': sectors_data,
             **dept_agg,
+            **summary,
             **self._nav_context(dept_works, role_info, emp, years, show_sectors=True),
         })
 
     # ── Ответ: все отделы ─────────────────────────────────────────────────
 
     def _respond_all_depts(self, request, works, all_norms, years,
-                           months_filter, role_info, emp):
+                           months_filter, role_info, emp, show_sectors=False):
         dept_map = defaultdict(list)
         for w in works:
             code = w.department.code if w.department else '—'
             dept_map[code].append(w)
 
-        dept_names = {d.code: d.name for d in Department.objects.all()}
+        dept_names = {}
+        all_sector_names = {}
+        for d in Department.objects.prefetch_related('sectors').all():
+            dept_names[d.code] = d.name
+            for s in d.sectors.all():
+                all_sector_names[s.pk] = s.name or s.code
 
         depts_data = []
         for code in sorted(dept_map.keys()):
             d_works = dept_map[code]
-            employees = self._collect_employees_for_works(d_works)
-            emp_plans = []
-            for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
-                plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
-                emp_plans.append({'id': e_id, 'name': e_info['name'], **plan})
 
-            agg = self._aggregate_months(emp_plans)
+            # Группируем по секторам для drilldown-данных
+            sectors_map = defaultdict(list)
+            for w in d_works:
+                sectors_map[w.sector_id or 0].append(w)
+
+            sectors_data = []
+            all_emp_plans = []
+            for s_id in sorted(sectors_map.keys()):
+                s_works = sectors_map[s_id]
+                employees = self._collect_employees_for_works(
+                    s_works, sector_id=s_id if s_id else None)
+                emp_plans = []
+                for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
+                    plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
+                    emp_plans.append({'id': e_id, 'name': e_info['name'], **plan})
+                all_emp_plans.extend(emp_plans)
+
+                s_agg = self._aggregate_months(emp_plans)
+                sectors_data.append({
+                    'id': s_id,
+                    'name': all_sector_names.get(s_id, 'Без сектора' if s_id == 0 else f'Сектор {s_id}'),
+                    'employees': emp_plans,
+                    **s_agg,
+                })
+
+            agg = self._aggregate_months(sectors_data)
             depts_data.append({
                 'code': code,
                 'name': dept_names.get(code, code),
-                'employee_count': len(emp_plans),
+                'employee_count': len(all_emp_plans),
+                'sectors': sectors_data,
                 **agg,
             })
 
         total_agg = self._aggregate_months(depts_data)
+        summary = _build_works_summary(works, years, months_filter)
 
         return JsonResponse({
             'view': 'all',
@@ -495,7 +611,8 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             'role_info': role_info,
             'depts': depts_data,
             **total_agg,
-            **self._nav_context(works, role_info, emp, years),
+            **summary,
+            **self._nav_context(works, role_info, emp, years, show_sectors=show_sectors),
         })
 
     # ── Вспомогательные ──────────────────────────────────────────────────

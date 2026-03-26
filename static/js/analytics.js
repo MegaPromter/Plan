@@ -402,6 +402,16 @@ function renderAllDeptsCharts(el, data) {
   });
 
   html += '</tbody></table></div></div>';
+
+  // Drilldown: сотрудники по отделам
+  depts.forEach(function(d) {
+    (d.sectors || []).forEach(function(s) {
+      if (s.employees && s.employees.length > 0) {
+        html += renderEmployeesList(s.employees, esc(d.code) + ' — ' + esc(s.name));
+      }
+    });
+  });
+
   el.innerHTML = html;
   renderBarChart(data.months || []);
 }
@@ -462,23 +472,139 @@ function renderSectorCharts(el, data) {
 }
 
 function renderEmployeeCharts(el, data) {
+  var emp = data.employee || {};
+  var empLabel = emp.name ? ' ' + esc(emp.name) : '';
   var html = renderSummaryCards(data);
 
   html += '<div class="an-widgets">';
-  html += '<div class="an-widget"><div class="an-widget-title"><i class="fas fa-chart-bar"></i> Загрузка по месяцам</div><div class="an-chart-wrap"><canvas id="anChart"></canvas></div></div>';
-  html += '<div class="an-widget"><div class="an-widget-title"><i class="fas fa-calendar-alt"></i> Помесячная разбивка</div>';
+  html += '<div class="an-widget"><div class="an-widget-title"><i class="fas fa-chart-bar"></i> Загрузка по месяцам' + (empLabel ? ':' + empLabel : '') + '</div><div class="an-chart-wrap"><canvas id="anChart"></canvas></div></div>';
+  html += '<div class="an-widget"><div class="an-widget-title"><i class="fas fa-calendar-alt"></i> Помесячная разбивка' + (empLabel ? ':' + empLabel : '') + '</div>';
   html += renderMonthsTable(data.months || []);
   html += '</div></div>';
 
   html += renderTasksBlock(data);
 
   el.innerHTML = html;
+  _anInitTaskSort();
   renderBarChart(data.months || []);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    РЕЖИМ «ТАБЛИЦЫ» — карточки + таблицы + экспорт (из reports.js)
    ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Сводка по задачам (НТЦ / отдел) ──────────────────────────────────── */
+function renderWorksSummary(data) {
+  var s = data.summary;
+  if (!s) return '';
+
+  var html = '<div class="rpt-tasks-wrap" style="margin-bottom:16px;">';
+  html += '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-clipboard-list"></i> Сводка по задачам</div></div>';
+  html += '<div style="padding:0 20px 16px;">';
+
+  var totalAll = s.planned_count + s.overdue_count;
+  var allItems = (s.planned || []).concat(s.overdue || []);
+
+  var sections = [
+    {key: 'total', label: 'Всего работ', count: totalAll, items: allItems, icon: 'fa-list', color: 'var(--text)'},
+    {key: 'planned', label: 'Работ запланировано', count: s.planned_count, items: s.planned, icon: 'fa-calendar-check', color: 'var(--accent)'},
+    {key: 'overdue', label: 'Ранее просроченных', count: s.overdue_count, items: s.overdue, icon: 'fa-exclamation-triangle', color: 'var(--danger)'},
+    {key: 'done', label: 'Выполнено', count: s.done_count, items: s.done, icon: 'fa-check-circle', color: '#16a34a'},
+    {key: 'not_done', label: 'Не выполнено', count: s.not_done_count, items: s.not_done, icon: 'fa-clock', color: '#d97706'},
+  ];
+
+  sections.forEach(function(sec) {
+    html += '<div class="an-summary-section" style="margin-bottom:8px;">';
+    html += '<div class="an-summary-toggle" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'collapsed\');" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">';
+    html += '<i class="fas fa-chevron-right" style="font-size:10px;transition:transform 0.2s;"></i>';
+    html += '<i class="fas ' + sec.icon + '" style="color:' + sec.color + ';width:16px;text-align:center;"></i>';
+    html += '<span style="font-weight:600;font-size:13px;">' + sec.label + '</span>';
+    html += '<span style="font-weight:700;font-size:14px;color:' + sec.color + ';">' + sec.count + '</span>';
+    html += '</div>';
+    html += '<div class="an-summary-body collapsed" style="padding:4px 0 4px 24px;">';
+
+    if (sec.items && sec.items.length > 0) {
+      // Сортировка по сроку по умолчанию
+      var sortedItems = sec.items.slice().sort(function(a, b) {
+        var da = a.deadline || a.date_end || '9999-12-31';
+        var db = b.deadline || b.date_end || '9999-12-31';
+        return da.localeCompare(db);
+      });
+      var tableId = 'an-summary-table-' + sec.key;
+      html += '<table id="' + tableId + '" class="an-tasks-table" style="width:100%;border-collapse:collapse;font-size:12px;">';
+      html += '<thead><tr>';
+      html += '<th data-sort="work_name" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Задача</th>';
+      html += '<th data-sort="project_name" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Проект</th>';
+      html += '<th data-sort="executor" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Исполнитель</th>';
+      html += '<th data-sort="deadline" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Срок</th>';
+      html += '</tr></thead><tbody>';
+      var todayStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+      sortedItems.forEach(function(t) {
+        var dlF = t.deadline ? t.deadline.slice(8,10) + '.' + t.deadline.slice(5,7) + '.' + t.deadline.slice(0,4) : '—';
+        var dlMonth = (t.deadline || t.date_end || '').slice(0, 7);
+        var rowCls = t.status === 'overdue' ? ' class="an-row-overdue"' : (dlMonth > todayStr ? ' class="an-row-future"' : '');
+        html += '<tr' + rowCls + '>';
+        html += '<td style="padding:2px 6px;">' + esc(t.work_name) + '</td>';
+        html += '<td style="padding:2px 6px;">' + esc(t.project_name || '') + '</td>';
+        html += '<td style="padding:2px 6px;">' + esc(t.executor || '') + '</td>';
+        html += '<td style="padding:2px 6px;white-space:nowrap;">' + dlF + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div style="color:var(--muted);font-size:12px;padding:4px 0;">Нет</div>';
+    }
+
+    html += '</div></div>';
+  });
+
+  html += '</div></div>';
+
+  // CSS для toggle
+  html += '<style>';
+  html += '.an-summary-toggle .fa-chevron-right { transform:rotate(0); }';
+  html += '.an-summary-toggle.open .fa-chevron-right { transform:rotate(90deg); }';
+  html += '.an-summary-body.collapsed { display:none; }';
+  html += '</style>';
+
+  return html;
+}
+
+var _anSummarySortStates = {};
+
+function _initSummarySort() {
+  var tables = document.querySelectorAll('[id^="an-summary-table-"]');
+  tables.forEach(function(table) {
+    var key = table.id;
+    if (!_anSummarySortStates[key]) {
+      _anSummarySortStates[key] = { col: 'deadline', dir: 'asc' };
+    }
+    var state = _anSummarySortStates[key];
+    var thead = table.querySelector('thead');
+    if (!thead) return;
+    renderSortIndicators(thead, state);
+    thead.querySelectorAll('th[data-sort]').forEach(function(th) {
+      th.style.cursor = 'pointer';
+      th.style.userSelect = 'none';
+      th.onclick = function() {
+        toggleSort(state, th.getAttribute('data-sort'));
+        // Пересортировать строки
+        var tbody = table.querySelector('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        var colIdx = {work_name: 0, project_name: 1, executor: 2, deadline: 3};
+        var idx = colIdx[state.col] || 0;
+        var dir = state.dir === 'desc' ? -1 : 1;
+        rows.sort(function(a, b) {
+          var va = a.cells[idx] ? a.cells[idx].textContent.trim() : '';
+          var vb = b.cells[idx] ? b.cells[idx].textContent.trim() : '';
+          return va.localeCompare(vb, 'ru') * dir;
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+        renderSortIndicators(thead, state);
+      };
+    });
+  });
+}
 
 function renderAllDeptsTables(el, data) {
   var depts = data.depts || [];
@@ -487,16 +613,18 @@ function renderAllDeptsTables(el, data) {
     return;
   }
 
-  _exportData = depts.map(function(d) {
-    return {
-      dept_code: d.code, dept_name: d.name || '',
-      employees: d.employee_count || 0,
-      planned: d.total_planned || 0, norm: d.total_norm || 0,
-      load_pct: d.total_load_pct || 0
-    };
+  // Экспорт — данные из drilldown (сотрудники по всем отделам)
+  _exportData = [];
+  depts.forEach(function(d) {
+    (d.sectors || []).forEach(function(s) {
+      (s.employees || []).forEach(function(e) {
+        _exportData.push(_empExportRow(e, d.code, s.name));
+      });
+    });
   });
 
   var html = renderSummaryCards(data);
+  html += renderWorksSummary(data);
 
   html += '<div class="rpt-level-header">';
   html += '<div class="rpt-level-title"><i class="fas fa-building"></i> Отделы (' + depts.length + ')</div>';
@@ -524,8 +652,18 @@ function renderAllDeptsTables(el, data) {
   });
   html += '</div>';
 
+  // Таблицы сотрудников по отделам (drilldown)
+  depts.forEach(function(d) {
+    (d.sectors || []).forEach(function(s) {
+      if (s.employees && s.employees.length > 0) {
+        html += _renderEmpTable(s.employees, esc(d.code) + ' — ' + esc(s.name));
+      }
+    });
+  });
+
   el.innerHTML = html;
-  _buildExport('anExportContainer', 'Отчёт_НТЦ', _deptExportCols());
+  _initSummarySort();
+  _buildExport('anExportContainer', 'Отчёт_НТЦ', _empExportCols());
 }
 
 function renderDeptTables(el, data) {
@@ -540,6 +678,7 @@ function renderDeptTables(el, data) {
 
   var deptName = data.dept ? (data.dept.name || data.dept.code) : '';
   var html = renderSummaryCards(data);
+  html += renderWorksSummary(data);
 
   html += '<div class="rpt-level-header">';
   html += '<div class="rpt-level-title"><i class="fas fa-layer-group"></i> ' + esc(deptName) + ' — Секторы (' + sectors.length + ')</div>';
@@ -580,6 +719,7 @@ function renderDeptTables(el, data) {
   });
 
   el.innerHTML = html;
+  _initSummarySort();
   _buildExport('anExportContainer', 'Отчёт_' + (data.dept ? data.dept.code : ''), _empExportCols());
 }
 
@@ -607,7 +747,12 @@ function renderSectorTables(el, data) {
 
 function renderEmployeeTables(el, data) {
   var emp = data.employee || {};
-  var tasks = data.tasks || [];
+  var tasks = (data.tasks || []).slice().sort(function(a, b) {
+    var da = a.date_end || '9999-12-31';
+    var db = b.date_end || '9999-12-31';
+    return da.localeCompare(db);
+  });
+  data.tasks = tasks;  // обновить для renderTasksTableBody
   var selYears = idsToList(currentYears);
 
   _exportData = tasks.map(function(t) {
@@ -660,7 +805,7 @@ function renderEmployeeTables(el, data) {
   var months = data.months || [];
   if (months.length > 0) {
     html += '<div class="rpt-tasks-wrap" style="margin-bottom:16px;">';
-    html += '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-calendar-alt"></i> Помесячная загрузка</div></div>';
+    html += '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-calendar-alt"></i> Помесячная загрузка' + (emp.name ? ': ' + esc(emp.name) : '') + '</div></div>';
     html += '<div style="overflow-x:auto;padding:0 14px 14px;">';
     html += '<table class="an-months-table"><thead><tr><th></th>';
     for (var m = 1; m <= 12; m++) html += '<th>' + MONTHS_RU[m-1] + '</th>';
@@ -719,7 +864,7 @@ function renderEmployeeTables(el, data) {
   // Таблица задач
   html += '<div class="rpt-tasks-wrap">';
   html += '<div class="rpt-tasks-header">';
-  html += '<div class="rpt-tasks-title"><i class="fas fa-tasks"></i> Задачи (' + tasks.length + ')';
+  html += '<div class="rpt-tasks-title"><i class="fas fa-tasks"></i> Задачи' + (emp.name ? ': ' + esc(emp.name) : '') + ' (' + tasks.length + ')';
   html += '<span class="an-legend"><span class="an-active-mark"></span> период';
   html += ' &nbsp; <span class="an-abs-mark an-abs-vac"></span> отпуск';
   html += ' &nbsp; <span class="an-abs-mark an-abs-trip"></span> командировка</span>';
@@ -731,6 +876,7 @@ function renderEmployeeTables(el, data) {
   html += '</div>';
 
   el.innerHTML = html;
+  _anInitTaskSort();
   _buildExport('anExportContainer', 'Отчёт_' + (emp.name || '').replace(/\s+/g, '_'), _taskExportCols());
 }
 
@@ -855,8 +1001,9 @@ function renderMonthsTable(months) {
 /* Блок задач для графического режима (employee view) */
 function renderTasksBlock(data) {
   var tasks = data.tasks || [];
+  var emp = data.employee || {};
   var html = '<div class="an-widget an-widget-full" style="padding:0;">';
-  html += '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-tasks"></i> Задачи (' + tasks.length + ')';
+  html += '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-tasks"></i> Задачи' + (emp.name ? ': ' + esc(emp.name) : '') + ' (' + tasks.length + ')';
   html += '<span class="an-legend"><span class="an-active-mark"></span> период выполнения';
   html += ' &nbsp; <span class="an-abs-mark an-abs-vac"></span> отпуск';
   html += ' &nbsp; <span class="an-abs-mark an-abs-trip"></span> командировка</span>';
@@ -867,10 +1014,55 @@ function renderTasksBlock(data) {
   return html;
 }
 
+/* ── Сортировка таблицы задач в аналитике ──────────────────────────────── */
+var _anTaskSortState = { col: 'date_end', dir: 'asc' };
+var _anTaskData = null;
+
+function _anInitTaskSort() {
+  var table = document.querySelector('.an-tasks-table');
+  if (!table) return;
+  var thead = table.querySelector('thead');
+  if (!thead) return;
+  thead.querySelectorAll('th[data-sort]').forEach(function(th) {
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.addEventListener('click', function() {
+      toggleSort(_anTaskSortState, th.getAttribute('data-sort'));
+      // Перерендерить только тело таблицы
+      if (_anTaskData) {
+        var wrapper = table.closest('.rpt-tasks-wrap') || table.closest('.an-widget-full');
+        if (wrapper) {
+          var oldTable = wrapper.querySelector('.an-tasks-table');
+          if (oldTable) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = renderTasksTableBody(_anTaskData);
+            var newTable = tmp.querySelector('.an-tasks-table');
+            if (newTable) oldTable.parentNode.replaceChild(newTable, oldTable);
+            _anInitTaskSort(); // переинициализировать на новой таблице
+          }
+        }
+      }
+    });
+  });
+  renderSortIndicators(thead, _anTaskSortState);
+}
+
 /* Общее тело таблицы задач (используется в обоих режимах) */
 function renderTasksTableBody(data) {
-  var tasks = data.tasks || [];
+  _anTaskData = data;
+  var tasks = (data.tasks || []).slice();
+  // Применяем сортировку
+  tasks = applySortToArray(tasks, _anTaskSortState, function(t, col) {
+    if (col === '_total') {
+      var sum = 0;
+      if (t.plan_hours) { for (var k in t.plan_hours) sum += parseFloat(t.plan_hours[k]) || 0; }
+      return sum;
+    }
+    if (col === 'project_name') return t.project_name || t.project || '';
+    return t[col] || '';
+  });
   var selYears = idsToList(currentYears);
+  var today = new Date().toISOString().slice(0, 10);
 
   if (tasks.length === 0) {
     return '<div class="an-empty"><i class="fas fa-clipboard-check"></i>Нет задач</div>';
@@ -901,16 +1093,16 @@ function renderTasksTableBody(data) {
 
   var html = '<div style="overflow-x:auto;padding:0 12px 10px;">';
   html += '<table class="an-tasks-table"><thead><tr>';
-  html += '<th>Название</th><th>Проект</th><th>Начало</th><th>Окончание</th>';
+  html += '<th data-sort="work_name">Название</th><th data-sort="project_name">Проект</th><th data-sort="date_start">Начало</th><th data-sort="date_end">Окончание</th><th data-sort="deadline">Срок выполнения</th>';
   for (var m = 1; m <= 12; m++) {
     html += '<th class="cell-num" style="font-size:10px;" title="Плановые часы / период выполнения задачи">' + MONTHS_RU[m-1] + '</th>';
   }
-  html += '<th class="cell-num">Итого (ч)</th><th>Статус</th>';
+  html += '<th class="cell-num" data-sort="_total">Итого (ч)</th><th data-sort="status">Статус</th>';
   html += '</tr></thead><tbody>';
 
   if (absences.length > 0) {
     html += '<tr class="an-absence-row">';
-    html += '<td colspan="4" style="font-weight:600;color:var(--muted);font-size:12px;"><i class="fas fa-plane-departure" style="margin-right:4px;"></i>Отпуска / командировки</td>';
+    html += '<td colspan="5" style="font-weight:600;color:var(--muted);font-size:12px;"><i class="fas fa-plane-departure" style="margin-right:4px;"></i>Отпуска / командировки</td>';
     for (var m = 1; m <= 12; m++) {
       var info = absMonths[m];
       if (info) {
@@ -929,6 +1121,8 @@ function renderTasksTableBody(data) {
   tasks.forEach(function(t) {
     var dsF = t.date_start ? t.date_start.slice(8,10) + '.' + t.date_start.slice(5,7) + '.' + t.date_start.slice(0,4) : '—';
     var deF = t.date_end ? t.date_end.slice(8,10) + '.' + t.date_end.slice(5,7) + '.' + t.date_end.slice(0,4) : '—';
+    var dlRaw = t.date_end || t.deadline || '';
+    var dlF = dlRaw ? dlRaw.slice(8,10) + '.' + dlRaw.slice(5,7) + '.' + dlRaw.slice(0,4) : '—';
     var statusCls = 'an-badge-status an-badge-' + t.status;
     var statusText = t.status === 'done' ? 'Готово' : (t.status === 'overdue' ? 'Просроч.' : 'В работе');
 
@@ -946,11 +1140,13 @@ function renderTasksTableBody(data) {
       });
     }
 
-    html += '<tr>';
+    var isOverdue = t.status === 'overdue' || (t.date_end && t.date_end < today && t.status !== 'done');
+    html += '<tr class="' + (isOverdue ? 'an-row-overdue' : '') + '">';
     html += '<td>' + esc(t.work_name) + '</td>';
     html += '<td>' + esc(t.project_name || t.project) + '</td>';
     html += '<td style="white-space:nowrap">' + dsF + '</td>';
     html += '<td style="white-space:nowrap">' + deF + '</td>';
+    html += '<td style="white-space:nowrap">' + dlF + '</td>';
 
     var rowTotal = 0;
     var hasPlanHours = false;
