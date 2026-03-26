@@ -295,8 +295,7 @@ function _jiAttachScrollListener() {
   );
 }
 
-// escapeHtml() — в utils.js
-const esc = escapeHtml;
+// escapeHtml() — в utils.js (alias esc уже объявлен в utils.js через var)
 
 /* ── Модал добавления/редактирования ─────────────────────────────────────── */
 
