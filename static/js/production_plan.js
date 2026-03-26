@@ -2770,7 +2770,6 @@ function ppToggleBulkMode() {
     if (_ppBulkMode && !existing) {
       var cb = document.createElement('input');
       cb.type = 'checkbox'; cb.className = 'bulk-cb';
-      cb.style.cssText = 'margin-right:4px;cursor:pointer;vertical-align:middle;';
       cb.onchange = function() {
         var id = parseInt(tr.dataset.id);
         if (cb.checked) _ppBulkSelected.add(id); else _ppBulkSelected.delete(id);
@@ -2820,24 +2819,39 @@ async function ppBulkDelete() {
   if (!await confirmDialog('Удалить ' + _ppBulkSelected.size + ' строк(и)?', 'Массовое удаление')) return;
   var ids = Array.from(_ppBulkSelected);
   var deleted = 0;
-  try {
-    for (var i = 0; i < ids.length; i++) {
-      var resp = await fetchJson('/api/production_plan/' + ids[i] + '/', { method: 'DELETE' });
-      if (resp !== false) {
+  // 1. Анимация исчезновения строк
+  ids.forEach(function(id) {
+    var tr = document.querySelector('#ppTableBody tr[data-id="' + id + '"]');
+    if (tr) {
+      tr.style.transition = 'opacity 0.4s, transform 0.4s, background 0.2s';
+      tr.style.opacity = '0';
+      tr.style.transform = 'translateX(-40px)';
+      tr.style.background = 'rgba(239,68,68,0.1)';
+    }
+  });
+  // 2. Ждём завершения анимации
+  await new Promise(function(r) { setTimeout(r, 450); });
+  // 3. Удаляем на сервере
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var res = await fetch('/api/production_plan/' + ids[i] + '/', {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': csrfToken}
+      });
+      if (res.ok || res.status === 204) {
         rows = rows.filter(function(r) { return r.id !== ids[i]; });
         deleted++;
       }
-    }
-    notify('Удалено строк: ' + deleted, 'ok');
-    _ppBulkSelected.clear();
-    _ppBulkMode = false;
-    var btn = document.getElementById('ppBulkModeBtn');
-    if (btn) btn.classList.remove('active');
-    var bar = document.getElementById('ppBulkBar');
-    if (bar) bar.classList.remove('visible');
-    renderPPTable();
-  } catch(e) {
-    notify('Ошибка: ' + e.message, 'err');
+    } catch(e) { /* пропускаем ошибку отдельной строки */ }
   }
+  // 4. Всегда приводим таблицу в нормальное состояние
+  _ppBulkSelected.clear();
+  _ppBulkMode = false;
+  var btn = document.getElementById('ppBulkModeBtn');
+  if (btn) btn.classList.remove('active');
+  var bar = document.getElementById('ppBulkBar');
+  if (bar) bar.classList.remove('visible');
+  renderPPTable();
+  if (deleted > 0) notify('Удалено строк: ' + deleted, 'ok');
 }
 

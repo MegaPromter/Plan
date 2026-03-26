@@ -57,11 +57,11 @@
   /* Плотность таблиц (comfortable по умолчанию) */
   --td-pad-y: 10px;
   --td-pad-x: 12px;
-  --td-font:  14px;
+  --td-font:  16px;
   --td-lh:    1.5;
   --th-pad-y: 12px;
   --th-pad-x: 12px;
-  --th-font:  11px;
+  --th-font:  14px;
 
   /* Таблица-заголовок */
   --th-bg:       #eef1f7;
@@ -177,12 +177,13 @@
 
 /* ── Плотность: compact ──────────────────────────────────────────── */
 .density-compact {
-  --td-pad-y: 4px;
-  --td-pad-x: 6px;
+  --td-pad-y: 5px;
+  --td-pad-x: 8px;
   --td-font:  13px;
-  --td-lh:    1.3;
+  --td-lh:    1.35;
   --th-pad-y: 8px;
   --th-pad-x: 8px;
+  --th-font:  11px;
 }
 
 /* ── Плотность: spacious ─────────────────────────────────────────── */

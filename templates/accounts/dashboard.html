@@ -109,7 +109,7 @@
 }
 .dash-dept-toggle.open { transform:rotate(90deg); }
 .dash-dept-name { color:var(--muted); font-weight:400; }
-.dash-dept-meta { color:var(--muted); font-size:12px; margin-left:auto; white-space:nowrap; }
+.dash-dept-meta { color:var(--muted); font-size:12px; margin-left:12px; white-space:nowrap; }
 .dash-dept-body { padding:4px 0 4px 16px; }
 
 /* ── Сектора ──────────────────────────────────────────────────── */
@@ -122,22 +122,24 @@
 /* ── Сотрудники (dropdown) ────────────────────────────────────── */
 .dash-emp { margin-bottom:1px; }
 .dash-emp-header {
-  display:flex; align-items:center; gap:6px; padding:3px 8px;
-  font-size:12px; border-radius:4px; transition:background 0.12s;
+  display:grid;
+  grid-template-columns: 14px 32px 180px 60px 65px 80px 80px 80px;
+  align-items:center; gap:4px; padding:4px 8px;
+  font-size:13px; border-radius:4px; transition:background 0.12s;
 }
 .dash-emp-header.clickable { cursor:pointer; }
 .dash-emp-header.clickable:hover { background:var(--row-hover); }
 .dash-emp-toggle {
-  font-size:8px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; width:10px;
+  font-size:9px; color:var(--muted); transition:transform 0.2s; flex-shrink:0;
 }
 .dash-emp-toggle.open { transform:rotate(90deg); }
-.dash-emp-name { font-weight:600; width:160px; min-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dash-emp-load { width:55px; min-width:55px; text-align:right; }
-.dash-emp-hrs { color:var(--muted); font-size:11px; white-space:nowrap; width:55px; min-width:55px; text-align:right; }
-.dash-emp-tag { font-size:11px; color:var(--muted); white-space:nowrap; width:80px; min-width:80px; text-align:right; }
+.dash-emp-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dash-emp-load { text-align:right; }
+.dash-emp-hrs { color:var(--muted); font-size:12px; white-space:nowrap; text-align:right; }
+.dash-emp-tag { font-size:12px; color:var(--muted); white-space:nowrap; text-align:right; }
 .dash-emp-tag.done { color:var(--success); }
 .dash-emp-tag.debt { color:var(--danger); font-weight:600; }
-.dash-emp-header .an-load-badge { font-size:10px; padding:1px 5px; }
+.dash-emp-header .an-load-badge { font-size:11px; padding:2px 6px; }
 .dash-emp-body { padding:2px 0 6px 28px; }
 .dash-emp-label {
   font-size:11px; font-weight:600; color:var(--accent); margin:2px 0;
@@ -151,25 +153,27 @@
   list-style:none; margin:0 0 4px; padding:0;
 }
 .dash-compact-list li {
-  display:flex; align-items:center; gap:6px; padding:2px 0;
-  font-size:12px; color:var(--text);
+  display:grid;
+  grid-template-columns: 1fr 130px 65px 120px 80px 60px 50px;
+  align-items:center; gap:4px; padding:3px 0;
+  font-size:13px; color:var(--text);
 }
 .dcl-name { font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dcl-designation { color:var(--muted); font-size:10px; width:120px; min-width:120px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dcl-project { color:var(--muted); font-size:11px; width:60px; min-width:60px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dcl-executor { color:var(--muted); font-size:11px; width:110px; min-width:110px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dcl-date { color:var(--muted); font-size:11px; white-space:nowrap; width:76px; min-width:76px; flex-shrink:0; }
-.dash-compact-list .an-badge-status { font-size:10px; padding:1px 5px; width:58px; min-width:58px; flex-shrink:0; text-align:center; }
-.dash-compact-list .dash-days-badge { font-size:10px; padding:0 4px; width:42px; min-width:42px; flex-shrink:0; text-align:right; }
+.dcl-designation { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dcl-project { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dcl-executor { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dcl-date { color:var(--muted); font-size:12px; white-space:nowrap; }
+.dash-compact-list .an-badge-status { font-size:11px; padding:2px 6px; text-align:center; }
+.dash-compact-list .dash-days-badge { font-size:11px; padding:0 4px; text-align:right; }
 /* Основные секции (Задачи/Долги) — чуть крупнее */
-.dash-section-list li { font-size:12px; padding:2px 0; }
-.dash-section-list .dcl-name { width:300px; min-width:300px; flex-shrink:0; }
-.dash-section-list .dcl-designation { font-size:10px; width:140px; min-width:140px; }
-.dash-section-list .dcl-project { font-size:11px; width:70px; min-width:70px; }
-.dash-section-list .dcl-executor { font-size:11px; width:120px; min-width:120px; }
-.dash-section-list .dcl-date { font-size:11px; }
-.dash-section-list .an-badge-status { font-size:10px; }
-.dash-section-list .dash-days-badge { font-size:10px; }
+.dash-section-list li { font-size:13px; padding:3px 0; }
+.dash-section-list .dcl-name { }
+.dash-section-list .dcl-designation { font-size:12px; }
+.dash-section-list .dcl-project { font-size:12px; }
+.dash-section-list .dcl-executor { font-size:12px; }
+.dash-section-list .dcl-date { font-size:12px; }
+.dash-section-list .an-badge-status { font-size:11px; }
+.dash-section-list .dash-days-badge { font-size:11px; }
 
 /* ── Dashboard Widget Grid ──────────────────────────────────────── */
 #dashGrid {

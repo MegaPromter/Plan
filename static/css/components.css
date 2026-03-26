@@ -869,8 +869,8 @@
 /* ── Единые маленькие бейджи (все модули) ─────────────────────────── */
 /* Базовый класс — общая геометрия для всех маленьких бейджей */
 .badge-sm {
-  display:inline-block; padding:1px 4px; border-radius:4px;
-  font-size:9px; font-weight:600;
+  display:inline-block; padding:2px 8px; border-radius:4px;
+  font-size:11px; font-weight:600;
   white-space:nowrap; cursor:default; vertical-align:middle;
 }
 /* Тултип — JS-generated .tt-tip (fixed, справа от бейджа, в цвете бейджа) */
@@ -1075,20 +1075,39 @@
 .gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
 .gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
 
+/* ── Bulk Mode Button & Checkboxes ────────────────────────────────── */
+#ppBulkModeBtn.active,
+#bulkModeBtn.active {
+  background:var(--accent); color:#fff; border-color:var(--accent);
+  box-shadow:0 2px 8px rgba(37,99,235,0.3);
+}
+.bulk-cb {
+  width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border2, #c8d0dc);
+  appearance:none; -webkit-appearance:none; cursor:pointer; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center; position:relative;
+  transition:all 0.15s; background:var(--surface); vertical-align:middle; margin-right:6px;
+}
+.bulk-cb:hover { border-color:var(--accent); }
+.bulk-cb:checked { background:var(--accent); border-color:var(--accent); }
+.bulk-cb:checked::after {
+  content:'✓'; color:#fff; font-size:11px; font-weight:700;
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+}
+
 /* ── Floating Bulk Actions Bar ───────────────────────────────────── */
 .bulk-bar {
-  position:fixed; bottom:-80px; left:50%; transform:translateX(-50%);
+  position:fixed; top:-80px; left:50%; transform:translateX(-50%);
   display:flex; align-items:center; gap:16px;
-  padding:12px 24px;
+  padding:10px 24px;
   background:var(--surface);
   border:1px solid var(--border);
-  border-radius:14px;
-  box-shadow:var(--shadow-lg);
+  border-radius:0 0 14px 14px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
   z-index:150;
-  transition:bottom 0.3s cubic-bezier(0.4,0,0.2,1);
+  transition:top 0.3s cubic-bezier(0.4,0,0.2,1);
   font-size:14px;
 }
-.bulk-bar.visible { bottom:24px; }
+.bulk-bar.visible { top:84px; }
 .bulk-bar-count {
   font-weight:700; color:var(--accent);
   padding:4px 12px; background:var(--accent-light);
