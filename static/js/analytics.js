@@ -709,7 +709,8 @@ function renderDeptTables(el, data) {
 
   el.innerHTML = html;
   _initSummarySort();
-  _buildExport('anExportContainer', 'Отчёт_' + (data.dept ? data.dept.code : ''), _summaryExportCols());
+  var deptLabel = data.dept ? data.dept.code + (data.dept.name ? '_' + data.dept.name : '') : '';
+  _buildExport('anExportContainer', 'Отчёт_' + deptLabel.replace(/\s+/g, '_'), _summaryExportCols());
 }
 
 function renderSectorTables(el, data) {
@@ -731,7 +732,9 @@ function renderSectorTables(el, data) {
   html += _renderEmpTable(employees, null);
 
   el.innerHTML = html;
-  _buildExport('anExportContainer', 'Отчёт_сектор', _empExportCols());
+  var deptCodes = idsToList(currentDeptCodes);
+  var sectorLabel = (deptCodes[0] || '') + (data.sector ? '_' + data.sector.name : '');
+  _buildExport('anExportContainer', 'Отчёт_' + sectorLabel.replace(/\s+/g, '_'), _empExportCols());
 }
 
 function renderEmployeeTables(el, data) {
@@ -866,7 +869,9 @@ function renderEmployeeTables(el, data) {
 
   el.innerHTML = html;
   _anInitTaskSort();
-  _buildExport('anExportContainer', 'Отчёт_' + (emp.name || '').replace(/\s+/g, '_'), _taskExportCols());
+  var empDept = emp.dept || '';
+  var empFileName = (empDept ? empDept + '_' : '') + (emp.name || '');
+  _buildExport('anExportContainer', 'Отчёт_' + empFileName.replace(/\s+/g, '_'), _taskExportCols());
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
