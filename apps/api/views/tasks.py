@@ -105,9 +105,8 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
         'executor': (work.executor.full_name if work.executor else '') or '',
         'date_start': work.date_start.isoformat() if work.date_start else '',
         'date_end': work.date_end.isoformat() if work.date_end else '',
-        # Для ПП-записей deadline = date_end (срок из ПП)
-        'deadline': (work.date_end.isoformat() if work.date_end else '') if is_from_pp
-                    else (work.deadline.isoformat() if work.deadline else ''),
+        # Приоритет: date_end (ПП) → deadline (СП)
+        'deadline': (work.date_end or work.deadline).isoformat() if (work.date_end or work.deadline) else '',
         'plan_hours': work.plan_hours or {},
         'created_by': work.created_by_id,
         'created_at': work.created_at.isoformat() if work.created_at else '',
@@ -141,9 +140,9 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
     d['predecessors_count'] = getattr(work, '_pred_count', 0) or 0
     d['has_reports'] = bool(getattr(work, '_has_reports', False))
 
-    # Индикатор просроченности: deadline (или date_end) < сегодня
+    # Индикатор просроченности: приоритет date_end (ПП) → deadline (СП)
     today = timezone.now().date()
-    effective_deadline = (work.date_end if is_from_pp else work.deadline) or work.date_end
+    effective_deadline = work.date_end or work.deadline
     has_reports = d['has_reports']
     d['is_overdue'] = bool(
         not has_reports and effective_deadline and effective_deadline < today
@@ -202,6 +201,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
                 from datetime import date
                 sel_start = date(yr, mn, 1)
                 sel_end = date(yr, mn + 1, 1) if mn < 12 else date(yr + 1, 1, 1)
+                today = timezone.now().date()
                 qs = qs.filter(
                     Q(date_start__isnull=True, date_end__isnull=True, deadline__isnull=True)
                     | Q(date_start__lt=sel_end, date_end__gte=sel_start)
@@ -212,6 +212,10 @@ class TaskListView(LoginRequiredJsonMixin, View):
                     | Q(date_end__gte=sel_start, date_start__isnull=True)
                     | Q(date_end__isnull=True, deadline__gte=sel_start,
                         date_start__isnull=True)
+                    # Просроченные: date_end прошёл, отчёта нет — тянутся до текущего месяца
+                    | (Q(date_end__lt=min(sel_start, today))
+                       & ~Q(pk__in=WorkReport.objects.values_list('work_id', flat=True))
+                       if sel_start <= today else Q())
                 )
             except (ValueError, TypeError):
                 pass

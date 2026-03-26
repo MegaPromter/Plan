@@ -174,6 +174,8 @@
   letter-spacing:0.04em; color:var(--muted); padding:3px 5px;
   border-bottom:2px solid var(--border2); font-weight:600;
 }
+.an-tasks-table tr.an-row-overdue td { color:var(--danger) !important; font-weight:500; }
+.an-tasks-table tr.an-row-future td { color:#3b82f6 !important; }
 .an-tasks-table td {
   padding:3px 5px; border-bottom:1px solid var(--border); color:var(--text);
 }

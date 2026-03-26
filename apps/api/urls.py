@@ -40,6 +40,7 @@ from .views.pp_projects import PPProjectListView, PPProjectCreateView, PPProject
 # Вьюхи УП-проектов и изделий (Project + ProjectProduct)
 from .views.projects import (
     ProjectListView, ProjectCreateView, ProjectDetailView,
+    ProjectMetricsView,
     ProjectProductListView, ProjectProductCreateView, ProjectProductDetailView,
 )
 # Вьюхи отпусков и проверки конфликтов
@@ -159,6 +160,8 @@ urlpatterns = [
     path('projects/create/',    ProjectCreateView.as_view()),
     # PUT/DELETE /api/projects/<pk>/ — обновление/удаление УП-проекта
     path('projects/<int:pk>/',  ProjectDetailView.as_view()),
+    # GET /api/projects/<pk>/metrics/ — метрики проекта
+    path('projects/<int:project_id>/metrics/', ProjectMetricsView.as_view()),
     # GET /api/projects/<pk>/products/ — список изделий проекта
     path('projects/<int:pk>/products/', ProjectProductListView.as_view()),
     # POST /api/projects/<pk>/products/create/ — создание изделия

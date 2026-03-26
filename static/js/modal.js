@@ -107,6 +107,10 @@ function openModal(options = {}) {
     backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) close();
     });
+    // Кнопки с классом modal-cancel тоже закрывают модалку
+    dialog.querySelectorAll('.modal-cancel').forEach(btn => {
+        btn.addEventListener('click', close);
+    });
 
     // ESC закрывает; Enter кликает первую .btn-primary в футере
     function onKey(e) {

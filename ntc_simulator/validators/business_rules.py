@@ -127,7 +127,7 @@ def _check_overdue_tasks(client):
     for task in tasks:
         date_end = task.get('date_end', '')
         deadline = task.get('deadline', '')
-        effective = deadline or date_end
+        effective = date_end or deadline
         is_actually_overdue = bool(effective and effective < today)
 
         if is_actually_overdue:
