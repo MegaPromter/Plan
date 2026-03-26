@@ -656,7 +656,7 @@ function renderAllDeptsTables(el, data) {
 
   el.innerHTML = html;
   _initSummarySort();
-  _buildExport('anExportContainer', 'Отчёт_НТЦ', _summaryExportCols());
+  _buildExport('anExportContainer', 'Отчёт_НТЦ', _summaryExportCols(), ['НТЦ — Все отделы']);
 }
 
 function renderDeptTables(el, data) {
@@ -710,7 +710,8 @@ function renderDeptTables(el, data) {
   el.innerHTML = html;
   _initSummarySort();
   var deptLabel = data.dept ? data.dept.code + (data.dept.name ? '_' + data.dept.name : '') : '';
-  _buildExport('anExportContainer', 'Отчёт_' + deptLabel.replace(/\s+/g, '_'), _summaryExportCols());
+  var deptMeta = data.dept ? ['Отдел: ' + data.dept.code + (data.dept.name ? ' — ' + data.dept.name : '')] : [];
+  _buildExport('anExportContainer', 'Отчёт_' + deptLabel.replace(/\s+/g, '_'), _summaryExportCols(), deptMeta);
 }
 
 function renderSectorTables(el, data) {
@@ -734,7 +735,10 @@ function renderSectorTables(el, data) {
   el.innerHTML = html;
   var deptCodes = idsToList(currentDeptCodes);
   var sectorLabel = (deptCodes[0] || '') + (data.sector ? '_' + data.sector.name : '');
-  _buildExport('anExportContainer', 'Отчёт_' + sectorLabel.replace(/\s+/g, '_'), _empExportCols());
+  var sectorMeta = [];
+  if (deptCodes[0]) sectorMeta.push('Отдел: ' + deptCodes[0]);
+  if (data.sector) sectorMeta.push('Сектор: ' + data.sector.name);
+  _buildExport('anExportContainer', 'Отчёт_' + sectorLabel.replace(/\s+/g, '_'), _empExportCols(), sectorMeta);
 }
 
 function renderEmployeeTables(el, data) {
@@ -871,7 +875,10 @@ function renderEmployeeTables(el, data) {
   _anInitTaskSort();
   var empDept = emp.dept || '';
   var empFileName = (empDept ? empDept + '_' : '') + (emp.name || '');
-  _buildExport('anExportContainer', 'Отчёт_' + empFileName.replace(/\s+/g, '_'), _taskExportCols());
+  var empMeta = [];
+  if (empDept) empMeta.push('Отдел: ' + empDept);
+  if (emp.name) empMeta.push('Сотрудник: ' + emp.name);
+  _buildExport('anExportContainer', 'Отчёт_' + empFileName.replace(/\s+/g, '_'), _taskExportCols(), empMeta);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1320,7 +1327,7 @@ function _taskExportCols() {
   return cols;
 }
 
-function _buildExport(containerId, pageName, columns) {
+function _buildExport(containerId, pageName, columns, meta) {
   // Всегда рендерим в верхнюю панель
   var targetId = 'anExportTop';
   var container = document.getElementById(targetId);
@@ -1329,6 +1336,7 @@ function _buildExport(containerId, pageName, columns) {
   buildExportDropdown(targetId, {
     pageName: pageName,
     columns: columns,
+    meta: meta || [],
     getAllData: function() { return _exportData; },
     getFilteredData: function() { return _exportData; }
   });

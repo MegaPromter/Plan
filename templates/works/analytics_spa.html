@@ -39,12 +39,12 @@
 </div>
 
 <script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
-<script src="{% static 'js/export.js' %}"></script>
+<script src="{% static 'js/export.js' %}?v=2"></script>
 <script id="an-config" type="application/json">{
   "currentYear": {{ current_year }},
   "role": "{{ role|escapejs }}",
   "deptCode": "{{ user_dept|escapejs }}"
 }</script>
 <script src="{% static 'js/utils.js' %}?v=9"></script>
-<script src="{% static 'js/analytics.js' %}?v=17"></script>
+<script src="{% static 'js/analytics.js' %}?v=18"></script>
 {% endblock %}

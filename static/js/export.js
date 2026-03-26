@@ -44,7 +44,7 @@ function _triggerDownload(content, filename, mimeType) {
 
 /* ── Excel (SpreadsheetML XML) ─────────────────────────────────────────── */
 
-function exportToExcel(data, columns, pageName) {
+function exportToExcel(data, columns, pageName, meta) {
     if (!data || !data.length) {
         showToast('Нет данных для экспорта', 'warning');
         return;
@@ -63,6 +63,7 @@ function exportToExcel(data, columns, pageName) {
     xml += '<Alignment ss:Horizontal="Center" ss:WrapText="1"/>';
     xml += '</Style>\n';
     xml += '  <Style ss:ID="def"><Alignment ss:WrapText="1"/></Style>\n';
+    xml += '  <Style ss:ID="meta"><Font ss:Bold="1" ss:Size="12"/></Style>\n';
     xml += '</Styles>\n';
 
     // Лист
@@ -72,6 +73,16 @@ function exportToExcel(data, columns, pageName) {
     columns.forEach(c => {
         xml += `  <Column ss:Width="${c.width || 100}"/>\n`;
     });
+
+    // Мета-строки (подразделение, сотрудник и т.п.)
+    if (meta && meta.length) {
+        meta.forEach(line => {
+            xml += '  <Row ss:StyleID="meta">\n';
+            xml += `    <Cell ss:MergeAcross="${columns.length - 1}"><Data ss:Type="String">${_escXml(line)}</Data></Cell>\n`;
+            xml += '  </Row>\n';
+        });
+        xml += '  <Row></Row>\n'; // пустая строка-разделитель
+    }
 
     // Заголовки
     xml += '  <Row ss:StyleID="hdr">\n';
@@ -101,7 +112,7 @@ function exportToExcel(data, columns, pageName) {
 
 /* ── XML ───────────────────────────────────────────────────────────────── */
 
-function exportToXml(data, columns, pageName) {
+function exportToXml(data, columns, pageName, meta) {
     if (!data || !data.length) {
         showToast('Нет данных для экспорта', 'warning');
         return;
@@ -110,6 +121,11 @@ function exportToXml(data, columns, pageName) {
     const now = new Date().toISOString().slice(0, 19);
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += `<Export page="${_escXml(pageName)}" date="${now}" count="${data.length}">\n`;
+    if (meta && meta.length) {
+        xml += '  <Meta>\n';
+        meta.forEach(line => { xml += `    <Line>${_escXml(line)}</Line>\n`; });
+        xml += '  </Meta>\n';
+    }
 
     data.forEach(row => {
         xml += '  <Row>\n';
@@ -177,16 +193,17 @@ function buildExportDropdown(containerId, config) {
     const menu = document.createElement('div');
     menu.className = 'export-menu';
 
+    const meta = config.meta || [];
     const items = [
         { icon: 'fa-file-excel', color: '#217346', label: 'Excel (фильтрованные)',
-          fn: () => exportToExcel(config.getFilteredData(), config.columns, config.pageName) },
+          fn: () => exportToExcel(config.getFilteredData(), config.columns, config.pageName, meta) },
         { icon: 'fa-file-excel', color: '#217346', label: 'Excel (все данные)',
-          fn: () => exportToExcel(config.getAllData(), config.columns, config.pageName) },
+          fn: () => exportToExcel(config.getAllData(), config.columns, config.pageName, meta) },
         '_sep_',
         { icon: 'fa-file-code', color: '#e37400', label: 'XML (фильтрованные)',
-          fn: () => exportToXml(config.getFilteredData(), config.columns, config.pageName) },
+          fn: () => exportToXml(config.getFilteredData(), config.columns, config.pageName, meta) },
         { icon: 'fa-file-code', color: '#e37400', label: 'XML (все данные)',
-          fn: () => exportToXml(config.getAllData(), config.columns, config.pageName) },
+          fn: () => exportToXml(config.getAllData(), config.columns, config.pageName, meta) },
     ];
 
     items.forEach(it => {
