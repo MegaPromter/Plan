@@ -613,15 +613,8 @@ function renderAllDeptsTables(el, data) {
     return;
   }
 
-  // Экспорт — данные из drilldown (сотрудники по всем отделам)
-  _exportData = [];
-  depts.forEach(function(d) {
-    (d.sectors || []).forEach(function(s) {
-      (s.employees || []).forEach(function(e) {
-        _exportData.push(_empExportRow(e, d.code, s.name));
-      });
-    });
-  });
+  // Экспорт — задачи из сводки (drilldown)
+  _exportData = _summaryExportData(data);
 
   var html = renderSummaryCards(data);
   html += renderWorksSummary(data);
@@ -663,18 +656,14 @@ function renderAllDeptsTables(el, data) {
 
   el.innerHTML = html;
   _initSummarySort();
-  _buildExport('anExportContainer', 'Отчёт_НТЦ', _empExportCols());
+  _buildExport('anExportContainer', 'Отчёт_НТЦ', _summaryExportCols());
 }
 
 function renderDeptTables(el, data) {
   var sectors = data.sectors || [];
 
-  _exportData = [];
-  sectors.forEach(function(s) {
-    (s.employees || []).forEach(function(e) {
-      _exportData.push(_empExportRow(e, data.dept ? data.dept.code : '', s.name));
-    });
-  });
+  // Экспорт — задачи из сводки (drilldown)
+  _exportData = _summaryExportData(data);
 
   var deptName = data.dept ? (data.dept.name || data.dept.code) : '';
   var html = renderSummaryCards(data);
@@ -720,7 +709,7 @@ function renderDeptTables(el, data) {
 
   el.innerHTML = html;
   _initSummarySort();
-  _buildExport('anExportContainer', 'Отчёт_' + (data.dept ? data.dept.code : ''), _empExportCols());
+  _buildExport('anExportContainer', 'Отчёт_' + (data.dept ? data.dept.code : ''), _summaryExportCols());
 }
 
 function renderSectorTables(el, data) {
@@ -1235,6 +1224,42 @@ function renderBarChart(months) {
 }
 
 /* ── Экспорт ──────────────────────────────────────────────────────────── */
+function _summaryExportData(data) {
+  var s = data.summary;
+  if (!s) return [];
+  var all = (s.planned || []).concat(s.overdue || []).concat(s.done || []);
+  // Дедупликация по id
+  var seen = {};
+  var result = [];
+  all.forEach(function(t) {
+    if (seen[t.id]) return;
+    seen[t.id] = true;
+    result.push({
+      work_name: t.work_name || '',
+      project_name: t.project_name || '',
+      executor: t.executor || '',
+      deadline: t.deadline || t.date_end || '',
+      status: t.status === 'done' ? 'Готово' : (t.status === 'overdue' ? 'Просрочено' : 'В работе')
+    });
+  });
+  result.sort(function(a, b) {
+    var da = a.deadline || '9999-12-31';
+    var db = b.deadline || '9999-12-31';
+    return da.localeCompare(db);
+  });
+  return result;
+}
+
+function _summaryExportCols() {
+  return [
+    { key: 'work_name', header: 'Задача', width: 260 },
+    { key: 'project_name', header: 'Проект', width: 140 },
+    { key: 'executor', header: 'Исполнитель', width: 160 },
+    { key: 'deadline', header: 'Срок', width: 100 },
+    { key: 'status', header: 'Статус', width: 80 }
+  ];
+}
+
 function _deptExportCols() {
   return [
     { key: 'dept_code', header: 'Код отдела', width: 80, forceText: true },
