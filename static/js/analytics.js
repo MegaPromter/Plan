@@ -1227,7 +1227,8 @@ function renderBarChart(months) {
 function _summaryExportData(data) {
   var s = data.summary;
   if (!s) return [];
-  var all = (s.planned || []).concat(s.overdue || []).concat(s.done || []);
+  // «Всего работ» = planned + overdue (без done)
+  var all = (s.planned || []).concat(s.overdue || []);
   // Дедупликация по id
   var seen = {};
   var result = [];
