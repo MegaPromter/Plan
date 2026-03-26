@@ -118,14 +118,14 @@
 .an-chart-wrap { position:relative; height:260px; }
 
 /* ── Таблица загрузки по месяцам ─────────────────────────────────────── */
-.an-months-table { width:100%; border-collapse:collapse; font-size:12px; }
+.an-months-table { width:100%; border-collapse:collapse; font-size:16px; }
 .an-months-table th {
-  text-align:center; font-size:10px; text-transform:uppercase;
-  letter-spacing:0.04em; color:var(--muted); padding:3px 3px;
+  text-align:center; font-size:14px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:4px 4px;
   border-bottom:2px solid var(--border2); font-weight:600;
 }
 .an-months-table td {
-  padding:3px 3px; text-align:center; border-bottom:1px solid var(--border);
+  padding:4px 4px; text-align:center; border-bottom:1px solid var(--border);
   font-variant-numeric:tabular-nums;
 }
 .an-months-table .row-label { text-align:left; font-weight:600; color:var(--text); }
@@ -143,15 +143,15 @@
 .an-load-over .an-load-bar-fill { background:var(--danger); }
 
 /* ── Таблица сотрудников / секторов / отделов ────────────────────────── */
-.an-list-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; line-height:1.3; }
+.an-list-table { width:100%; border-collapse:collapse; font-size:15px; table-layout:fixed; line-height:1.35; }
 .an-list-table th {
-  text-align:left; font-size:9px; text-transform:uppercase;
-  letter-spacing:0.04em; color:var(--muted); padding:2px 3px;
+  text-align:left; font-size:13px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:3px 4px;
   border-bottom:1px solid var(--border2); font-weight:600;
 }
 .an-list-table th.cell-num { text-align:right; }
 .an-list-table td {
-  padding:2px 3px; border-bottom:1px solid var(--border); color:var(--text);
+  padding:3px 4px; border-bottom:1px solid var(--border); color:var(--text);
   vertical-align:middle;
 }
 .an-list-table td.cell-num { text-align:right; font-variant-numeric:tabular-nums; }
@@ -160,24 +160,29 @@
 
 /* ── Бейдж загрузки (%) ──────────────────────────────────────────────── */
 .an-load-badge {
-  display:inline-block; padding:2px 8px; border-radius:10px;
-  font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
+  display:inline-block; padding:3px 10px; border-radius:10px;
+  font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
 }
 .an-load-badge.ok { background:rgba(34,197,94,0.12); color:#16a34a; }
 .an-load-badge.warn { background:rgba(245,158,11,0.12); color:#d97706; }
 .an-load-badge.over { background:rgba(239,68,68,0.12); color:var(--danger); }
 
 /* ── Таблица задач сотрудника ────────────────────────────────────────── */
-.an-tasks-table { width:100%; border-collapse:collapse; font-size:12px; }
+.an-tasks-table { width:100%; border-collapse:collapse; font-size:16px; }
 .an-tasks-table th {
-  text-align:left; font-size:10px; text-transform:uppercase;
-  letter-spacing:0.04em; color:var(--muted); padding:3px 5px;
+  text-align:left; font-size:14px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--muted); padding:4px 6px;
   border-bottom:2px solid var(--border2); font-weight:600;
+  white-space:nowrap;
 }
 .an-tasks-table tr.an-row-overdue td { color:var(--danger) !important; font-weight:500; }
 .an-tasks-table tr.an-row-future td { color:#3b82f6 !important; }
 .an-tasks-table td {
-  padding:3px 5px; border-bottom:1px solid var(--border); color:var(--text);
+  padding:4px 6px; border-bottom:1px solid var(--border); color:var(--text);
+  white-space:nowrap;
+}
+.an-tasks-table td:first-child {
+  white-space:normal; max-width:400px; word-break:break-word;
 }
 .an-tasks-table th.cell-num { text-align:center; }
 .an-tasks-table td.cell-num { text-align:center; font-variant-numeric:tabular-nums; min-width:40px; }

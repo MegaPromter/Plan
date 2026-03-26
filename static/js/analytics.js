@@ -531,12 +531,12 @@ function renderWorksSummary(data) {
         return da.localeCompare(db);
       });
       var tableId = 'an-summary-table-' + sec.key;
-      html += '<table id="' + tableId + '" class="an-tasks-table" style="width:100%;border-collapse:collapse;font-size:12px;">';
+      html += '<table id="' + tableId + '" class="an-tasks-table">';
       html += '<thead><tr>';
-      html += '<th data-sort="work_name" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Задача</th>';
-      html += '<th data-sort="project_name" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Проект</th>';
-      html += '<th data-sort="executor" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Исполнитель</th>';
-      html += '<th data-sort="deadline" style="text-align:left;padding:2px 6px;color:var(--muted);font-size:10px;cursor:pointer;">Срок</th>';
+      html += '<th data-sort="work_name" style="text-align:left;padding:2px 6px;color:var(--muted);cursor:pointer;">Задача</th>';
+      html += '<th data-sort="project_name" style="text-align:left;padding:2px 6px;color:var(--muted);cursor:pointer;">Проект</th>';
+      html += '<th data-sort="executor" style="text-align:left;padding:2px 6px;color:var(--muted);cursor:pointer;">Исполнитель</th>';
+      html += '<th data-sort="deadline" style="text-align:left;padding:2px 6px;color:var(--muted);cursor:pointer;">Срок</th>';
       html += '</tr></thead><tbody>';
       var todayStr = new Date().toISOString().slice(0, 7); // YYYY-MM
       sortedItems.forEach(function(t) {
@@ -552,7 +552,7 @@ function renderWorksSummary(data) {
       });
       html += '</tbody></table>';
     } else {
-      html += '<div style="color:var(--muted);font-size:12px;padding:4px 0;">Нет</div>';
+      html += '<div style="color:var(--muted);padding:4px 0;">Нет</div>';
     }
 
     html += '</div></div>';
@@ -917,7 +917,7 @@ function renderEmployeesList(employees, title) {
   html += '<table class="an-list-table"><thead><tr>';
   html += '<th>Сотрудник</th>';
   for (var m = 1; m <= 12; m++) {
-    html += '<th class="cell-num" style="font-size:10px;">' + MONTHS_RU[m-1] + '</th>';
+    html += '<th class="cell-num">' + MONTHS_RU[m-1] + '</th>';
   }
   html += '<th class="cell-num">Итого</th><th class="cell-num">Загрузка</th>';
   html += '</tr></thead><tbody>';
@@ -959,7 +959,7 @@ function _renderEmpTable(employees, title) {
   html += '</colgroup>';
   html += '<thead><tr>';
   html += '<th>Сотрудник</th>';
-  for (var m = 1; m <= 12; m++) html += '<th class="cell-num" style="font-size:10px;">' + MONTHS_RU[m-1] + '</th>';
+  for (var m = 1; m <= 12; m++) html += '<th class="cell-num">' + MONTHS_RU[m-1] + '</th>';
   html += '<th class="cell-num">Итого</th><th class="cell-num">Загрузка</th>';
   html += '</tr></thead><tbody>';
 
@@ -1096,14 +1096,14 @@ function renderTasksTableBody(data) {
   html += '<table class="an-tasks-table"><thead><tr>';
   html += '<th data-sort="work_name">Название</th><th data-sort="project_name">Проект</th><th data-sort="date_start">Начало</th><th data-sort="date_end">Окончание</th><th data-sort="deadline">Срок выполнения</th>';
   for (var m = 1; m <= 12; m++) {
-    html += '<th class="cell-num" style="font-size:10px;" title="Плановые часы / период выполнения задачи">' + MONTHS_RU[m-1] + '</th>';
+    html += '<th class="cell-num" title="Плановые часы / период выполнения задачи">' + MONTHS_RU[m-1] + '</th>';
   }
   html += '<th class="cell-num" data-sort="_total">Итого (ч)</th><th data-sort="status">Статус</th>';
   html += '</tr></thead><tbody>';
 
   if (absences.length > 0) {
     html += '<tr class="an-absence-row">';
-    html += '<td colspan="5" style="font-weight:600;color:var(--muted);font-size:12px;"><i class="fas fa-plane-departure" style="margin-right:4px;"></i>Отпуска / командировки</td>';
+    html += '<td colspan="5" style="font-weight:600;color:var(--muted);"><i class="fas fa-plane-departure" style="margin-right:4px;"></i>Отпуска / командировки</td>';
     for (var m = 1; m <= 12; m++) {
       var info = absMonths[m];
       if (info) {
