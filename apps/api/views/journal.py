@@ -233,7 +233,13 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
         sector_name = (data.get('sector') or '').strip()
         executor_name = (data.get('executor') or '').strip()
 
-        department = Department.objects.filter(code=dept_code).first() if dept_code else None
+        if dept_code:
+            try:
+                department = Department.objects.get(code=dept_code)
+            except Department.DoesNotExist:
+                department = None
+        else:
+            department = None
         sector = None
         if sector_name and department:
             sector = Sector.objects.filter(department=department, name=sector_name).first()
@@ -377,10 +383,13 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
             if 'dept' in data:
                 dept_code = (data['dept'] or '').strip()
-                notice.department = (
-                    Department.objects.filter(code=dept_code).first()
-                    if dept_code else None
-                )
+                if dept_code:
+                    try:
+                        notice.department = Department.objects.get(code=dept_code)
+                    except Department.DoesNotExist:
+                        notice.department = None
+                else:
+                    notice.department = None
                 update_fields.append('department')
 
             if 'sector' in data:

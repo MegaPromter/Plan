@@ -262,7 +262,9 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         total_count = qs.count()
 
-        qs = qs.annotate(
+        qs = qs.defer(
+            'executors_list',
+        ).annotate(
             _pred_count=Count('predecessor_links'),
             _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
@@ -315,6 +317,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         response = JsonResponse(result, safe=False)
         response['X-Total-Count'] = total_count
+        response['Cache-Control'] = 'private, max-age=5'
         return response
 
 
@@ -713,9 +716,11 @@ def _set_work_fk_fields(work, d, request):
     # department / dept
     dept = d.get('dept', '')
     if dept:
-        dep_obj = Department.objects.filter(code=dept).first()
-        if dep_obj:
+        try:
+            dep_obj = Department.objects.get(code=dept)
             work.department = dep_obj
+        except Department.DoesNotExist:
+            pass
 
     # sector
     sector = d.get('sector', '')

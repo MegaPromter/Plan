@@ -113,13 +113,15 @@ class WorkloadAnalyticsView(LoginRequiredJsonMixin, View):
                 'days_left': (w.date_end - today).days if w.date_end else 0,
             })
 
-        return JsonResponse({
+        response = JsonResponse({
             'year': year,
             'by_dept': by_dept,
             'monthly': monthly,
             'top_overdue': top_overdue,
             'upcoming': upcoming,
         })
+        response['Cache-Control'] = 'private, max-age=15'
+        return response
 
 
 class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
@@ -254,7 +256,7 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
                     'dept': e.department.code if e.department else '',
                 })
 
-        return JsonResponse({
+        response = JsonResponse({
             'year': year,
             'executor': {
                 'id': target_emp.pk,
@@ -271,6 +273,8 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
             'monthly_hours': monthly_hours,
             'executors_list': executors_list,
         })
+        response['Cache-Control'] = 'private, max-age=15'
+        return response
 
 
 class PPAnalyticsView(LoginRequiredJsonMixin, View):
@@ -403,7 +407,7 @@ class PPAnalyticsView(LoginRequiredJsonMixin, View):
         for pp in PPProject.objects.all().order_by('name'):
             pp_projects.append({'id': pp.pk, 'name': pp.name or f'ПП #{pp.pk}'})
 
-        return JsonResponse({
+        response = JsonResponse({
             'year': year,
             'summary': summary,
             'by_project': by_project,
@@ -412,3 +416,5 @@ class PPAnalyticsView(LoginRequiredJsonMixin, View):
             'monthly': monthly,
             'pp_projects': pp_projects,
         })
+        response['Cache-Control'] = 'private, max-age=15'
+        return response

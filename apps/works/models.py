@@ -269,6 +269,7 @@ class Work(models.Model):
             models.Index(fields=['show_in_plan', 'department']),
             models.Index(fields=['show_in_pp', 'created_at']),
             models.Index(fields=['executor', 'show_in_plan']),
+            models.Index(fields=['date_end', 'show_in_plan'], name='idx_work_date_end_plan'),
         ]
         constraints = [
             # show_in_pp=True → pp_project обязан быть заполнен

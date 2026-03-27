@@ -142,7 +142,9 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         if project_id:
             qs = qs.filter(pp_project_id=project_id)
 
-        qs = qs.annotate(
+        qs = qs.defer(
+            'plan_hours', 'executors_list', 'actions', 'justification',
+        ).annotate(
             _pred_count=Count('predecessor_links'),
             _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
@@ -159,6 +161,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
 
         resp = JsonResponse([_serialize_pp(w, today) for w in works], safe=False)
         resp['X-Total-Count'] = total_count
+        resp['Cache-Control'] = 'private, max-age=5'
         return resp
 
 
@@ -218,7 +221,10 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
         if employee and employee.role in ('dept_head', 'dept_deputy', 'sector_head'):
             dept_obj = employee.department
         elif d.get('dept'):
-            dept_obj = Department.objects.filter(code=d['dept']).first()
+            try:
+                dept_obj = Department.objects.get(code=d['dept'])
+            except Department.DoesNotExist:
+                dept_obj = None
 
         _validated_tt, tt_err = validate_task_type(d.get('task_type', ''))
         if tt_err:
@@ -419,13 +425,19 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 work.executor = None
         elif field == 'dept':
             if value:
-                dep = Department.objects.filter(code=value).first()
+                try:
+                    dep = Department.objects.get(code=value)
+                except Department.DoesNotExist:
+                    dep = None
                 work.department = dep
             else:
                 work.department = None
         elif field == 'center':
             if value:
-                center = NTCCenter.objects.filter(code=value).first()
+                try:
+                    center = NTCCenter.objects.get(code=value)
+                except NTCCenter.DoesNotExist:
+                    center = None
                 work.ntc_center = center
             else:
                 work.ntc_center = None

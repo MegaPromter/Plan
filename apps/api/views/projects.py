@@ -116,7 +116,9 @@ class ProjectListView(LoginRequiredJsonMixin, View):
                 }
                 result.append(_serialize_project(proj, extra))
             # Возвращаем JSON-список
-            return JsonResponse(result, safe=False)
+            response = JsonResponse(result, safe=False)
+            response['Cache-Control'] = 'private, max-age=30'
+            return response
         except Exception as e:
             logger.error('ProjectListView.get: %s', e, exc_info=True)
             return JsonResponse({'error': 'Ошибка сервера'}, status=500)

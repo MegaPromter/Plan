@@ -143,7 +143,9 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             result['done_late'] = personal['done_late']
             result['months'] = self._build_months_overview(emp.pk, all_works, year, norms)
 
-        return JsonResponse(result)
+        response = JsonResponse(result)
+        response['Cache-Control'] = 'private, max-age=10'
+        return response
 
     # ── Личный план ──────────────────────────────────────────────────────
 
