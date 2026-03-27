@@ -9,9 +9,7 @@ var currentYear = cfg.currentYear;
 var currentMonth = cfg.currentMonth;
 var lastData = null;
 
-var MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-var MONTHS_FULL = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-                   'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+// MONTHS_FULL, MONTHS_SHORT — в utils.js (1-based: MONTHS_FULL[1] = "Январь")
 
 /* ── Утилиты — в utils.js (esc, loadBadgeCls, fmtPct, fmtHrs, fmtDate) ── */
 
@@ -47,8 +45,7 @@ function loadDashboard() {
   .then(function(data) {
     if (data.error) {
       document.getElementById('dashKPI').innerHTML =
-        '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
-        '<div class="empty-state-title">' + esc(data.error) + '</div></div>';
+        emptyStateHtml({icon:'fas fa-exclamation-triangle', title: esc(data.error)});
       return;
     }
     lastData = data;
@@ -64,9 +61,7 @@ function loadDashboard() {
   .catch(function(e) {
     console.error('Dashboard error:', e);
     document.getElementById('dashKPI').innerHTML =
-      '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
-      '<div class="empty-state-title">Ошибка загрузки</div>' +
-      '<div class="empty-state-desc">Попробуйте обновить страницу</div></div>';
+      emptyStateHtml({icon:'fas fa-exclamation-triangle', title:'Ошибка загрузки', desc:'Попробуйте обновить страницу'});
   });
 }
 
@@ -101,7 +96,7 @@ function renderMonthChips(years) {
   html += '<div class="an-chips">';
   for (var m = 1; m <= 12; m++) {
     var cls = m === currentMonth ? 'an-chip active' : 'an-chip';
-    html += '<button class="' + cls + '" onclick="dashSetMonth(' + m + ')">' + MONTHS_RU[m-1] + '</button>';
+    html += '<button class="' + cls + '" onclick="dashSetMonth(' + m + ')">' + MONTHS_SHORT[m] + '</button>';
   }
   html += '</div></div>';
   document.getElementById('dashMonthChips').innerHTML = html;
@@ -135,7 +130,7 @@ function renderHeroSub(data) {
     parts.push('<span style="opacity:0.75;">Все задачи в порядке <i class="fas fa-check-circle"></i></span>');
   }
 
-  el.innerHTML = MONTHS_FULL[currentMonth - 1] + ' ' + currentYear + ' &nbsp; ' + parts.join(' ');
+  el.innerHTML = MONTHS_FULL[currentMonth] + ' ' + currentYear + ' &nbsp; ' + parts.join(' ');
 }
 
 /* ── KPI-карточки ────────────────────────────────────────────────── */
@@ -259,7 +254,7 @@ function _renderEmployeeDropdown(e) {
     html += '<div class="dash-emp-body" style="display:none;">';
 
     if (hasTasks) {
-      html += '<div class="dash-emp-label"><i class="fas fa-tasks"></i> ' + MONTHS_FULL[currentMonth - 1] + '</div>';
+      html += '<div class="dash-emp-label"><i class="fas fa-tasks"></i> ' + MONTHS_FULL[currentMonth] + '</div>';
       html += _renderCompactList(e.tasks);
     }
 
@@ -303,15 +298,9 @@ function _renderCompactList(tasks) {
 function renderTasks(tasks, showExecutor) {
   var el = document.getElementById('dashTasks');
   var widget = el.closest('.dash-widget');
-  if (widget) _updateWidgetHeader(widget, '<i class="fas fa-tasks" style="color:var(--accent);margin-right:6px;"></i>Задачи — ' + MONTHS_FULL[currentMonth - 1] + (tasks && tasks.length ? ' (' + tasks.length + ')' : ''));
+  if (widget) _updateWidgetHeader(widget, '<i class="fas fa-tasks" style="color:var(--accent);margin-right:6px;"></i>Задачи — ' + MONTHS_FULL[currentMonth] + (tasks && tasks.length ? ' (' + tasks.length + ')' : ''));
   if (!tasks || !tasks.length) {
-    el.innerHTML =
-      '<div class="empty-state">' +
-        '<div class="empty-state-icon"><i class="fas fa-clipboard-check"></i></div>' +
-        '<div class="empty-state-title">Нет задач на этот месяц</div>' +
-        '<div class="empty-state-desc">Все задачи выполнены или ещё не запланированы</div>' +
-        '<div class="empty-state-action"><a class="btn btn-primary btn-sm" href="/plan/"><i class="fas fa-calendar-alt"></i> Перейти к плану</a></div>' +
-      '</div>';
+    el.innerHTML = emptyStateHtml({icon:'fas fa-clipboard-check', title:'Нет задач на этот месяц', desc:'Все задачи выполнены или ещё не запланированы', action:'<a class="btn btn-primary btn-sm" href="/plan/"><i class="fas fa-calendar-alt"></i> Перейти к плану</a>'});
     return;
   }
 

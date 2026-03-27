@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block topbar_actions %}
+<button class="btn btn-outline btn-sm" onclick="openTripOverlapsModal()">
+  <i class="fas fa-user-friends"></i> Проверить пересечения
+</button>
 {% if request.user|is_writer %}
   <button class="btn btn-primary btn-sm" onclick="openAddTripModal()">
     <i class="fas fa-plus"></i> Добавить
@@ -287,5 +290,6 @@
   "is_writer": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "current_year": {{ current_year }}
 }</script>
-<script src="{% static 'js/business_trips.js' %}"></script>
+<script src="{% static 'js/absence_overlaps.js' %}?v=1"></script>
+<script src="{% static 'js/business_trips.js' %}?v=3"></script>
 {% endblock %}

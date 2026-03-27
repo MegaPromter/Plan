@@ -5,3 +5,6 @@ class AccountsConfig(AppConfig):
     name  = 'apps.accounts'
     label = 'accounts'
     verbose_name = 'Авторизация'
+
+    def ready(self):
+        import apps.accounts.signals  # noqa: F401 — подключаем сигналы auth

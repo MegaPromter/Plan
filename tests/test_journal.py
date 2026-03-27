@@ -108,6 +108,27 @@ class TestJournalDetail:
         resp = c.delete('/api/journal/99999/')
         assert resp.status_code == 404
 
+    def test_create_future_date_rejected(self, admin_user):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.post('/api/journal/create/',
+            json.dumps({
+                'ii_pi': 'ИИ', 'notice_number': 'ИИ-FUT',
+                'subject': 'Будущая дата', 'date_issued': '2099-01-01',
+            }),
+            content_type='application/json')
+        assert resp.status_code == 400
+        assert 'позже' in resp.json()['error']
+
+    def test_update_future_date_rejected(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.put(f'/api/journal/{notice.id}/',
+            json.dumps({'date_issued': '2099-01-01'}),
+            content_type='application/json')
+        assert resp.status_code == 400
+        assert 'позже' in resp.json()['error']
+
     def test_update_requires_writer(self, regular_user, notice):
         c = Client()
         c.force_login(regular_user)

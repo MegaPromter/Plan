@@ -217,7 +217,7 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                 created += 1
 
             # ── ПП-записи (show_in_pp=True) ──────────────────────────────
-            pp_projects = list(PPProject.objects.all())
+            pp_projects = list(PPProject.objects.all()[:100])
             pp_count = min(count // 2, 500)  # половина от SP, макс 500
             if pp_projects:
                 for idx in range(pp_count):

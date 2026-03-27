@@ -1254,3 +1254,49 @@ tr.drag-over-bottom { box-shadow:inset 0 -2px 0 var(--accent); }
 }
 .avatar-circle.sm { width: 24px; height: 24px; font-size: 11px; }
 .avatar-circle.lg { width: 40px; height: 40px; font-size: 16px; }
+
+/* ── Модалка пересечений отсутствий ──────────────────────────────── */
+.overlap-modal-content { max-width:100%; }
+.overlap-form { margin-bottom:16px; }
+.overlap-form-row { margin-bottom:12px; }
+.overlap-label { font-size:13px; font-weight:600; color:var(--text2); margin-bottom:4px; display:block; }
+.overlap-emp-select-wrap { border:1px solid var(--border); border-radius:8px; padding:8px; }
+.overlap-emp-search { width:100%; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-bottom:6px; font-family:var(--font); }
+.overlap-emp-actions { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+.overlap-selected-count { font-size:12px; color:var(--text2); margin-left:auto; }
+.overlap-emp-list { max-height:240px; overflow-y:auto; }
+.overlap-emp-group { margin-bottom:8px; }
+.overlap-dept-header { display:flex; align-items:center; gap:6px; padding:4px 0; cursor:pointer; font-size:13px; }
+.overlap-emp-item { display:block; padding:2px 0 2px 20px; font-size:13px; cursor:pointer; }
+.overlap-emp-item:hover { background:var(--surface2); }
+.overlap-check-label { font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+
+/* Результаты */
+.overlap-summary { margin-bottom:16px; padding:12px 16px; background:var(--surface2); border-radius:8px; }
+.overlap-summary-stats { display:flex; gap:20px; flex-wrap:wrap; }
+.overlap-stat { font-size:13px; display:flex; align-items:center; gap:6px; }
+.overlap-no-result { text-align:center; padding:24px; font-size:14px; color:var(--text2); }
+.overlap-table-wrap { overflow-x:auto; margin-bottom:16px; }
+.overlap-table { width:100%; border-collapse:collapse; font-size:13px; }
+.overlap-table th { text-align:left; padding:8px 10px; background:var(--surface2); border-bottom:2px solid var(--border); font-weight:600; white-space:nowrap; }
+.overlap-table td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+.ov-dates { white-space:nowrap; font-weight:500; }
+.ov-days { text-align:center; font-weight:600; color:var(--danger); }
+.ov-emp-row { margin-bottom:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ov-emp-name { font-weight:500; }
+.ov-badge { padding:1px 6px; border-radius:10px; font-size:11px; font-weight:600; }
+.ov-badge-vac { background:rgba(37,99,235,0.12); color:#2563eb; }
+.ov-badge-trip { background:rgba(124,58,237,0.12); color:#7c3aed; }
+.ov-emp-detail { font-size:12px; color:var(--text2); }
+
+/* Таймлайн */
+.overlap-timeline { margin-top:16px; }
+.overlap-timeline h4 { font-size:14px; font-weight:600; color:var(--text); }
+.ov-tl-header { position:relative; height:20px; margin-bottom:4px; border-bottom:1px solid var(--border); }
+.ov-tl-month { position:absolute; font-size:11px; color:var(--muted); top:0; }
+.ov-tl-row { display:flex; align-items:center; height:28px; gap:8px; }
+.ov-tl-name { width:160px; flex-shrink:0; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ov-tl-bars { flex:1; position:relative; height:18px; background:var(--surface2); border-radius:3px; }
+.ov-tl-bar { position:absolute; top:2px; height:14px; border-radius:3px; opacity:0.85; }
+.ov-bar-vac { background:#3b82f6; }
+.ov-bar-trip { background:#8b5cf6; }

@@ -84,12 +84,7 @@ window.fbLoad = fbLoad;
 function renderList(items) {
   var el = document.getElementById('fbList');
   if (!items.length) {
-    el.innerHTML = '<div class="empty-state">' +
-      '<div class="empty-state-icon"><i class="fas fa-clipboard-check"></i></div>' +
-      '<div class="empty-state-title">Нет замечаний</div>' +
-      '<div class="empty-state-desc">Здесь будут отображаться замечания и обращения</div>' +
-      '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="fbOpenCreate()"><i class="fas fa-plus"></i> Создать обращение</button></div>' +
-      '</div>';
+    el.innerHTML = emptyStateHtml({icon:'fas fa-clipboard-check', title:'Нет замечаний', desc:'Здесь будут отображаться замечания и обращения', action:'<button class="btn btn-primary btn-sm" onclick="fbOpenCreate()"><i class="fas fa-plus"></i> Создать обращение</button>'});
     return;
   }
   var html = '';

@@ -31,6 +31,9 @@ function openModal(options = {}) {
     // Dialog
     const dialog = document.createElement('div');
     dialog.className = 'modal-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    if (title) dialog.setAttribute('aria-label', title);
     dialog.style.cssText = `
         background: var(--surface, #ffffff); border: 1px solid var(--border, #e2e6ed);
         border-radius: 12px; width: ${width}; max-width: 95vw;
@@ -183,15 +186,22 @@ function closeModal(idOrEl) {
     } else {
         el = idOrEl;
     }
-    if (el) {
-        el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
-        setTimeout(() => {
-            el.remove();
-            if (!document.querySelector('.modal-backdrop')) {
-                document.body.style.overflow = '';
-            }
-        }, 150);
+    if (!el) return;
+
+    // Шаблонные модалы (.modal-overlay) — убираем класс .open
+    if (el.classList.contains('modal-overlay')) {
+        el.classList.remove('open');
+        return;
     }
+
+    // JS-модалы (.modal-backdrop из openModal) — удаляем с анимацией
+    el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
+    setTimeout(() => {
+        el.remove();
+        if (!document.querySelector('.modal-backdrop')) {
+            document.body.style.overflow = '';
+        }
+    }, 150);
 }
 
 function closeAllModals() {
@@ -216,6 +226,18 @@ function closeAllModals() {
     `;
     document.head.appendChild(style);
 })();
+
+/* ── Шаблонные модалы (.modal-overlay): единый ESC и клик по фону ────────── */
+
+// Клик по фону — закрываем если клик именно на оверлей, не на содержимое (.modal)
+// Дублирует base.js:172, но base.js может не загрузиться первым — defensive
+document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('modal-overlay')) return;
+    if (!e.target.classList.contains('open')) return;
+    // Используем реестр кастомных close-функций (если зарегистрирована)
+    if (typeof _callModalClose === 'function') _callModalClose(e.target);
+    else e.target.classList.remove('open');
+});
 
 /* ── Confirm-диалог ──────────────────────────────────────────────────────── */
 

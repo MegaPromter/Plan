@@ -13,4 +13,4 @@ class HealthCheckView(View):
                 cursor.execute('SELECT 1')
             return JsonResponse({'status': 'ok'})
         except Exception:
-            return JsonResponse({'status': 'error', 'detail': 'database unavailable'}, status=503)
+            return JsonResponse({'status': 'error', 'error': 'database unavailable'}, status=503)

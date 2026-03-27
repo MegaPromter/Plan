@@ -8,7 +8,7 @@ PUT     /api/journal/<id>     -- обновление записи (writer)
 DELETE  /api/journal/<id>     -- удаление записи (writer, только ручные)
 """
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -252,6 +252,11 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
         if status not in valid_statuses:
             status = Notice.STATUS_ACTIVE
 
+        # Валидация: дата выпуска не может быть позже сегодня
+        di = _safe_date(data.get('date_issued'))
+        if di and di > date.today():
+            return JsonResponse({'error': 'Дата выпуска не может быть позже текущей даты'}, status=400)
+
         try:
             with transaction.atomic():
                 if nn and iip and Notice.objects.filter(notice_number=nn, ii_pi=iip).exists():
@@ -266,7 +271,7 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
                     department=department,
                     sector=sector,
                     executor=executor,
-                    date_issued=_safe_date(data.get('date_issued')),
+                    date_issued=di,
                     date_expires=_safe_date(data.get('date_expires')),
                     subject=data.get('subject', '') or '',
                     description=data.get('description', '') or '',
@@ -399,7 +404,10 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
                 update_fields.append('executor')
 
             if 'date_issued' in data:
-                notice.date_issued = _safe_date(data['date_issued'])
+                di = _safe_date(data['date_issued'])
+                if di and di > date.today():
+                    return JsonResponse({'error': 'Дата выпуска не может быть позже текущей даты'}, status=400)
+                notice.date_issued = di
                 update_fields.append('date_issued')
 
             if 'date_expires' in data:

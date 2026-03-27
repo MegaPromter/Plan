@@ -38,38 +38,10 @@ urlpatterns = [
     # ER-диаграмма моделей
     path('er-diagram/', views.ERDiagramView.as_view(), name='er_diagram'),
 
-    # ── Стандартные CRUD-маршруты для работ ────────────────────────────────────
+    # ── Журнал корректирующих извещений (SPA) ─────────────────────────────────
 
-    # Список работ (с фильтрацией по видимости пользователя)
-    path('',                    views.WorkListView.as_view(),    name='list'),
-    # Детальная страница одной работы
-    path('<int:pk>/',           views.WorkDetailView.as_view(),  name='detail'),
-    # Форма создания новой работы
-    path('create/',             views.WorkCreateView.as_view(),  name='create'),
-    # Форма редактирования существующей работы
-    path('<int:pk>/edit/',      views.WorkUpdateView.as_view(),  name='edit'),
-    # Подтверждение и выполнение удаления работы
-    path('<int:pk>/delete/',    views.WorkDeleteView.as_view(),  name='delete'),
-
-    # ── Отчётные документы к работам ───────────────────────────────────────────
-
-    # Добавление нового отчётного документа к работе
-    path('<int:work_pk>/reports/add/',       views.ReportCreateView.as_view(), name='report_add'),
-    # Редактирование существующего отчётного документа
-    path('reports/<int:pk>/edit/',           views.ReportUpdateView.as_view(), name='report_edit'),
-    # Удаление отчётного документа
-    path('reports/<int:pk>/delete/',         views.ReportDeleteView.as_view(), name='report_delete'),
-
-    # ── Журнал корректирующих извещений ────────────────────────────────────────
-
-    # Список всех извещений
+    # Список извещений (SPA-страница, CRUD — через API /api/journal/)
     path('notices/',             views.NoticeListView.as_view(),   name='notice_list'),
-    # Создание нового извещения
-    path('notices/add/',         views.NoticeCreateView.as_view(), name='notice_add'),
-    # Детальная страница извещения
-    path('notices/<int:pk>/',    views.NoticeDetailView.as_view(), name='notice_detail'),
-    # Редактирование извещения
-    path('notices/<int:pk>/edit/', views.NoticeUpdateView.as_view(), name='notice_edit'),
 ]
 
 # ── Демо-страницы для показа улучшений дизайна (только DEBUG) ────────────

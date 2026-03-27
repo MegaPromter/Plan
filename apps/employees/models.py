@@ -374,6 +374,12 @@ class Vacation(models.Model):
         indexes = [
             models.Index(fields=['employee', 'date_start']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(date_end__gte=models.F('date_start')),
+                name='vacation_date_end_gte_start',
+            ),
+        ]
 
     def __str__(self):
         # Строковое представление: «Фамилия И.О.: дата_начала – дата_конца»
@@ -426,6 +432,12 @@ class BusinessTrip(models.Model):
         ordering = ['date_start']
         indexes = [
             models.Index(fields=['employee', 'date_start']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(date_end__gte=models.F('date_start')),
+                name='trip_date_end_gte_start',
+            ),
         ]
 
     def __str__(self):

@@ -34,12 +34,9 @@ function _canModify(rowDept, rowSector) {
 }
 
 /* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */
-var _ppSkeletonRows = skeletonRows;
+// skeletonRows() — в utils.js
 
-/* ── Переключатель плотности — в utils.js ─────────────────────────── */
-function _initPPDensity() {
-  initDensityToggle('.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable');
-}
+/* ── Переключатель плотности — initDensityToggle() в utils.js ─────── */
 
 /** Формирует стандартное название ПП:
  *  "Производственный план подразделения НТЦ-XX по проекту/изделию ..."
@@ -258,13 +255,7 @@ function renderProjects() {
 
   // Пустое состояние: нет проектов
   if (projects.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1;">
-        <div class="empty-state-icon"><i class="fas fa-industry"></i></div>
-        <div class="empty-state-title">Производственных планов пока нет</div>
-        <div class="empty-state-desc">Создайте первый план, чтобы начать управлять производством</div>
-        ${IS_ADMIN ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button></div>' : ''}
-      </div>`;
+    grid.innerHTML = '<div style="grid-column:1/-1;">' + emptyStateHtml({icon:'fas fa-industry', title:'Производственных планов пока нет', desc:'Создайте первый план, чтобы начать управлять производством', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button>' : ''}) + '</div>';
     return;
   }
 
@@ -601,7 +592,7 @@ async function openProject(id, name) {
 
   // Показываем skeleton-загрузку в таблице
   const _ppTbody = document.getElementById('ppTableBody');
-  if (_ppTbody) _ppTbody.innerHTML = _ppSkeletonRows(10, 19);
+  if (_ppTbody) _ppTbody.innerHTML = skeletonRows(10, 19);
   // Загружаем строки плана и рендерим таблицу
   await loadPPRows(id);
 
@@ -781,16 +772,7 @@ function renderPPTable() {
 
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="20">
-      <div class="empty-state">
-        <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
-        <div class="empty-state-title">Нет записей</div>
-        <div class="empty-state-desc">Попробуйте изменить фильтры или добавьте новую строку</div>
-        <div class="empty-state-action">
-          <button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>
-        </div>
-      </div>
-    </td></tr>`;
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-inbox', title:'Нет записей', desc:'Попробуйте изменить фильтры или добавьте новую строку', action:'<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>', colspan:20});
     return;
   }
 
@@ -2068,7 +2050,7 @@ window.addEventListener('popstate', async () => {
 
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
-  _initPPDensity();
+  initDensityToggle('.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable');
   _ppInitSort();
   // Параллельно загружаем справочники и список ПП-проектов
   await Promise.all([loadDirs(), loadProjects()]);
@@ -2495,10 +2477,7 @@ async function ppAlignDates(cascade) {
   } catch (e) { showToast('Ошибка', 'error'); }
 }
 
-// Закрытие модала кликом по фону
-document.getElementById('ppDepsModal').addEventListener('click', function(e) {
-  if (e.target === this) closePPDepsModal();
-});
+// Закрытие модала кликом по фону — обрабатывается глобально в modal.js/base.js
 
 
 // ── PP Gantt View ──────────────────────────────────────────────────────

@@ -239,6 +239,20 @@
 .dash-hero .btn-primary:hover {
   background:rgba(255,255,255,0.3);
 }
+
+/* ── Уведомления на dashboard ──────────────────────────────────── */
+.dash-notif-list { display:flex; flex-direction:column; gap:2px; }
+.dash-notif-item {
+  display:flex; align-items:flex-start; gap:10px; padding:8px 12px;
+  border-radius:8px; text-decoration:none; color:var(--text);
+  transition:background 0.15s;
+}
+.dash-notif-item:hover { background:var(--surface2); }
+.dash-notif-item.notif-read { opacity:0.5; }
+.dash-notif-item i { margin-top:2px; font-size:14px; }
+.dash-notif-text { min-width:0; }
+.dash-notif-title { font-size:13px; font-weight:600; }
+.dash-notif-msg { font-size:12px; color:var(--text2); margin-top:1px; }
 </style>
 {% endblock %}
 
@@ -318,5 +332,5 @@
   "role": "{{ role|escapejs }}",
   "isWriter": {% if is_writer %}true{% else %}false{% endif %}
 }</script>
-<script src="{% static 'js/dashboard.js' %}?v=17"></script>
+<script src="{% static 'js/dashboard.js' %}?v=18"></script>
 {% endblock %}

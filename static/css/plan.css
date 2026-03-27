@@ -47,7 +47,7 @@
 .main-content.sidebar-collapsed .toolbar { left:0; }
 .toolbar .pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .toolbar .sp-dept-row { display:flex; align-items:center; gap:8px; }
-.toolbar .density-toggle { align-self:flex-end; }
+.toolbar .density-toggle { margin-top:2px; }
 .cal-block { display:flex; align-items:center; gap:8px; }
 .cal-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; font-weight:600; }
 .cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);

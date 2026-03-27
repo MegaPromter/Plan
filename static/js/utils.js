@@ -3,6 +3,18 @@
  * Аналог общих функций из Flask plan.html.
  */
 
+/* ── Глобальный реестр кастомных close-функций для модалов ────────────────── */
+// Модули регистрируют: registerModalCloser('newTaskModal', closeNewTaskModal)
+// ESC/click вызовет эту функцию вместо простого classList.remove('open')
+var _globalModalClosers = {};
+function registerModalCloser(modalId, closeFn) {
+    _globalModalClosers[modalId] = closeFn;
+}
+function _callModalClose(el) {
+    var fn = _globalModalClosers[el.id];
+    if (fn) fn(); else el.classList.remove('open');
+}
+
 /* ── CSRF-токен для fetch ─────────────────────────────────────────────────── */
 
 function getCsrfToken() {
@@ -56,13 +68,18 @@ let _toastContainer = null;
 
 function _ensureToastContainer() {
     if (_toastContainer) return _toastContainer;
+    // Используем контейнер из base.html если есть
+    _toastContainer = document.getElementById('toastContainer') || document.getElementById('toast-container');
+    if (_toastContainer) return _toastContainer;
     _toastContainer = document.createElement('div');
-    _toastContainer.id = 'toast-container';
+    _toastContainer.id = 'toastContainer';
     _toastContainer.style.cssText = `
         position: fixed; top: 16px; right: 16px; z-index: 10000;
         display: flex; flex-direction: column; gap: 8px;
         pointer-events: none;
     `;
+    _toastContainer.setAttribute('aria-live', 'polite');
+    _toastContainer.setAttribute('role', 'status');
     document.body.appendChild(_toastContainer);
     return _toastContainer;
 }
@@ -258,13 +275,16 @@ function monthAdd(dateStr, months) {
     return `${newY}-${String(newM).padStart(2, '0')}`;
 }
 
+// Глобальные константы месяцев (единый источник для всех модулей)
+// Индекс 0 — пустая строка, чтобы MONTHS_FULL[1] = "Январь"
+var MONTHS_FULL  = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+var MONTHS_SHORT = ['','Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+// Индекс с 0 (для 0-based month): MONTHS_SHORT_0[0] = "Янв"
+var MONTHS_SHORT_0 = MONTHS_SHORT.slice(1);
+
 function monthLabel(dateStr) {
-    const months = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ];
     const [y, m] = dateStr.split('-').map(Number);
-    return `${months[m - 1]} ${y}`;
+    return `${MONTHS_FULL[m]} ${y}`;
 }
 
 function currentMonth() {
@@ -913,13 +933,18 @@ function initColumnResize(tableSelector, handleSelector) {
  */
 function emptyStateHtml(opts) {
     opts = opts || {};
-    var icon  = opts.icon  || 'fas fa-inbox';
     var title = opts.title || 'Нет данных';
     var desc  = opts.desc  || '';
     var action = opts.action || '';   // HTML кнопки-действия
+    // iconHtml — произвольный HTML для иконки (эмодзи, текст);
+    // icon — CSS-класс FontAwesome (по умолчанию)
+    var iconContent = opts.iconHtml
+        ? opts.iconHtml
+        : '<i class="' + (opts.icon || 'fas fa-inbox') + '"></i>';
+    var style = opts.style ? ' style="' + opts.style + '"' : '';
     var inner =
-        '<div class="empty-state">' +
-          '<div class="empty-state-icon"><i class="' + icon + '"></i></div>' +
+        '<div class="empty-state"' + style + '>' +
+          '<div class="empty-state-icon">' + iconContent + '</div>' +
           '<div class="empty-state-title">' + title + '</div>' +
           (desc ? '<div class="empty-state-desc">' + desc + '</div>' : '') +
           (action ? '<div class="empty-state-action">' + action + '</div>' : '') +
@@ -928,6 +953,125 @@ function emptyStateHtml(opts) {
         return '<tr><td colspan="' + opts.colspan + '">' + inner + '</td></tr>';
     }
     return inner;
+}
+
+/* ── Мультифильтр для колонок таблицы (фабрика) ────────────────────────── */
+/**
+ * Создаёт набор функций мультифильтра для колонок таблицы.
+ * @param {object} opts
+ *   getValues(col)       — возвращает отсортированный массив уникальных значений колонки
+ *   onApply(col, btn, sel) — вызывается после изменения выбора (sel — Set выбранных)
+ *   formatDisplay(col, val) — (опц.) преобразует val для отображения в списке
+ *   searchMatch(col, opt, query) — (опц.) кастомная фильтрация по поиску
+ * @returns {object} { build, toggle, getSelections, setSelections, cleanup }
+ */
+function createMultiFilter(opts) {
+    var selections = {};   // col → Set
+    var activeDrop = null;
+    var activeBtn  = null;
+
+    function build(btn, col) {
+        if (activeDrop) activeDrop.remove();
+        var vals = opts.getValues(col);
+        var selected = selections[col] || new Set();
+        var drop = document.createElement('div');
+        drop.className = 'mf-dropdown open';
+        drop.dataset.col = col;
+
+        // Поиск
+        var sw = document.createElement('div'); sw.className = 'mf-search';
+        var si = document.createElement('input'); si.placeholder = 'Поиск...'; si.autocomplete = 'off';
+        si.oninput = function() {
+            var q = si.value.toLowerCase();
+            drop.querySelectorAll('.mf-option').forEach(function(o) {
+                if (opts.searchMatch) {
+                    o.style.display = opts.searchMatch(col, o, q) ? '' : 'none';
+                } else {
+                    var raw = o.dataset.val.toLowerCase();
+                    var disp = (o.textContent || '').toLowerCase();
+                    o.style.display = (raw.includes(q) || disp.includes(q)) ? '' : 'none';
+                }
+            });
+        };
+        sw.appendChild(si); drop.appendChild(sw);
+
+        // Кнопки «Все» / «Сброс»
+        var ac = document.createElement('div'); ac.className = 'mf-actions';
+        var selAll = document.createElement('button'); selAll.className = 'mf-btn'; selAll.textContent = 'Все';
+        selAll.onclick = function(e) {
+            e.stopPropagation();
+            selections[col] = new Set(vals);
+            drop.querySelectorAll('.mf-option input').forEach(function(c) { c.checked = true; });
+            opts.onApply(col, btn, selections[col]);
+        };
+        var clr = document.createElement('button'); clr.className = 'mf-btn'; clr.textContent = 'Сброс';
+        clr.onclick = function(e) {
+            e.stopPropagation();
+            selections[col] = new Set();
+            drop.querySelectorAll('.mf-option input').forEach(function(c) { c.checked = false; });
+            opts.onApply(col, btn, selections[col]);
+        };
+        ac.appendChild(selAll); ac.appendChild(clr); drop.appendChild(ac);
+
+        // Опции
+        vals.forEach(function(val) {
+            var o = document.createElement('div'); o.className = 'mf-option'; o.dataset.val = val;
+            o.tabIndex = 0;
+            var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
+            cb.tabIndex = -1;
+            var toggle = function() {
+                cb.checked = !cb.checked;
+                var s = selections[col] || new Set();
+                if (cb.checked) s.add(val); else s.delete(val);
+                selections[col] = s;
+                opts.onApply(col, btn, s);
+            };
+            cb.onchange = function() {
+                var s = selections[col] || new Set();
+                if (cb.checked) s.add(val); else s.delete(val);
+                selections[col] = s;
+                opts.onApply(col, btn, s);
+            };
+            o.onclick = function(e) { if (e.target !== cb) toggle(); };
+            o.onkeydown = function(e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            };
+            o.appendChild(cb);
+            var displayText = opts.formatDisplay ? opts.formatDisplay(col, val) : val;
+            o.appendChild(document.createTextNode(displayText));
+            drop.appendChild(o);
+        });
+
+        document.body.appendChild(drop);
+        var rect = btn.getBoundingClientRect();
+        drop.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+        drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
+        activeDrop = drop; activeBtn = btn;
+        setTimeout(function() { si.focus(); }, 50);
+    }
+
+    function toggle(btn) {
+        if (activeDrop && activeBtn === btn) {
+            activeDrop.remove(); activeDrop = null; activeBtn = null;
+            return;
+        }
+        build(btn, btn.dataset.col);
+    }
+
+    // Закрытие при клике снаружи
+    document.addEventListener('click', function(e) {
+        if (activeDrop && !activeDrop.contains(e.target) && e.target !== activeBtn) {
+            activeDrop.remove(); activeDrop = null; activeBtn = null;
+        }
+    }, true);
+
+    return {
+        build: build,
+        toggle: toggle,
+        getSelections: function() { return selections; },
+        setSelections: function(s) { selections = s; },
+        getActiveDrop: function() { return activeDrop; }
+    };
 }
 
 /* ── Staggered fade-in ──────────────────────────────────────────────────── */
@@ -1146,10 +1290,10 @@ document.addEventListener('keydown', function(e) {
         // modal-backdrop (modal.js обрабатывает сам)
         var backdrops = document.querySelectorAll('.modal-backdrop');
         if (backdrops.length) return;
-        // .modal-overlay.open — закрываем верхнее
+        // .modal-overlay.open — закрываем верхнее (через реестр или classList)
         var openModals = document.querySelectorAll('.modal-overlay.open');
         if (openModals.length) {
-            openModals[openModals.length - 1].classList.remove('open');
+            _callModalClose(openModals[openModals.length - 1]);
             e.preventDefault();
             return;
         }

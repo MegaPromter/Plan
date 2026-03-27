@@ -30,8 +30,11 @@ NOTICE_TASK_TYPE = 'Корректировка документа'
 
 _URL_RE = re.compile(
     r'^https?://'               # http:// или https://
-    r'[^\s/$.?#]'               # хотя бы один символ домена
-    r'[^\s]*$',                 # остальные символы (без пробелов)
+    r'[A-Za-z0-9]'             # домен начинается с буквы/цифры
+    r'[A-Za-z0-9._-]*'         # остальная часть домена
+    r'\.'                       # обязательная точка
+    r'[A-Za-z]{2,}'            # TLD минимум 2 буквы
+    r'[^\s]*$',                 # путь/параметры (без пробелов)
     re.IGNORECASE,
 )
 
@@ -192,6 +195,11 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
         if url_err:
             return JsonResponse({'error': url_err}, status=400)
 
+        # Валидация: дата выпуска не может быть позже сегодня
+        da = _safe_date(d.get('date_accepted'))
+        if da and da > dt_date.today():
+            return JsonResponse({'error': 'Дата выпуска не может быть позже текущей даты'}, status=400)
+
         with transaction.atomic():
             report = WorkReport.objects.create(
                 work_id=task_id,
@@ -200,7 +208,7 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
                 ii_pi=d.get('ii_pi') or '',
                 doc_number=d.get('doc_number') or '',
                 inventory_num=d.get('inventory_num') or '',
-                date_accepted=_safe_date(d.get('date_accepted')),
+                date_accepted=da,
                 date_expires=_safe_date(d.get('date_expires')),
                 doc_type=d.get('doc_type') or '',
                 doc_class=d.get('doc_class') or '',
@@ -298,7 +306,10 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         report.doc_link = d.get('doc_link') or report.doc_link or ''
 
         if 'date_accepted' in d:
-            report.date_accepted = _safe_date(d['date_accepted'])
+            da = _safe_date(d['date_accepted'])
+            if da and da > dt_date.today():
+                return JsonResponse({'error': 'Дата выпуска не может быть позже текущей даты'}, status=400)
+            report.date_accepted = da
         if 'date_expires' in d:
             report.date_expires = _safe_date(d['date_expires'])
         if 'sheets_a4' in d:
@@ -310,7 +321,8 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         if 'bvd_hours' in d:
             report.bvd_hours = _safe_decimal(d['bvd_hours'])
 
-        report.save()
-        # Синхронизация ЖИ при обновлении отчёта
-        _sync_notice_for_report(report)
+        with transaction.atomic():
+            report.save()
+            # Синхронизация ЖИ при обновлении отчёта
+            _sync_notice_for_report(report)
         return JsonResponse({'ok': True})

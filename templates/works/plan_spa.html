@@ -377,7 +377,7 @@
 </div>
 
 <!-- DATE CHANGE CONFIRMATION MODAL -->
-<div class="modal-overlay" id="dateChangeModal" style="display:none;">
+<div class="modal-overlay" id="dateChangeModal">
 <div class="modal" style="max-width:500px">
   <div class="modal-header">
     <div class="modal-title">⚠️ Изменение периода задачи</div>
@@ -398,7 +398,7 @@
 </div>
 
 <!-- VACATION CONFLICT MODAL -->
-<div class="modal-overlay" id="vacationConflictModal" style="display:none;">
+<div class="modal-overlay" id="vacationConflictModal">
 <div class="modal" style="max-width:500px">
   <div class="modal-header">
     <div class="modal-title">⚠️ Пересечение с отпусками</div>
@@ -436,7 +436,7 @@
       <div style="flex:1;min-width:200px;">
         <label>Задача-предшественник</label>
         <div class="search-dropdown" id="depsAddPredDropdown" style="margin-top:4px;">
-          <input type="text" class="search-dropdown-input" id="depsAddPredInput" placeholder="Поиск задачи..." autocomplete="off">
+          <input type="text" class="search-dropdown-input" id="depsAddPredInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
           <span class="search-dropdown-arrow">▼</span>
           <div class="search-dropdown-list" id="depsAddPredList"></div>
           <input type="hidden" id="depsAddPredSelect" value="">
@@ -463,7 +463,7 @@
       <div style="flex:1;min-width:200px;">
         <label>Задача-последователь</label>
         <div class="search-dropdown" id="depsAddSuccDropdown" style="margin-top:4px;">
-          <input type="text" class="search-dropdown-input" id="depsAddSuccInput" placeholder="Поиск задачи..." autocomplete="off">
+          <input type="text" class="search-dropdown-input" id="depsAddSuccInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
           <span class="search-dropdown-arrow">▼</span>
           <div class="search-dropdown-list" id="depsAddSuccList"></div>
           <input type="hidden" id="depsAddSuccSelect" value="">
@@ -535,7 +535,7 @@
 <script src="{% static 'js/utils.js' %}?v=11"></script>
 <script src="{% static 'js/shared-toolbar.js' %}?v=2"></script>
 <script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}"></script>
+<script src="{% static 'js/modal.js' %}?v=4"></script>
 <script src="{% static 'js/filters.js' %}?v=1"></script>
 <script id="sp-config" type="application/json">{
   "isWriter": {{ is_writer|yesno:"true,false" }},
@@ -546,7 +546,7 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}?v=11"></script>
+<script src="{% static 'js/plan.js' %}?v=12"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){

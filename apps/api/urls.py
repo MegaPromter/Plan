@@ -50,6 +50,8 @@ from .views.vacations import (
 )
 # Вьюхи командировок
 from .views.business_trips import BusinessTripListView, BusinessTripDetailView
+# Вьюха пересечений отсутствий
+from .views.absence_overlaps import AbsenceOverlapsView
 # Вьюхи журнала извещений
 from .views.journal import JournalListView, JournalCreateView, JournalDetailView
 # Вьюхи замечаний и предложений (Feedback)
@@ -82,7 +84,7 @@ from .views.comments import CommentListView, CommentDetailView
 from .views.health import HealthCheckView
 # Уведомления
 from .views.notifications import (
-    NotificationListView, NotificationReadView,
+    NotificationListView, NotificationSyncView, NotificationReadView,
     NotificationReadAllView, NotificationUnreadCountView,
 )
 
@@ -200,6 +202,8 @@ urlpatterns = [
     path('vacations/<int:pk>/', VacationDetailView.as_view()),
     # GET /api/check_vacation_conflict/ — проверка пересечений отпусков
     path('check_vacation_conflict/', VacationConflictView.as_view()),
+    # POST /api/absence_overlaps/ — проверка пересечений отсутствий (отпуска + командировки)
+    path('absence_overlaps/', AbsenceOverlapsView.as_view()),
 
     # ── Командировки ──────────────────────────────────────────────────
     path('business_trips/',          BusinessTripListView.as_view()),
@@ -283,8 +287,10 @@ urlpatterns = [
     path('dashboard/', DashboardAPIView.as_view()),
 
     # ── Уведомления ────────────────────────────────────────────────────
-    # GET /api/notifications/ — список последних 20 уведомлений
+    # GET /api/notifications/ — список последних 50 уведомлений
     path('notifications/', NotificationListView.as_view()),
+    # POST /api/notifications/sync/ — генерация уведомлений о сроках
+    path('notifications/sync/', NotificationSyncView.as_view()),
     # POST /api/notifications/<pk>/read/ — пометить как прочитанное
     path('notifications/<int:pk>/read/', NotificationReadView.as_view()),
     # POST /api/notifications/read_all/ — пометить все как прочитанные

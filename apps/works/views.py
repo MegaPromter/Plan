@@ -1,221 +1,16 @@
 # Миксины для проверки аутентификации и прав доступа на уровне view
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 # Базовые generic-view классы Django
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView,
-)
-# Утилита для создания URL-адресов «ленивым» способом (вычисляется при обращении)
-from django.urls import reverse_lazy
-# Получение объекта или автоматический возврат 404 при его отсутствии
-from django.shortcuts import get_object_or_404
-from django.contrib import messages
-from django.db.models import Q
+from django.views.generic import ListView, TemplateView
 
 # Модель сотрудника — нужна для получения роли и настроек пользователя
 from apps.employees.models import Employee
-# Модель отдела — используется в контексте для фильтрации по отделам
-from apps.employees.models import Department
-# Единый фильтр видимости (с поддержкой RoleDelegation и show_all_depts)
-from apps.api.utils import get_visibility_filter
 # Основные модели данного приложения
-from .models import Work, WorkReport, Notice
-# Формы для создания и редактирования объектов
-from .forms  import WorkForm, WorkReportForm, NoticeForm
+from .models import Notice
 # Общий миксин для SPA-страниц
 from .mixins import SPAContextMixin
 # timezone — работа со временем с учётом часового пояса
 from django.utils import timezone
-
-
-# ── Миксин writer ─────────────────────────────────────────────────────────────
-
-class WriterRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    # Проверяет, имеет ли пользователь право на запись (is_writer=True)
-    def test_func(self):
-        try:
-            # Проверяем флаг is_writer у связанного профиля Employee
-            return self.request.user.employee.is_writer
-        except Employee.DoesNotExist:
-            # Если профиля Employee нет — разрешаем суперпользователям
-            return self.request.user.is_superuser
-
-
-# ── Работы ────────────────────────────────────────────────────────────────────
-
-class WorkListView(LoginRequiredMixin, ListView):
-    # Модель, из которой берётся queryset
-    model               = Work
-    # Шаблон для отображения списка работ
-    template_name       = 'works/list.html'
-    # Имя переменной в контексте шаблона
-    context_object_name = 'works'
-    # Количество записей на одной странице
-    paginate_by         = 50
-
-    def get_queryset(self):
-        # Базовый queryset с оптимизированными JOIN'ами для связанных объектов
-        qs = Work.objects.select_related(
-            'department', 'sector',
-            'ntc_center', 'executor', 'project',
-        ).filter(get_visibility_filter(self.request.user))
-
-        # Фильтры из GET-параметров
-        # Фильтр по источнику (план задач или производственный план)
-        src = self.request.GET.get('source')
-        if src == 'task':
-            qs = qs.filter(show_in_plan=True)
-        elif src == 'pp':
-            qs = qs.filter(show_in_pp=True)
-
-        # Полнотекстовый поиск по названию работы, номеру документа, фамилии исполнителя
-        q = self.request.GET.get('q', '').strip()
-        if q:
-            qs = qs.filter(
-                Q(work_name__icontains=q) |
-                Q(work_num__icontains=q) |
-                Q(executor__last_name__icontains=q)
-            )
-
-        # Фильтр по коду отдела
-        dept = self.request.GET.get('dept')
-        if dept:
-            qs = qs.filter(department__code=dept)
-
-        # Фильтр по году: работы, активные в данном году
-        year = self.request.GET.get('year')
-        if year:
-            qs = qs.filter(
-                Q(date_start__year__lte=year, date_end__year__gte=year) |
-                Q(date_start__year=year)
-            )
-
-        # Сортируем: последние созданные — первыми
-        return qs.order_by('-created_at')
-
-    def get_context_data(self, **kwargs):
-        # Вызываем родительский метод для стандартных контекстных переменных
-        ctx = super().get_context_data(**kwargs)
-        # Список всех отделов (для фильтра по отделу)
-        ctx['departments'] = Department.objects.order_by('code')
-        # Диапазон годов для фильтра (3 прошлых + текущий + 2 будущих)
-        current_year = timezone.now().date().year
-        ctx['years'] = list(range(current_year - 3, current_year + 3))
-        return ctx
-
-
-class WorkDetailView(LoginRequiredMixin, DetailView):
-    # Модель для детального просмотра
-    model         = Work
-    # Шаблон детальной страницы работы
-    template_name = 'works/detail.html'
-
-    def get_queryset(self):
-        # Применяем фильтр видимости + загружаем все связанные объекты одним запросом
-        return Work.objects.filter(
-            get_visibility_filter(self.request.user)
-        ).select_related(
-            'department', 'sector', 'ntc_center',
-            'executor', 'project', 'created_by',
-        ).prefetch_related('reports')  # Отчётные документы одним запросом
-
-
-class WorkCreateView(WriterRequiredMixin, CreateView):
-    # Модель для создания новой записи
-    model         = Work
-    # Форма для создания работы
-    form_class    = WorkForm
-    # Шаблон с формой
-    template_name = 'works/form.html'
-
-    def form_valid(self, form):
-        try:
-            # Автоматически устанавливаем создателя записи из профиля Employee
-            form.instance.created_by = self.request.user.employee
-        except Employee.DoesNotExist:
-            # Если профиля Employee нет — оставляем created_by пустым
-            pass
-        # Передаём управление родительскому методу (сохранение + редирект)
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        # После создания перенаправляем на детальную страницу новой записи
-        return reverse_lazy('works:detail', kwargs={'pk': self.object.pk})
-
-
-class WorkUpdateView(WriterRequiredMixin, UpdateView):
-    # Модель для редактирования
-    model         = Work
-    # Форма редактирования
-    form_class    = WorkForm
-    # Шаблон с формой
-    template_name = 'works/form.html'
-
-    def get_queryset(self):
-        # Пользователь может редактировать только видимые ему записи
-        return Work.objects.filter(get_visibility_filter(self.request.user))
-
-    def get_success_url(self):
-        # После редактирования возвращаем на детальную страницу
-        return reverse_lazy('works:detail', kwargs={'pk': self.object.pk})
-
-
-class WorkDeleteView(WriterRequiredMixin, DeleteView):
-    # Модель для удаления
-    model         = Work
-    # Шаблон подтверждения удаления
-    template_name = 'works/confirm_delete.html'
-    # После удаления перенаправляем на список работ
-    success_url   = reverse_lazy('works:list')
-
-    def get_queryset(self):
-        # Пользователь может удалять только видимые ему записи
-        return Work.objects.filter(get_visibility_filter(self.request.user))
-
-
-# ── Отчётные документы ────────────────────────────────────────────────────────
-
-class ReportCreateView(WriterRequiredMixin, CreateView):
-    # Модель отчётного документа
-    model         = WorkReport
-    # Форма для создания документа
-    form_class    = WorkReportForm
-    # Шаблон с формой
-    template_name = 'works/report_form.html'
-
-    def form_valid(self, form):
-        # Получаем родительскую работу по work_pk из URL
-        work = get_object_or_404(Work, pk=self.kwargs['work_pk'])
-        # Привязываем новый документ к работе (work — обязательный FK)
-        form.instance.work = work
-        # Сохраняем через родительский метод
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        # Возвращаем на детальную страницу работы, к которой добавлен документ
-        return reverse_lazy('works:detail', kwargs={'pk': self.kwargs['work_pk']})
-
-
-class ReportUpdateView(WriterRequiredMixin, UpdateView):
-    # Модель и форма редактирования документа
-    model         = WorkReport
-    form_class    = WorkReportForm
-    # Шаблон с формой
-    template_name = 'works/report_form.html'
-
-    def get_success_url(self):
-        # Возвращаем на детальную страницу родительской работы
-        return reverse_lazy('works:detail', kwargs={'pk': self.object.work_id})
-
-
-class ReportDeleteView(WriterRequiredMixin, DeleteView):
-    # Модель для удаления документа
-    model         = WorkReport
-    # Шаблон подтверждения удаления
-    template_name = 'works/confirm_delete.html'
-
-    def get_success_url(self):
-        # Возвращаем на детальную страницу родительской работы
-        return reverse_lazy('works:detail', kwargs={'pk': self.object.work_id})
 
 
 # ── Журнал извещений ──────────────────────────────────────────────────────────
@@ -240,37 +35,6 @@ class NoticeListView(LoginRequiredMixin, SPAContextMixin, ListView):
             qs = qs.filter(status=status)
         # Сортировка: самые свежие извещения первыми
         return qs.order_by('-date_issued')
-
-
-class NoticeDetailView(LoginRequiredMixin, DetailView):
-    # Детальная страница одного извещения
-    model         = Notice
-    template_name = 'works/notice_detail.html'
-
-    def get_queryset(self):
-        return Notice.objects.select_related('department', 'sector', 'executor')
-
-
-class NoticeCreateView(WriterRequiredMixin, CreateView):
-    model         = Notice
-    form_class    = NoticeForm
-    template_name = 'works/notice_form.html'
-    success_url   = reverse_lazy('works:notice_list')
-
-    def form_valid(self, form):
-        messages.success(self.request, 'Извещение успешно создано.')
-        return super().form_valid(form)
-
-
-class NoticeUpdateView(WriterRequiredMixin, UpdateView):
-    model         = Notice
-    form_class    = NoticeForm
-    template_name = 'works/notice_form.html'
-    success_url   = reverse_lazy('works:notice_list')
-
-    def form_valid(self, form):
-        messages.success(self.request, 'Извещение успешно сохранено.')
-        return super().form_valid(form)
 
 
 # ── План/Отчёт SPA ──────────────────────────────────────────────────────────
@@ -385,15 +149,15 @@ class AnalyticsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 # ── Демо-страницы (только DEBUG) ────────────────────────────────────────────
 class DemoDensityView(TemplateView):
     """Демо: переключатель плотности таблицы."""
-    template_name = 'works/demo_density.html'
+    template_name = 'demo/demo_density.html'
 
 class DemoSkeletonView(TemplateView):
     """Демо: skeleton-загрузка."""
-    template_name = 'works/demo_skeleton.html'
+    template_name = 'demo/demo_skeleton.html'
 
 class DemoSlideoutView(TemplateView):
     """Демо: slideout-панель vs. модальное окно."""
-    template_name = 'works/demo_slideout.html'
+    template_name = 'demo/demo_slideout.html'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -407,14 +171,14 @@ class DemoTripsView(TemplateView):
     """Демо: варианты оформления плана командировок."""
     def get_template_names(self):
         n = self.kwargs.get('num', 1)
-        return [f'works/demo_trips_{n}.html']
+        return [f'demo/demo_trips_{n}.html']
 
 
 class DemoPPFilterView(TemplateView):
     """Демо: варианты фильтра отчётов в ПП."""
     def get_template_names(self):
         n = self.kwargs.get('num', 1)
-        return [f'works/demo_pp_filter_{n}.html']
+        return [f'demo/demo_pp_filter_{n}.html']
 
 
 class ReportsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
@@ -431,4 +195,4 @@ class FeedbackSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 
 class ERDiagramView(TemplateView):
     """ER-диаграмма моделей приложения (standalone, без base.html)."""
-    template_name = 'works/er_diagram.html'
+    template_name = 'demo/er_diagram.html'

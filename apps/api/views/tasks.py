@@ -12,6 +12,7 @@ API задач (Work show_in_plan=True).
 import logging
 from datetime import date as dt_date
 
+from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Count, Exists, OuterRef, Q
@@ -35,6 +36,7 @@ from apps.api.utils import (
     validate_task_type,
     generate_row_code,
     resolve_employee,
+    short_name,
 )
 from apps.works.models import (
     Work, TaskExecutor, WorkReport, Project, AuditLog,
@@ -295,17 +297,14 @@ class TaskListView(LoginRequiredJsonMixin, View):
                 month_key = None
 
         # Словарь ФИО начальников секторов: {sector_code: "Фамилия И.О."}
-        sector_heads = {}
-        for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
-            if emp.sector:
-                parts = (emp.full_name or '').split()
-                if len(parts) >= 3:
-                    short = f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
-                elif len(parts) == 2:
-                    short = f'{parts[0]} {parts[1][0]}.'
-                else:
-                    short = emp.full_name or ''
-                sector_heads[emp.sector.code] = short
+        # Кешируется на 1 час (статичные справочные данные)
+        sector_heads = cache.get('sector_heads_map')
+        if sector_heads is None:
+            sector_heads = {}
+            for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
+                if emp.sector:
+                    sector_heads[emp.sector.code] = short_name(emp.full_name)
+            cache.set('sector_heads_map', sector_heads, 3600)
 
         result = []
         for w in works:

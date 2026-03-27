@@ -24,24 +24,27 @@ function _isFullAccess() {
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
 // skeletonRows() — в utils.js
-var _jiSkeletonRows = skeletonRows;
+// skeletonRows() — в utils.js
 
-/* ── Переключатель плотности — в utils.js ─────────────────────────── */
-function _initJiDensity() {
-  initDensityToggle('.ji-wrap', (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable');
-}
+/* ── Переключатель плотности — initDensityToggle() в utils.js ─────── */
+
+/* ── Ограничение даты выпуска — не позже сегодня ─────────────────────────── */
+(function() {
+  var today = new Date().toISOString().slice(0, 10);
+  ['mf_date_issued', 'cl_date_issued'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.max = today;
+  });
+})();
 
 /* ── Состояние ───────────────────────────────────────────────────────────── */
 
 let jiData = [];
-let jiMfSelections = {};
 let jiMfFilters = {};
-let jiActiveDrop = null;
-let jiActiveBtn = null;
 let editingId = null;
 let closingId = null;
 
-/* ── Мультифильтры ───────────────────────────────────────────────────────── */
+/* ── Мультифильтры (через createMultiFilter из utils.js) ─────────────── */
 
 const JI_COLS = ['ii_pi','notice_number','subject','doc_designation',
                  'date_issued','date_expires','dept','sector','executor','description','status'];
@@ -55,89 +58,26 @@ function jiGetValues(col) {
   return [...vals].sort((a,b) => String(a).localeCompare(String(b), 'ru'));
 }
 
-function jiBuildDrop(btn, col) {
-  if (jiActiveDrop) jiActiveDrop.remove();
-  const vals = jiGetValues(col);
-  const selected = jiMfSelections[col] || new Set();
-  const drop = document.createElement('div');
-  drop.className = 'mf-dropdown open';
-  drop.dataset.col = col;
-
-  const sw = document.createElement('div'); sw.className = 'mf-search';
-  const si = document.createElement('input'); si.placeholder = 'Поиск...'; si.autocomplete = 'off';
-  si.oninput = () => {
-    const q = si.value.toLowerCase();
-    drop.querySelectorAll('.mf-option').forEach(o => {
-      o.style.display = o.dataset.val.toLowerCase().includes(q) ? '' : 'none';
-    });
-  };
-  sw.appendChild(si); drop.appendChild(sw);
-
-  const ac = document.createElement('div'); ac.className = 'mf-actions';
-  const selAll = document.createElement('button'); selAll.className = 'mf-btn'; selAll.textContent = 'Все';
-  selAll.onclick = e => { e.stopPropagation(); jiMfSelections[col] = new Set(vals);
-    drop.querySelectorAll('.mf-option input').forEach(c => c.checked = true); jiApplyMf(col, btn); };
-  const clr = document.createElement('button'); clr.className = 'mf-btn'; clr.textContent = 'Сброс';
-  clr.onclick = e => { e.stopPropagation(); jiMfSelections[col] = new Set();
-    drop.querySelectorAll('.mf-option input').forEach(c => c.checked = false); jiApplyMf(col, btn); };
-  ac.appendChild(selAll); ac.appendChild(clr); drop.appendChild(ac);
-
-  vals.forEach(val => {
-    const opt = document.createElement('div'); opt.className = 'mf-option'; opt.dataset.val = val;
-    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
-    const toggle = () => {
-      cb.checked = !cb.checked;
-      const s = jiMfSelections[col] || new Set();
-      cb.checked ? s.add(val) : s.delete(val);
-      jiMfSelections[col] = s; jiApplyMf(col, btn);
-    };
-    cb.onchange = () => {
-      const s = jiMfSelections[col] || new Set();
-      cb.checked ? s.add(val) : s.delete(val);
-      jiMfSelections[col] = s; jiApplyMf(col, btn);
-    };
-    opt.onclick = e => { if (e.target !== cb) toggle(); };
-    opt.appendChild(cb); opt.appendChild(document.createTextNode(val)); drop.appendChild(opt);
-  });
-
-  document.body.appendChild(drop);
-  const rect = btn.getBoundingClientRect();
-  drop.style.top = (rect.bottom + 2) + 'px';
-  drop.style.left = Math.min(rect.left, window.innerWidth - 270) + 'px';
-  jiActiveDrop = drop; jiActiveBtn = btn;
-  setTimeout(() => si.focus(), 50);
-}
-
-function jiToggleMf(btn) {
-  if (jiActiveDrop && jiActiveBtn === btn) {
-    jiActiveDrop.remove(); jiActiveDrop = null; jiActiveBtn = null; return;
+const _jiMf = createMultiFilter({
+  getValues: jiGetValues,
+  onApply: function(col, btn, sel) {
+    if (sel.size === 0) {
+      delete jiMfFilters[col]; btn.textContent = '\u25BC'; btn.classList.remove('active');
+    } else {
+      jiMfFilters[col] = sel;
+      btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
+      btn.classList.add('active');
+    }
+    renderTable();
   }
-  jiBuildDrop(btn, btn.dataset.col);
-}
-
-function jiApplyMf(col, btn) {
-  const sel = jiMfSelections[col] || new Set();
-  if (sel.size === 0) {
-    delete jiMfFilters[col]; btn.textContent = '\u25BC'; btn.classList.remove('active');
-  } else {
-    jiMfFilters[col] = sel;
-    btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
-    btn.classList.add('active');
-  }
-  renderTable();
-}
-
-document.addEventListener('click', e => {
-  if (jiActiveDrop && !jiActiveDrop.contains(e.target) && e.target !== jiActiveBtn) {
-    jiActiveDrop.remove(); jiActiveDrop = null; jiActiveBtn = null;
-  }
-}, true);
+});
+function jiToggleMf(btn) { _jiMf.toggle(btn); }
 
 /* ── Загрузка данных ─────────────────────────────────────────────────────── */
 
 async function loadJournal() {
   try {
-    document.getElementById('jiBody').innerHTML = _jiSkeletonRows(8, 13);
+    document.getElementById('jiBody').innerHTML = skeletonRows(8, 13);
     const r = await fetch('/api/journal/?per_page=100000');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     jiData = await r.json();
@@ -527,21 +467,11 @@ function getCsrf() {
     .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
 }
 
-/* ── Закрытие модалов по клику на оверлей ────────────────────────────────── */
-
-document.getElementById('jiModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
-document.getElementById('jiCloseModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeCloseModal();
-});
-document.getElementById('jiDescModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeDescModal();
-});
+/* ── Закрытие модалов по клику на оверлей — обрабатывается глобально в modal.js/base.js ── */
 
 /* ── Инициализация ───────────────────────────────────────────────────────── */
 
-_initJiDensity();
+initDensityToggle('.ji-wrap', (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable');
 loadJournal();
 
 const JI_STATUS_LABELS = {active:'Действует', expired:'Просрочено', closed_no:'Погашено без внесения', closed_yes:'Погашено с внесением'};

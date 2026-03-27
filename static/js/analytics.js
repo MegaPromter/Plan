@@ -23,7 +23,7 @@ var currentExecutorIds = {};
 
 currentYears[cfg.currentYear] = true;
 
-var MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+// MONTHS_SHORT — в utils.js (1-based: MONTHS_SHORT[1] = "Янв")
 
 var lastData = null;
 var chartBar = null;
@@ -213,7 +213,7 @@ function renderToolbar(data) {
   html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Месяц:</span><div class="an-chips">';
   for (var m = 1; m <= 12; m++) {
     var cls = currentMonths[m] ? 'an-chip active' : 'an-chip';
-    html += '<button class="' + cls + '" onclick="anToggleMonth(' + m + ')">' + MONTHS_RU[m-1] + '</button>';
+    html += '<button class="' + cls + '" onclick="anToggleMonth(' + m + ')">' + MONTHS_SHORT[m] + '</button>';
   }
   if (hasAny(currentMonths)) {
     html += '<button class="an-chip-clear" onclick="anClearMonths()">сбросить</button>';
@@ -804,7 +804,7 @@ function renderEmployeeTables(el, data) {
     html += '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-calendar-alt"></i> Помесячная загрузка' + (emp.name ? ': ' + esc(emp.name) : '') + '</div></div>';
     html += '<div style="overflow-x:auto;padding:0 14px 14px;">';
     html += '<table class="an-months-table"><thead><tr><th></th>';
-    for (var m = 1; m <= 12; m++) html += '<th>' + MONTHS_RU[m-1] + '</th>';
+    for (var m = 1; m <= 12; m++) html += '<th>' + MONTHS_SHORT[m] + '</th>';
     html += '<th>Итого</th></tr></thead><tbody>';
 
     html += '<tr><td class="row-label">План</td>';
@@ -917,7 +917,7 @@ function renderEmployeesList(employees, title) {
   html += '<table class="an-list-table"><thead><tr>';
   html += '<th>Сотрудник</th>';
   for (var m = 1; m <= 12; m++) {
-    html += '<th class="cell-num">' + MONTHS_RU[m-1] + '</th>';
+    html += '<th class="cell-num">' + MONTHS_SHORT[m] + '</th>';
   }
   html += '<th class="cell-num">Итого</th><th class="cell-num">Загрузка</th>';
   html += '</tr></thead><tbody>';
@@ -959,7 +959,7 @@ function _renderEmpTable(employees, title) {
   html += '</colgroup>';
   html += '<thead><tr>';
   html += '<th>Сотрудник</th>';
-  for (var m = 1; m <= 12; m++) html += '<th class="cell-num">' + MONTHS_RU[m-1] + '</th>';
+  for (var m = 1; m <= 12; m++) html += '<th class="cell-num">' + MONTHS_SHORT[m] + '</th>';
   html += '<th class="cell-num">Итого</th><th class="cell-num">Загрузка</th>';
   html += '</tr></thead><tbody>';
 
@@ -988,7 +988,7 @@ function renderMonthsTable(months) {
   months.forEach(function(m) {
     var badgeCls = loadBadgeCls(m.load_pct);
     html += '<tr>';
-    html += '<td class="row-label">' + MONTHS_RU[(m.month || 1) - 1] + '</td>';
+    html += '<td class="row-label">' + MONTHS_SHORT[m.month || 1] + '</td>';
     html += '<td>' + fmtHrs(m.planned) + '</td>';
     html += '<td>' + fmtHrs(m.norm) + '</td>';
     html += '<td><span class="an-load-badge ' + badgeCls + '">' + fmtPct(m.load_pct) + '</span></td>';
@@ -1096,7 +1096,7 @@ function renderTasksTableBody(data) {
   html += '<table class="an-tasks-table"><thead><tr>';
   html += '<th data-sort="work_name">Название</th><th data-sort="project_name">Проект</th><th data-sort="date_start">Начало</th><th data-sort="date_end">Окончание</th><th data-sort="deadline">Срок выполнения</th>';
   for (var m = 1; m <= 12; m++) {
-    html += '<th class="cell-num" title="Плановые часы / период выполнения задачи">' + MONTHS_RU[m-1] + '</th>';
+    html += '<th class="cell-num" title="Плановые часы / период выполнения задачи">' + MONTHS_SHORT[m] + '</th>';
   }
   html += '<th class="cell-num" data-sort="_total">Итого (ч)</th><th data-sort="status">Статус</th>';
   html += '</tr></thead><tbody>';
@@ -1199,7 +1199,7 @@ function renderBarChart(months) {
   chartBar = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: MONTHS_RU,
+      labels: MONTHS_SHORT_0,
       datasets: [
         {
           label: 'План (ч)',
@@ -1305,7 +1305,7 @@ function _empExportCols() {
     { key: 'name', header: 'Сотрудник', width: 180 }
   ];
   for (var m = 1; m <= 12; m++) {
-    cols.push({ key: 'm' + m, header: MONTHS_RU[m-1], width: 60 });
+    cols.push({ key: 'm' + m, header: MONTHS_SHORT[m], width: 60 });
   }
   cols.push({ key: 'planned', header: 'Итого (ч)', width: 80 });
   cols.push({ key: 'load_pct', header: 'Загрузка (%)', width: 80, format: function(r) { return r.load_pct.toFixed(1); } });
@@ -1320,7 +1320,7 @@ function _taskExportCols() {
     { key: 'date_end', header: 'Окончание', width: 100 }
   ];
   for (var m = 1; m <= 12; m++) {
-    cols.push({ key: 'm' + m, header: MONTHS_RU[m-1], width: 60 });
+    cols.push({ key: 'm' + m, header: MONTHS_SHORT[m], width: 60 });
   }
   cols.push({ key: 'total_hours', header: 'Итого (ч)', width: 80 });
   cols.push({ key: 'status', header: 'Статус', width: 80 });

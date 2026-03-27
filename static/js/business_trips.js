@@ -8,9 +8,7 @@ var IS_WRITER = _cfg.is_writer || false;
 var CURRENT_YEAR = _cfg.current_year || new Date().getFullYear();
 
 /* ── Константы ─────────────────────────────────────────────────────────────── */
-var MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь',
-              'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-var MONTHS_SHORT = ['','Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+// MONTHS_FULL, MONTHS_SHORT — в utils.js (1-based: MONTHS_FULL[1] = "Январь")
 var WEEKDAYS = ['пн','вт','ср','чт','пт','сб','вс'];
 
 var STATUS_COLORS = {
@@ -22,6 +20,7 @@ var STATUS_COLORS = {
 var STATUS_LABELS = { plan: 'Запланирована', active: 'В процессе', done: 'Завершена', cancel: 'Отменена' };
 
 /* ── Состояние ─────────────────────────────────────────────────────────────── */
+var allTripEmployees = [];  // [{id, value, dept}] — загружается из /api/directories/
 var trips = [];
 var holidays = {};
 var curYear = CURRENT_YEAR;
@@ -118,12 +117,7 @@ function renderGantt() {
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = '<div class="empty-state">' +
-      '<div class="empty-state-icon"><i class="fas fa-plane-slash"></i></div>' +
-      '<div class="empty-state-title">Нет командировок в ' + MONTHS[curMonth] + ' ' + curYear + '</div>' +
-      '<div class="empty-state-desc">Добавьте командировку, чтобы она отобразилась на графике</div>' +
-      (IS_WRITER ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button></div>' : '') +
-      '</div>';
+    container.innerHTML = emptyStateHtml({icon:'fas fa-plane-slash', title:'Нет командировок в ' + MONTHS_FULL[curMonth] + ' ' + curYear, desc:'Добавьте командировку, чтобы она отобразилась на графике', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>' : ''});
     return;
   }
 
@@ -189,12 +183,7 @@ function renderMatrix() {
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = '<div class="empty-state">' +
-      '<div class="empty-state-icon"><i class="fas fa-plane-slash"></i></div>' +
-      '<div class="empty-state-title">Нет командировок в ' + curYear + '</div>' +
-      '<div class="empty-state-desc">Добавьте командировку, чтобы она отобразилась в матрице</div>' +
-      (IS_WRITER ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button></div>' : '') +
-      '</div>';
+    container.innerHTML = emptyStateHtml({icon:'fas fa-plane-slash', title:'Нет командировок в ' + curYear, desc:'Добавьте командировку, чтобы она отобразилась в матрице', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>' : ''});
     return;
   }
 
@@ -447,3 +436,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+/* ── Загрузка списка сотрудников (для модалки пересечений) ─────────────── */
+async function loadTripEmployees() {
+  if (allTripEmployees.length > 0) return;
+  try {
+    var resp = await fetch('/api/directories/');
+    var data = await resp.json();
+    allTripEmployees = (data.employees || []).map(function(e) {
+      return { id: e.id, value: e.value, dept: e.dept };
+    });
+  } catch(e) { console.warn('Не удалось загрузить сотрудников', e); }
+}
+
+function openTripOverlapsModal() {
+  loadTripEmployees().then(function() {
+    openOverlapsModal({
+      context: 'trips',
+      employees: allTripEmployees,
+      getCsrfToken: getCsrfToken,
+    });
+  });
+}

@@ -1,10 +1,7 @@
 /* === DJANGO CSRF HELPER === */
-function getCSRF() {
-  const c = document.cookie.match(/csrftoken=([^;]+)/);
-  return c ? c[1] : '';
-}
+// getCsrfToken() — в utils.js (единый источник)
 function apiHeaders(extra) {
-  return Object.assign({'Content-Type':'application/json','X-CSRFToken':getCSRF()}, extra||{});
+  return Object.assign({'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, extra||{});
 }
 async function fetchJson(url, opts={}) {
   const res = await fetch(url, Object.assign({headers: apiHeaders()}, opts));
@@ -113,9 +110,7 @@ function spFilterStatus(status) {
   _spSyncFiltersToUrl();
 }
 
-/* ── Skeleton-загрузка ─────────────────────────────────────────────── */
-// skeletonRows() — в utils.js
-var _spSkeletonRows = skeletonRows;
+/* ── Skeleton-загрузка — skeletonRows() в utils.js ────────────────── */
 
 /* ── Тултип для бейджа ПП (position:fixed, не обрезается overflow) ── */
 const _ppTip = (() => {
@@ -157,10 +152,7 @@ const _ppTip = (() => {
   });
 })();
 
-/* ── Переключатель плотности — в utils.js ─────────────────────────── */
-function _initDensity() {
-  initDensityToggle('.table-wrap', (colSettings && colSettings.density) || 'comfortable');
-}
+/* ── Переключатель плотности — initDensityToggle() в utils.js ─────── */
 
 let currentTaskId = null;
 let currentTask = null;
@@ -318,33 +310,11 @@ function _syncDeptFilter() {
 window.addEventListener("DOMContentLoaded", async () => {
   // Sidebar dropdowns и scroll — управляется base.html
 
-  // Маппинг id → функция закрытия (для модалок со сбросом состояния)
-  var _modalClosers = {
-    newTaskModal: function() { closeNewTaskModal(); },
-    reportModal: function() { closeReportModal(); },
-    depsModal: function() { closeDepsModal(); }
-  };
-  function _closeLastModal() {
-    var openModals = document.querySelectorAll('.modal-overlay.open');
-    if (!openModals.length) return;
-    var last = openModals[openModals.length - 1];
-    var closer = _modalClosers[last.id];
-    if (closer) closer(); else last.classList.remove('open');
-  }
-
-  // ESC закрывает последний открытый .modal-overlay.open
-  document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Escape') return;
-    _closeLastModal();
-  });
-
-  // Клик по фону .modal-overlay закрывает его
-  document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('open')) {
-      var closer = _modalClosers[e.target.id];
-      if (closer) closer(); else e.target.classList.remove('open');
-    }
-  });
+  // Регистрируем кастомные close-функции для модалок со сбросом состояния
+  // ESC/click обрабатываются глобально в utils.js/modal.js
+  registerModalCloser('newTaskModal', function() { closeNewTaskModal(); });
+  registerModalCloser('reportModal', function() { closeReportModal(); });
+  registerModalCloser('depsModal', function() { closeDepsModal(); });
 
   // Tooltip для бейджей типа задачи — используем нативный title (не зависает)
 
@@ -358,7 +328,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   const si = document.getElementById("searchInput");
   si.value = "";
-  _initDensity();
+  initDensityToggle('.table-wrap', (colSettings && colSettings.density) || 'comfortable');
   _syncToolbarHeight();
   window.addEventListener('resize', _syncToolbarHeight);
   // ResizeObserver — автоматически пересчитывает --toolbar-h при изменении размера тулбара (dept chips и т.д.)
@@ -391,7 +361,7 @@ async function loadTasks() {
   }
   if (search) url += `&search=${encodeURIComponent(search)}`;
 
-  document.getElementById("taskBody").innerHTML = _spSkeletonRows(10, 15);
+  document.getElementById("taskBody").innerHTML = skeletonRows(10, 15);
   document.getElementById("searchCount").textContent = "...";
 
   try {
@@ -432,7 +402,7 @@ async function calcPlanningErrors() {
   const curMonth = now.getMonth() + 1;
   const curKey   = `${curYear}-${String(curMonth).padStart(2,"0")}`;
   const todayStr = now.toISOString().slice(0,10);
-  const MONTHS_RU = ["","Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  // MONTHS_FULL — в utils.js
 
   // Загружаем задачи текущего месяца
   let allTasks;
@@ -588,7 +558,7 @@ async function openPlanningErrors() {
           curYear, curMonth, curKey, total, monthNorm, MONTHS_RU, todayStr } = result;
 
   document.getElementById("peMeta").textContent =
-    `${MONTHS_RU[curMonth]} ${curYear} · Найдено ошибок: ${total} · Норма: ${monthNorm} ч/мес`;
+    `${MONTHS_FULL[curMonth]} ${curYear} · Найдено ошибок: ${total} · Норма: ${monthNorm} ч/мес`;
   document.getElementById("peLastCheck").textContent =
     "Проверено: " + new Date().toLocaleTimeString("ru-RU");
 
@@ -644,7 +614,7 @@ async function openPlanningErrors() {
     overloaded.length, overloaded.length > 0 ? "danger" : "ok",
     overloaded.map(e => ({
       title: e.name,
-      meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
+      meta: `Загрузка в ${MONTHS_FULL[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
       highlight: `Перегруз: +${(e.hours - monthNorm).toFixed(1)} ч`,
       actions: [
         { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
@@ -660,7 +630,7 @@ async function openPlanningErrors() {
     underloaded.length, underloaded.length > 0 ? "warn" : "ok",
     underloaded.map(e => ({
       title: e.name,
-      meta: `Загрузка в ${MONTHS_RU[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
+      meta: `Загрузка в ${MONTHS_FULL[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
       highlight: `Дефицит: ${((e.norm || monthNorm) - e.hours).toFixed(1)} ч`,
       actions: [
         { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
@@ -822,9 +792,9 @@ let mccTodayKey = "";
 function openMonthCheckModal(tasksList, year, month, todayKey) {
   Object.keys(mccDecisions).forEach(k => delete mccDecisions[k]);
   mccTodayKey = todayKey;
-  const MONTHS = ["","Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  // MONTHS_FULL — в utils.js
   document.getElementById("monthCheckSub").textContent =
-    `${MONTHS[month]} ${year} — ${tasksList.length} работ без отчёта`;
+    `${MONTHS_FULL[month]} ${year} — ${tasksList.length} работ без отчёта`;
 
   const body = document.getElementById("monthCheckBody");
   body.innerHTML = "";
@@ -993,9 +963,9 @@ function updatePlanSummary() {
   document.getElementById("planSummaryValue").textContent =
     total > 0 ? total.toLocaleString("ru-RU") + " ч" : "0 ч";
 
-  const MONTHS = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+  // MONTHS_SHORT — в utils.js
   let periodLabel;
-  if (monthKey) { periodLabel = `${MONTHS[selectedMonth]} ${selectedYear}`; }
+  if (monthKey) { periodLabel = `${MONTHS_SHORT[selectedMonth]} ${selectedYear}`; }
   else if (showAll) { periodLabel = "Все периоды"; }
   else { periodLabel = `Год ${selectedYear}`; }
   const filtered = _spFiltered.length;
@@ -1354,16 +1324,7 @@ function renderTable() {
 
   // Пустое состояние: нет строк после фильтрации
   if (_spFiltered.length === 0 && (hasFilters || _spStatusFilter !== 'all')) {
-    tbody.innerHTML = `<tr><td colspan="15">
-      <div class="empty-state">
-        <div class="empty-state-icon"><i class="fas fa-search"></i></div>
-        <div class="empty-state-title">Ничего не найдено</div>
-        <div class="empty-state-desc">Попробуйте изменить фильтры или сбросить поиск</div>
-        <div class="empty-state-action">
-          <button class="btn btn-primary btn-sm" onclick="openNewTaskModal('task')"><i class="fas fa-plus"></i> Новая задача</button>
-        </div>
-      </div>
-    </td></tr>`;
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action:'<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Новая задача</button>', colspan:15});
     updatePlanSummary();
     return;
   }
@@ -2872,6 +2833,7 @@ function _makeDateCell(field, value, isDisabled) {
   const inp = document.createElement("input");
   inp.type = "date"; inp.className = "r-cell r-cell-date"; inp.dataset.field = field;
   inp.value = value || "";                          // Пустая строка если дата не задана
+  if (field === 'date_accepted') inp.max = new Date().toISOString().slice(0, 10);
   // Блокируем поле если isDisabled (зависит от типа задачи/конфига)
   if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); td.classList.add('r-td-disabled'); }
   td.appendChild(inp);
@@ -3240,10 +3202,10 @@ function showDateChangeModal(monthsCount, callback, taskId, row) {
   const monthWord = monthsCount === 1 ? 'месяц' : (monthsCount < 5 ? 'месяца' : 'месяцев');
   message.textContent = `Изменение периода добавит ${monthsCount} новый ${monthWord}. Часы для исполнителей в новых месяцах нужно заполнить вручную.`;
   dateChangeCallback = callback; dateChangeTaskId = taskId; dateChangeRow = row;
-  modal.style.display = 'flex';
+  modal.classList.add('open');
 }
 function closeDateChangeModal() {
-  document.getElementById('dateChangeModal').style.display = 'none';
+  document.getElementById('dateChangeModal').classList.remove('open');
   dateChangeCallback = null; dateChangeTaskId = null; dateChangeRow = null;
 }
 function cancelDateChange() { if (dateChangeCallback) dateChangeCallback(false); closeDateChangeModal(); }
@@ -3262,11 +3224,11 @@ function showVacationConflictModal(message) {
   return new Promise((resolve) => {
     vacationConflictResolve = resolve;
     document.getElementById('vacationConflictMessage').textContent = message;
-    document.getElementById('vacationConflictModal').style.display = 'flex';
+    document.getElementById('vacationConflictModal').classList.add('open');
   });
 }
 function closeVacationConflictModal(action) {
-  document.getElementById('vacationConflictModal').style.display = 'none';
+  document.getElementById('vacationConflictModal').classList.remove('open');
   if (vacationConflictResolve) { vacationConflictResolve(action); vacationConflictResolve = null; }
 }
 

@@ -23,6 +23,7 @@ from apps.api.mixins import (
     LoginRequiredJsonMixin,
     parse_json_body,
 )
+from apps.api.utils import short_name
 # Модели сотрудников: Employee (профиль), Department (отдел),
 # Sector (сектор), NTCCenter (НТЦ-центр)
 from apps.employees.models import Employee, Department, Sector, NTCCenter
@@ -73,21 +74,13 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
             {'id': d.pk, 'value': d.code, 'parent_id': None}
             for d in Department.objects.order_by('code')
         ]
-        # Сокращение ФИО для компактного отображения в таблицах и селектах
-        def _short_name(full):
-            """«Иванов Иван Иванович» → «Иванов И.И.» — экономит место в UI"""
-            parts = (full or '').split()
-            if len(parts) >= 3:
-                return f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
-            if len(parts) == 2:
-                return f'{parts[0]} {parts[1][0]}.'
-            return full or ''
+        # short_name() — в apps/api/utils.py
 
         # Начальники секторов — нужны для подстановки в таблицу ПП (колонка «Нач. сектора»)
         sector_heads = {}
         for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
             if emp.sector:
-                sector_heads[emp.sector.code] = _short_name(emp.full_name)
+                sector_heads[emp.sector.code] = short_name(emp.full_name)
 
         result['sector'] = [
             {
@@ -121,6 +114,7 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
             # если сокращение недоступно — используем полное имя
             abbrev = emp.short_name
             employees.append({
+                'id': emp.pk,
                 'value': abbrev if abbrev else full,
                 'dept': dept_code,
                 'sector': sector_code,

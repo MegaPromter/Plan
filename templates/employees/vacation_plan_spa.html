@@ -14,6 +14,10 @@
 
 <!-- Кнопки в topbar: проверка ошибок и добавление отпуска (для редакторов) -->
 {% block topbar_actions %}
+<!-- Кнопка «Проверить пересечения» -->
+<button class="btn btn-outline btn-sm" onclick="openOverlapsModal({context:'vacations', employees:allEmployees, getCsrfToken:getCsrfToken})">
+  <i class="fas fa-user-friends"></i> Проверить пересечения
+</button>
 <!-- Кнопка «Ошибки отпусков»: меняет стиль в зависимости от наличия ошибок -->
 <button class="btn btn-outline btn-sm" id="vacErrBtn" onclick="openVacErrModal()">
   <i class="fas fa-exclamation-triangle"></i> Ошибки отпусков
@@ -428,7 +432,7 @@
   <div class="vac-filter-row">
     <span class="vac-filter-label">Фильтр</span>
     <!-- Поиск по ФИО: oninput перерисовывает таблицу без запроса к серверу -->
-    <input class="vac-search" id="filterSearch" type="text" placeholder="Поиск по ФИО..." oninput="renderTable()">
+    <input class="vac-search" id="filterSearch" type="text" placeholder="Поиск по ФИО..." aria-label="Поиск по ФИО" oninput="renderTable()">
     <!-- Фильтр по году: список лет собирается из данных в buildYearSelect() -->
     <select class="vac-select" id="filterYear" onchange="renderTable()">
       <option value="">Все годы</option>
@@ -486,7 +490,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/inline_edit.js' %}"></script>  <!-- InlineEditor (не используется напрямую здесь) -->
+<script src="{% static 'js/inline_edit.js' %}"></script>
+<script src="{% static 'js/absence_overlaps.js' %}?v=1"></script>
 <script>
 /* ========================================================================
    Vacation Plan SPA — Сводный план отпусков

@@ -271,6 +271,7 @@ class RegisterPublicView(View):
             )
         except IntegrityError:
             # Нарушение ограничения уникальности: логин уже занят
+            logger.warning("register_public: дубликат логина '%s'", username)
             return JsonResponse(
                 {'error': 'Пользователь с таким логином уже существует'},
                 status=400,

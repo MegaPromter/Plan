@@ -28,7 +28,7 @@
 <!-- Строка фильтрации: поиск по ФИО и коду отдела -->
 <form method="get" class="filter-bar">
   <!-- Поле полнотекстового поиска по ФИО -->
-  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." class="filter-input">
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." aria-label="Поиск по ФИО" class="filter-input">
   <!-- Поле фильтра по коду отдела -->
   <input type="text" name="dept" value="{{ request.GET.dept }}" placeholder="Код отдела" class="filter-input filter-input--sm">
   <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Найти</button>

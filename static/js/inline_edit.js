@@ -65,6 +65,9 @@ const InlineEditor = {
             input = document.createElement('input');
             input.type = 'date';
             input.value = currentValue || '';
+            if (field === 'date_issued' || field === 'date_accepted') {
+                input.max = new Date().toISOString().slice(0, 10);
+            }
         } else if (fieldType === 'number') {
             input = document.createElement('input');
             input.type = 'number';

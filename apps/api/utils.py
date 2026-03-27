@@ -94,6 +94,16 @@ def get_client_ip(request):
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
+def short_name(full):
+    """«Иванов Иван Иванович» → «Иванов И.И.» — сокращение ФИО для UI."""
+    parts = (full or '').split()
+    if len(parts) >= 3:
+        return f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
+    if len(parts) == 2:
+        return f'{parts[0]} {parts[1][0]}.'
+    return full or ''
+
+
 # ── Безопасные конвертеры типов (общие для всех views) ─────────────────────────
 
 def safe_date(val):

@@ -29,7 +29,7 @@
 <!-- Строка фильтров: поиск по ФИО, коду отдела и году -->
 <form method="get" class="filter-bar">
   <!-- Текстовый поиск по ФИО сотрудника -->
-  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." class="filter-input">
+  <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Поиск по ФИО..." aria-label="Поиск по ФИО" class="filter-input">
   <!-- Фильтр по коду отдела -->
   <input type="text" name="dept" value="{{ request.GET.dept }}" placeholder="Код отдела" class="filter-input filter-input--sm">
   <!-- Фильтр по году: список доступных лет из контекста -->

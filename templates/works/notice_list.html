@@ -15,7 +15,7 @@
 
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Добавить</button>
+  <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus" aria-hidden="true"></i> Добавить</button>
 {% endif %}
 <span id="exportBtnContainer"></span>
 {% endblock %}
@@ -227,5 +227,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}?v=7"></script>
+<script src="{% static 'js/notices.js' %}?v=8"></script>
 {% endblock %}

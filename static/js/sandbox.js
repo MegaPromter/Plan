@@ -101,7 +101,7 @@ function exitSandbox() {
 function openChangesetList() {
     var modal = document.getElementById('changesetListModal');
     if (!modal) return;
-    modal.style.display = 'flex';
+    modal.classList.add('open');
 
     var body = document.getElementById('changesetListBody');
     body.innerHTML = '<div class="skeleton-row"></div><div class="skeleton-row"></div>';
@@ -112,8 +112,7 @@ function openChangesetList() {
     fetchJson(url).then(function(data) {
         var items = data.items || [];
         if (!items.length) {
-            body.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div>' +
-                '<p>Нет наборов изменений для этого плана</p></div>';
+            body.innerHTML = emptyStateHtml({iconHtml:'📋', title:'Нет наборов изменений для этого плана'});
             return;
         }
 
@@ -158,7 +157,7 @@ function openCreateChangesetModal() {
     closeModal('changesetListModal');
     document.getElementById('csTitle').value = '';
     document.getElementById('csDescription').value = '';
-    document.getElementById('createChangesetModal').style.display = 'flex';
+    document.getElementById('createChangesetModal').classList.add('open');
 }
 
 function createChangeset() {
@@ -545,7 +544,7 @@ function approveChangeset() {
 
 function openRejectDialog() {
     document.getElementById('rejectComment').value = '';
-    document.getElementById('rejectModal').style.display = 'flex';
+    document.getElementById('rejectModal').classList.add('open');
 }
 
 function rejectChangeset() {
@@ -579,7 +578,7 @@ function _showConflicts(conflicts) {
             '</div></div>';
     });
     document.getElementById('changesetDiffBody').innerHTML = html;
-    document.getElementById('changesetDiffModal').style.display = 'flex';
+    document.getElementById('changesetDiffModal').classList.add('open');
 }
 
 
@@ -591,7 +590,7 @@ function showChangesetDiff() {
     if (!currentChangesetId) return;
     var body = document.getElementById('changesetDiffBody');
     body.innerHTML = '<div class="skeleton-row"></div><div class="skeleton-row"></div>';
-    document.getElementById('changesetDiffModal').style.display = 'flex';
+    document.getElementById('changesetDiffModal').classList.add('open');
 
     fetchJson('/api/changesets/' + currentChangesetId + '/diff/').then(function(data) {
         var diff = data.diff || [];
@@ -639,7 +638,7 @@ function showChangesetDiff() {
         });
 
         if (!diff.length) {
-            html += '<div class="empty-state"><div class="empty-state-icon">📋</div><p>Нет изменений</p></div>';
+            html += emptyStateHtml({iconHtml:'📋', title:'Нет изменений'});
         }
 
         body.innerHTML = html;

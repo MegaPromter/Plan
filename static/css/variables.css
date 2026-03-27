@@ -107,8 +107,8 @@
   /* Таблица-заголовок */
   --th-bg:       #1e2130;
   --th-color:    #94a3b8;
-  --row-even:    #13151d;
-  --row-odd:     #1a1d27;
+  --row-even:    #12141c;
+  --row-odd:     #1c2030;
   --row-hover:   rgba(59,130,246,0.08);
   --row-num-bg:  #15171f;
 }
