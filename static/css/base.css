@@ -79,15 +79,9 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 /* Анимация появления toast справа */
 @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
 
-/* ── Buttons ─────────────────────────────────────────────────────────── */
-/* Базовый стиль кнопки */
-.btn {
-  display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
-  font-size:14px; font-weight:600; font-family:var(--font);
-  text-decoration:none; cursor:pointer; border:none; transition:all 0.2s ease;
-  position:relative; overflow:hidden;
-}
+/* ── Buttons (доп. стили; базовые — в components.css) ────────────────── */
 /* Ripple-эффект при клике */
+.btn { position:relative; overflow:hidden; }
 .btn::after {
   content:''; position:absolute; inset:0; background:rgba(255,255,255,0.3);
   border-radius:inherit; transform:scale(0); opacity:0; transition:none;
@@ -97,20 +91,12 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 /* Иконки в кнопках — сдвиг при hover */
 .btn i, .btn .fas, .btn .far { transition:transform 0.2s ease; }
 .btn:hover i, .btn:hover .fas, .btn:hover .far { transform:translateX(1px); }
-/* Основная кнопка (gradient) */
-.btn-primary  { background:var(--accent-gradient, var(--accent)); color:#fff; }
-.btn-primary:hover  { transform:translateY(-1px); box-shadow:var(--shadow-accent); filter:brightness(1.08); }
 /* Вторичная кнопка (светлая) */
-.btn-secondary{ background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary{ background:var(--surface2); color:var(--text); border-color:var(--border); }
 .btn-secondary:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
 /* Опасная кнопка (красная, для удаления) */
 .btn-danger   { background:var(--danger);   color:#fff; }
 .btn-danger:hover   { background:#dc2626; transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.35); }
-/* Кнопка-контур (прозрачный фон) */
-.btn-outline  { background:transparent; color:var(--text2); border:1px solid var(--border); }
-.btn-outline:hover  { border-color:var(--border2); color:var(--text); transform:translateY(-1px); }
-/* Маленький размер кнопки */
-.btn-sm { padding:6px 12px; font-size:13px; border-radius:8px; }
 /* Неактивная кнопка */
 .btn:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
 
