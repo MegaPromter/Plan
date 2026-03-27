@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Tour / Onboarding — стили интерактивного обучения (13 шагов)
+   Tour / Onboarding — стили интерактивного обучения
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Spotlight: подсветка целевого элемента ──────────────────────── */
@@ -180,7 +180,7 @@
   position: fixed;
   inset: 0;
   z-index: 99990;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,7 +256,7 @@
   position: fixed;
   inset: 0;
   z-index: 99990;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;

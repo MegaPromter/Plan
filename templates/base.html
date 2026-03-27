@@ -15,8 +15,9 @@
 <title>{% block title %}Система управления{% endblock %}</title>
 <!-- Шрифт Inter из Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<!-- Font Awesome — иконки в навигации и кнопках -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Font Awesome — иконки в навигации и кнопках (non-blocking load) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 <!-- Переменные дизайн-системы (должны загружаться первыми) -->
 <link rel="stylesheet" href="{% static 'css/variables.css' %}?v=2">
 <!-- Базовые стили (извлечены из inline <style>) -->
@@ -27,7 +28,7 @@
 <link rel="stylesheet" href="{% static 'css/tables.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=8">
 {% block styles %}{% endblock %}
-<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=9">
+<link rel="stylesheet" href="{% static 'css/tour.css' %}?v=10">
 </head>
 <body data-user-role="{{ request.user.employee.role|default:'' }}" data-is-admin="{% if request.user.is_superuser or request.user.employee.role == 'admin' %}1{% else %}0{% endif %}">
 <a href="#main-content" class="skip-link">Перейти к основному содержанию</a>
@@ -130,6 +131,6 @@
 <!-- Блок пользовательских скриптов из дочерних шаблонов -->
 {% block scripts %}{% endblock %}
 <!-- Скрипт интерактивного тура по интерфейсу -->
-<script src="{% static 'js/tour.js' %}?v=12"></script>
+<script src="{% static 'js/tour.js' %}?v=13"></script>
 </body>
 </html>

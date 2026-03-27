@@ -317,7 +317,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   si.value = "";
   initDensityToggle('.table-wrap', (colSettings && colSettings.density) || 'comfortable');
   _syncToolbarHeight();
-  window.addEventListener('resize', _syncToolbarHeight);
+  var _resizePending = false;
+  window.addEventListener('resize', function() {
+    if (!_resizePending) {
+      _resizePending = true;
+      requestAnimationFrame(function() {
+        _syncToolbarHeight();
+        _resizePending = false;
+      });
+    }
+  });
   // ResizeObserver — автоматически пересчитывает --toolbar-h при изменении размера тулбара (dept chips и т.д.)
   if (window.ResizeObserver) {
     var _tbEl = document.getElementById('toolbar');
@@ -1234,10 +1243,10 @@ function clearAllColFilters() {
 
 // Авторесайз всех textarea в контейнере (подгоняет высоту под содержимое)
 function _resizeTextareas(container) {
-  container.querySelectorAll("textarea.cell-edit").forEach(ta => {
-    ta.style.height = "auto";
-    ta.style.height = ta.scrollHeight + "px";
-  });
+  var textareas = [].slice.call(container.querySelectorAll("textarea.cell-edit"));
+  textareas.forEach(function(ta) { ta.style.height = "auto"; });
+  var heights = textareas.map(function(ta) { return ta.scrollHeight; });
+  textareas.forEach(function(ta, i) { ta.style.height = heights[i] + "px"; });
 }
 
 /* ── Infinite scroll: состояние ленивой отрисовки СП ──────────────────── */
@@ -1336,14 +1345,16 @@ function _spAppendBatch(count) {
   }
   tbody.appendChild(frag);
 
-  // Авто-высота textarea для новых строк
+  // Авто-высота textarea для новых строк (batch read/write — без layout thrashing)
   requestAnimationFrame(() => {
     const allRows = tbody.querySelectorAll("tr");
+    var textareas = [];
     for (let r = _spRenderedCount; r < end && r < allRows.length; r++) {
-      allRows[r].querySelectorAll("textarea.cell-edit").forEach(ta => {
-        ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px";
-      });
+      allRows[r].querySelectorAll("textarea.cell-edit").forEach(ta => textareas.push(ta));
     }
+    textareas.forEach(ta => { ta.style.height = "auto"; });
+    var heights = textareas.map(ta => ta.scrollHeight);
+    textareas.forEach((ta, i) => { ta.style.height = heights[i] + "px"; });
   });
 
   _spRenderedCount = end;
@@ -1683,7 +1694,7 @@ function makeRow(t, num) {
       // Автовысота textarea при вводе текста
       if (inp.tagName === "TEXTAREA") {
         inp.rows = 1;
-        inp.addEventListener("input", () => { inp.style.height="auto"; inp.style.height=inp.scrollHeight+"px"; });
+        inp.addEventListener("input", () => { requestAnimationFrame(() => { inp.style.height="auto"; inp.style.height=inp.scrollHeight+"px"; }); });
       }
       // Для ПП-записей блокируем все поля кроме разрешённых (date_start, date_end)
       const ppAllowedFields = new Set(["date_start", "date_end"]);
@@ -2112,7 +2123,7 @@ function openInlineNewRow() {
       ta.placeholder = def.placeholder || '';
       ta.rows = 1;
       ta.style.cssText = 'resize:none;overflow:hidden;';
-      ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; });
+      ta.addEventListener('input', () => { requestAnimationFrame(() => { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }); });
       td.appendChild(ta);
     }
     tr.appendChild(td);
@@ -2730,7 +2741,10 @@ async function openReportModal(taskOrId) {
   document.getElementById("reportModal").classList.add("open");
   // Пересчитать высоту textarea после показа модала (scrollHeight=0 пока display:none)
   requestAnimationFrame(() => {
-    document.querySelectorAll('#reportBody .r-cell').forEach(c => { c.style.height = 'auto'; c.style.height = c.scrollHeight + 'px'; });
+    var cells = [].slice.call(document.querySelectorAll('#reportBody .r-cell'));
+    cells.forEach(function(c) { c.style.height = 'auto'; });
+    var heights = cells.map(function(c) { return c.scrollHeight; });
+    cells.forEach(function(c, i) { c.style.height = heights[i] + 'px'; });
   });
 }
 
@@ -2806,7 +2820,7 @@ function _makeTextCell(field, value, isDisabled) {
   inp.value = value != null ? String(value) : "";  // null/undefined → пустая строка
   inp.dataset.field = field;
   // Авторесайз по мере ввода текста
-  inp.addEventListener("input", () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; });
+  inp.addEventListener("input", () => { requestAnimationFrame(() => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; }); });
   // Блокируем поле если isDisabled (зависит от типа задачи/конфига)
   if (isDisabled) { inp.disabled = true; inp.classList.add('r-cell-disabled'); td.classList.add('r-td-disabled'); }
   td.appendChild(inp);

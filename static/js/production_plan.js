@@ -712,6 +712,76 @@ const PP_CHUNK = 50;
 let _ppFiltered = [];
 let _ppRenderedCount = 0;
 let _ppScrollDispose = null;
+let _ppDelegationAttached = false;
+
+/* ── Навигация по ячейкам: переход к следующей/предыдущей .cell-edit ── */
+function _ppMoveFocus(current, forward) {
+  const td = current.closest('td');
+  if (!td) return;
+  let nextTd = forward ? td.nextElementSibling : td.previousElementSibling;
+  // Перебираем соседние td, пока не найдём ячейку с .cell-edit
+  while (nextTd) {
+    const el = nextTd.querySelector('.cell-edit');
+    if (el) { el.focus(); if (el.tagName !== 'SELECT') el.select(); return; }
+    nextTd = forward ? nextTd.nextElementSibling : nextTd.previousElementSibling;
+  }
+  // Если в текущей строке не нашлось — переходим в соседнюю строку
+  const tr = td.closest('tr');
+  const nextTr = forward ? tr.nextElementSibling : tr.previousElementSibling;
+  if (!nextTr) return;
+  const cells = nextTr.querySelectorAll('.cell-edit');
+  if (cells.length) {
+    const target = forward ? cells[0] : cells[cells.length - 1];
+    target.focus();
+    if (target.tagName !== 'SELECT') target.select();
+  }
+}
+
+/* ── Делегированные обработчики событий на tbody ПП ────────────────── */
+function _ppAttachDelegatedListeners(tbody) {
+  if (_ppDelegationAttached) return;
+  _ppDelegationAttached = true;
+
+  // change — сохранение ячейки (input/select с .cell-edit)
+  tbody.addEventListener('change', function(e) {
+    if (e.target.matches('.cell-edit')) {
+      handleCellChange(e);
+    }
+  });
+
+  // keydown — Tab-навигация между ячейками
+  tbody.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab' && e.target.matches('.cell-edit')) {
+      e.preventDefault();
+      handleCellChange({ target: e.target });
+      _ppMoveFocus(e.target, !e.shiftKey);
+    }
+  });
+
+  // click — кнопка удаления строки
+  tbody.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.btn-delete');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    // ── Перехват для песочницы ──
+    if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
+      const ok = await confirmDialog('Отметить строку на удаление в песочнице?', 'Удаление (песочница)');
+      if (!ok) return;
+      try {
+        await addSandboxItem('delete', id, {});
+      } catch(err) { /* toast уже показан */ }
+      return;
+    }
+    const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
+    if (!ok) return;
+    const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
+    if (!resp._error) {
+      rows = rows.filter(r => String(r.id) !== String(id));
+      renderPPTable();
+      showToast('Строка удалена', 'success');
+    }
+  });
+}
 
 /* ── Отрисовка таблицы ПП ────────────────────────────────────────────── */
 function renderPPTable() {
@@ -860,49 +930,16 @@ function _ppAppendBatch(count) {
     tbody.appendChild(tr);
   }
 
-  /* ── Навешиваем обработчики только на новые ячейки ────────────────── */
+  /* ── Инициализация _ppLastSaved для новых ячеек ──────────────────── */
   const allRows = tbody.querySelectorAll('tr');
   for (let r = startIdx; r < end && r < allRows.length; r++) {
     allRows[r].querySelectorAll('.cell-edit').forEach(input => {
       input._ppLastSaved = input.value;
-      input.addEventListener('change', handleCellChange);
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          handleCellChange({ target: this });
-          const inputs = Array.from(tbody.querySelectorAll('.cell-edit'));
-          const i = inputs.indexOf(this);
-          const nextI = e.shiftKey ? i - 1 : i + 1;
-          if (nextI >= 0 && nextI < inputs.length) {
-            inputs[nextI].focus();
-            if (inputs[nextI].tagName !== 'SELECT') inputs[nextI].select();
-          }
-        }
-      });
-    });
-    allRows[r].querySelectorAll('.btn-delete').forEach(btn => {
-      btn.addEventListener('click', async function() {
-        const id = this.getAttribute('data-id');
-        // ── Перехват для песочницы ──
-        if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
-          const ok = await confirmDialog('Отметить строку на удаление в песочнице?', 'Удаление (песочница)');
-          if (!ok) return;
-          try {
-            await addSandboxItem('delete', id, {});
-          } catch(err) { /* toast уже показан */ }
-          return;
-        }
-        const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
-        if (!ok) return;
-        const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
-        if (!resp._error) {
-          rows = rows.filter(r => String(r.id) !== String(id));
-          renderPPTable();
-          showToast('Строка удалена', 'success');
-        }
-      });
     });
   }
+
+  /* ── Делегированные обработчики (один раз на tbody) ────────────────── */
+  _ppAttachDelegatedListeners(tbody);
 
   _ppRenderedCount = end;
 
@@ -996,20 +1033,14 @@ async function handleCellChange(e) {
       if (headSel) {
         headSel.outerHTML = buildSelectHtml('sector_head', rowObj);
         const newHead = input.closest('tr').querySelector('select[data-col="sector_head"]');
-        if (newHead) {
-          newHead.addEventListener('change', handleCellChange);
-          newHead._ppLastSaved = newHead.value;
-        }
+        if (newHead) newHead._ppLastSaved = newHead.value;
       }
       // Обновляем исполнителей по новому отделу (сектор сброшен — показываем весь отдел)
       const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
       if (execSel) {
         execSel.outerHTML = buildSelectHtml('executor', rowObj);
         const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
-        if (newSel) {
-          newSel.addEventListener('change', handleCellChange);
-          newSel._ppLastSaved = newSel.value;
-        }
+        if (newSel) newSel._ppLastSaved = newSel.value;
       }
     }
   }
@@ -1035,10 +1066,7 @@ async function handleCellChange(e) {
       if (execSel) {
         execSel.outerHTML = buildSelectHtml('executor', rowObj);
         const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
-        if (newSel) {
-          newSel.addEventListener('change', handleCellChange);
-          newSel._ppLastSaved = newSel.value;
-        }
+        if (newSel) newSel._ppLastSaved = newSel.value;
       }
     }
   }
