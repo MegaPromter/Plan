@@ -104,6 +104,29 @@ function _ppGetStatus(row) {
   return 'inwork';
 }
 
+// Фильтрует rows по colFilters (без status-фильтра) — для подсчёта в панели статусов
+function _ppRowsWithoutStatusFilter() {
+  if (Object.keys(colFilters).length === 0) return rows;
+  return rows.filter(function(r) {
+    for (var col in colFilters) {
+      if (!colFilters.hasOwnProperty(col)) continue;
+      var val = colFilters[col];
+      if (col.startsWith('mf_')) {
+        var field = col.slice(3);
+        if (val.size > 0) {
+          if (field === 'date_end' || field === 'date_start') {
+            var cellVal = (r[field] || '').slice(0, 7);
+            if (!val.has(cellVal)) return false;
+          } else {
+            if (!val.has(r[field] || '')) return false;
+          }
+        }
+      }
+    }
+    return true;
+  });
+}
+
 function ppUpdateStatusPanel() {
   var panel = document.getElementById('ppStatusPanel');
   if (!panel || !rows || rows.length === 0) {
@@ -112,14 +135,15 @@ function ppUpdateStatusPanel() {
   }
   panel.style.display = '';
 
+  var filtered = _ppRowsWithoutStatusFilter();
   var done = 0, overdue = 0, inwork = 0;
-  rows.forEach(function(item) {
+  filtered.forEach(function(item) {
     var s = _ppGetStatus(item);
     if (s === 'done') done++;
     else if (s === 'overdue') overdue++;
     else inwork++;
   });
-  var total = rows.length;
+  var total = filtered.length;
 
   var el;
   el = document.getElementById('ppCountAll'); if (el) el.textContent = total;
@@ -1333,7 +1357,7 @@ function openAddRowModal() {
       document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
       // Сбрасываем фильтр отделов
       ppSelectedDepts = new Set();
-      _updatePPDeptUI();
+      if (_ppDeptFilter) _ppDeptFilter.refresh();
       if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
       // Вставляем новую запись в начало rows напрямую (не зависим от лимита пагинации)
       if (resp.work) {
@@ -1655,149 +1679,32 @@ function _applyPPPeriodFilter() {
   renderPPTable();
 }
 
-// ── DEPT FILTER (чипы ≤5 / dropdown с чекбоксами >5) ─────────────────────
-const PP_DEPT_CHIP_LIMIT = 5;
-let ppSelectedDepts = new Set();     // мультивыбор отделов
-let _ppDeptMode = 'chips';          // 'chips' | 'dropdown'
+// ── DEPT FILTER (через shared-toolbar.js) ────────────────────────────────
+let ppSelectedDepts = new Set();
+let _ppDeptFilter = null;
 
 function initPPDeptChips() {
   const depts = [...new Set(rows.map(r => r.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
-  const bar = document.getElementById('ppDeptBar');
-  const wrap = document.getElementById('ppDeptChips');
-  if (depts.length < 2) { bar.style.display = 'none'; return; }
   // Восстанавливаем выбор из текущего фильтра
   const currentDeptFilter = colFilters['mf_dept'];
   if (currentDeptFilter && currentDeptFilter.size > 0) {
     ppSelectedDepts = new Set(currentDeptFilter);
   }
-
-  if (depts.length > PP_DEPT_CHIP_LIMIT) {
-    // ── Режим dropdown с чекбоксами ──
-    _ppDeptMode = 'dropdown';
-    const hasFilter = ppSelectedDepts.size > 0;
-    const label = hasFilter
-      ? (ppSelectedDepts.size === 1 ? [...ppSelectedDepts][0] : ppSelectedDepts.size + ' отд.')
-      : 'Все отделы';
-    let html = `<div class="dept-dropdown" id="ppDeptDropdown">
-      <button class="dept-trigger${hasFilter ? ' has-filter' : ''}" id="ppDeptTrigger" onclick="ppToggleDeptMenu()">
-        <i class="fas fa-building" style="font-size:12px;opacity:0.6"></i>
-        <span id="ppDeptLabel">${label}</span>
-        ${hasFilter ? '<span class="badge-count">' + ppSelectedDepts.size + '</span>' : ''}
-        <i class="fas fa-chevron-down" style="font-size:10px;opacity:0.5;margin-left:2px"></i>
-      </button>
-      <div class="dept-menu" id="ppDeptMenu">
-        <div class="dept-menu-search"><input type="text" placeholder="Поиск отдела..." id="ppDeptSearch" oninput="ppFilterDeptList()"></div>
-        <div class="dept-menu-items" id="ppDeptMenuItems">`;
-    depts.forEach(d => {
-      const checked = ppSelectedDepts.has(d) ? ' checked' : '';
-      html += `<label class="dept-menu-item" data-dept="${escapeHtml(d)}">
-        <input type="checkbox" class="dept-cb" value="${escapeHtml(d)}"${checked} onchange="ppToggleDeptItem(this)">
-        <span>${escapeHtml(d)}</span>
-      </label>`;
-    });
-    html += `</div>
-        <div class="dept-menu-footer">
-          <button class="dm-clear" onclick="ppClearDeptFilter()">Сбросить</button>
-          <button class="dm-apply" onclick="ppApplyDeptFilter()">Применить</button>
-        </div>
-      </div>
-    </div>`;
-    wrap.innerHTML = html;
-  } else {
-    // ── Режим chips ──
-    _ppDeptMode = 'chips';
-    const singleDept = ppSelectedDepts.size === 1 ? [...ppSelectedDepts][0] : null;
-    let html = `<span class="pp-dept-chip${ppSelectedDepts.size === 0 ? ' active' : ''}" onclick="selectPPDept(null)">Все</span>`;
-    depts.forEach(d => {
-      html += `<span class="pp-dept-chip${singleDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectPPDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
-    });
-    wrap.innerHTML = html;
-  }
-  bar.style.display = '';
-}
-
-/* Dropdown toggle */
-function ppToggleDeptMenu() {
-  const menu = document.getElementById('ppDeptMenu');
-  if (!menu) return;
-  menu.classList.toggle('open');
-  if (menu.classList.contains('open')) {
-    const inp = document.getElementById('ppDeptSearch');
-    if (inp) { inp.value = ''; ppFilterDeptList(); inp.focus(); }
-  }
-}
-
-/* Поиск в списке отделов */
-function ppFilterDeptList() {
-  const q = (document.getElementById('ppDeptSearch')?.value || '').toLowerCase();
-  document.querySelectorAll('#ppDeptMenuItems .dept-menu-item').forEach(el => {
-    el.style.display = el.dataset.dept.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-
-/* Чекбокс отдела */
-function ppToggleDeptItem(cb) {
-  // ничего — ждём нажатия «Применить»
-}
-
-/* Сбросить все чекбоксы */
-function ppClearDeptFilter() {
-  document.querySelectorAll('#ppDeptMenuItems .dept-cb').forEach(cb => cb.checked = false);
-}
-
-/* Применить выбранные отделы */
-function ppApplyDeptFilter() {
-  const checked = document.querySelectorAll('#ppDeptMenuItems .dept-cb:checked');
-  ppSelectedDepts = new Set();
-  checked.forEach(cb => ppSelectedDepts.add(cb.value));
-  _syncPPDeptFilter();
-  _updatePPDeptUI();
-  renderPPTable();
-  _ppSyncFiltersToUrl();
-  // Закрыть меню
-  const menu = document.getElementById('ppDeptMenu');
-  if (menu) menu.classList.remove('open');
-}
-
-/* Для chips mode — одиночный выбор */
-function selectPPDept(dept) {
-  ppSelectedDepts = dept ? new Set([dept]) : new Set();
-  _updatePPDeptUI();
-  _syncPPDeptFilter();
-  renderPPTable();
-  _ppSyncFiltersToUrl();
-}
-
-/** Обновляет визуальное состояние dept-фильтра ПП */
-function _updatePPDeptUI() {
-  if (_ppDeptMode === 'dropdown') {
-    const trigger = document.getElementById('ppDeptTrigger');
-    const labelEl = document.getElementById('ppDeptLabel');
-    if (!trigger || !labelEl) return;
-    const n = ppSelectedDepts.size;
-    if (n === 0) {
-      labelEl.textContent = 'Все отделы';
-      trigger.classList.remove('has-filter');
-      // Убираем badge
-      const badge = trigger.querySelector('.badge-count');
-      if (badge) badge.remove();
-    } else {
-      labelEl.textContent = n === 1 ? [...ppSelectedDepts][0] : n + ' отд.';
-      trigger.classList.add('has-filter');
-      let badge = trigger.querySelector('.badge-count');
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'badge-count';
-        trigger.insertBefore(badge, trigger.querySelector('.fa-chevron-down'));
-      }
-      badge.textContent = n;
+  _ppDeptFilter = initDeptFilter({
+    barId: 'ppDeptBar',
+    wrapId: 'ppDeptChips',
+    idPrefix: 'pp',
+    multiSelect: true,
+    depts: depts,
+    getSelection: function() { return ppSelectedDepts; },
+    setSelection: function(sel) { ppSelectedDepts = sel; },
+    onApply: function() {
+      _syncPPDeptFilter();
+      renderPPTable();
+      ppUpdateStatusPanel();
+      _ppSyncFiltersToUrl();
     }
-  } else {
-    const singleDept = ppSelectedDepts.size === 1 ? [...ppSelectedDepts][0] : null;
-    document.querySelectorAll('.pp-dept-chip').forEach(c => {
-      c.classList.toggle('active', ppSelectedDepts.size === 0 ? !c.dataset.dept : c.dataset.dept === singleDept);
-    });
-  }
+  });
 }
 
 function _syncPPDeptFilter() {
@@ -2023,7 +1930,7 @@ function applyMfFilter(col, btn) {
   // Синхронизируем фильтр отделов если изменён dept-фильтр через дропдаун
   if (col === 'dept') {
     ppSelectedDepts = new Set(sel);
-    _updatePPDeptUI();
+    if (_ppDeptFilter) _ppDeptFilter.refresh();
   }
   renderPPTable();
 }
@@ -2046,7 +1953,7 @@ function clearAllColFilters() {
   document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
   // Сбрасываем фильтр отделов
   ppSelectedDepts = new Set();
-  _updatePPDeptUI();
+  if (_ppDeptFilter) _ppDeptFilter.refresh();
   // Запоминаем что пользователь сбросил дефолтный фильтр вручную
   if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
   renderPPTable();

@@ -167,7 +167,16 @@ let currentTask = null;
 let reportRows = [];
 let pendingTaskType = null;
 let newTaskExecutorsList = [];
-let selectedDept = localStorage.getItem('sp_selected_dept') || null;
+let spSelectedDepts = new Set();
+(function() {
+  var saved = localStorage.getItem('sp_selected_depts');
+  if (saved) try { JSON.parse(saved).forEach(function(d) { spSelectedDepts.add(d); }); } catch(e) {}
+  // Миграция со старого формата
+  if (spSelectedDepts.size === 0) {
+    var old = localStorage.getItem('sp_selected_dept');
+    if (old) { spSelectedDepts.add(old); localStorage.removeItem('sp_selected_dept'); }
+  }
+})();
 
 const MONTH_NAMES = ["","Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
 
@@ -180,7 +189,7 @@ function _spSyncFiltersToUrl() {
   syncFiltersToUrl({
     year:   selectedYear,
     month:  showAll ? 'all' : (selectedMonth || null),
-    dept:   selectedDept || null,
+    dept:   spSelectedDepts.size ? [...spSelectedDepts].join(',') : null,
     status: _spStatusFilter !== 'all' ? _spStatusFilter : null,
   });
 }
@@ -201,7 +210,7 @@ function _spRestoreFiltersFromUrl() {
     selectedMonth = null; changed = true;
   }
   if (f.dept) {
-    selectedDept = f.dept; changed = true;
+    spSelectedDepts = new Set(f.dept.split(',').filter(Boolean)); changed = true;
   }
   if (f.status && ['done', 'overdue', 'inwork'].includes(f.status)) {
     _spStatusFilter = f.status; changed = true;
@@ -247,79 +256,54 @@ function _syncToolbarHeight() {
   document.documentElement.style.setProperty('--toolbar-h', h + 'px');
 }
 
-// ── DEPT FILTER (чипы ≤5 / выпадающий список >5) ──────────────────────────
-const DEPT_CHIP_LIMIT = 5;         // порог: чипы → select
-let _deptMode = 'chips';           // 'chips' | 'select'
+// ── DEPT FILTER (через shared-toolbar.js) ────────────────────────────────
+let _spDeptFilter = null;
 
 function initDeptChips() {
-  const depts = [...new Set(tasks.map(t => t.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
-  if (depts.length < 2) return;
-  const bar = document.getElementById('deptBar');
-  const wrap = document.getElementById('deptChips');
-
-  if (depts.length > DEPT_CHIP_LIMIT) {
-    // ── Режим select ──
-    _deptMode = 'select';
-    let html = '<select class="filter-select" id="deptSelect" onchange="selectDept(this.value || null)">';
-    html += '<option value="">Все отделы</option>';
-    depts.forEach(d => {
-      const sel = selectedDept === d ? ' selected' : '';
-      html += `<option value="${escapeHtml(d)}"${sel}>${escapeHtml(d)}</option>`;
-    });
-    html += '</select>';
-    wrap.innerHTML = html;
-    // Подсветка active-стиля для select
-    const sel = document.getElementById('deptSelect');
-    if (sel) sel.classList.toggle('active', !!selectedDept);
-  } else {
-    // ── Режим chips ──
-    _deptMode = 'chips';
-    let html = `<span class="dept-chip${!selectedDept ? ' active' : ''}" onclick="selectDept(null)">Все</span>`;
-    depts.forEach(d => {
-      html += `<span class="dept-chip${selectedDept === d ? ' active' : ''}" data-dept="${escapeHtml(d)}" onclick="selectDept(this.dataset.dept)">${escapeHtml(d)}</span>`;
-    });
-    wrap.innerHTML = html;
+  var depts = [...new Set(tasks.map(t => t.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+  // Убираем несуществующие отделы из выбора
+  var cleaned = new Set([...spSelectedDepts].filter(function(d) { return depts.includes(d); }));
+  if (cleaned.size !== spSelectedDepts.size) {
+    spSelectedDepts = cleaned;
+    _saveSPDepts();
   }
-  bar.style.display = '';
-  // Пересчитываем --toolbar-h по реальной высоте
+  _spDeptFilter = initDeptFilter({
+    barId: 'deptBar',
+    wrapId: 'spDeptWrap',
+    idPrefix: 'sp',
+    multiSelect: true,
+    depts: depts,
+    getSelection: function() { return spSelectedDepts; },
+    setSelection: function(sel) {
+      spSelectedDepts = sel;
+      _saveSPDepts();
+    },
+    onApply: function() {
+      _syncDeptFilter();
+      renderTable();
+      spUpdateStatusPanel();
+      _spSyncFiltersToUrl();
+      _syncToolbarHeight();
+    }
+  });
+  _syncDeptFilter();
   _syncToolbarHeight();
-  // Применяем сохранённый фильтр
-  if (selectedDept && depts.includes(selectedDept)) {
-    _syncDeptFilter(selectedDept);
-  } else if (selectedDept) {
-    selectedDept = null;
-    localStorage.removeItem('sp_selected_dept');
-  }
 }
 
-function selectDept(dept) {
-  selectedDept = dept;
-  if (dept) localStorage.setItem('sp_selected_dept', dept);
-  else localStorage.removeItem('sp_selected_dept');
-  _updateDeptUI(dept);
-  _syncDeptFilter(dept);
-  renderTable();
-  _spSyncFiltersToUrl();
+function _saveSPDepts() {
+  if (spSelectedDepts.size) localStorage.setItem('sp_selected_depts', JSON.stringify([...spSelectedDepts]));
+  else localStorage.removeItem('sp_selected_depts');
 }
 
-/** Обновляет визуальное состояние dept-фильтра (чипы или select) */
-function _updateDeptUI(dept) {
-  if (_deptMode === 'select') {
-    const sel = document.getElementById('deptSelect');
-    if (sel) { sel.value = dept || ''; sel.classList.toggle('active', !!dept); }
-  } else {
-    document.querySelectorAll('.dept-chip').forEach(c => {
-      c.classList.toggle('active', dept ? c.dataset.dept === dept : !c.dataset.dept);
-    });
-  }
-}
-
-function _syncDeptFilter(dept) {
+function _syncDeptFilter() {
   const btn = document.querySelector('.mf-trigger[data-col="dept"]');
-  if (dept) {
-    mfSelections['dept'] = new Set([dept]);
-    colFilters['mf_dept'] = new Set([dept]);
-    if (btn) { btn.textContent = dept; btn.classList.add('active'); }
+  if (spSelectedDepts.size > 0) {
+    mfSelections['dept'] = new Set(spSelectedDepts);
+    colFilters['mf_dept'] = new Set(spSelectedDepts);
+    if (btn) {
+      btn.textContent = spSelectedDepts.size === 1 ? [...spSelectedDepts][0] : spSelectedDepts.size + ' отд.';
+      btn.classList.add('active');
+    }
   } else {
     delete colFilters['mf_dept'];
     mfSelections['dept'] = new Set();
@@ -1176,14 +1160,9 @@ function applyMfFilter(col, btn) {
   }
   // Синхронизация dept-чипов при изменении мультифильтра dept
   if (col === 'dept') {
-    if (sel.size === 1) {
-      selectedDept = [...sel][0];
-      localStorage.setItem('sp_selected_dept', selectedDept);
-    } else {
-      selectedDept = null;
-      localStorage.removeItem('sp_selected_dept');
-    }
-    _updateDeptUI(selectedDept);
+    spSelectedDepts = new Set(sel);
+    _saveSPDepts();
+    if (_spDeptFilter) _spDeptFilter.refresh();
     // Сбрасываем фильтр секторов при смене отдела
     if (mfSelections['sector'] && mfSelections['sector'].size > 0) {
       mfSelections['sector'] = new Set();
@@ -1290,9 +1269,9 @@ function clearAllColFilters() {
   if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
   document.getElementById("filtersActiveBadge").classList.remove("visible");
   // Сброс dept-фильтра
-  selectedDept = null;
-  localStorage.removeItem('sp_selected_dept');
-  _updateDeptUI(null);
+  spSelectedDepts = new Set();
+  _saveSPDepts();
+  if (_spDeptFilter) _spDeptFilter.refresh();
   renderTable();
 }
 
@@ -2696,8 +2675,8 @@ async function submitNewTask() {
     document.querySelectorAll(".mf-trigger").forEach(btn => { btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼"; btn.classList.remove("active"); });
     if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
     document.getElementById("filtersActiveBadge").classList.remove("visible");
-    selectedDept = null; localStorage.removeItem('sp_selected_dept');
-    _updateDeptUI(null);
+    spSelectedDepts = new Set(); _saveSPDepts();
+    if (_spDeptFilter) _spDeptFilter.refresh();
     await loadTasks();
     notify("✓ Задача создана", "ok");
     // Прокрутка к первой строке (новая задача — вверху, API сортирует по -id)

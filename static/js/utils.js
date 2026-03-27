@@ -856,7 +856,7 @@ function updateStatusPanel(opts) {
     el = document.getElementById(p + 'BarOverdue'); if (el) el.style.width = (overdue / total * 100) + '%';
     el = document.getElementById(p + 'BarInWork'); if (el) el.style.width = (inwork / total * 100) + '%';
 
-    panel.querySelectorAll('.status-chip').forEach(function(c) {
+    panel.querySelectorAll('.status-chip, .sp').forEach(function(c) {
         c.classList.toggle('active', c.dataset.status === opts.activeFilter);
     });
 }

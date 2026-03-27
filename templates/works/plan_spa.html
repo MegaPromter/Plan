@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=9">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -30,83 +30,79 @@
 {% endblock %}
 
 {% block content %}
-<!-- ══ Тулбар: строка фильтрации по периоду ══════════════════════════════ -->
+<!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
 <div class="toolbar" id="toolbar">
-  <span class="cal-label">Период:</span>
-  <div class="cal-block">
-    <button class="cal-nav" onclick="changeYear(-1)">‹</button>
-    <div class="cal-display" id="yearDisplay">2024</div>
-    <button class="cal-nav" onclick="changeYear(1)">›</button>
+  <!-- 1. Панель периода -->
+  <div class="pp-period-bar">
+    <span class="cal-label">Период:</span>
+    <div class="cal-block">
+      <button class="cal-nav" onclick="changeYear(-1)">‹</button>
+      <div class="cal-display" id="yearDisplay">2024</div>
+      <button class="cal-nav" onclick="changeYear(1)">›</button>
+    </div>
+    <div class="cal-months">
+      <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
+      <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
+      <span class="cal-month" data-m="5" onclick="selectMonth(5)">Май</span><span class="cal-month" data-m="6" onclick="selectMonth(6)">Июн</span>
+      <span class="cal-month" data-m="7" onclick="selectMonth(7)">Июл</span><span class="cal-month" data-m="8" onclick="selectMonth(8)">Авг</span>
+      <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
+      <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
+    </div>
+    <span class="cal-clear" onclick="clearFilter()">Показать все</span>
   </div>
-  <div class="cal-months">
-    <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
-    <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
-    <span class="cal-month" data-m="5" onclick="selectMonth(5)">Май</span><span class="cal-month" data-m="6" onclick="selectMonth(6)">Июн</span>
-    <span class="cal-month" data-m="7" onclick="selectMonth(7)">Июл</span><span class="cal-month" data-m="8" onclick="selectMonth(8)">Авг</span>
-    <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
-    <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
+
+  <!-- 2. Отдел (чипы ≤5 / dropdown >5 — как в ПП) -->
+  <div class="pp-dept-bar" id="deptBar" style="display:none;">
+    <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Отдел:</span>
+    <div id="spDeptWrap" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
   </div>
-  <span class="cal-clear" onclick="clearFilter()">Показать все</span>
-  <div class="density-toggle" id="densityToggle">
-    <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
-    <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
-    <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
+
+  <!-- 3. Вид + статус-pills + density справа -->
+  <div class="view-tabs" id="viewTabs">
+    <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
+    <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
+    <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
+      <button class="gantt-scale-btn" data-scale="day" onclick="setGanttScale('day')">Дни</button>
+      <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">Недели</button>
+      <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">Месяцы</button>
+      <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
+    </span>
+    <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" data-tip="Показать только задачи с зависимостями">🔗 Только зависимые</button>
+    <div class="status-pills" id="spStatusPanel" style="display:none;">
+      <button class="sp sp-all" data-status="all" onclick="spFilterStatus('all')">
+        Все <span class="num" id="spCountAll">0</span>
+      </button>
+      <button class="sp sp-done" data-status="done" onclick="spFilterStatus('done')">
+        ✓ <span class="num" id="spCountDone">0</span>
+      </button>
+      <button class="sp sp-overdue" data-status="overdue" onclick="spFilterStatus('overdue')">
+        ⚠ <span class="num" id="spCountOverdue">0</span>
+      </button>
+      <button class="sp sp-inwork" data-status="inwork" onclick="spFilterStatus('inwork')">
+        ⟳ <span class="num" id="spCountInWork">0</span>
+      </button>
+    </div>
+    <div class="density-toggle" id="densityToggle" style="margin-left:auto;">
+      <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
+      <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
+      <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
+    </div>
   </div>
-  <div class="plan-summary">
+
+  <!-- Скрытые элементы для JS-совместимости (searchbar удалён визуально) -->
+  <div style="display:none;">
+    <input id="searchInput" value="">
+    <span id="searchCount"></span>
+    <span id="filtersActiveBadge"></span>
+    <input type="checkbox" id="filterInstant">
+  </div>
+
+  <div class="plan-summary" style="display:none;">
     <div>
       <div class="plan-summary-label">Суммарная трудоёмкость</div>
       <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
     </div>
     <div class="plan-summary-value" id="planSummaryValue">—</div>
-  </div>
-  <div class="dept-bar" id="deptBar" style="display:none;">
-    <span class="cal-label">Отдел:</span>
-    <div id="deptChips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-  </div>
-</div>
-
-<!-- ══ Строка поиска (под тулбаром) ══════════════════════════════════════ -->
-<div class="searchbar" id="searchbar">
-  <span class="search-icon">🔍</span>
-  <input class="search-input" id="searchInput" placeholder="Поиск по всем полям..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
-  <span class="search-count" id="searchCount"></span>
-  <span class="filters-active-badge" id="filtersActiveBadge" onclick="clearAllColFilters()">✕ Сбросить фильтры</span>
-  <div class="filter-mode-toggle">
-    <input type="checkbox" id="filterInstant" onchange="toggleFilterMode(this)">
-    <label for="filterInstant">Мгновенный фильтр</label>
-  </div>
-</div>
-
-<!-- ══ Переключатель видов + статус-панель (fixed) ═════════════════════ -->
-<div class="view-tabs" id="viewTabs">
-  <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
-  <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
-  <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
-    <button class="gantt-scale-btn" data-scale="day" onclick="setGanttScale('day')">Дни</button>
-    <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">Недели</button>
-    <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">Месяцы</button>
-    <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
-  </span>
-  <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" data-tip="Показать только задачи с зависимостями">🔗 Только зависимые</button>
-  <!-- Статус-панель (прогресс-бар + чипы) встроена в view-tabs справа -->
-  <div class="sp-status-inline" id="spStatusPanel" style="display:none;">
-    <div class="status-bar-mini" id="spStatusBar">
-      <div class="status-bar-done" id="spBarDone"></div>
-      <div class="status-bar-overdue" id="spBarOverdue"></div>
-      <div class="status-bar-inwork" id="spBarInWork"></div>
-    </div>
-    <button class="status-chip" data-status="all" onclick="spFilterStatus('all')">
-      Все <span class="status-chip-count" id="spCountAll"></span>
-    </button>
-    <button class="status-chip chip-done" data-status="done" onclick="spFilterStatus('done')">
-      <i class="fas fa-check"></i> Выполнено <span class="status-chip-count" id="spCountDone"></span>
-    </button>
-    <button class="status-chip chip-overdue" data-status="overdue" onclick="spFilterStatus('overdue')">
-      <i class="fas fa-exclamation-triangle"></i> Просрочено <span class="status-chip-count" id="spCountOverdue"></span>
-    </button>
-    <button class="status-chip chip-inwork" data-status="inwork" onclick="spFilterStatus('inwork')">
-      <i class="fas fa-spinner"></i> В работе <span class="status-chip-count" id="spCountInWork"></span>
-    </button>
   </div>
 </div>
 
@@ -536,7 +532,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=8"></script>
+<script src="{% static 'js/utils.js' %}?v=11"></script>
+<script src="{% static 'js/shared-toolbar.js' %}?v=2"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}"></script>
 <script src="{% static 'js/filters.js' %}?v=1"></script>
@@ -549,7 +546,7 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}?v=6"></script>
+<script src="{% static 'js/plan.js' %}?v=11"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){

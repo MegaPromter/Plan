@@ -7,7 +7,7 @@
 :root {
   --header-h: 56px;
   --toolbar-h: 100px;
-  --search-h: 42px;
+  --search-h: 0px;
   --tabs-h: 38px;
   --sidebar-width: 260px;
   --muted2: #64748b;
@@ -18,7 +18,7 @@
 /* План использует fixed-позиционирование для topbar/toolbar/searchbar,
    поэтому main-content margin-left не нужен (fixed элементы используют left:var(--sidebar-width)).
    Для table-wrap/view-tabs/gantt внутри main-content — margin-left:0, т.к. родитель уже смещён. */
-.page-content { padding:0; }
+.page-content { padding:0; animation:none !important; }
 .main-content { margin-left:0; }
 .main-content.sidebar-collapsed { margin-left:0; }
 
@@ -40,11 +40,14 @@
 .topbar-btn.primary:hover { background:var(--accent2); }
 .topbar-btn.danger { border-color:rgba(220,38,38,0.5); color:#f87171; }
 
-/* ── Тулбар: фильтр по году/месяцу и сводка плана ─────────────────── */
+/* ── Тулбар: фильтр по году/месяцу, отделы, вид, поиск ─────────────── */
 .toolbar { position:fixed; top:var(--header-h); left:var(--sidebar-width); right:0; z-index:90;
   background:var(--surface); border-bottom:1px solid var(--border);
-  padding:10px 20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; transition:left 0.3s ease; }
+  padding:10px 20px 0; display:flex; flex-direction:column; gap:6px; transition:left 0.3s ease; }
 .main-content.sidebar-collapsed .toolbar { left:0; }
+.toolbar .pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.toolbar .sp-dept-row { display:flex; align-items:center; gap:8px; }
+.toolbar .density-toggle { align-self:flex-end; }
 .cal-block { display:flex; align-items:center; gap:8px; }
 .cal-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; font-weight:600; }
 .cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
@@ -59,20 +62,13 @@
   display:inline-flex; align-items:center; }
 .cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-.dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-top:4px; }
-.dept-chip { padding:6px 12px; min-height:36px; border-radius:5px; font-size:13px; cursor:pointer;
-  border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap;
-  display:inline-flex; align-items:center; }
-.dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 .cal-clear { font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
 .cal-clear:hover { color:var(--accent); }
 
 /* ── Строка поиска ────────────────────────────────────────────────────── */
-.searchbar { position:fixed; top:calc(var(--header-h) + var(--toolbar-h)); left:var(--sidebar-width); right:0; z-index:80;
-  background:var(--surface2); border-bottom:1px solid var(--border);
-  padding:6px 20px; display:flex; align-items:center; gap:10px; height:var(--search-h); transition:left 0.3s ease; }
-.main-content.sidebar-collapsed .searchbar { left:0; }
+.searchbar {
+  background:var(--surface2); border-radius:6px;
+  padding:6px 12px; display:flex; align-items:center; gap:10px; height:var(--search-h); }
 .search-icon { color:var(--muted); font-size:16px; }
 .search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
 .search-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
@@ -80,9 +76,9 @@
 .search-count { font-size:13px; color:var(--muted); font-family:var(--mono); }
 
 /* ── Таблица задач ────────────────────────────────────────────────────── */
-.table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + var(--tabs-h)); margin-left:var(--sidebar-width);
+.table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h)); margin-left:var(--sidebar-width);
   overflow-x:auto; overflow-y:auto; padding-bottom:52px;
-  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - var(--tabs-h)); transition:margin-left 0.3s ease; }
+  height:calc(100vh - var(--header-h) - var(--toolbar-h)); transition:margin-left 0.3s ease; }
 .main-content.sidebar-collapsed .table-wrap { margin-left:0; }
 table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
 thead th {
@@ -178,10 +174,8 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 /* Searchable dropdown — базовые стили в components.css */
 
 /* ── Табы Таблица/Гант ────────────────────────────────────────────────── */
-.view-tabs { display:flex; gap:0; margin-left:var(--sidebar-width); padding:0 20px; background:var(--surface);
-  border-bottom:1px solid var(--border); position:fixed; top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h));
-  left:0; right:0; z-index:89; height:38px; align-items:center; }
-.main-content.sidebar-collapsed .view-tabs { margin-left:0; }
+.view-tabs { display:flex; gap:0; padding:0; background:var(--surface);
+  border-bottom:1px solid var(--border); height:38px; align-items:center; }
 .view-tab { padding:0 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
   background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
 .view-tab:hover { color:var(--text); background:var(--surface2); }
@@ -525,18 +519,12 @@ tr.pp-locked .pp-lock-badge {
 }
 @keyframes slideInRight { from{transform:translateX(100%)}to{transform:translateX(0)} }
 
-/* ── Статус-панель встроенная в view-tabs (план-специфичные размеры) ─── */
-/* Базовые .status-chip, .status-bar-mini, .status-bar-* в components.css */
-.sp-status-inline {
-  display:flex; align-items:center; gap:12px;
-  margin:0 auto; padding:0 20px;
+/* ── Статус-pills встроенные в view-tabs (как в ПП) ───────────────── */
+.view-tabs .status-pills {
+  display:flex; align-items:center; gap:8px;
+  margin-left:16px; padding:0;
 }
-.sp-status-inline .status-bar-mini {
-  width:600px; height:16px;
-}
-.sp-status-inline .status-chip {
-  padding:6px 14px; min-height:36px; font-size:13px;
-}
+.view-tabs .status-bar-mini { width:600px; height:16px; }
 .status-bar-wrap { flex:1; min-width:200px; max-width:400px; }
 
 /* ── Подсветка строк по статусу ──────────────────────────────────────── */

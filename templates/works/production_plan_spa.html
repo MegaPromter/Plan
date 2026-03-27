@@ -149,7 +149,7 @@
   </div>
 
   <!-- Переключатель плотности таблицы -->
-  <div class="density-toggle" id="densityToggle" data-tip="Плотность таблицы" style="margin-bottom:6px;">
+  <div class="density-toggle" id="densityToggle" data-tip="Плотность таблицы" style="float:right;margin-bottom:6px;">
     <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
     <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
     <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
@@ -427,7 +427,8 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/production_plan.js' %}?v=7"></script>
+<script src="{% static 'js/shared-toolbar.js' %}?v=3"></script>
+<script src="{% static 'js/production_plan.js' %}?v=10"></script>
 <script src="{% static 'js/sandbox.js' %}?v=7"></script>
 <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>
