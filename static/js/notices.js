@@ -78,7 +78,7 @@ function jiToggleMf(btn) { _jiMf.toggle(btn); }
 async function loadJournal() {
   try {
     document.getElementById('jiBody').innerHTML = skeletonRows(8, 13);
-    const r = await fetch('/api/journal/?per_page=100000');
+    const r = await fetch('/api/journal/?per_page=500');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     jiData = await r.json();
     _jiInitSort();

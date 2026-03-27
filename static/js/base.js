@@ -199,13 +199,14 @@ function toggleNotifPanel() {
   var isOpen = panel.classList.toggle('open');
   if (isOpen) {
     loadNotifications();
+    updateNotifBadge();
     // #15: авто-обновление при открытой панели
     if (!window._notifPollId) {
       window._notifPollId = setInterval(function() {
         var p = document.getElementById('notifPanel');
         if (p && p.classList.contains('open')) loadNotifications();
         else { clearInterval(window._notifPollId); window._notifPollId = null; }
-      }, 10000);
+      }, 60000);
     }
   }
 }
@@ -249,10 +250,10 @@ function timeAgo(isoStr) {
 }
 
 function readNotif(id, link) {
-  fetch('/api/notifications/' + id + '/read/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}, credentials: 'same-origin'});
+  fetch('/api/notifications/' + id + '/read/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}, credentials: 'same-origin'})
+    .then(function() { updateNotifBadge(); });
   var el = document.querySelector('.notif-item[data-id="' + id + '"]');
   if (el) el.classList.remove('unread');
-  updateNotifBadge();
   if (link) window.location.href = link;
 }
 
@@ -261,6 +262,7 @@ function markAllNotifRead() {
     .then(function() {
       document.querySelectorAll('.notif-item.unread').forEach(function(el) { el.classList.remove('unread'); });
       updateNotifBadge();
+      loadNotifications();
     });
 }
 
@@ -279,9 +281,9 @@ function updateNotifBadge() {
     });
 }
 
-// Initial load + polling every 60s (с паузой при скрытой вкладке)
+// Initial load + polling every 5 min (с паузой при скрытой вкладке)
 updateNotifBadge();
-var _notifBadgePollId = setInterval(updateNotifBadge, 60000);
+var _notifBadgePollId = setInterval(updateNotifBadge, 300000);
 
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
@@ -291,7 +293,7 @@ document.addEventListener('visibilitychange', function() {
   } else {
     // Вкладка снова видима — возобновляем polling бейджа
     updateNotifBadge();
-    if (!_notifBadgePollId) { _notifBadgePollId = setInterval(updateNotifBadge, 60000); }
+    if (!_notifBadgePollId) { _notifBadgePollId = setInterval(updateNotifBadge, 300000); }
     // Панельный polling возобновится при следующем toggleNotifPanel()
   }
 });

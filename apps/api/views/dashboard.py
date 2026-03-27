@@ -34,10 +34,10 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
 
         role = emp.role
 
-        # Доступные годы (из WorkCalendar)
-        available_years = sorted(set(
-            WorkCalendar.objects.values_list('year', flat=True)
-        ))
+        # Доступные годы (из WorkCalendar) — distinct на уровне БД
+        available_years = sorted(
+            WorkCalendar.objects.values_list('year', flat=True).distinct()
+        )
         if not available_years:
             available_years = [today.year]
 
@@ -53,11 +53,41 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             .values('created_at')[:1]
         )
 
+        # Только поля, используемые в dashboard (KPI, задачи, долги).
+        # PP-специфичные поля (sheets_a4, norm, coeff, total_2d, total_3d,
+        # labor, row_code, work_order, milestone_num, justification,
+        # executors_list, actions, task_type, stage_num, deadline) не нужны.
+        _WORK_FIELDS = (
+            'id', 'work_name', 'work_num', 'work_designation',
+            'date_start', 'date_end', 'plan_hours',
+            'executor_id', 'department_id', 'sector_id',
+            'project_id', 'pp_project_id',
+        )
+        _RELATED_ONLY = (
+            # department
+            'department__id', 'department__code', 'department__name',
+            # sector
+            'sector__id', 'sector__code', 'sector__name',
+            # executor — short_name property uses last/first/patronymic
+            'executor__id', 'executor__last_name',
+            'executor__first_name', 'executor__patronymic',
+            # project — .name property uses name_short/name_full
+            'project__id', 'project__name_short', 'project__name_full',
+            # pp_project
+            'pp_project__id', 'pp_project__name',
+            'pp_project__up_project_id',
+            # pp_project__up_project
+            'pp_project__up_project__id',
+            'pp_project__up_project__name_short',
+            'pp_project__up_project__name_full',
+        )
+
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
             .annotate(_done=has_reports, _report_date=first_report_date)
             .select_related('department', 'sector', 'executor',
                             'project', 'pp_project', 'pp_project__up_project')
+            .only(*_WORK_FIELDS, *_RELATED_ONLY)
         )
 
         year_q = (
@@ -268,18 +298,25 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         month_norm = norms.get(year, {}).get(month, 0)
 
         # Определяем подчинённых (включая себя — для scope KPI)
+        # Загружаем только поля, нужные для dashboard (short_name, dept, sector)
+        _emp_only = (
+            'id', 'last_name', 'first_name', 'patronymic',
+            'department_id', 'sector_id',
+            'department__id', 'department__code', 'department__name',
+            'sector__id', 'sector__code', 'sector__name',
+        )
         if emp.role in ('admin', 'ntc_head', 'ntc_deputy'):
             team_employees = Employee.objects.filter(
                 is_active=True
-            ).select_related('department', 'sector')
+            ).select_related('department', 'sector').only(*_emp_only)
         elif emp.role in ('dept_head', 'dept_deputy'):
             team_employees = Employee.objects.filter(
                 is_active=True, department=emp.department
-            ).select_related('department', 'sector')
+            ).select_related('department', 'sector').only(*_emp_only)
         elif emp.role == 'sector_head':
             team_employees = Employee.objects.filter(
                 is_active=True, sector=emp.sector
-            ).select_related('department', 'sector')
+            ).select_related('department', 'sector').only(*_emp_only)
         else:
             return None
 
@@ -325,6 +362,9 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             # KPI — считаем один раз на задачу, не на исполнителя
             any_in_month = False
 
+            # Сериализуем задачу один раз (результат одинаков для всех исполнителей)
+            task_item = None  # lazy — создаём только если нужно
+
             for eid in executors_on_work:
                 ph = {}
                 if w.executor_id == eid:
@@ -352,12 +392,14 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                 if in_month:
                     any_in_month = True
 
-                task_item = self._serialize_task(w, ph, status, today, year)
-
                 # Долги — все просроченные невыполненные (приоритет над месяцем)
                 if status == 'overdue':
+                    if task_item is None:
+                        task_item = self._serialize_task(w, ph, status, today, year)
                     emp_debts[eid].append(task_item)
                 elif in_month:
+                    if task_item is None:
+                        task_item = self._serialize_task(w, ph, status, today, year)
                     emp_tasks[eid].append(task_item)
 
                 # Выполнено с просрочкой (per employee)
@@ -366,6 +408,8 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                     if report_date:
                         rd = report_date.date() if hasattr(report_date, 'date') else report_date
                         if rd > w.date_end:
+                            if task_item is None:
+                                task_item = self._serialize_task(w, ph, status, today, year)
                             emp_done_late[eid].append(task_item)
 
             # KPI — один раз на задачу

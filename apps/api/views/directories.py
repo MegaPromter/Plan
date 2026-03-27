@@ -12,6 +12,8 @@ import logging
 # defaultdict — словарь с дефолтным значением (используется для группировки)
 from collections import defaultdict, deque
 
+# cache — серверный кэш Django (memcache/redis/locmem в зависимости от настроек)
+from django.core.cache import cache
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
 # View — базовый класс для CBV
@@ -33,6 +35,10 @@ from apps.works.models import Directory, PPProject, Project, Work
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)
 
+# Ключ и TTL серверного кэша справочников (5 минут)
+DIRECTORIES_CACHE_KEY = 'directories_list'
+DIRECTORIES_CACHE_TTL = 300
+
 
 # ── GET /api/directories ─────────────────────────────────────────────────────
 
@@ -48,6 +54,13 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
     _REAL_MODEL_TYPES = {'center', 'dept', 'sector', 'task_type'}
 
     def get(self, request):
+        # Проверяем серверный кэш (справочники меняются редко)
+        cached = cache.get(DIRECTORIES_CACHE_KEY)
+        if cached is not None:
+            response = JsonResponse(cached)
+            response['Cache-Control'] = 'max-age=60'
+            return response
+
         # Исключаем типы, дублирующие реальные модели (NTCCenter, Department, Sector)
         # Они обрабатываются отдельно ниже
         qs = Directory.objects.exclude(
@@ -152,9 +165,13 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
         # Добавляем виртуальный справочник сотрудников
         result['employees'] = employees
 
+        # Сохраняем в серверный кэш (5 минут)
+        payload = dict(result)
+        cache.set(DIRECTORIES_CACHE_KEY, payload, DIRECTORIES_CACHE_TTL)
+
         # Формируем ответ
-        response = JsonResponse(dict(result))
-        # Кэшируем на 60 секунд (справочники меняются редко)
+        response = JsonResponse(payload)
+        # Браузерный кэш на 60 секунд (дополнительно к серверному)
         response['Cache-Control'] = 'max-age=60'
         return response
 
@@ -207,6 +224,9 @@ class DirectoryCreateView(AdminRequiredJsonMixin, View):
             parent=parent,      # FK на родителя (None для корневых записей)
         )
 
+        # Инвалидируем кэш справочников после создания записи
+        cache.delete(DIRECTORIES_CACHE_KEY)
+
         # Результат: минимально — ID созданной записи
         result = {'id': entry.pk}
 
@@ -252,6 +272,9 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
         entry.value = value
         # Сохраняем только поле value
         entry.save(update_fields=['value'])
+
+        # Инвалидируем кэш справочников после обновления
+        cache.delete(DIRECTORIES_CACHE_KEY)
 
         # Синхронизируем имя в PPProject, если это проект верхнего уровня
         if entry.dir_type == 'project' and not entry.parent_id:
@@ -302,5 +325,8 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
 
         # Удаляем все найденные записи справочника одним запросом
         Directory.objects.filter(pk__in=to_delete_ids).delete()
+
+        # Инвалидируем кэш справочников после удаления
+        cache.delete(DIRECTORIES_CACHE_KEY)
 
         return JsonResponse({'ok': True})

@@ -179,10 +179,15 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
         )
         qs = base.filter(year_q)
 
-        # Сводка
-        total = qs.count()
-        done = qs.filter(_done=True).count()
-        overdue = qs.filter(_done=False, date_end__lt=today).count()
+        # Сводка (один запрос вместо трёх)
+        agg = qs.aggregate(
+            total=Count('id'),
+            done=Count('id', filter=Q(_done=True)),
+            overdue=Count('id', filter=Q(_done=False, date_end__lt=today)),
+        )
+        total = agg['total']
+        done = agg['done']
+        overdue = agg['overdue']
         inwork = total - done - overdue
 
         # Задачи
