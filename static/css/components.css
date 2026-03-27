@@ -52,6 +52,74 @@
 }
 .modal-close:hover { background: var(--surface2); }
 .modal-close:focus-visible { outline:2px solid var(--accent); outline-offset:2px; box-shadow:0 0 0 4px var(--accent-glow); }
+/* ── JS-модалки (openModal / confirmDialog) ────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.2s ease-out;
+  overflow-y: auto;
+}
+.modal-dialog {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e6ed);
+  border-radius: 12px;
+  max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: modalSlideIn 0.2s ease-out;
+  margin-bottom: 40px;
+}
+.modal-backdrop .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #e2e6ed);
+}
+.modal-backdrop .modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--muted, #64748b);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.modal-close-btn:hover { background: var(--surface2, #f8f9fb); color: var(--text, #1e293b); }
+.modal-backdrop .modal-body {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.modal-backdrop .modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border, #e2e6ed);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.confirm-message {
+  color: var(--text, #1e293b);
+  margin: 0;
+  white-space: pre-line;
+}
+@keyframes modalFadeIn  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes modalFadeOut { from { opacity: 1 } to { opacity: 0 } }
+@keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px) } to { opacity: 1; transform: translateY(0) } }
+
 /* A11y: visual cue when modal dialog is focused via keyboard */
 .modal-backdrop .modal-dialog:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .modal-box {
@@ -1020,7 +1088,7 @@
 .dept-menu-item:hover { background:var(--accent-light, rgba(37,99,235,0.06)); }
 .dept-cb {
   width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border2, #c8d0dc);
-  appearance:none; -webkit-appearance:none; cursor:pointer; flex-shrink:0;
+  appearance:none; cursor:pointer; flex-shrink:0;
   display:flex; align-items:center; justify-content:center; position:relative;
   transition:all 0.15s; background:var(--surface);
 }
@@ -1083,7 +1151,7 @@
 }
 .bulk-cb {
   width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border2, #c8d0dc);
-  appearance:none; -webkit-appearance:none; cursor:pointer; flex-shrink:0;
+  appearance:none; cursor:pointer; flex-shrink:0;
   display:inline-flex; align-items:center; justify-content:center; position:relative;
   transition:all 0.15s; background:var(--surface); vertical-align:middle; margin-right:6px;
 }
@@ -1222,7 +1290,6 @@ tr.drag-over-bottom { box-shadow:inset 0 -2px 0 var(--accent); }
   outline: none;
   transition: all 0.15s;
   appearance: none;
-  -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;

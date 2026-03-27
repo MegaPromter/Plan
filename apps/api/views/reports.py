@@ -179,8 +179,9 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
             )
 
         # Проверяем существование задачи
-        work = Work.objects.filter(pk=task_id).select_related('department').first()
-        if not work:
+        try:
+            work = Work.objects.select_related('department').get(pk=task_id)
+        except Work.DoesNotExist:
             return JsonResponse({'error': 'Задача не найдена'}, status=404)
 
         # Проверка доступа по отделу (создавать отчёт — только свой отдел)
@@ -245,8 +246,9 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            report = WorkReport.objects.select_related('work').filter(pk=pk).first()
-            if not report:
+            try:
+                report = WorkReport.objects.select_related('work').get(pk=pk)
+            except WorkReport.DoesNotExist:
                 return JsonResponse(
                     {'error': 'Отчёт не найден'}, status=404,
                 )
@@ -275,8 +277,9 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         if not d:
             return JsonResponse({'error': 'Пустое тело запроса'}, status=400)
 
-        report = WorkReport.objects.select_related('work').filter(pk=pk).first()
-        if not report:
+        try:
+            report = WorkReport.objects.select_related('work').get(pk=pk)
+        except WorkReport.DoesNotExist:
             return JsonResponse({'error': 'Отчёт не найден'}, status=404)
 
         # Проверка видимости задачи для текущего пользователя

@@ -170,9 +170,9 @@ class PPProjectDetailView(AdminRequiredJsonMixin, View):
             )
 
         # Ищем проект по первичному ключу
-        project = PPProject.objects.filter(pk=pk).first()
-        if not project:
-            # Проект не найден — 404
+        try:
+            project = PPProject.objects.get(pk=pk)
+        except PPProject.DoesNotExist:
             return JsonResponse(
                 {'error': 'Проект не найден'}, status=404,
             )
@@ -191,8 +191,9 @@ class PPProjectDetailView(AdminRequiredJsonMixin, View):
 
     def _delete(self, request, pk):
         # Ищем проект по PK
-        project = PPProject.objects.filter(pk=pk).first()
-        if not project:
+        try:
+            project = PPProject.objects.get(pk=pk)
+        except PPProject.DoesNotExist:
             return JsonResponse(
                 {'error': 'Проект не найден'}, status=404,
             )

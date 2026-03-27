@@ -83,8 +83,9 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
         emp = getattr(request.user, 'employee', None)
         is_admin = emp and emp.role == 'admin' if emp else request.user.is_superuser
 
-        fb = Feedback.objects.filter(pk=pk).first()
-        if not fb:
+        try:
+            fb = Feedback.objects.get(pk=pk)
+        except Feedback.DoesNotExist:
             return JsonResponse({'error': 'Не найдено'}, status=404)
 
         is_own = fb.user_id == request.user.pk
@@ -141,8 +142,9 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
         if not is_admin:
             return JsonResponse({'error': 'Доступ запрещён'}, status=403)
 
-        fb = Feedback.objects.filter(pk=pk).first()
-        if not fb:
+        try:
+            fb = Feedback.objects.get(pk=pk)
+        except Feedback.DoesNotExist:
             return JsonResponse({'error': 'Не найдено'}, status=404)
 
         fb.delete()
@@ -153,8 +155,9 @@ class FeedbackAttachmentDeleteView(LoginRequiredJsonMixin, View):
     """DELETE /api/feedback/attachment/<pk>/ — удаление вложения (автор или admin)."""
 
     def delete(self, request, pk):
-        att = FeedbackAttachment.objects.select_related('feedback').filter(pk=pk).first()
-        if not att:
+        try:
+            att = FeedbackAttachment.objects.select_related('feedback').get(pk=pk)
+        except FeedbackAttachment.DoesNotExist:
             return JsonResponse({'error': 'Не найдено'}, status=404)
 
         emp = getattr(request.user, 'employee', None)

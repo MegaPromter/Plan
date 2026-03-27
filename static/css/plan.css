@@ -7,7 +7,6 @@
 :root {
   --header-h: 56px;
   --toolbar-h: 100px;
-  --search-h: 0px;
   --tabs-h: 38px;
   --sidebar-width: 260px;
   --muted2: #64748b;
@@ -68,7 +67,7 @@
 /* ── Строка поиска ────────────────────────────────────────────────────── */
 .searchbar {
   background:var(--surface2); border-radius:6px;
-  padding:6px 12px; display:flex; align-items:center; gap:10px; height:var(--search-h); }
+  padding:6px 12px; display:flex; align-items:center; gap:10px; }
 .search-icon { color:var(--muted); font-size:16px; }
 .search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
 .search-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
@@ -136,7 +135,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 /* ── Select в ячейке ──────────────────────────────────────────────────── */
 .cell-select { width:100%; padding:var(--td-pad-y) var(--td-pad-x); background:transparent; border:none; outline:none;
   color:var(--text); font-family:var(--font); font-size:var(--td-font); cursor:pointer; text-align:center;
-  -webkit-appearance:none; appearance:none;
+  appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; min-height:36px; }
 .cell-select:focus { background-color:rgba(59,130,246,0.06); }
@@ -182,8 +181,8 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 .view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
 
 /* ── Гант — gantt-scale-btn, gantt-filter-btn в components.css ─────── */
-#ganttContainer { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--search-h) + var(--tabs-h)); margin-left:var(--sidebar-width);
-  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--search-h) - var(--tabs-h)); display:none; }
+#ganttContainer { margin-top:calc(var(--header-h) + var(--toolbar-h) + var(--tabs-h)); margin-left:var(--sidebar-width);
+  height:calc(100vh - var(--header-h) - var(--toolbar-h) - var(--tabs-h)); display:none; }
 .main-content.sidebar-collapsed #ganttContainer { margin-left:0; }
 
 /* ── PP-locked (задачи из Производственного плана) ─────────────────── */
@@ -198,7 +197,7 @@ tr.pp-locked .cell-edit:disabled {
 tr.pp-locked .cell-select:disabled {
   background: transparent; border-color: transparent;
   color: var(--text); cursor: default; pointer-events: none; opacity: 1;
-  appearance: none; -webkit-appearance: none;
+  appearance: none;
 }
 tr.pp-locked .pp-lock-badge {
   font-size: 14px; color: #6b7280; opacity: 0.9;
@@ -468,7 +467,7 @@ tr.pp-locked .pp-lock-badge {
 .form-input:focus { border-color:var(--accent); }
 .form-select { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
   border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
-  -webkit-appearance:none; appearance:none;
+  appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 .form-select:focus { border-color:var(--accent); }

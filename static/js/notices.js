@@ -308,7 +308,7 @@ async function saveDescModal() {
   try {
     const r = await fetch('/api/journal/' + descEditingId + '/', {
       method: 'PUT',
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify({description: desc}),
     });
     if (r.ok) {
@@ -357,7 +357,7 @@ async function saveModal() {
   try {
     const r = await fetch(url, {
       method,
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify(payload),
     });
     let d = {};
@@ -424,7 +424,7 @@ async function saveCloseModal() {
   try {
     const r = await fetch('/api/journal/' + closingId + '/', {
       method: 'PUT',
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify(payload),
     });
     let d = {};
@@ -446,7 +446,7 @@ async function deleteRow(id) {
   try {
     const r = await fetch('/api/journal/' + id + '/', {
       method: 'DELETE',
-      headers: {'X-CSRFToken': getCsrf()},
+      headers: {'X-CSRFToken': getCsrfToken()},
     });
     if (r.ok) {
       jiData = jiData.filter(x => x.id !== id);
@@ -462,10 +462,7 @@ async function deleteRow(id) {
   }
 }
 
-function getCsrf() {
-  return document.cookie.split(';').map(c => c.trim())
-    .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
-}
+// getCsrfToken() удалён — используем getCsrfToken() из utils.js
 
 /* ── Закрытие модалов по клику на оверлей — обрабатывается глобально в modal.js/base.js ── */
 

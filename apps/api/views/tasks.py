@@ -745,10 +745,9 @@ def _set_work_fk_fields(work, d, request):
     # project — УП-проект по названию
     project = d.get('project', '')
     if project:
-        proj_obj = (
-            Project.objects.filter(name_short=project).first()
-            or Project.objects.filter(name_full=project).first()
-        )
+        proj_obj = Project.objects.filter(
+            Q(name_short=project) | Q(name_full=project)
+        ).first()
         if proj_obj:
             work.project = proj_obj
 

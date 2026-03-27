@@ -111,8 +111,9 @@ class CommentDetailView(LoginRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            comment = WorkComment.objects.filter(pk=pk).first()
-            if not comment:
+            try:
+                comment = WorkComment.objects.get(pk=pk)
+            except WorkComment.DoesNotExist:
                 return JsonResponse({'error': 'Комментарий не найден'}, status=404)
 
             # Удалять может только автор или admin

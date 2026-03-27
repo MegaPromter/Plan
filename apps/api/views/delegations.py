@@ -89,6 +89,7 @@ class DelegationListView(LoginRequiredJsonMixin, View):
                 .filter(
                     models_Q_delegator_or_delegate(employee)
                 )
+                .select_related('delegate__user', 'delegator__user')
                 .order_by('-created_at')
             )
             result = []

@@ -1,6 +1,7 @@
 /**
  * Универсальная система модальных окон.
  * Аналог модалок из Flask plan.html.
+ * Стили — в components.css (секция «JS-модалки»).
  */
 
 /* ── Создание модалки ────────────────────────────────────────────────────── */
@@ -20,13 +21,6 @@ function openModal(options = {}) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.id = id;
-    backdrop.style.cssText = `
-        position: fixed; inset: 0; z-index: 9000;
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        animation: modalFadeIn 0.2s ease-out;
-        overflow-y: auto;
-    `;
 
     // Dialog
     const dialog = document.createElement('div');
@@ -34,34 +28,20 @@ function openModal(options = {}) {
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
     if (title) dialog.setAttribute('aria-label', title);
-    dialog.style.cssText = `
-        background: var(--surface, #ffffff); border: 1px solid var(--border, #e2e6ed);
-        border-radius: 12px; width: ${width}; max-width: 95vw;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        animation: modalSlideIn 0.2s ease-out;
-        margin-bottom: 40px;
-    `;
+    dialog.style.width = width;
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = `
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 16px 20px; border-bottom: 1px solid var(--border, #e2e6ed);
-    `;
+    header.className = 'modal-header';
     header.innerHTML = `
-        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text,#1e293b);"></h3>
-        <button class="modal-close-btn" style="
-            background:none;border:none;color:var(--muted,#64748b);
-            font-size:20px;cursor:pointer;padding:4px 8px;
-            border-radius:4px;transition:all 0.15s;
-        " title="Закрыть">&times;</button>
+        <h3 class="modal-title"></h3>
+        <button class="modal-close-btn" title="Закрыть">&times;</button>
     `;
     header.querySelector('h3').textContent = title;
 
     // Body
     const bodyDiv = document.createElement('div');
     bodyDiv.className = 'modal-body';
-    bodyDiv.style.cssText = 'padding: 20px; max-height: 70vh; overflow-y: auto;';
     if (bodyElement) {
         bodyDiv.appendChild(bodyElement);
     } else {
@@ -75,10 +55,6 @@ function openModal(options = {}) {
     if (footer) {
         const footerDiv = document.createElement('div');
         footerDiv.className = 'modal-footer';
-        footerDiv.style.cssText = `
-            padding: 12px 20px; border-top: 1px solid var(--border, #e2e6ed);
-            display: flex; justify-content: flex-end; gap: 8px;
-        `;
         footerDiv.innerHTML = footer;
         dialog.appendChild(footerDiv);
     }
@@ -212,21 +188,6 @@ function closeAllModals() {
     setTimeout(() => { document.body.style.overflow = ''; }, 150);
 }
 
-/* ── CSS-анимации для модалок ──────────────────────────────────────────── */
-
-(function() {
-    if (document.getElementById('modal-animations')) return;
-    const style = document.createElement('style');
-    style.id = 'modal-animations';
-    style.textContent = `
-        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modalFadeOut { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-close-btn:hover { background: var(--surface2, #f8f9fb) !important; color: var(--text, #1e293b) !important; }
-    `;
-    document.head.appendChild(style);
-})();
-
 /* ── Шаблонные модалы (.modal-overlay): единый ESC и клик по фону ────────── */
 
 // Клик по фону — закрываем если клик именно на оверлей, не на содержимое (.modal)
@@ -259,7 +220,7 @@ function confirmDialog(message, title = 'Подтверждение') {
         }
 
         const msgEl = document.createElement('p');
-        msgEl.style.cssText = 'color:var(--text,#1e293b);margin:0;white-space:pre-line;';
+        msgEl.className = 'confirm-message';
         msgEl.textContent = message;
 
         const modal = openModal({
@@ -267,17 +228,8 @@ function confirmDialog(message, title = 'Подтверждение') {
             bodyElement: msgEl,
             width: '400px',
             footer: `
-                <button class="btn btn-outline modal-cancel" style="
-                    padding:7px 16px;border-radius:6px;font-size:14px;cursor:pointer;
-                    background:transparent;color:var(--text,#1e293b);
-                    border:1px solid var(--border2,#c8d0dc);font-family:inherit;
-                    transition:all 0.15s;
-                ">Отмена</button>
-                <button class="btn btn-primary modal-confirm" style="
-                    padding:7px 16px;border-radius:6px;font-size:14px;cursor:pointer;
-                    background:var(--accent,#3b82f6);color:#fff;border:none;
-                    font-family:inherit;font-weight:500;transition:all 0.15s;
-                ">Подтвердить</button>
+                <button class="btn btn-outline modal-cancel">Отмена</button>
+                <button class="btn btn-primary modal-confirm">Подтвердить</button>
             `,
             onClose: () => done(false),
             noEsc: true,   // Escape обрабатываем сами через onKey

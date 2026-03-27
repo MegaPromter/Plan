@@ -279,9 +279,22 @@ function updateNotifBadge() {
     });
 }
 
-// Initial load + polling every 60s
+// Initial load + polling every 60s (с паузой при скрытой вкладке)
 updateNotifBadge();
-setInterval(updateNotifBadge, 60000);
+var _notifBadgePollId = setInterval(updateNotifBadge, 60000);
+
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    // Вкладка скрыта — останавливаем polling
+    if (_notifBadgePollId) { clearInterval(_notifBadgePollId); _notifBadgePollId = null; }
+    if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+  } else {
+    // Вкладка снова видима — возобновляем polling бейджа
+    updateNotifBadge();
+    if (!_notifBadgePollId) { _notifBadgePollId = setInterval(updateNotifBadge, 60000); }
+    // Панельный polling возобновится при следующем toggleNotifPanel()
+  }
+});
 
 // Close notification panel on outside click
 document.addEventListener('click', function(e) {

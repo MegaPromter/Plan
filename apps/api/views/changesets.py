@@ -490,8 +490,9 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
 
     def _apply_update(self, item):
         """Обновить существующую строку. Возвращает dict конфликта или None."""
-        work = Work.objects.select_for_update().filter(pk=item.target_row_id).first()
-        if not work:
+        try:
+            work = Work.objects.select_for_update().get(pk=item.target_row_id)
+        except Work.DoesNotExist:
             return {'item_id': item.id, 'error': 'Строка удалена'}
 
         # Проверяем конфликты: сравниваем original_data с текущим состоянием
@@ -521,8 +522,9 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
 
     def _apply_delete(self, item):
         """Удалить строку (или скрыть из ПП если есть в СП)."""
-        work = Work.objects.select_for_update().filter(pk=item.target_row_id).first()
-        if not work:
+        try:
+            work = Work.objects.select_for_update().get(pk=item.target_row_id)
+        except Work.DoesNotExist:
             return  # уже удалена
         if work.show_in_plan:
             work.show_in_pp = False

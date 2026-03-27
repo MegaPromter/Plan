@@ -105,8 +105,9 @@ class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
 
     def put(self, request, pk):
         try:
-            cal = WorkCalendar.objects.filter(pk=pk).first()
-            if not cal:
+            try:
+                cal = WorkCalendar.objects.get(pk=pk)
+            except WorkCalendar.DoesNotExist:
                 return JsonResponse({'error': 'Запись не найдена'}, status=404)
             d = parse_json_body(request)
             if d is None:
@@ -127,8 +128,9 @@ class WorkCalendarDetailView(AdminRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         try:
-            cal = WorkCalendar.objects.filter(pk=pk).first()
-            if not cal:
+            try:
+                cal = WorkCalendar.objects.get(pk=pk)
+            except WorkCalendar.DoesNotExist:
                 return JsonResponse({'error': 'Запись не найдена'}, status=404)
             cal.delete()
             return JsonResponse({'ok': True})
@@ -183,8 +185,9 @@ class HolidayDetailView(AdminRequiredJsonMixin, View):
     """DELETE /api/holidays/<id>/"""
 
     def delete(self, request, pk):
-        h = Holiday.objects.filter(pk=pk).first()
-        if not h:
+        try:
+            h = Holiday.objects.get(pk=pk)
+        except Holiday.DoesNotExist:
             return JsonResponse({'error': 'Запись не найдена'}, status=404)
         h.delete()
         invalidate_holiday_cache()

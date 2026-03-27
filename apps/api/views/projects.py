@@ -288,8 +288,9 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
             if d is None:
                 return JsonResponse({'error': 'Невалидный JSON'}, status=400)
             # Ищем проект по PK
-            proj = Project.objects.filter(pk=pk).first()
-            if not proj:
+            try:
+                proj = Project.objects.get(pk=pk)
+            except Project.DoesNotExist:
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Получаем новые значения полей
             name_full  = (d.get('name_full') or '').strip()
@@ -313,8 +314,9 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
     def delete(self, request, pk):
         try:
             # Ищем проект
-            proj = Project.objects.filter(pk=pk).first()
-            if not proj:
+            try:
+                proj = Project.objects.get(pk=pk)
+            except Project.DoesNotExist:
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Удаляем проект (CASCADE удалит связанные ProjectProduct и PPProject.up_project → SET NULL)
             proj.delete()
@@ -334,8 +336,9 @@ class ProjectProductListView(LoginRequiredJsonMixin, View):
     def get(self, request, pk):
         try:
             # Проверяем существование проекта
-            proj = Project.objects.filter(pk=pk).first()
-            if not proj:
+            try:
+                proj = Project.objects.get(pk=pk)
+            except Project.DoesNotExist:
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Получаем изделия проекта, сортируем по названию
             products = proj.products.order_by('name')
@@ -352,8 +355,9 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
     def post(self, request, pk):
         try:
             # Проверяем существование проекта
-            proj = Project.objects.filter(pk=pk).first()
-            if not proj:
+            try:
+                proj = Project.objects.get(pk=pk)
+            except Project.DoesNotExist:
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
@@ -388,8 +392,9 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
     def put(self, request, pk, pid):
         try:
             # Ищем изделие по PK изделия И PK проекта (защита от подмены)
-            prod = ProjectProduct.objects.filter(pk=pid, project_id=pk).first()
-            if not prod:
+            try:
+                prod = ProjectProduct.objects.get(pk=pid, project_id=pk)
+            except ProjectProduct.DoesNotExist:
                 return JsonResponse({'error': 'Изделие не найдено'}, status=404)
             # Парсим тело запроса
             d = parse_json_body(request)
@@ -423,8 +428,9 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
     def delete(self, request, pk, pid):
         try:
             # Ищем изделие по PK изделия И PK проекта (защита от подмены)
-            prod = ProjectProduct.objects.filter(pk=pid, project_id=pk).first()
-            if not prod:
+            try:
+                prod = ProjectProduct.objects.get(pk=pid, project_id=pk)
+            except ProjectProduct.DoesNotExist:
                 return JsonResponse({'error': 'Изделие не найдено'}, status=404)
             # Удаляем изделие
             prod.delete()

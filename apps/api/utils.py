@@ -15,9 +15,31 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 # timezone — работа со временем с учётом часового пояса
 from django.utils import timezone
+# cache — кеширование в памяти (LocMemCache / Redis)
+from django.core.cache import cache
 
 # Модели сотрудников: Employee (профиль) и RoleDelegation (делегирования)
 from apps.employees.models import Employee, RoleDelegation
+
+
+def _get_active_delegations(employee):
+    """
+    Возвращает список активных делегирований для сотрудника.
+    Кешируется на 60 секунд чтобы не запрашивать БД на каждый API-вызов.
+    """
+    cache_key = f'delegations:{employee.pk}'
+    result = cache.get(cache_key)
+    if result is not None:
+        return result
+    now = timezone.now()
+    delegations = list(
+        RoleDelegation.objects.filter(
+            delegate=employee,
+            valid_until__gt=now,
+        ).values_list('scope_type', 'scope_value', named=True)
+    )
+    cache.set(cache_key, delegations, 60)
+    return delegations
 
 
 # ── Роли и константы ──────────────────────────────────────────────────────────
@@ -262,23 +284,14 @@ def get_visibility_filter(user):
             q = Q(executor=employee) | Q(created_by=employee)
 
     # Добавляем делегирования: временно расширяем видимость на чужие данные
-    delegations = RoleDelegation.objects.filter(
-        delegate=employee,   # делегирование адресовано именно этому сотруднику
-        valid_until__gt=now, # ещё действует (не истёк срок)
-    )
-    for d in delegations:
-        # Расширяем фильтр в зависимости от типа области делегирования
+    for d in _get_active_delegations(employee):
         if d.scope_type == 'center':
-            # Делегирование по НТЦ-центру
             q = q | Q(ntc_center__code=d.scope_value)
         elif d.scope_type == 'dept':
-            # Делегирование по отделу
             q = q | Q(department__code=d.scope_value)
         elif d.scope_type == 'sector':
-            # Делегирование по сектору
             q = q | Q(sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            # Делегирование по конкретному исполнителю (по фамилии через FK)
             q = q | Q(executor__last_name__icontains=d.scope_value)
 
     return q
@@ -333,22 +346,14 @@ def get_vacation_visibility_filter(user):
         q = Q(employee=employee)
 
     # Делегирования — расширяем видимость отпусков
-    delegations = RoleDelegation.objects.filter(
-        delegate=employee,   # адресовано данному сотруднику
-        valid_until__gt=now, # действует
-    )
-    for d in delegations:
+    for d in _get_active_delegations(employee):
         if d.scope_type == 'center':
-            # Видит отпуска сотрудников центра
             q = q | Q(employee__ntc_center__code=d.scope_value)
         elif d.scope_type == 'dept':
-            # Видит отпуска сотрудников отдела
             q = q | Q(employee__department__code=d.scope_value)
         elif d.scope_type == 'sector':
-            # Видит отпуска сотрудников сектора
             q = q | Q(employee__sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            # Видит отпуска конкретного сотрудника (по фамилии)
             q = q | Q(employee__last_name__icontains=d.scope_value)
 
     return q

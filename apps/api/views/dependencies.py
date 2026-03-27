@@ -309,8 +309,9 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
             d = parse_json_body(request)
             if d is None:
                 return JsonResponse({'error': 'Невалидный JSON'}, status=400)
-            dep = TaskDependency.objects.filter(pk=pk).first()
-            if not dep:
+            try:
+                dep = TaskDependency.objects.get(pk=pk)
+            except TaskDependency.DoesNotExist:
                 return JsonResponse({'error': 'Зависимость не найдена'}, status=404)
 
             if 'dep_type' in d:
@@ -336,8 +337,9 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
     def delete(self, request, pk):
         """Удаление зависимости."""
         try:
-            dep = TaskDependency.objects.filter(pk=pk).first()
-            if not dep:
+            try:
+                dep = TaskDependency.objects.get(pk=pk)
+            except TaskDependency.DoesNotExist:
                 return JsonResponse({'error': 'Зависимость не найдена'}, status=404)
 
             log_action(

@@ -1,18 +1,5 @@
-/* === DJANGO CSRF HELPER === */
-// getCsrfToken() — в utils.js (единый источник)
-function apiHeaders(extra) {
-  return Object.assign({'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, extra||{});
-}
-async function fetchJson(url, opts={}) {
-  const res = await fetch(url, Object.assign({headers: apiHeaders()}, opts));
-  if (!res.ok) {
-    let msg = 'Ошибка сервера ' + res.status;
-    try { const e = await res.json(); if (e.error) msg = e.error; } catch(_) {}
-    throw new Error(msg);
-  }
-  const txt = await res.text();
-  return txt ? JSON.parse(txt) : {};
-}
+/* === DJANGO CSRF / fetchJson === */
+// getCsrfToken(), fetchJson() — в utils.js (единый источник)
 // escapeHtml(), escapeJs() — в utils.js
 const _now = new Date();
 let selectedYear  = parseInt(localStorage.getItem("plan_year")  || _now.getFullYear());
@@ -2244,16 +2231,19 @@ let editingTaskId = null;                            // ID редактируе�
 let _editingTaskOriginal = null;                     // Исходные данные задачи (для сравнения)
 
 // Сброс состояния при закрытии модалки через ESC (base.html снимает .open)
+// Ссылка хранится на уровне модуля, чтобы можно было .disconnect() перед повторным созданием
+var _newTaskModalObserver = null;
 (function() {
   const ntm = document.getElementById("newTaskModal");
   if (ntm) {
-    const obs = new MutationObserver(function() {
+    if (_newTaskModalObserver) _newTaskModalObserver.disconnect();
+    _newTaskModalObserver = new MutationObserver(function() {
       if (!ntm.classList.contains("open") && editingTaskId !== null) {
         editingTaskId = null;
         _editingTaskOriginal = null;
       }
     });
-    obs.observe(ntm, { attributes: true, attributeFilter: ["class"] });
+    _newTaskModalObserver.observe(ntm, { attributes: true, attributeFilter: ["class"] });
   }
 })();
 
@@ -2928,7 +2918,10 @@ function makeReportRow(r, idx, cfg) {
     delBtn.textContent = "✕";
     delBtn.onclick = async () => {
       if (!await confirmDialog("Удалить строку отчёта? Данные будут удалены из ЕТБД без возможности восстановления.")) return;
-      if (r.id) await fetchJson(`/api/reports/${r.id}/detail/`, {method: "DELETE"});
+      if (r.id) {
+        const delRes = await fetchJson(`/api/reports/${r.id}/detail/`, {method: "DELETE"});
+        if (delRes._error) return;
+      }
       reportRows.splice(idx, 1); renderReportTable();
     };
 
@@ -2985,9 +2978,11 @@ async function saveOneReportRow(tr, r, idx) {
   try {
     const rid = tr.dataset.rid || r.id;
     if (rid) {
-      await fetchJson(`/api/reports/${rid}/detail/`, {method: "PUT", body: JSON.stringify(data)});
+      const updRes = await fetchJson(`/api/reports/${rid}/detail/`, {method: "PUT", body: JSON.stringify(data)});
+      if (updRes._error) return false;
     } else {
       const resp = await fetchJson("/api/reports/", {method: "POST", body: JSON.stringify(data)});
+      if (resp._error) return false;
       if (resp && resp.id) { tr.dataset.rid = resp.id; reportRows[idx].id = resp.id; }
     }
     // Визуальный фидбек: строка мигает зелёным
@@ -3029,7 +3024,7 @@ async function _syncNoticeFromReport(data, reportId) {
       const check = await fetchJson(
         `/api/journal/?check_number=${encodeURIComponent(noticeData.notice_number)}&check_ii_pi=${encodeURIComponent('ПИ')}`
       );
-      if (!check.exists) {
+      if (!check._error && !check.exists) {
         await fetchJson('/api/journal/create/', {method: 'POST', body: JSON.stringify(noticeData)});
       }
     }
@@ -3063,9 +3058,11 @@ async function saveAllReports() {
     }
 
     if (rid) {
-      await fetchJson(`/api/reports/${rid}/detail/`, {method: "PUT", body: JSON.stringify(data)});
+      const updRes = await fetchJson(`/api/reports/${rid}/detail/`, {method: "PUT", body: JSON.stringify(data)});
+      if (updRes._error) return;
     } else {
       const resp = await fetchJson("/api/reports/", {method: "POST", body: JSON.stringify(data)});
+      if (resp._error) return;
       if (resp && resp.id) tr.dataset.rid = resp.id;
     }
   }
@@ -4253,13 +4250,13 @@ function _renderActivityDetails(t) {
 }
 
 async function _loadComments(workId) {
-  try {
-    const comments = await fetchJson('/api/comments/?work_id=' + workId);
-    renderActivityFeed(comments);
-  } catch (e) {
+  const comments = await fetchJson('/api/comments/?work_id=' + workId);
+  if (comments._error) {
     document.getElementById('activityFeed').innerHTML =
       '<div style="padding:20px;color:var(--muted);text-align:center;">Не удалось загрузить комментарии</div>';
+    return;
   }
+  renderActivityFeed(comments);
 }
 
 function renderActivityFeed(comments) {
@@ -4293,27 +4290,21 @@ async function postComment() {
   const text = (input.value || '').trim();
   if (!text) return;
 
-  try {
-    const comment = await fetchJson('/api/comments/', {
-      method: 'POST',
-      body: JSON.stringify({work_id: _activityWorkId, text: text}),
-    });
-    input.value = '';
-    // Reload comments
-    _loadComments(_activityWorkId);
-  } catch (e) {
-    alert('Ошибка при сохранении комментария: ' + e.message);
-  }
+  const comment = await fetchJson('/api/comments/', {
+    method: 'POST',
+    body: JSON.stringify({work_id: _activityWorkId, text: text}),
+  });
+  if (comment._error) return;  // toast уже показан в fetchJson
+  input.value = '';
+  // Reload comments
+  _loadComments(_activityWorkId);
 }
 
 async function deleteComment(commentId) {
   if (!confirm('Удалить комментарий?')) return;
-  try {
-    await fetchJson('/api/comments/' + commentId + '/', {method: 'DELETE'});
-    if (_activityWorkId) _loadComments(_activityWorkId);
-  } catch (e) {
-    alert('Ошибка при удалении: ' + e.message);
-  }
+  const res = await fetchJson('/api/comments/' + commentId + '/', {method: 'DELETE'});
+  if (res._error) return;  // toast уже показан в fetchJson
+  if (_activityWorkId) _loadComments(_activityWorkId);
 }
 
 // Ctrl+Enter to submit comment

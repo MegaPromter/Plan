@@ -64,7 +64,7 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
         qs = (
             BusinessTrip.objects
             .filter(vis_q)
-            .select_related('employee', 'employee__department')
+            .select_related('employee', 'employee__department', 'employee__department__ntc_center')
         )
 
         # Фильтры
