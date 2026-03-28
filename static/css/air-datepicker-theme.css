@@ -1,0 +1,116 @@
+/* ── Air Datepicker: кастомная тема ManageSystems ─────────────────────── */
+
+/* Контейнер */
+.air-datepicker {
+  --adp-font-family: inherit;
+  --adp-font-size: 13px;
+  --adp-width: 260px;
+  --adp-z-index: 10000;
+  --adp-padding: 4px;
+
+  /* Цвета из нашей дизайн-системы */
+  --adp-background-color: var(--surface, #fff);
+  --adp-color: var(--text, #1e293b);
+  --adp-color-secondary: var(--muted, #64748b);
+
+  --adp-accent-color: var(--accent, #3b82f6);
+  --adp-color-current-date: var(--accent, #3b82f6);
+
+  --adp-cell-background-color-hover: var(--accent-light, rgba(59,130,246,0.08));
+  --adp-cell-background-color-selected: var(--accent, #3b82f6);
+  --adp-cell-background-color-selected-hover: var(--accent-hover, #2563eb);
+  --adp-cell-background-color-in-range: rgba(59,130,246,0.1);
+  --adp-cell-background-color-in-range-hover: rgba(59,130,246,0.16);
+  --adp-cell-border-color-in-range: var(--accent, #3b82f6);
+
+  --adp-btn-color: var(--accent, #3b82f6);
+  --adp-btn-color-hover: var(--accent-hover, #2563eb);
+  --adp-btn-background-color-hover: var(--accent-light, rgba(59,130,246,0.08));
+  --adp-btn-background-color-active: var(--accent-light, rgba(59,130,246,0.12));
+
+  --adp-nav-color-secondary: var(--muted, #64748b);
+  --adp-nav-arrow-color: var(--muted, #64748b);
+  --adp-nav-action-size: 32px;
+
+  --adp-pointer-size: 0;
+
+  --adp-day-name-color: var(--muted, #94a3b8);
+  --adp-day-name-color-hover: var(--accent, #3b82f6);
+
+  --adp-cell-border-radius: 8px;
+  --adp-border-radius: 12px;
+  --adp-border-color: var(--border, #e2e8f0);
+
+  border: 1px solid var(--adp-border-color) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04) !important;
+  animation: adpSlideIn 0.15s ease;
+}
+
+@keyframes adpSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Навигация (месяц/год) */
+.air-datepicker-nav {
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding: 8px 4px;
+}
+
+.air-datepicker-nav--title {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+.air-datepicker-nav--action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.air-datepicker-nav--action:hover {
+  background: var(--accent-light, rgba(59,130,246,0.08));
+  border-radius: 8px;
+}
+
+/* Дни недели */
+.air-datepicker-body--day-name {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Ячейки дней */
+.air-datepicker-cell {
+  font-weight: 500;
+  transition: all 0.1s ease;
+}
+
+/* Сегодня */
+.air-datepicker-cell.-current- {
+  font-weight: 700;
+}
+
+/* Выбранный */
+.air-datepicker-cell.-selected- {
+  font-weight: 700;
+}
+
+/* Ячейки месяцев и годов */
+.air-datepicker-cell.-month-,
+.air-datepicker-cell.-year- {
+  border-radius: 8px;
+}
+
+/* Кнопки внизу (Очистить / Сегодня) */
+.air-datepicker-buttons {
+  border-top: 1px solid var(--border, #e2e8f0);
+  padding: 6px 8px;
+}
+
+.air-datepicker-button {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+}

@@ -57,11 +57,17 @@ if (typeof showToast !== 'function') {
     setTimeout(function() {
       toast.style.animation = 'slideIn 0.3s ease reverse';
       setTimeout(function() { toast.remove(); }, 300);
-    }, 4000);
+    }, (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.toastDuration : 4000));
   };
 }
 
 // ── Навигация: дропдауны ────────────────────────────────────────────────
+// Делегированный обработчик для data-toggle="nav-dropdown"
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-toggle="nav-dropdown"]');
+  if (btn) toggleNavDropdown(btn);
+});
+
 function toggleNavDropdown(btn) {
   btn.classList.toggle('open');
   btn.setAttribute('aria-expanded', btn.classList.contains('open'));
@@ -165,15 +171,30 @@ document.addEventListener('DOMContentLoaded', function() {
       break;
     }
   }
-  setTimeout(showNextTip, 1200);
+  setTimeout(showNextTip, APP_CONFIG.onboardingDelay);
 })();
 
-// ── Modal overlay click ─────────────────────────────────────────────────
+// ── Modal overlay click (защита от закрытия при выделении текста) ────────
+var _modalDownTarget = null;
+document.addEventListener('mousedown', function(e) { _modalDownTarget = e.target; });
 document.addEventListener('click', function(e) {
   if (!e.target.classList.contains('modal-overlay')) return;
   if (!e.target.classList.contains('open')) return;
+  // Закрываем только если mousedown тоже был на overlay (не на содержимом модалки)
+  if (_modalDownTarget !== e.target) return;
   e.target.classList.remove('open');
 });
+
+// ── Modal aria-hidden: скрываем контент от скринридеров при открытой модалке ──
+(function() {
+  var mainEl = document.querySelector('main, .main-content');
+  if (!mainEl) return;
+  var observer = new MutationObserver(function() {
+    var anyOpen = document.querySelector('.modal-overlay.open');
+    mainEl.setAttribute('aria-hidden', anyOpen ? 'true' : 'false');
+  });
+  observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+})();
 
 // ── User menu dropdown ──────────────────────────────────────────────────
 function toggleBaseUserMenu() {
@@ -192,6 +213,16 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ── Привязка обработчиков (вместо inline onclick) ───────────────────────
+var _notifBellBtn = document.getElementById('notifBell');
+if (_notifBellBtn) _notifBellBtn.addEventListener('click', function() { toggleNotifPanel(); });
+var _notifMarkAllBtn = document.getElementById('notifMarkAll');
+if (_notifMarkAllBtn) _notifMarkAllBtn.addEventListener('click', function() { markAllNotifRead(); });
+var _baseTopbarUser = document.getElementById('baseTopbarUser');
+if (_baseTopbarUser) _baseTopbarUser.addEventListener('click', function() { toggleBaseUserMenu(); });
+var _restartTourLink = document.getElementById('restartTourLink');
+if (_restartTourLink) _restartTourLink.addEventListener('click', function(e) { e.preventDefault(); if (typeof restartTour === 'function') restartTour(); });
+
 // ── Notification center ─────────────────────────────────────────────────
 function toggleNotifPanel() {
   var panel = document.getElementById('notifPanel');
@@ -206,7 +237,7 @@ function toggleNotifPanel() {
         var p = document.getElementById('notifPanel');
         if (p && p.classList.contains('open')) loadNotifications();
         else { clearInterval(window._notifPollId); window._notifPollId = null; }
-      }, 60000);
+      }, APP_CONFIG.pollPanel);
     }
   }
 }
@@ -224,12 +255,15 @@ function loadNotifications() {
         list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" aria-hidden="true"></i><br>Нет новых уведомлений</div>';
         return;
       }
+      var h = typeof escapeHtml === 'function' ? escapeHtml : function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+      var ejs = typeof escapeJs === 'function' ? escapeJs : function(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); };
       list.innerHTML = data.items.map(function(n) {
-        return '<div class="notif-item' + (n.is_read ? '' : ' unread') + '" data-id="' + n.id + '" onclick="readNotif(' + n.id + ', \'' + (n.link || '') + '\')">' +
+        var safeLink = ejs(n.link || '');
+        return '<div class="notif-item' + (n.is_read ? '' : ' unread') + '" data-id="' + n.id + '" onclick="readNotif(' + n.id + ', \'' + safeLink + '\')">' +
           '<div class="notif-item-icon"><i class="fas fa-' + notifIcon(n.type) + '" aria-hidden="true"></i></div>' +
           '<div class="notif-item-body">' +
-          '<div class="notif-item-title">' + n.title + '</div>' +
-          '<div class="notif-item-msg">' + n.message + '</div>' +
+          '<div class="notif-item-title">' + h(n.title) + '</div>' +
+          '<div class="notif-item-msg">' + h(n.message) + '</div>' +
           '<div class="notif-item-time">' + timeAgo(n.created_at) + '</div>' +
           '</div></div>';
       }).join('');
@@ -283,7 +317,7 @@ function updateNotifBadge() {
 
 // Initial load + polling every 5 min (с паузой при скрытой вкладке)
 updateNotifBadge();
-var _notifBadgePollId = setInterval(updateNotifBadge, 300000);
+var _notifBadgePollId = setInterval(updateNotifBadge, APP_CONFIG.pollBadge);
 
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
@@ -293,7 +327,7 @@ document.addEventListener('visibilitychange', function() {
   } else {
     // Вкладка снова видима — возобновляем polling бейджа
     updateNotifBadge();
-    if (!_notifBadgePollId) { _notifBadgePollId = setInterval(updateNotifBadge, 300000); }
+    if (!_notifBadgePollId) { _notifBadgePollId = setInterval(updateNotifBadge, APP_CONFIG.pollBadge); }
     // Панельный polling возобновится при следующем toggleNotifPanel()
   }
 });
@@ -353,8 +387,8 @@ document.addEventListener('click', function(e) {
 
 // ── Предупреждение о таймауте сессии ────────────────────────────────────
 (function() {
-  var SESSION_LIFETIME = 8 * 3600 * 1000;
-  var WARN_BEFORE = 10 * 60 * 1000;
+  var SESSION_LIFETIME = APP_CONFIG.sessionLifetime;
+  var WARN_BEFORE = APP_CONFIG.sessionWarnBefore;
   var warned = false;
   var overlay = null;
   function showWarn() {
@@ -384,3 +418,80 @@ document.addEventListener('click', function(e) {
   }
   startTimer();
 })();
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Air Datepicker: глобальная инициализация date-инпутов
+// ══════════════════════════════════════════════════════════════════════════
+(function() {
+  if (typeof AirDatepicker === 'undefined') return;
+
+  function initDatePickers(root) {
+    var container = root || document;
+    var inputs = container.querySelectorAll('input[type="date"]:not([data-dp-done])');
+    inputs.forEach(function(inp) {
+      var val = inp.value;
+      inp.setAttribute('data-dp-done', '1');
+      inp.type = 'text';
+      inp.readOnly = false;
+      inp.placeholder = inp.placeholder || '';
+
+      var opts = {
+        dateFormat: 'yyyy-MM-dd',
+        autoClose: true,
+        buttons: ['clear', 'today'],
+        isMobile: window.innerWidth < 768,
+        onSelect: function(obj) {
+          // Устанавливаем значение в формате YYYY-MM-DD
+          if (obj.date) {
+            var d = obj.date;
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            inp.value = y + '-' + m + '-' + day;
+          } else {
+            inp.value = '';
+          }
+          inp.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+      };
+
+      var dp = new AirDatepicker(inp, opts);
+
+      // Восстанавливаем значение
+      if (val) {
+        var parts = val.split('-');
+        if (parts.length === 3) {
+          dp.selectDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])), {silent: true});
+        }
+      }
+
+      inp._datepicker = dp;
+    });
+  }
+
+  window.initDatePickers = initDatePickers;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { initDatePickers(); });
+  } else {
+    initDatePickers();
+  }
+
+  // MutationObserver для динамических date-инпутов
+  var _dpObserver = new MutationObserver(function(mutations) {
+    var hasNew = false;
+    for (var i = 0; i < mutations.length; i++) {
+      var added = mutations[i].addedNodes;
+      for (var j = 0; j < added.length; j++) {
+        var node = added[j];
+        if (node.nodeType !== 1) continue;
+        if (node.matches && node.matches('input[type="date"]:not([data-dp-done])')) { hasNew = true; break; }
+        if (node.querySelector && node.querySelector('input[type="date"]:not([data-dp-done])')) { hasNew = true; break; }
+      }
+      if (hasNew) break;
+    }
+    if (hasNew) initDatePickers();
+  });
+  _dpObserver.observe(document.body, { childList: true, subtree: true });
+})();
+
