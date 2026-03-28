@@ -38,6 +38,9 @@ urlpatterns = [
     # ER-диаграмма моделей
     path('er-diagram/', views.ERDiagramView.as_view(), name='er_diagram'),
 
+    # Управление предприятием SPA
+    path('enterprise/',         views.EnterpriseSPAView.as_view(),      name='enterprise'),
+
     # ── Журнал корректирующих извещений (SPA) ─────────────────────────────────
 
     # Список извещений (SPA-страница, CRUD — через API /api/journal/)

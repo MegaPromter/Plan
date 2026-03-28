@@ -33,6 +33,10 @@ class Department(models.Model):
         'NTCCenter', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='departments', verbose_name='НТЦ-центр',
     )
+    # Штатная численность (Enterprise) — задаётся вручную администратором
+    staff_count = models.PositiveIntegerField(
+        'Штатная численность', null=True, blank=True,
+    )
 
     class Meta:
         # Имя таблицы в БД
@@ -58,6 +62,10 @@ class Sector(models.Model):
     code = models.CharField('Код сектора', max_length=30)
     # Название сектора (необязательно)
     name = models.CharField('Название',   max_length=200, blank=True)
+    # Штатная численность (Enterprise) — задаётся вручную администратором
+    staff_count = models.PositiveIntegerField(
+        'Штатная численность', null=True, blank=True,
+    )
 
     class Meta:
         # Имя таблицы в БД
@@ -109,23 +117,27 @@ class Employee(models.Model):
 
     # ── Роли ──────────────────────────────────────────────────────────────
     # Константы ролей — используются в коде вместо «магических строк»
-    ROLE_ADMIN        = 'admin'        # полный доступ, управление пользователями
-    ROLE_NTC_HEAD     = 'ntc_head'     # руководитель НТЦ-центра
-    ROLE_NTC_DEPUTY   = 'ntc_deputy'   # заместитель руководителя НТЦ
-    ROLE_DEPT_HEAD    = 'dept_head'    # начальник отдела
-    ROLE_DEPT_DEPUTY  = 'dept_deputy'  # заместитель начальника отдела
-    ROLE_SECTOR_HEAD  = 'sector_head'  # начальник сектора
-    ROLE_USER         = 'user'         # рядовой исполнитель
+    ROLE_ADMIN          = 'admin'            # полный доступ, управление пользователями
+    ROLE_NTC_HEAD       = 'ntc_head'         # руководитель НТЦ-центра
+    ROLE_NTC_DEPUTY     = 'ntc_deputy'       # заместитель руководителя НТЦ
+    ROLE_DEPT_HEAD      = 'dept_head'        # начальник отдела
+    ROLE_DEPT_DEPUTY    = 'dept_deputy'      # заместитель начальника отдела
+    ROLE_SECTOR_HEAD    = 'sector_head'      # начальник сектора
+    ROLE_CHIEF_DESIGNER = 'chief_designer'   # главный конструктор (Enterprise)
+    ROLE_DEPUTY_GD_ECON = 'deputy_gd_econ'   # зам. ГД по экономике (Enterprise)
+    ROLE_USER           = 'user'             # рядовой исполнитель
 
     # Список допустимых значений поля role с человекочитаемыми названиями
     ROLE_CHOICES = [
-        (ROLE_ADMIN,       'Администратор'),
-        (ROLE_NTC_HEAD,    'Руководитель НТЦ'),
-        (ROLE_NTC_DEPUTY,  'Зам. руководителя НТЦ'),
-        (ROLE_DEPT_HEAD,   'Начальник отдела'),
-        (ROLE_DEPT_DEPUTY, 'Зам. начальника отдела'),
-        (ROLE_SECTOR_HEAD, 'Начальник сектора'),
-        (ROLE_USER,        'Исполнитель'),
+        (ROLE_ADMIN,          'Администратор'),
+        (ROLE_NTC_HEAD,       'Руководитель НТЦ'),
+        (ROLE_NTC_DEPUTY,     'Зам. руководителя НТЦ'),
+        (ROLE_DEPT_HEAD,      'Начальник отдела'),
+        (ROLE_DEPT_DEPUTY,    'Зам. начальника отдела'),
+        (ROLE_SECTOR_HEAD,    'Начальник сектора'),
+        (ROLE_CHIEF_DESIGNER, 'Главный конструктор'),
+        (ROLE_DEPUTY_GD_ECON, 'Зам. ГД по экономике'),
+        (ROLE_USER,           'Исполнитель'),
     ]
 
     # ── Должности ─────────────────────────────────────────────────────────
@@ -323,6 +335,7 @@ class Employee(models.Model):
         return self.role in (
             self.ROLE_ADMIN, self.ROLE_NTC_HEAD, self.ROLE_NTC_DEPUTY,
             self.ROLE_DEPT_HEAD, self.ROLE_DEPT_DEPUTY, self.ROLE_SECTOR_HEAD,
+            self.ROLE_CHIEF_DESIGNER, self.ROLE_DEPUTY_GD_ECON,
         )
 
 

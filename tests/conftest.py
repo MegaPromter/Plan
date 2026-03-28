@@ -3,8 +3,17 @@
 """
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 from apps.employees.models import Employee, Department, NTCCenter, Sector
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    """Сбрасывает кэш rate limiter между тестами."""
+    cache.clear()
+    yield
+    cache.clear()
 
 User = get_user_model()
 

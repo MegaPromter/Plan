@@ -100,10 +100,60 @@ class PPProject(models.Model):
 
 class Project(models.Model):
     """Проект (модуль Управления проектами)."""
+
+    # ── Статусы проекта (Enterprise) ─────────────────────────────────────
+    STATUS_PROSPECTIVE = 'prospective'
+    STATUS_APPROVED    = 'approved'
+    STATUS_ACTIVE      = 'active'
+    STATUS_SUSPENDED   = 'suspended'
+    STATUS_DEFERRED    = 'deferred'
+    STATUS_CLOSED      = 'closed'
+    STATUS_CANCELLED   = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_PROSPECTIVE, 'Перспективный'),
+        (STATUS_APPROVED,    'Одобренный'),
+        (STATUS_ACTIVE,      'Действующий'),
+        (STATUS_SUSPENDED,   'Приостановленный'),
+        (STATUS_DEFERRED,    'Отложенный'),
+        (STATUS_CLOSED,      'Закрытый'),
+        (STATUS_CANCELLED,   'Отменённый'),
+    ]
+
+    PRIORITY_CRITICAL = 'critical'
+    PRIORITY_HIGH     = 'high'
+    PRIORITY_MEDIUM   = 'medium'
+    PRIORITY_LOW      = 'low'
+    PRIORITY_CHOICES = [
+        (PRIORITY_CRITICAL, 'Критический'),
+        (PRIORITY_HIGH,     'Высокий'),
+        (PRIORITY_MEDIUM,   'Средний'),
+        (PRIORITY_LOW,      'Низкий'),
+    ]
+
+    # ── Основные поля ────────────────────────────────────────────────────
     name_full  = models.CharField('Полное наименование', max_length=500)
     name_short = models.CharField('Краткое наименование', max_length=100, blank=True)
     code       = models.CharField('Шифр / код', max_length=100, blank=True)
     row_code_seq = models.PositiveIntegerField('Счётчик row_code', default=0)
+
+    # ── Поля Enterprise ──────────────────────────────────────────────────
+    status = models.CharField(
+        'Статус проекта', max_length=20,
+        choices=STATUS_CHOICES, default=STATUS_ACTIVE,
+    )
+    priority_number = models.IntegerField(
+        'Числовой приоритет', null=True, blank=True,
+    )
+    priority_category = models.CharField(
+        'Категория приоритета', max_length=10,
+        choices=PRIORITY_CHOICES, null=True, blank=True,
+    )
+    chief_designer = models.ForeignKey(
+        'employees.Employee', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='chief_designer_projects',
+        verbose_name='Главный конструктор',
+    )
+
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлён', auto_now=True)
 
@@ -205,6 +255,13 @@ class Work(models.Model):
     justification  = models.CharField('Основание', max_length=500, blank=True)
     executors_list = models.JSONField('Список исполнителей', default=list, blank=True)
     actions        = models.JSONField('Связи / доп. данные', default=dict, blank=True)
+
+    # ── Привязка к сквозному графику (Enterprise) ──────────────────────
+    cross_stage = models.ForeignKey(
+        'enterprise.CrossStage', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='works',
+        verbose_name='Этап сквозного графика',
+    )
 
     # ── Поля ПП (+ единые поля stage_num, work_num, work_designation) ────
     pp_project = models.ForeignKey(
@@ -330,6 +387,7 @@ class TaskExecutor(models.Model):
         indexes = [
             models.Index(fields=['work']),
             models.Index(fields=['executor']),
+            models.Index(fields=['work', 'executor'], name='idx_taskexec_work_exec'),
         ]
 
     def __str__(self):
@@ -449,6 +507,10 @@ class WorkReport(models.Model):
         verbose_name = 'Отчётный документ'
         verbose_name_plural = 'Отчётные документы'
         ordering = ['-date_accepted']
+        indexes = [
+            models.Index(fields=['work'], name='idx_report_work'),
+            models.Index(fields=['work', 'doc_type'], name='idx_report_work_doctype'),
+        ]
 
     def __str__(self):
         return self.doc_name or f'Документ #{self.pk}'
@@ -635,6 +697,7 @@ class AuditLog(models.Model):
     ACTION_CS_SUBMIT     = 'cs_submit'
     ACTION_CS_APPROVE    = 'cs_approve'
     ACTION_CS_REJECT     = 'cs_reject'
+    ACTION_COMMENT_DELETE = 'comment_delete'
 
     ACTION_CHOICES = [
         (ACTION_TASK_CREATE, 'Создание задачи'),
@@ -655,6 +718,7 @@ class AuditLog(models.Model):
         (ACTION_CS_SUBMIT,   'Отправка на согласование'),
         (ACTION_CS_APPROVE,  'Утверждение набора изменений'),
         (ACTION_CS_REJECT,   'Отклонение набора изменений'),
+        (ACTION_COMMENT_DELETE, 'Удаление комментария'),
     ]
 
     user       = models.ForeignKey(

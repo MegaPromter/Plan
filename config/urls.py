@@ -18,6 +18,8 @@ urlpatterns = [
     path('employees/', include('apps.employees.urls', namespace='employees')),
     # Маршруты рабочего модуля (/works/...) — план задач, производственный план, проекты
     path('works/',     include('apps.works.urls',     namespace='works')),
+    # API модуля «Управление предприятием» (/api/enterprise/...)
+    path('api/enterprise/', include('apps.enterprise.urls')),
     # Корень → дашборд
     # Временный редирект (302) с корневого URL '/' на дашборд; permanent=False → HTTP 302
     path('', RedirectView.as_view(url='/accounts/dashboard/', permanent=False)),
