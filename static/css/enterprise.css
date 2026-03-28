@@ -1,0 +1,362 @@
+/* ── Enterprise SPA стили ───────────────────────────────────────────────── */
+
+/* Бейдж сброса фильтров */
+#pfFiltersBadge {
+  font-size: 13px;
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--accent-light, rgba(37,99,235,0.08));
+  border: 1px solid var(--accent);
+  transition: background 0.15s;
+}
+#pfFiltersBadge:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Строка фильтров в шапке таблицы */
+#portfolioTable .filter-row th {
+  padding: 4px 6px;
+  background: var(--surface2, #f8f9fb);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Табы */
+.ent-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.ent-tab {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ent-tab:hover {
+  color: var(--text);
+}
+.ent-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Панели табов */
+.ent-panel {
+  min-height: 300px;
+}
+
+/* Тулбар */
+.ent-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ent-toolbar-left,
+.ent-toolbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Секции внутри панелей */
+.ent-section {
+  margin-bottom: 24px;
+}
+.ent-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Метабар (edit_owner, version и т.д.) */
+.ent-meta-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.ent-meta-bar .ent-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ent-meta-bar .ent-meta-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Бейджи статусов проектов */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.status-badge--prospective { background: rgba(156,163,175,0.15); color: var(--gray); }
+.status-badge--approved    { background: rgba(59,130,246,0.12);  color: var(--accent); }
+.status-badge--active      { background: rgba(34,197,94,0.12);   color: var(--success); }
+.status-badge--suspended   { background: rgba(234,179,8,0.15);   color: #ca8a04; }
+.status-badge--deferred    { background: rgba(168,162,158,0.15); color: #78716c; }
+.status-badge--closed      { background: rgba(107,114,128,0.12); color: #4b5563; }
+.status-badge--cancelled   { background: rgba(239,68,68,0.12);   color: var(--danger); }
+
+/* Бейджи приоритетов */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.priority-badge--critical { background: rgba(239,68,68,0.12);   color: var(--danger); }
+.priority-badge--high     { background: rgba(249,115,22,0.12);  color: #ea580c; }
+.priority-badge--medium   { background: rgba(234,179,8,0.12);   color: #ca8a04; }
+.priority-badge--low      { background: rgba(107,114,128,0.12); color: var(--gray); }
+
+/* Индикаторы загрузки */
+.loading-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 80px;
+}
+.loading-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.loading-bar-fill--low      { background: var(--muted); }
+.loading-bar-fill--normal   { background: var(--success-light); }
+.loading-bar-fill--high     { background: var(--warning-light); }
+.loading-bar-fill--overload { background: var(--danger-light); }
+
+.capacity-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.capacity-pct {
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 50px;
+  text-align: right;
+}
+.capacity-pct--low      { color: var(--muted); }
+.capacity-pct--normal   { color: var(--success); }
+.capacity-pct--high     { color: #ca8a04; }
+.capacity-pct--overload { color: var(--danger); }
+
+/* Действия в табтопбаре */
+.ent-tab-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Пустое состояние */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-state i {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+.empty-state p {
+  font-size: 15px;
+}
+
+/* Edit-lock бейдж */
+.edit-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.edit-lock-badge--cross  { background: rgba(34,197,94,0.12); color: var(--success); }
+.edit-lock-badge--pp     { background: rgba(59,130,246,0.12); color: var(--accent); }
+.edit-lock-badge--locked { background: rgba(239,68,68,0.12); color: var(--danger); }
+
+/* Справка-панель */
+.ent-help {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  font-size: 13px;
+}
+.ent-help-toggle {
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+}
+.ent-help-toggle::-webkit-details-marker { display: none; }
+.ent-help-toggle::after {
+  content: '\f078';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 10px;
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.ent-help[open] .ent-help-toggle::after {
+  transform: rotate(180deg);
+}
+.ent-help-body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ent-help-section {}
+.ent-help-title {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.ent-help-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  align-items: center;
+}
+.ent-help-note {
+  margin-top: 8px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Project Picker (кнопка + модалка выбора проекта) ──────────────────── */
+
+.project-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-picker-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+}
+.project-picker-btn i {
+  color: var(--muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.project-picker-btn .picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-picker-btn.has-value .picker-label {
+  font-weight: 600;
+}
+
+/* Поиск в picker */
+.picker-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Таблица picker */
+.picker-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.picker-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface2, #f8f9fb);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 10px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+.picker-table thead th:hover {
+  color: var(--text);
+}
+.picker-table thead th .sort-arrow {
+  font-size: 10px;
+  margin-left: 3px;
+}
+.picker-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.picker-table tbody tr:hover {
+  background: var(--accent-light, rgba(59,130,246,0.06));
+}
+.picker-table tbody tr.picker-selected {
+  background: var(--accent-light, rgba(59,130,246,0.1));
+}
+.picker-table td {
+  padding: 8px 10px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Счётчик результатов */
+.picker-count {
+  font-size: 13px;
+  color: var(--muted);
+}
