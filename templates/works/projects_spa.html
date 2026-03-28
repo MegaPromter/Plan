@@ -13,11 +13,6 @@
 {% endblock %}
 
 {% block topbar_actions %}
-{% if request.user|is_admin_role %}
-  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
-    <i class="fas fa-plus"></i> Создать проект
-  </button>
-{% endif %}
 {% endblock %}
 
 {% block styles %}
@@ -154,8 +149,7 @@ function renderProjects() {
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon"><i class="fas fa-project-diagram"></i></div>
         <div class="empty-state-title">Проектов пока нет</div>
-        <div class="empty-state-desc">Создайте первый проект для организации задач и управления командой</div>
-        ${IS_ADMIN ? '<div class="empty-state-action"><button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Добавить проект</button></div>' : ''}
+        <div class="empty-state-desc">Проекты создаются в модуле «Управление предприятием»</div>
       </div>`;
     return;
   }

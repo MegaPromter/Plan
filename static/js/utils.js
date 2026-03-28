@@ -28,7 +28,22 @@ function getCsrfToken() {
     return '';
 }
 
-/* ── Обёртка fetch для JSON API ──────────────────────────────────────────── */
+/* ── Общий конфиг (таймауты, пагинация, поллинг) ──────────────────────── */
+
+var APP_CONFIG = {
+    fetchTimeout:     15000,   // таймаут fetch-запросов (мс)
+    pollBadge:        300000,  // интервал обновления бейджа уведомлений (мс)
+    pollPanel:        60000,   // интервал обновления панели уведомлений (мс)
+    sessionLifetime:  8 * 3600 * 1000,  // время жизни сессии (мс)
+    sessionWarnBefore: 10 * 60 * 1000,  // предупреждение за N мс до конца
+    chunkSize:        50,      // размер порции для infinite scroll
+    toastDuration:    4000,    // время показа тоста (мс)
+    onboardingDelay:  1200,    // задержка показа onboarding-подсказки (мс)
+};
+
+/* ── Обёртка fetch для JSON API (с таймаутом и дедупликацией) ─────────── */
+
+var _inflightRequests = {};
 
 async function fetchJson(url, options = {}) {
     const defaults = {
@@ -43,23 +58,48 @@ async function fetchJson(url, options = {}) {
         merged.headers = { ...defaults.headers, ...options.headers };
     }
 
-    try {
-        const resp = await fetch(url, merged);
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-            const msg = data.error || data.message || `Ошибка ${resp.status}`;
-            if (resp.status === 409) {
-                showToast(msg, 'warning');
-                return { _conflict: true, ...data };
-            }
-            showToast(msg, 'error');
-            return { _error: true, status: resp.status, ...data };
-        }
-        return data;
-    } catch (err) {
-        showToast('Ошибка сети: ' + err.message, 'error');
-        return { _error: true, message: err.message };
+    // Дедупликация: для GET-запросов с тем же URL возвращаем текущий промис
+    var method = (merged.method || 'GET').toUpperCase();
+    var dedupeKey = (method === 'GET') ? url : null;
+    if (dedupeKey && _inflightRequests[dedupeKey]) {
+        return _inflightRequests[dedupeKey];
     }
+
+    // AbortController с таймаутом
+    var timeout = (options._timeout !== undefined) ? options._timeout : APP_CONFIG.fetchTimeout;
+    var controller = new AbortController();
+    merged.signal = controller.signal;
+    var timerId = timeout > 0 ? setTimeout(function() { controller.abort(); }, timeout) : null;
+
+    var promise = (async function() {
+        try {
+            const resp = await fetch(url, merged);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                const msg = data.error || data.message || `Ошибка ${resp.status}`;
+                if (resp.status === 409) {
+                    showToast(msg, 'warning');
+                    return { _conflict: true, ...data };
+                }
+                showToast(msg, 'error');
+                return { _error: true, status: resp.status, ...data };
+            }
+            return data;
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                showToast('Запрос отменён (таймаут)', 'warning');
+                return { _error: true, message: 'timeout' };
+            }
+            showToast('Ошибка сети: ' + err.message, 'error');
+            return { _error: true, message: err.message };
+        } finally {
+            if (timerId) clearTimeout(timerId);
+            if (dedupeKey) delete _inflightRequests[dedupeKey];
+        }
+    })();
+
+    if (dedupeKey) _inflightRequests[dedupeKey] = promise;
+    return promise;
 }
 
 /* ── Toast-уведомления ───────────────────────────────────────────────────── */
@@ -725,6 +765,20 @@ function isFullAccess(isAdmin, userRole) {
     return isAdmin || userRole === 'ntc_head' || userRole === 'ntc_deputy';
 }
 
+/** Фабрика: создаёт замыкание _canModify(rowDept, rowSector) для конкретного пользователя */
+function makeCanModify(cfg) {
+    return function(rowDept, rowSector) {
+        return canModifyRow(cfg.isWriter, cfg.isAdmin, cfg.userRole, cfg.userDept, cfg.userSector, rowDept, rowSector);
+    };
+}
+
+/** Фабрика: создаёт замыкание _isFullAccess() для конкретного пользователя */
+function makeIsFullAccess(cfg) {
+    return function() {
+        return isFullAccess(cfg.isAdmin, cfg.userRole);
+    };
+}
+
 /* ── Переключатель плотности (общий) ─────────────────────────────────── */
 
 function initDensityToggle(wrapSelector, savedDensity) {
@@ -1044,7 +1098,14 @@ function createMultiFilter(opts) {
 
         document.body.appendChild(drop);
         var rect = btn.getBoundingClientRect();
-        drop.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+        var dropH = drop.offsetHeight || 300;
+        var spaceBelow = window.innerHeight - rect.bottom;
+        var spaceAbove = rect.top;
+        if (spaceBelow < dropH && spaceAbove > spaceBelow) {
+            drop.style.top = (rect.top + window.scrollY - dropH - 2) + 'px';
+        } else {
+            drop.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+        }
         drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
         activeDrop = drop; activeBtn = btn;
         setTimeout(function() { si.focus(); }, 50);
@@ -1270,9 +1331,11 @@ function showShortcutsHelp() {
     card.appendChild(table);
     overlay.appendChild(card);
 
-    // Клик по оверлею (фону) закрывает
+    // Клик по оверлею (фону) закрывает (защита от drag-выделения)
+    var _helpDownTarget = null;
+    overlay.addEventListener('mousedown', function(e) { _helpDownTarget = e.target; });
     overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) overlay.remove();
+        if (e.target === overlay && _helpDownTarget === overlay) overlay.remove();
     });
 
     document.body.appendChild(overlay);

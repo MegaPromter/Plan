@@ -14,7 +14,7 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 
 /* ── Main Layout ─────────────────────────────────────────────────────── */
 /* Основной контент — отступ слева равен ширине сайдбара */
-.main-content { margin-left:260px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left 0.3s ease; }
+.main-content { margin-left:260px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left 0.25s ease; }
 /* Верхняя панель (topbar) — прилипает к верху при прокрутке */
 .topbar {
   position:sticky; top:0; height:60px;
@@ -96,7 +96,7 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 .btn-secondary:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
 /* Опасная кнопка (красная, для удаления) */
 .btn-danger   { background:var(--danger);   color:#fff; }
-.btn-danger:hover   { background:#dc2626; transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.35); }
+.btn-danger:hover   { background:var(--danger); filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.35); }
 /* Неактивная кнопка */
 .btn:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
 
@@ -175,8 +175,8 @@ textarea { resize:vertical; min-height:80px; }
 /* Блок алертов (уведомлений над формой) */
 .alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px; }
 .alert-error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--danger); }
-.alert-success { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:#22c55e; }
-.alert-warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
+.alert-success { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:var(--success-light); }
+.alert-warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:var(--warning-light); }
 
 /* ── Badges ──────────────────────────────────────────────────────────── */
 /* Бейджи для отображения статусов, ролей и т.п. */
@@ -274,6 +274,7 @@ textarea { resize:vertical; min-height:80px; }
 /* ── Text helpers ────────────────────────────────────────────────────── */
 /* Вспомогательный класс для приглушённого текста */
 .text-muted { color:var(--muted); font-size:13px; }
+.text-center { text-align:center; }
 
 /* ── Skeleton loader ────────────────────────────────────────────────── */
 .skeleton{background:linear-gradient(90deg,var(--border) 25%,var(--bg) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}

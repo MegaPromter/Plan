@@ -31,18 +31,37 @@
   /* Текст */
   --text:  #1e293b;
   --text2: #475569;
-  --muted: #94a3b8;
-  --muted2:#64748b;
+  --muted: #64748b;
+  --muted2:#94a3b8;
 
   /* Статусы */
   --danger:  #dc2626;
   --success: #16a34a;
   --warning: #d97706;
 
+  /* Семантические цвета (для бейджей, графиков) */
+  --success-light: #22c55e;
+  --warning-light: #f59e0b;
+  --danger-light:  #ef4444;
+  --info:          #3b82f6;
+  --purple:        #a855f7;
+  --gray:          #6b7280;
+
   /* Геометрия */
   --radius: 12px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Spacing tokens */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   /* Gradient accent (blue → purple) */
   --accent-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
@@ -147,8 +166,8 @@
   /* Текст — приглушённый, но читаемый */
   --text:  #2d3a4e;
   --text2: #56667d;
-  --muted: #7a8da4;
-  --muted2:#6b7f96;
+  --muted: #56667d;
+  --muted2:#7a8da4;
 
   /* Статусы — чуть мягче */
   --danger:  #dc2626;

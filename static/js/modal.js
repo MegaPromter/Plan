@@ -126,8 +126,10 @@ function openModal(options = {}) {
     };
 
     header.querySelector('.modal-close-btn').addEventListener('click', close);
+    let _backdropDownTarget = null;
+    backdrop.addEventListener('mousedown', (e) => { _backdropDownTarget = e.target; });
     backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) close();
+        if (e.target === backdrop && _backdropDownTarget === backdrop) close();
     });
     // Кнопки с классом modal-cancel тоже закрывают модалку
     dialog.querySelectorAll('.modal-cancel').forEach(btn => {
@@ -191,10 +193,13 @@ function closeAllModals() {
 /* ── Шаблонные модалы (.modal-overlay): единый ESC и клик по фону ────────── */
 
 // Клик по фону — закрываем если клик именно на оверлей, не на содержимое (.modal)
-// Дублирует base.js:172, но base.js может не загрузиться первым — defensive
+// Защита от закрытия при выделении текста (mousedown внутри → drag → mouseup снаружи)
+var _tplModalDownTarget = null;
+document.addEventListener('mousedown', function(e) { _tplModalDownTarget = e.target; });
 document.addEventListener('click', function(e) {
     if (!e.target.classList.contains('modal-overlay')) return;
     if (!e.target.classList.contains('open')) return;
+    if (_tplModalDownTarget !== e.target) return;
     // Используем реестр кастомных close-функций (если зарегистрирована)
     if (typeof _callModalClose === 'function') _callModalClose(e.target);
     else e.target.classList.remove('open');
