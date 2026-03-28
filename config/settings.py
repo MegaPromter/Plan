@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'apps.employees',  # модель Employee, роли, отделы, сектора, НТЦ
     'apps.works',      # основные модели: Work, TaskWork, PPWork, Project и т.д.
     'apps.api',        # REST API: все views, сериализаторы, middleware, утилиты
+    'apps.enterprise', # Управление предприятием: портфель, ГГ, сквозной график
 ]
 
 # --- Middleware ---------------------------------------------------------
@@ -149,6 +150,13 @@ else:
             'LOCATION': 'planapp-cache',
         }
     }
+    if not DEBUG:
+        import logging as _logging
+        _logging.getLogger('django').warning(
+            'CACHE_BACKEND=locmem в продакшене — кеш не шарится между воркерами gunicorn. '
+            'Rate limiting работает некорректно (каждый воркер считает отдельно). '
+            'Настоятельно рекомендуется CACHE_BACKEND=redis.'
+        )
 
 # --- Безопасность -------------------------------------------------------
 SECURE_CONTENT_TYPE_NOSNIFF = True  # запрет MIME-sniffing: браузер не угадывает тип контента

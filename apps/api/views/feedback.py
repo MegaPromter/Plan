@@ -12,6 +12,9 @@ from django.views import View
 from apps.api.mixins import LoginRequiredJsonMixin
 from apps.works.models import Feedback, FeedbackAttachment
 
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 МБ
+ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+
 
 def _serialize(fb, current_user=None):
     return {
@@ -37,6 +40,12 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
     def get(self, request):
         qs = Feedback.objects.select_related('user', 'user__employee').prefetch_related('attachments')
 
+        # Обычные пользователи видят только свои замечания, admin — все
+        emp = getattr(request.user, 'employee', None)
+        is_admin = (emp and emp.role == 'admin') if emp else request.user.is_superuser
+        if not is_admin:
+            qs = qs.filter(user=request.user)
+
         status_filter = request.GET.get('status', '')
         if status_filter:
             qs = qs.filter(status=status_filter)
@@ -56,6 +65,17 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
         valid_cats = {c[0] for c in Feedback.CATEGORY_CHOICES}
         if category not in valid_cats:
             category = 'other'
+
+        # Валидация загружаемых файлов
+        all_files = []
+        if 'screenshot' in request.FILES:
+            all_files.append(request.FILES['screenshot'])
+        all_files.extend(request.FILES.getlist('screenshots'))
+        for f in all_files:
+            if f.size > MAX_UPLOAD_SIZE:
+                return JsonResponse({'error': f'Файл «{f.name}» слишком большой (макс. 5 МБ)'}, status=400)
+            if f.content_type not in ALLOWED_IMAGE_TYPES:
+                return JsonResponse({'error': f'Файл «{f.name}»: допустимы только изображения (JPEG, PNG, GIF, WebP)'}, status=400)
 
         fb = Feedback(user=request.user, category=category, text=text)
         if 'screenshot' in request.FILES:
@@ -81,7 +101,7 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
 
     def _update(self, request, pk, multipart=False):
         emp = getattr(request.user, 'employee', None)
-        is_admin = emp and emp.role == 'admin' if emp else request.user.is_superuser
+        is_admin = (emp and emp.role == 'admin') if emp else request.user.is_superuser
 
         try:
             fb = Feedback.objects.get(pk=pk)
@@ -138,7 +158,7 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
 
     def delete(self, request, pk):
         emp = getattr(request.user, 'employee', None)
-        is_admin = emp and emp.role == 'admin' if emp else request.user.is_superuser
+        is_admin = (emp and emp.role == 'admin') if emp else request.user.is_superuser
         if not is_admin:
             return JsonResponse({'error': 'Доступ запрещён'}, status=403)
 
@@ -161,7 +181,7 @@ class FeedbackAttachmentDeleteView(LoginRequiredJsonMixin, View):
             return JsonResponse({'error': 'Не найдено'}, status=404)
 
         emp = getattr(request.user, 'employee', None)
-        is_admin = emp and emp.role == 'admin' if emp else request.user.is_superuser
+        is_admin = (emp and emp.role == 'admin') if emp else request.user.is_superuser
         is_own = att.feedback.user_id == request.user.pk
 
         if not is_admin and not is_own:

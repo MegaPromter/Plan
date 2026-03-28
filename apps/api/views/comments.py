@@ -10,8 +10,10 @@ import logging
 from django.http import JsonResponse
 from django.views import View
 
+from apps.api.audit import log_action
 from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
-from apps.works.models import Work, WorkComment
+from apps.api.utils import get_visibility_filter
+from apps.works.models import AuditLog, Work, WorkComment
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +50,15 @@ class CommentListView(LoginRequiredJsonMixin, View):
             if not work_id:
                 return JsonResponse({'error': 'work_id обязателен'}, status=400)
 
-            if not Work.objects.filter(pk=work_id).exists():
+            vis_q = get_visibility_filter(request.user)
+            if not Work.objects.filter(vis_q, pk=work_id).exists():
                 return JsonResponse({'error': 'Задача не найдена'}, status=404)
 
             comments = (
                 WorkComment.objects
                 .filter(work_id=work_id)
                 .select_related('author', 'author__employee')
-                .order_by('created_at')
+                .order_by('created_at')[:200]
             )
             result = [_serialize_comment(c) for c in comments]
             return JsonResponse(result, safe=False)
@@ -89,7 +92,8 @@ class CommentListView(LoginRequiredJsonMixin, View):
         if not text:
             return JsonResponse({'error': 'Текст комментария обязателен'}, status=400)
 
-        if not Work.objects.filter(pk=work_id).exists():
+        vis_q = get_visibility_filter(request.user)
+        if not Work.objects.filter(vis_q, pk=work_id).exists():
             return JsonResponse({'error': 'Задача не найдена'}, status=404)
 
         comment = WorkComment.objects.create(
@@ -112,8 +116,13 @@ class CommentDetailView(LoginRequiredJsonMixin, View):
     def delete(self, request, pk):
         try:
             try:
-                comment = WorkComment.objects.get(pk=pk)
+                comment = WorkComment.objects.select_related('work').get(pk=pk)
             except WorkComment.DoesNotExist:
+                return JsonResponse({'error': 'Комментарий не найден'}, status=404)
+
+            # Проверяем доступ к задаче
+            vis_q = get_visibility_filter(request.user)
+            if not Work.objects.filter(vis_q, pk=comment.work_id).exists():
                 return JsonResponse({'error': 'Комментарий не найден'}, status=404)
 
             # Удалять может только автор или admin
@@ -122,6 +131,12 @@ class CommentDetailView(LoginRequiredJsonMixin, View):
             if comment.author_id != request.user.id and not is_admin:
                 return JsonResponse({'error': 'Нет прав на удаление'}, status=403)
 
+            log_action(
+                request, AuditLog.ACTION_COMMENT_DELETE,
+                object_id=comment.pk,
+                object_repr=f'Комментарий к задаче #{comment.work_id}',
+                details={'work_id': comment.work_id, 'text': comment.text[:200]},
+            )
             comment.delete()
             return JsonResponse({'ok': True})
         except Exception as e:

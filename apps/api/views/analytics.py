@@ -402,10 +402,11 @@ class PPAnalyticsView(LoginRequiredJsonMixin, View):
                 'done': m_agg['done'] or 0,
             })
 
-        # 6. Список ПП-проектов для дропдауна
-        pp_projects = []
-        for pp in PPProject.objects.all().order_by('name'):
-            pp_projects.append({'id': pp.pk, 'name': pp.name or f'ПП #{pp.pk}'})
+        # 6. Список ПП-проектов для дропдауна (values_list — без ORM-объектов)
+        pp_projects = [
+            {'id': pk, 'name': name or f'ПП #{pk}'}
+            for pk, name in PPProject.objects.order_by('name').values_list('pk', 'name')
+        ]
 
         response = JsonResponse({
             'year': year,

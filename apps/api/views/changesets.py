@@ -21,6 +21,7 @@ API наборов изменений (Changeset / Песочница).
 """
 import logging
 from django.db import transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
@@ -62,7 +63,7 @@ def _serialize_changeset(cs, include_items=False):
         'status': cs.status,
         'status_display': cs.get_status_display(),
         'reject_comment': cs.reject_comment,
-        'items_count': cs.items.count(),
+        'items_count': getattr(cs, '_items_count', None) or cs.items.count(),
         'created_at': cs.created_at.isoformat() if cs.created_at else '',
         'updated_at': cs.updated_at.isoformat() if cs.updated_at else '',
         'submitted_at': cs.submitted_at.isoformat() if cs.submitted_at else '',
@@ -138,7 +139,7 @@ class ChangesetListView(LoginRequiredJsonMixin, View):
     def get(self, request):
         qs = Changeset.objects.select_related(
             'pp_project', 'department', 'author', 'reviewed_by',
-        )
+        ).annotate(_items_count=Count('items'))
 
         pp_id = request.GET.get('pp_project_id')
         if pp_id:

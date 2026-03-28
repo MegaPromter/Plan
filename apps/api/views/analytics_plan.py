@@ -501,7 +501,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
     def _respond_dept(self, request, dept_code, works, all_norms, years,
                       months_filter, role_info, emp):
-        dept = Department.objects.filter(code=dept_code).first()
+        dept = Department.objects.prefetch_related('sectors').filter(code=dept_code).first()
         dept_name = dept.name if dept else dept_code
 
         dept_works = [w for w in works if w.department and w.department.code == dept_code]
