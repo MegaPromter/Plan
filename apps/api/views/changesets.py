@@ -20,26 +20,32 @@ API наборов изменений (Changeset / Песочница).
   GET    /api/changesets/<pk>/diff/        — просмотр изменений (diff)
 """
 import logging
+
 from django.db import transaction
 from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
 
+from apps.api.audit import log_action
 from apps.api.mixins import (
     LoginRequiredJsonMixin,
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.audit import log_action
 from apps.api.utils import (
-    PRODUCTION_ALLOWED_FIELDS, generate_row_code,
-    safe_date, safe_decimal, resolve_employee,
+    generate_row_code,
+    safe_date,
+    safe_decimal,
 )
+from apps.employees.models import Department, Employee, NTCCenter, Sector
 from apps.works.models import (
-    Work, PPProject, AuditLog, Changeset, ChangesetItem,
+    AuditLog,
+    Changeset,
+    ChangesetItem,
+    PPProject,
+    Work,
 )
-from apps.employees.models import Employee, Department, NTCCenter, Sector
 
 logger = logging.getLogger(__name__)
 

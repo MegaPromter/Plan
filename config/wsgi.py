@@ -1,4 +1,5 @@
 import os  # стандартная библиотека для работы с переменными окружения
+
 from django.core.wsgi import get_wsgi_application  # фабрика WSGI-приложения Django
 
 # Устанавливаем переменную среды DJANGO_SETTINGS_MODULE, если она не задана извне.

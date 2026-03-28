@@ -4,6 +4,7 @@
           PUT/DELETE /api/pp_projects/<pk>/
 """
 import json
+
 import pytest
 from django.test import Client
 

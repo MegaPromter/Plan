@@ -1,0 +1,37 @@
+# Ruff — линтер и форматер Python
+# Документация: https://docs.astral.sh/ruff/
+
+target-version = "py311"
+line-length = 120
+
+[lint]
+# Включённые категории правил:
+# F — pyflakes (неиспользуемые импорты, переменные, ошибки)
+# E — pycodestyle errors (стиль кода)
+# W — pycodestyle warnings
+# I — isort (порядок импортов)
+# UP — pyupgrade (устаревшие конструкции Python)
+# B — flake8-bugbear (частые баги)
+# SIM — flake8-simplify (упрощение кода)
+# S — bandit (безопасность)
+select = ["F", "E", "W", "I", "UP", "B", "SIM"]
+
+ignore = [
+    "E501",   # длина строки (контролируем line-length, но не жёстко)
+    "F841",   # unused variable — много ложных срабатываний в conftest/migrations
+    "E402",   # module-level import not at top — Django lazy imports
+    "B904",   # raise ... from err — слишком педантично
+    "SIM102", # nested if → single if — часто ухудшает читаемость
+    "SIM103", # return condition directly — не всегда яснее
+    "SIM105", # contextlib.suppress — try/except/pass понятнее
+    "SIM108", # ternary operator — ухудшает читаемость
+    "UP031",  # printf-style formatting — у нас много logging с %s
+]
+
+[lint.per-file-ignores]
+"apps/works/migrations/*" = ["F", "E", "W", "I", "UP", "B", "SIM"]
+"apps/employees/migrations/*" = ["F", "E", "W", "I", "UP", "B", "SIM"]
+"apps/enterprise/migrations/*" = ["F", "E", "W", "I", "UP", "B", "SIM"]
+
+[lint.isort]
+known-first-party = ["apps", "config"]

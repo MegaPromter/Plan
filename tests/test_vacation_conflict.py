@@ -2,12 +2,12 @@
 Тесты проверки пересечения отпусков.
 """
 import json
-import pytest
 from datetime import date
 
+import pytest
 from django.test import Client
 
-from apps.employees.models import Employee, Vacation
+from apps.employees.models import Vacation
 
 
 @pytest.mark.django_db

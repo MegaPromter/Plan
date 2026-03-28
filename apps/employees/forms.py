@@ -1,8 +1,8 @@
 # Импорт базового модуля форм Django
 from django import forms
-# Импорт моделей, для которых создаются формы
-from .models import Employee, Vacation, KPI
 
+# Импорт моделей, для которых создаются формы
+from .models import KPI, Employee, Vacation
 
 # ── Форма создания/редактирования профиля сотрудника ─────────────────────────
 

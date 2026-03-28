@@ -1,5 +1,6 @@
 # Импорт функции для объявления URL-маршрутов
 from django.urls import path
+
 # Импорт всех view-классов из текущего пакета
 from . import views
 

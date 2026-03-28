@@ -4,6 +4,7 @@
           GET /api/dept_employees/, GET /api/tasks/<pk>/executors/
 """
 import json
+
 import pytest
 from django.test import Client
 

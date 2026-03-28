@@ -2,7 +2,6 @@
 Тесты API журнала аудита.
 Покрытие: GET /api/audit_log/
 """
-import pytest
 from django.test import Client
 
 

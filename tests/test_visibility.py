@@ -4,7 +4,6 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.employees.models import Employee, Department, NTCCenter, Sector
 from apps.api.utils import get_visibility_filter
 
 User = get_user_model()

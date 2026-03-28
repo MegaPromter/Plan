@@ -11,12 +11,12 @@
 7. Сериализация: deadline = date_end для ПП-записей
 """
 import json
-import pytest
 from datetime import date
+
+import pytest
 from django.test import Client
 
-from apps.works.models import Work, PPProject
-from apps.employees.models import Employee
+from apps.works.models import PPProject, Work
 
 
 @pytest.fixture

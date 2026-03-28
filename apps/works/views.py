@@ -1,17 +1,20 @@
 # Миксины для проверки аутентификации и прав доступа на уровне view
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+# timezone — работа со временем с учётом часового пояса
+from django.utils import timezone
+
 # Базовые generic-view классы Django
 from django.views.generic import ListView, TemplateView
 
 # Модель сотрудника — нужна для получения роли и настроек пользователя
 from apps.employees.models import Employee
-# Основные модели данного приложения
-from .models import Notice
+
 # Общий миксин для SPA-страниц
 from .mixins import SPAContextMixin
-# timezone — работа со временем с учётом часового пояса
-from django.utils import timezone
 
+# Основные модели данного приложения
+from .models import Notice
 
 # ── Журнал извещений ──────────────────────────────────────────────────────────
 

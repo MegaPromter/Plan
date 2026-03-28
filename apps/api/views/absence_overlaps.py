@@ -7,10 +7,9 @@ from datetime import date
 from django.http import JsonResponse
 from django.views import View
 
-from apps.api.mixins import LoginRequiredJsonMixin
-from apps.api.mixins import parse_json_body
+from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
 from apps.api.utils import get_vacation_visibility_filter
-from apps.employees.models import Employee, Vacation, BusinessTrip
+from apps.employees.models import BusinessTrip, Vacation
 
 
 class AbsenceOverlapsView(LoginRequiredJsonMixin, View):

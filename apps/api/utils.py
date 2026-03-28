@@ -3,20 +3,24 @@
 Аналог Flask-хелперов: _get_visibility_filter, _norm_plan_hours и т.д.
 """
 # Стандартный модуль JSON (используется при парсинге строк в dict)
-import json
 # calendar — для вычисления последнего дня месяца
 import calendar
+import json
+
 # date и timedelta из стандартной библиотеки
-from datetime import date, timedelta
+from datetime import date
+
 # Decimal — для точных вычислений с дробными числами (финансовые данные)
 from decimal import Decimal, InvalidOperation
 
-# Q — объект для построения сложных ORM-запросов (OR/AND)
-from django.db.models import Q
-# timezone — работа со временем с учётом часового пояса
-from django.utils import timezone
 # cache — кеширование в памяти (LocMemCache / Redis)
 from django.core.cache import cache
+
+# Q — объект для построения сложных ORM-запросов (OR/AND)
+from django.db.models import Q
+
+# timezone — работа со временем с учётом часового пояса
+from django.utils import timezone
 
 # Модели сотрудников: Employee (профиль) и RoleDelegation (делегирования)
 from apps.employees.models import Employee, RoleDelegation

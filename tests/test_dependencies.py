@@ -7,7 +7,7 @@ from datetime import date
 import pytest
 from django.test import Client
 
-from apps.works.models import Work, TaskDependency, PPProject
+from apps.works.models import PPProject, TaskDependency, Work
 
 
 @pytest.fixture

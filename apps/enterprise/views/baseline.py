@@ -16,7 +16,6 @@ POST   /api/enterprise/scenarios/<id>/entries/            — добавлени
 import logging
 
 from django.db import transaction
-from django.db.models import F
 from django.http import JsonResponse
 from django.views import View
 
@@ -25,12 +24,14 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import Work, Project
 from apps.enterprise.models import (
-    CrossSchedule, CrossStage,
-    BaselineSnapshot, BaselineEntry,
-    Scenario, ScenarioEntry,
+    BaselineEntry,
+    BaselineSnapshot,
+    CrossSchedule,
+    Scenario,
+    ScenarioEntry,
 )
+from apps.works.models import Project, Work
 
 logger = logging.getLogger(__name__)
 

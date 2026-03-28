@@ -9,16 +9,12 @@
 - этот файл — интеграционные сценарии (цепочка из 5-15 вызовов)
 """
 import json
+
 import pytest
 from django.test import Client
 
-from apps.works.models import Project, Work, PPProject, WorkCalendar
-from apps.employees.models import Employee, Department
-from apps.enterprise.models import (
-    GeneralSchedule, GGStage,
-    CrossSchedule, CrossStage,
-    BaselineSnapshot,
-)
+from apps.employees.models import Employee
+from apps.works.models import PPProject, Project, Work, WorkCalendar
 
 pytestmark = pytest.mark.django_db
 
@@ -77,7 +73,7 @@ class TestProjectLifecycle:
         project_id = r.json()['id']
 
         # 2. Назначаем enterprise-поля (статус, приоритет, ГК)
-        chief_id = admin_user.id
+        chief_id = admin_user.employee.id
         r = _put(admin_client, f'{API}/portfolio/{project_id}/', {
             'status': 'prospective',
             'priority_category': 'high',
@@ -303,12 +299,13 @@ class TestEditLockLifecycle:
         r = _put(writer_client, f'{API}/cross/{pid}/', {'edit_owner': 'cross'})
         assert r.status_code == 200
 
-        # 11. Теперь CRUD снова работает
+        # 11. Теперь создание снова работает
         r = _post(writer_client, f'{API}/cross/{pid}/stages/', {'name': 'Этап B'})
         assert r.status_code == 201
 
+        # Удаление этапов сквозного запрещено (управление через ГГ) — 403 всегда
         r = writer_client.delete(f'{API}/cross_stages/{stage_id}/')
-        assert r.status_code == 200
+        assert r.status_code == 403
 
 
 # ══════════════════════════════════════════════════════════════════════════

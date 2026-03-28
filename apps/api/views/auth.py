@@ -6,28 +6,35 @@ GET     /api/dirs_public      -- справочники для формы рег
 """
 # Стандартный логгер Python
 import logging
-# os — для чтения переменных окружения (DEFAULT_ROLE)
-import os
 
-# get_user_model — получаем модель пользователя (кастомную или стандартную)
-from django.contrib.auth import get_user_model
-# ValidationError — исключение при нарушении бизнес-правил (model.clean)
-from django.core.exceptions import ValidationError
 # settings — доступ к DEBUG и другим настройкам проекта
 from django.conf import settings
+
+# os — для чтения переменных окружения (DEFAULT_ROLE)
+# get_user_model — получаем модель пользователя (кастомную или стандартную)
+from django.contrib.auth import get_user_model
+
+# ValidationError — исключение при нарушении бизнес-правил (model.clean)
+from django.core.exceptions import ValidationError
+
 # IntegrityError — исключение при нарушении ограничений БД (уникальный login)
 from django.db import IntegrityError, transaction
+
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
+
 # method_decorator — применение декоратора к методу класса
 from django.utils.decorators import method_decorator
+
 # View — базовый класс для CBV
 from django.views import View
+
 # csrf_exempt — отключение CSRF-проверки (публичные эндпоинты)
 from django.views.decorators.csrf import csrf_exempt
 
 # Парсер JSON-тела запроса
 from apps.api.mixins import parse_json_body
+
 # Модели сотрудников: отдел, сотрудник, НТЦ-центр, сектор
 from apps.employees.models import (
     Department,

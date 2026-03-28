@@ -2,7 +2,6 @@
 Тесты API аналитики.
 Покрытие: GET /api/analytics/workload/, /api/analytics/employee/, /api/analytics/pp/
 """
-import pytest
 from django.test import Client
 
 

@@ -5,87 +5,139 @@ URL-маршрутизация REST API.
 # path — функция формирования URL-паттернов в Django
 from django.urls import path
 
-# ── Импорт вьюх по разделам ───────────────────────────────────────────────────
+# Вьюха пересечений отсутствий
+from .views.absence_overlaps import AbsenceOverlapsView
 
-# Вьюхи справочников (Directory)
-from .views.directories import DirectoryListView, DirectoryCreateView, DirectoryDetailView
-# Вьюхи пользователей (User + Employee)
-from .views.users import UserListView, UserDetailView, UserPasswordResetView, DeptEmployeesView
-# Вьюхи делегирований ролей
-from .views.delegations import DelegationListView, DelegationDetailView
-# Публичные вьюхи: справочники для регистрации и сама регистрация
-from .views.auth import DirsPublicView, RegisterPublicView
-# Настройки колонок таблицы (ширина, видимость)
-from .views.col_settings import ColSettingsView
-# Вьюхи задач (plan_tasks)
-from .views.tasks import (
-    TaskListView, TaskCreateView, TaskDetailView,
-    TaskDeleteAllView, TaskBulkDeleteView, TaskExecutorsView,
-)
-# Журнал аудита (только admin)
-from .views.audit_log import AuditLogListView
 # Аналитика
 from .views.analytics import EmployeeAnalyticsView, PPAnalyticsView, WorkloadAnalyticsView
 from .views.analytics_plan import PlanAnalyticsView
-from .views.dashboard import DashboardAPIView
-# Вьюхи отчётных документов (WorkReport)
-from .views.reports import ReportListView, ReportCreateView, ReportDetailView
-# Вьюхи производственного плана (PPWork)
-from .views.production_plan import (
-    ProductionPlanListView, ProductionPlanCreateView,
-    ProductionPlanDetailView, ProductionPlanSyncView,
-)
-# Вьюхи проектов производственного плана (PPProject)
-from .views.pp_projects import PPProjectListView, PPProjectCreateView, PPProjectDetailView
-# Вьюхи УП-проектов и изделий (Project + ProjectProduct)
-from .views.projects import (
-    ProjectListView, ProjectCreateView, ProjectDetailView,
-    ProjectMetricsView,
-    ProjectProductListView, ProjectProductCreateView, ProjectProductDetailView,
-)
-# Вьюхи отпусков и проверки конфликтов
-from .views.vacations import (
-    VacationListView, VacationCreateView,
-    VacationDetailView, VacationConflictView,
-)
+
+# Журнал аудита (только admin)
+from .views.audit_log import AuditLogListView
+
+# Публичные вьюхи: справочники для регистрации и сама регистрация
+from .views.auth import DirsPublicView, RegisterPublicView
+
 # Вьюхи командировок
-from .views.business_trips import BusinessTripListView, BusinessTripDetailView
-# Вьюха пересечений отсутствий
-from .views.absence_overlaps import AbsenceOverlapsView
-# Вьюхи журнала извещений
-from .views.journal import JournalListView, JournalCreateView, JournalDetailView
-# Вьюхи замечаний и предложений (Feedback)
-from .views.feedback import FeedbackListView, FeedbackDetailView, FeedbackAttachmentDeleteView
+from .views.business_trips import BusinessTripDetailView, BusinessTripListView
+
 # Вьюхи наборов изменений (Changeset / Песочница)
 from .views.changesets import (
-    ChangesetListView, ChangesetCreateView, ChangesetDetailView,
-    ChangesetItemCreateView, ChangesetItemDetailView,
-    ChangesetSubmitView, ChangesetApproveView, ChangesetRejectView,
-    ChangesetDiffView, ChangesetReopenView,
+    ChangesetApproveView,
+    ChangesetCreateView,
+    ChangesetDetailView,
+    ChangesetDiffView,
+    ChangesetItemCreateView,
+    ChangesetItemDetailView,
+    ChangesetListView,
+    ChangesetRejectView,
+    ChangesetReopenView,
+    ChangesetSubmitView,
 )
-# Вьюхи производственного календаря (WorkCalendar + Holiday)
-from .views.work_calendar import (
-    WorkCalendarListView, WorkCalendarCreateView, WorkCalendarDetailView,
-    HolidayListView, HolidayDetailView,
-)
-# Вьюхи для заполнения тестовыми данными (seed)
-from .views.seed import (
-    SeedDataView, SeedExecutorsView, SeedVacationsView,
-    FillAllView, FillDeptView, SeedAnalyticsView,
-)
+
+# Настройки колонок таблицы (ширина, видимость)
+from .views.col_settings import ColSettingsView
+
+# Вьюхи комментариев к задачам (WorkComment)
+from .views.comments import CommentDetailView, CommentListView
+from .views.dashboard import DashboardAPIView
+
+# Вьюхи делегирований ролей
+from .views.delegations import DelegationDetailView, DelegationListView
+
 # Вьюхи зависимостей задач (TaskDependency)
 from .views.dependencies import (
-    TaskDependencyListView, TaskDependencyDetailView,
-    AllDependenciesView, AlignDatesView,
+    AlignDatesView,
+    AllDependenciesView,
+    TaskDependencyDetailView,
+    TaskDependencyListView,
 )
-# Вьюхи комментариев к задачам (WorkComment)
-from .views.comments import CommentListView, CommentDetailView
+
+# ── Импорт вьюх по разделам ───────────────────────────────────────────────────
+# Вьюхи справочников (Directory)
+from .views.directories import DirectoryCreateView, DirectoryDetailView, DirectoryListView
+
+# Вьюхи замечаний и предложений (Feedback)
+from .views.feedback import FeedbackAttachmentDeleteView, FeedbackDetailView, FeedbackListView
+
 # Health check
 from .views.health import HealthCheckView
+
+# Вьюхи журнала извещений
+from .views.journal import JournalCreateView, JournalDetailView, JournalListView
+
 # Уведомления
 from .views.notifications import (
-    NotificationListView, NotificationSyncView, NotificationReadView,
-    NotificationReadAllView, NotificationUnreadCountView,
+    NotificationListView,
+    NotificationReadAllView,
+    NotificationReadView,
+    NotificationSyncView,
+    NotificationUnreadCountView,
+)
+
+# Вьюхи проектов производственного плана (PPProject)
+from .views.pp_projects import PPProjectCreateView, PPProjectDetailView, PPProjectListView
+
+# Вьюхи производственного плана (PPWork)
+from .views.production_plan import (
+    ProductionPlanCreateView,
+    ProductionPlanDetailView,
+    ProductionPlanListView,
+    ProductionPlanSyncView,
+)
+
+# Вьюхи УП-проектов и изделий (Project + ProjectProduct)
+from .views.projects import (
+    ProjectCreateView,
+    ProjectDetailView,
+    ProjectListView,
+    ProjectMetricsView,
+    ProjectProductCreateView,
+    ProjectProductDetailView,
+    ProjectProductListView,
+)
+
+# Вьюхи отчётных документов (WorkReport)
+from .views.reports import ReportCreateView, ReportDetailView, ReportListView
+
+# Вьюхи для заполнения тестовыми данными (seed)
+from .views.seed import (
+    FillAllView,
+    FillDeptView,
+    SeedAnalyticsView,
+    SeedDataView,
+    SeedExecutorsView,
+    SeedVacationsView,
+)
+
+# Вьюхи задач (plan_tasks)
+from .views.tasks import (
+    TaskBulkDeleteView,
+    TaskCreateView,
+    TaskDeleteAllView,
+    TaskDetailView,
+    TaskExecutorsView,
+    TaskListView,
+)
+
+# Вьюхи пользователей (User + Employee)
+from .views.users import DeptEmployeesView, UserDetailView, UserListView, UserPasswordResetView
+
+# Вьюхи отпусков и проверки конфликтов
+from .views.vacations import (
+    VacationConflictView,
+    VacationCreateView,
+    VacationDetailView,
+    VacationListView,
+)
+
+# Вьюхи производственного календаря (WorkCalendar + Holiday)
+from .views.work_calendar import (
+    HolidayDetailView,
+    HolidayListView,
+    WorkCalendarCreateView,
+    WorkCalendarDetailView,
+    WorkCalendarListView,
 )
 
 # ── Основные URL-паттерны API ─────────────────────────────────────────────────
@@ -303,6 +355,7 @@ urlpatterns = [
 # ── Seed-данные и дамп (только в DEBUG) ────────────────────────────────────
 # Импортируем настройки Django для проверки режима DEBUG
 from django.conf import settings
+
 if settings.DEBUG:
     # Загрузка дампа данных (только в DEBUG-режиме!)
     from apps.api.views.load_dump import LoadDumpView

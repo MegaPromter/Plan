@@ -1,11 +1,9 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
-from django.views.generic import FormView, TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from django.contrib import messages
-from django.db.models import Count
-from django.db.models.functions import Coalesce
+from django.views.generic import FormView, TemplateView
 
 
 class ChangePasswordView(LoginRequiredMixin, FormView):
@@ -57,7 +55,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         from django.utils import timezone
-        from apps.employees.models import Employee
         ctx = super().get_context_data(**kwargs)
 
         today = timezone.now().date()

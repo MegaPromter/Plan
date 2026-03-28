@@ -13,24 +13,27 @@ DELETE /api/projects/<id>/products/<pid>/  — удаление изделия
 """
 # Стандартный логгер Python
 import logging
+from datetime import date
 
 # Count — агрегация: подсчёт связанных объектов
 from django.db.models import Count
+
 # JsonResponse — HTTP-ответ в формате JSON
 from django.http import JsonResponse
+
 # View — базовый класс CBV
 from django.views import View
 
 # Миксины авторизации (login, writer, admin) и парсер тела запроса
 from apps.api.mixins import (
-    LoginRequiredJsonMixin,
     AdminRequiredJsonMixin,
+    LoginRequiredJsonMixin,
     parse_json_body,
 )
+
 # Модели: Project (УП-проект), ProjectProduct (изделие проекта),
 # PPProject (план ПП, связанный с УП-проектом), Work (задача)
-from apps.works.models import Project, ProjectProduct, PPProject, Work
-from datetime import date
+from apps.works.models import PPProject, Project, ProjectProduct, Work
 
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)
@@ -144,7 +147,8 @@ class ProjectMetricsView(LoginRequiredJsonMixin, View):
         pp_ids = list(pp_projects.values_list('id', flat=True))
 
         # Все задачи проекта: через прямую связь ИЛИ через ПП
-        from django.db.models import Q, Exists, OuterRef
+        from django.db.models import Exists, OuterRef, Q
+
         from apps.works.models import WorkReport
         works = Work.objects.filter(
             Q(project=proj) | Q(pp_project_id__in=pp_ids)

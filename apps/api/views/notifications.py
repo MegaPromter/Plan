@@ -9,13 +9,13 @@ GET  /api/notifications/unread_count/ — количество непрочит�
 """
 from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db.models import Exists, OuterRef
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
+from django.views import View
 
 from apps.works.models import Notification, Work, WorkReport
 

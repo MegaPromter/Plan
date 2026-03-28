@@ -1,6 +1,7 @@
 # Базовый класс конфигурации Django-приложения
 from django.apps import AppConfig
 
+
 # Конфигурация приложения works
 class WorksConfig(AppConfig):
     # Тип первичного ключа по умолчанию для всех моделей приложения

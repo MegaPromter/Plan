@@ -1,14 +1,22 @@
 from django.contrib import admin
 
 from .models import (
-    GGTemplate, GGTemplateStage,
-    GeneralSchedule, GGStage, GGMilestone, GGStageDependency,
-    CrossSchedule, CrossScheduleDeptStatus, CrossStage, CrossMilestone,
-    BaselineSnapshot, BaselineEntry,
-    Scenario, ScenarioEntry,
+    BaselineEntry,
+    BaselineSnapshot,
+    CrossMilestone,
+    CrossSchedule,
+    CrossScheduleDeptStatus,
+    CrossStage,
     EnterpriseNotification,
+    GeneralSchedule,
+    GGMilestone,
+    GGStage,
+    GGStageDependency,
+    GGTemplate,
+    GGTemplateStage,
+    Scenario,
+    ScenarioEntry,
 )
-
 
 # --- ГГ (Генеральный график) ------------------------------------------------
 

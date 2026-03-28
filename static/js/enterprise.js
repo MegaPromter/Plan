@@ -720,6 +720,50 @@ function loadCross(projectId) {
 
 const EDIT_OWNER_LABELS = { cross: 'Сквозной', pp: 'ПП', locked: 'Заблокирован' };
 
+function onCrossSettingChange() {
+  const modeEl = document.getElementById('crossModeSelect');
+  const granEl = document.getElementById('crossGranSelect');
+  const btn = document.getElementById('crossSettingsApply');
+  if (!modeEl || !granEl || !btn) return;
+
+  const changed = modeEl.value !== currentCross.edit_owner || granEl.value !== currentCross.granularity;
+  btn.style.display = changed ? '' : 'none';
+
+  // Обновляем цвет селекта режима
+  modeEl.className = 'edit-owner-select edit-owner-select--' + modeEl.value;
+}
+
+function applyCrossSettings() {
+  const pid = selectedProjectId;
+  if (!pid) return;
+
+  const modeEl = document.getElementById('crossModeSelect');
+  const granEl = document.getElementById('crossGranSelect');
+  const body = {};
+  if (modeEl.value !== currentCross.edit_owner) body.edit_owner = modeEl.value;
+  if (granEl.value !== currentCross.granularity) body.granularity = granEl.value;
+  if (!Object.keys(body).length) return;
+
+  const LABELS = { cross: 'Сквозной', pp: 'ПП', locked: 'Заблокирован' };
+  if (body.edit_owner === 'locked') {
+    if (!confirm('Заблокировать график? Редактирование станет невозможным.')) {
+      modeEl.value = currentCross.edit_owner;
+      onCrossSettingChange();
+      return;
+    }
+  }
+
+  fetchJSON(`${API}/cross/${pid}/`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  }).then(() => {
+    if (body.edit_owner) currentCross.edit_owner = body.edit_owner;
+    if (body.granularity) currentCross.granularity = body.granularity;
+    renderCross();
+    showToast('Настройки сохранены', 'success');
+  }).catch(e => alert(e.error || 'Ошибка'));
+}
+
 function renderCross() {
   const emptyEl   = document.getElementById('crossEmpty');
   const viewEl    = document.getElementById('crossScheduleView');
@@ -740,14 +784,28 @@ function renderCross() {
 
   // Метабар
   const eo = currentCross.edit_owner;
+  const modeSelector = IS_WRITER
+    ? `<select class="edit-owner-select edit-owner-select--${eo}" onchange="changeCrossMode(this.value)">
+         <option value="cross"${eo === 'cross' ? ' selected' : ''}>Сквозной</option>
+         <option value="pp"${eo === 'pp' ? ' selected' : ''}>ПП</option>
+         <option value="locked"${eo === 'locked' ? ' selected' : ''}>Заблокирован</option>
+       </select>`
+    : `<span class="edit-lock-badge edit-lock-badge--${eo}">${EDIT_OWNER_LABELS[eo] || escapeHtml(eo)}</span>`;
+
+  const gran = currentCross.granularity;
+  const granSelector = IS_WRITER
+    ? `<select class="edit-owner-select" onchange="changeCrossGranularity(this.value)">
+         <option value="whole"${gran === 'whole' ? ' selected' : ''}>Весь график</option>
+         <option value="per_dept"${gran === 'per_dept' ? ' selected' : ''}>По отделам</option>
+       </select>`
+    : (gran === 'whole' ? 'Весь график' : 'По отделам');
+
   metaEl.innerHTML = `
     <div class="ent-meta-item"><span class="ent-meta-label">Версия:</span>
       <a href="#" class="baseline-version-link" onclick="openBaselineList(); return false;">${currentCross.version}</a>
     </div>
-    <div class="ent-meta-item"><span class="ent-meta-label">Режим:</span>
-      <span class="edit-lock-badge edit-lock-badge--${eo}">${EDIT_OWNER_LABELS[eo] || escapeHtml(eo)}</span>
-    </div>
-    <div class="ent-meta-item"><span class="ent-meta-label">Гранулярность:</span> ${currentCross.granularity === 'whole' ? 'Весь график' : 'По отделам'}</div>
+    <div class="ent-meta-item"><span class="ent-meta-label">Режим:</span> ${modeSelector}</div>
+    <div class="ent-meta-item"><span class="ent-meta-label">Гранулярность:</span> ${granSelector}</div>
   `;
 
   // Кнопки
@@ -760,9 +818,7 @@ function renderCross() {
   // Этапы
   const stagesBody = document.getElementById('crossStagesBody');
   stagesBody.innerHTML = (currentCross.stages || []).map(s => {
-    const actions = IS_WRITER && eo !== 'locked'
-      ? `<button class="btn btn-ghost btn-sm" onclick="deleteCrossStage(${s.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
+    const actions = '';
     return `<tr>
       <td>${s.order}</td>
       <td>${escapeHtml(s.name)}</td>
@@ -922,28 +978,37 @@ function renderBaselineModal() {
     ? baselinesCache.map(b => {
         const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
         return `<tr>
+          <td><label class="baseline-check"><input type="checkbox" class="bl-compare-cb" data-id="${b.id}" data-version="${b.version}" onchange="onBaselineCheckChange()"><span></span></label></td>
           <td><strong>v${b.version}</strong></td>
           <td>${date}</td>
           <td>${escapeHtml(b.created_by || '—')}</td>
           <td>${escapeHtml(b.comment || '—')}</td>
           <td>
             <button class="btn btn-ghost btn-sm" onclick="viewBaseline(${b.id})" title="Просмотр"><i class="fas fa-eye"></i></button>
-            <button class="btn btn-ghost btn-sm" onclick="compareBaseline(${b.id}, ${b.version})" title="Сравнить с текущим"><i class="fas fa-not-equal"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="compareBaselineWithCurrent(${b.id}, ${b.version})" title="Сравнить с текущим"><i class="fas fa-not-equal"></i></button>
             ${IS_WRITER ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteBaseline(${b.id})" title="Удалить"><i class="fas fa-trash"></i></button>` : ''}
           </td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="5" class="text-center text-muted">Нет снимков</td></tr>';
+    : '<tr><td colspan="6" class="text-center text-muted">Нет снимков</td></tr>';
+
+  const compareBtn = baselinesCache.length >= 2
+    ? `<button id="blCompareBtn" class="btn btn-outline btn-sm" onclick="compareTwoBaselines()" disabled>
+         <i class="fas fa-columns"></i> Сравнить выбранные
+       </button>`
+    : '';
 
   modal.innerHTML = `
-    <div class="modal" style="max-width:720px;">
+    <div class="modal" style="max-width:780px;">
       <div class="modal-header">
         <h3>Снимки (Baselines)</h3>
         <button class="modal-close" onclick="document.getElementById('baselineModal').classList.remove('open')">&times;</button>
       </div>
       <div class="modal-body" style="overflow-x:auto;">
+        ${compareBtn ? `<div style="margin-bottom:10px;">${compareBtn} <span id="blCompareHint" class="text-muted" style="font-size:12px;margin-left:8px;">Выберите 2 снимка для сравнения</span></div>` : ''}
         <table class="baseline-table">
           <thead><tr>
+            <th style="width:32px;"></th>
             <th>Версия</th><th>Дата</th><th>Автор</th><th>Комментарий</th><th>Действия</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -1022,100 +1087,160 @@ function renderBaselineView(b) {
   `;
 }
 
-// ── Сравнение снимка с текущим ──────────────────────────────────────────
+// ── Выбор снимков для сравнения ──────────────────────────────────────────
 
-function compareBaseline(id, version) {
-  if (!currentCross) return;
+function onBaselineCheckChange() {
+  const cbs = document.querySelectorAll('.bl-compare-cb:checked');
+  const btn = document.getElementById('blCompareBtn');
+  const hint = document.getElementById('blCompareHint');
+  if (!btn) return;
 
-  fetchJSON(`${API}/baselines/${id}/`).then(data => {
-    const b = data.baseline;
-    renderBaselineComparison(b);
+  if (cbs.length > 2) {
+    // Снимаем первый из отмеченных (FIFO)
+    cbs[0].checked = false;
+  }
+  const checked = document.querySelectorAll('.bl-compare-cb:checked');
+  btn.disabled = checked.length !== 2;
+  if (hint) {
+    hint.textContent = checked.length === 2
+      ? `v${checked[0].dataset.version} ↔ v${checked[1].dataset.version}`
+      : 'Выберите 2 снимка для сравнения';
+  }
+}
+
+function compareTwoBaselines() {
+  const cbs = [...document.querySelectorAll('.bl-compare-cb:checked')];
+  if (cbs.length !== 2) return;
+
+  // Сортируем: меньшая версия = left (старая), большая = right (новая)
+  cbs.sort((a, b) => +a.dataset.version - +b.dataset.version);
+  const idA = +cbs[0].dataset.id;
+  const idB = +cbs[1].dataset.id;
+
+  Promise.all([
+    fetchJSON(`${API}/baselines/${idA}/`),
+    fetchJSON(`${API}/baselines/${idB}/`),
+  ]).then(([dataA, dataB]) => {
+    renderBaselineComparison(dataA.baseline, dataB.baseline);
   }).catch(e => alert(e.error || 'Ошибка'));
 }
 
-function renderBaselineComparison(b) {
-  const stateEntry = (b.entries || []).find(e => e.data && e.data._type === 'schedule_state');
-  const oldStages = stateEntry ? (stateEntry.data.stages || []) : [];
-  const curStages = currentCross.stages || [];
+// ── Сравнение снимка с текущим ──────────────────────────────────────────
+
+function compareBaselineWithCurrent(id, version) {
+  if (!currentCross) return;
+
+  fetchJSON(`${API}/baselines/${id}/`).then(data => {
+    // Создаём «виртуальный» правый снимок из текущего состояния
+    const currentAsBaseline = {
+      version: currentCross.version,
+      created_at: new Date().toISOString(),
+      created_by: '',
+      entries: [{
+        data: {
+          _type: 'schedule_state',
+          stages: currentCross.stages || [],
+          milestones: currentCross.milestones || [],
+        }
+      }],
+    };
+    renderBaselineComparison(data.baseline, currentAsBaseline, true);
+  }).catch(e => alert(e.error || 'Ошибка'));
+}
+
+/**
+ * Универсальное сравнение двух снимков.
+ * @param {Object} left  — старый снимок (baseline JSON)
+ * @param {Object} right — новый снимок (baseline JSON или виртуальный из текущего)
+ * @param {boolean} rightIsCurrent — true если right = текущее состояние
+ */
+function renderBaselineComparison(left, right, rightIsCurrent) {
+  const leftEntry = (left.entries || []).find(e => e.data && e.data._type === 'schedule_state');
+  const rightEntry = (right.entries || []).find(e => e.data && e.data._type === 'schedule_state');
+  const leftStages = leftEntry ? (leftEntry.data.stages || []) : [];
+  const rightStages = rightEntry ? (rightEntry.data.stages || []) : [];
 
   // Строим map по order для сопоставления
-  const oldMap = {};
-  oldStages.forEach(s => { oldMap[s.order] = s; });
-  const curMap = {};
-  curStages.forEach(s => { curMap[s.order] = s; });
+  const leftMap = {};
+  leftStages.forEach(s => { leftMap[s.order] = s; });
+  const rightMap = {};
+  rightStages.forEach(s => { rightMap[s.order] = s; });
 
   // Собираем все orders
-  const allOrders = [...new Set([...Object.keys(oldMap), ...Object.keys(curMap)])].sort((a, b) => a - b);
+  const allOrders = [...new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])].sort((a, b) => a - b);
 
   const rows = allOrders.map(order => {
-    const old = oldMap[order];
-    const cur = curMap[order];
+    const l = leftMap[order];
+    const r = rightMap[order];
 
-    if (!old && cur) {
-      // Новый этап (нет в снимке)
+    if (!l && r) {
       return `<tr class="baseline-added">
-        <td>${cur.order}</td>
-        <td>${escapeHtml(cur.name)}</td>
+        <td>${r.order}</td>
+        <td>${escapeHtml(r.name)}</td>
         <td>—</td><td>—</td>
-        <td>${cur.date_start || '—'}</td><td>${cur.date_end || '—'}</td>
+        <td>${r.date_start || '—'}</td><td>${r.date_end || '—'}</td>
         <td><span class="baseline-badge baseline-badge--added">Добавлен</span></td>
       </tr>`;
     }
-    if (old && !cur) {
-      // Удалён в текущем
+    if (l && !r) {
       return `<tr class="baseline-removed">
-        <td>${old.order}</td>
-        <td>${escapeHtml(old.name)}</td>
-        <td>${old.date_start || '—'}</td><td>${old.date_end || '—'}</td>
+        <td>${l.order}</td>
+        <td>${escapeHtml(l.name)}</td>
+        <td>${l.date_start || '—'}</td><td>${l.date_end || '—'}</td>
         <td>—</td><td>—</td>
         <td><span class="baseline-badge baseline-badge--removed">Удалён</span></td>
       </tr>`;
     }
 
-    // Оба есть — сравниваем
     const changes = [];
-    if (old.name !== cur.name) changes.push('название');
-    if (old.date_start !== cur.date_start) changes.push('начало');
-    if (old.date_end !== cur.date_end) changes.push('окончание');
+    if (l.name !== r.name) changes.push('название');
+    if (l.date_start !== r.date_start) changes.push('начало');
+    if (l.date_end !== r.date_end) changes.push('окончание');
 
     const cls = changes.length ? 'baseline-changed' : '';
     const badge = changes.length
       ? `<span class="baseline-badge baseline-badge--changed">${escapeHtml(changes.join(', '))}</span>`
       : '<span class="baseline-badge baseline-badge--same">Без изменений</span>';
 
-    const startCls = old.date_start !== cur.date_start ? ' class="baseline-diff"' : '';
-    const endCls = old.date_end !== cur.date_end ? ' class="baseline-diff"' : '';
+    const startCls = l.date_start !== r.date_start ? ' class="baseline-diff"' : '';
+    const endCls = l.date_end !== r.date_end ? ' class="baseline-diff"' : '';
 
     return `<tr class="${cls}">
-      <td>${cur.order}</td>
-      <td>${escapeHtml(cur.name)}</td>
-      <td>${old.date_start || '—'}</td><td>${old.date_end || '—'}</td>
-      <td${startCls}>${cur.date_start || '—'}</td><td${endCls}>${cur.date_end || '—'}</td>
+      <td>${r.order}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${l.date_start || '—'}</td><td>${l.date_end || '—'}</td>
+      <td${startCls}>${r.date_start || '—'}</td><td${endCls}>${r.date_end || '—'}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
 
-  const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const leftDate = new Date(left.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const rightLabel = rightIsCurrent
+    ? `Текущий (v${right.version})`
+    : `v${right.version}`;
+  const rightDate = rightIsCurrent
+    ? ''
+    : ` — ${new Date(right.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}`;
 
   let modal = document.getElementById('baselineModal');
   modal.innerHTML = `
     <div class="modal" style="max-width:960px;">
       <div class="modal-header">
-        <h3>Сравнение: v${b.version} → текущий (v${currentCross.version})</h3>
+        <h3>Сравнение: v${left.version} → ${rightLabel}</h3>
         <button class="modal-close" onclick="document.getElementById('baselineModal').classList.remove('open')">&times;</button>
       </div>
       <div class="modal-body" style="overflow-x:auto;">
         <div class="baseline-view-meta">
-          <span><strong>Снимок v${b.version}:</strong> ${date}</span>
-          <span><strong>Автор:</strong> ${escapeHtml(b.created_by || '—')}</span>
+          <span><strong>v${left.version}:</strong> ${leftDate}</span>
+          ${!rightIsCurrent ? `<span><strong>v${right.version}:</strong> ${rightDate}</span>` : ''}
         </div>
         <table class="baseline-table baseline-compare-table">
           <thead>
             <tr>
               <th rowspan="2">№</th>
               <th rowspan="2">Название</th>
-              <th colspan="2" class="baseline-col-group">v${b.version} (снимок)</th>
-              <th colspan="2" class="baseline-col-group">Текущий (v${currentCross.version})</th>
+              <th colspan="2" class="baseline-col-group">v${left.version}</th>
+              <th colspan="2" class="baseline-col-group">${rightLabel}</th>
               <th rowspan="2">Изменение</th>
             </tr>
             <tr>

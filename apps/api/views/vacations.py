@@ -21,10 +21,9 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import (
-    VACATION_ALLOWED_FIELDS,
+    build_employee_q,
     get_vacation_visibility_filter,
     resolve_employee_loose,
-    build_employee_q,
 )
 from apps.employees.models import Employee, Vacation
 

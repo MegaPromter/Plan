@@ -12,16 +12,21 @@ GET /api/analytics/plan/
 """
 from collections import defaultdict
 
-from django.db.models import Q, Exists, OuterRef, Prefetch
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
 
 from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
-from apps.employees.models import Employee, Department, Sector, Vacation, BusinessTrip
+from apps.employees.models import BusinessTrip, Department, Employee, Sector, Vacation
 from apps.works.models import (
-    Work, WorkCalendar, WorkReport, TaskExecutor, Project, ProjectProduct,
+    Project,
+    ProjectProduct,
+    TaskExecutor,
+    Work,
+    WorkCalendar,
+    WorkReport,
 )
 
 

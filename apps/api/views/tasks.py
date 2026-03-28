@@ -14,36 +14,39 @@ from datetime import date as dt_date
 
 from django.core.cache import cache
 from django.db import transaction
-from django.utils import timezone
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 
+from apps.api.audit import log_action
 from apps.api.mixins import (
+    AdminRequiredJsonMixin,
     LoginRequiredJsonMixin,
     WriterRequiredJsonMixin,
-    AdminRequiredJsonMixin,
     parse_json_body,
 )
 from apps.api.utils import (
-    get_visibility_filter,
-    norm_plan_hours,
-    parse_json_hours,
-    mcc_finish_data,
-    validate_plan_hours,
-    validate_executors_list,
-    validate_actions,
-    validate_task_type,
     generate_row_code,
+    get_visibility_filter,
+    mcc_finish_data,
+    parse_json_hours,
     resolve_employee,
     short_name,
+    validate_actions,
+    validate_executors_list,
+    validate_plan_hours,
+    validate_task_type,
 )
-from apps.works.models import (
-    Work, TaskExecutor, WorkReport, Project, AuditLog,
-)
-from apps.employees.models import Employee, Department, Sector, NTCCenter
-from apps.api.audit import log_action
 from apps.api.views.reports import _sync_notices_for_work
+from apps.employees.models import Department, Employee, Sector
+from apps.works.models import (
+    AuditLog,
+    Project,
+    TaskExecutor,
+    Work,
+    WorkReport,
+)
 
 logger = logging.getLogger(__name__)
 

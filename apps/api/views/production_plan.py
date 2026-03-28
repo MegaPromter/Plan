@@ -9,28 +9,30 @@ API производственного плана (Work show_in_pp=True).
   POST   /api/production_plan/sync   — синхронизация ПП → задачи
 """
 import logging
-from datetime import date as dt_date
-from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
-from django.utils import timezone
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 
+from apps.api.audit import log_action
 from apps.api.mixins import (
     LoginRequiredJsonMixin,
     WriterRequiredJsonMixin,
     parse_json_body,
 )
 from apps.api.utils import (
-    PRODUCTION_ALLOWED_FIELDS, validate_task_type, generate_row_code,
-    safe_date, safe_decimal, resolve_employee,
+    PRODUCTION_ALLOWED_FIELDS,
+    generate_row_code,
+    resolve_employee,
+    safe_date,
+    safe_decimal,
+    validate_task_type,
 )
-from apps.works.models import Work, WorkReport, PPProject, AuditLog
-from apps.employees.models import Employee, Department, NTCCenter, Sector
-from apps.api.audit import log_action
 from apps.api.views.reports import _sync_notices_for_work
+from apps.employees.models import Department, NTCCenter, Sector
+from apps.works.models import AuditLog, Work, WorkReport
 
 logger = logging.getLogger(__name__)
 

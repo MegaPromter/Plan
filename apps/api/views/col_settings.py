@@ -5,6 +5,7 @@ POST    /api/col_settings  -- сохранение настроек видимо
 """
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
+
 # View — базовый класс для CBV
 from django.views import View
 
@@ -32,7 +33,7 @@ class ColSettingsView(LoginRequiredJsonMixin, View):
             return f'Слишком много ключей (максимум {cls._MAX_KEYS})'
         for key in data:
             if not isinstance(key, str):
-                return f'Ключ должен быть строкой'
+                return 'Ключ должен быть строкой'
             if len(key) > cls._MAX_KEY_LEN:
                 return f'Ключ слишком длинный: {key[:20]}...'
             if not cls._KEY_RE.match(key):

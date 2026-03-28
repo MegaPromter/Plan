@@ -5,19 +5,19 @@ GET /api/dashboard/?year=2026&month=3
 """
 import calendar as cal_mod
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 
-from django.db.models import Q, Exists, OuterRef, Min, Subquery, Prefetch
+from django.db.models import Exists, OuterRef, Prefetch, Q, Subquery
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
 
 from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
-from apps.employees.models import Employee, Sector
-from apps.works.models import Work, WorkCalendar, WorkReport, TaskExecutor
+from apps.employees.models import Employee
+from apps.works.models import TaskExecutor, Work, WorkCalendar, WorkReport
 
-from .analytics_plan import _float, _get_calendar_norms, _get_absences
+from .analytics_plan import _float, _get_absences, _get_calendar_norms
 
 
 class DashboardAPIView(LoginRequiredJsonMixin, View):

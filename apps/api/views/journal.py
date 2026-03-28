@@ -8,7 +8,7 @@ PUT     /api/journal/<id>     -- обновление записи (writer)
 DELETE  /api/journal/<id>     -- удаление записи (writer, только ручные)
 """
 import logging
-from datetime import date, timedelta
+from datetime import date
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -20,8 +20,8 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.api.utils import safe_date, resolve_employee_loose
-from apps.employees.models import Department, Employee, Sector
+from apps.api.utils import resolve_employee_loose, safe_date
+from apps.employees.models import Department, Sector
 from apps.works.models import Notice
 
 logger = logging.getLogger(__name__)

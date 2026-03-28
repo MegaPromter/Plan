@@ -1,20 +1,27 @@
 # Миксины для проверки аутентификации и прав доступа на уровне view
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-# Базовые generic-view классы Django
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView,
-)
-# Утилита для создания URL-адресов «ленивым» способом (вычисляется при обращении)
-from django.urls import reverse_lazy
+
 # Получение объекта или автоматический возврат 404 при его отсутствии
 from django.shortcuts import get_object_or_404
+
+# Утилита для создания URL-адресов «ленивым» способом (вычисляется при обращении)
+from django.urls import reverse_lazy
 from django.utils import timezone
 
-# Модели приложения employees
-from .models import Employee, Vacation, KPI
-# Формы для создания и редактирования объектов
-from .forms  import EmployeeForm, VacationForm, KPIForm
+# Базовые generic-view классы Django
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 
+# Формы для создания и редактирования объектов
+from .forms import EmployeeForm, KPIForm, VacationForm
+
+# Модели приложения employees
+from .models import KPI, Employee, Vacation
 
 # ── Миксин: только admin ──────────────────────────────────────────────────────
 

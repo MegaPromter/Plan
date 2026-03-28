@@ -8,8 +8,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
-from apps.employees.models import Employee, Department
-from apps.works.models import Work, PPProject, Directory
+from apps.employees.models import Department, Employee
+from apps.works.models import Directory, PPProject, Work
 
 User = get_user_model()
 

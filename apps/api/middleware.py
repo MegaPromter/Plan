@@ -7,15 +7,17 @@ Rate-limiting middleware для защиты API от брутфорса.
 - /api/                  : 300 запросов / 60 сек с одного IP (общий лимит)
 """
 # Модуль для работы с временем (используется для скользящего окна)
-import time
 # Стандартный логгер Python
 import logging
+import time
+
 # Django cache — используется для хранения счётчиков запросов (Redis/LocMem)
 from django.core.cache import cache
+
 # JsonResponse — для возврата JSON-ошибки при превышении лимита
 from django.http import JsonResponse
+
 # method_decorator — вспомогательный декоратор (импортирован, но не используется здесь напрямую)
-from django.utils.decorators import method_decorator
 
 # Логгер для данного модуля
 logger = logging.getLogger(__name__)

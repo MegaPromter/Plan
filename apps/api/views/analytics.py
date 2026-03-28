@@ -1,9 +1,8 @@
 """
 API аналитики: загрузка по отделам, выполнение по месяцам, просроченные, дедлайны.
 """
-from decimal import Decimal
 
-from django.db.models import Count, Q, Exists, OuterRef, Sum
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View

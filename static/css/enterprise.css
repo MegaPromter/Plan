@@ -214,6 +214,25 @@
 .edit-lock-badge--pp     { background: rgba(59,130,246,0.12); color: var(--accent); }
 .edit-lock-badge--locked { background: rgba(239,68,68,0.12); color: var(--danger); }
 
+/* Селект режима/гранулярности */
+.edit-owner-select {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.edit-owner-select:hover { border-color: var(--accent); }
+.edit-owner-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,0.12); }
+.edit-owner-select--cross  { color: var(--success); }
+.edit-owner-select--pp     { color: var(--accent); }
+.edit-owner-select--locked { color: var(--danger); }
+
 /* Справка-панель */
 .ent-help {
   margin-bottom: 16px;
@@ -432,6 +451,10 @@
 
 .btn-danger-text { color: #dc2626; }
 .btn-danger-text:hover { color: #b91c1c; background: rgba(239,68,68,0.08); }
+
+/* Чекбокс выбора снимков */
+.baseline-check { display: flex; align-items: center; justify-content: center; }
+.baseline-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
 
 /* Сравнительная таблица */
 .baseline-compare-table thead tr:first-child th[colspan] {

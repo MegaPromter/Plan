@@ -5,7 +5,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
-from apps.employees.models import Employee, Department, NTCCenter, Sector
+from apps.employees.models import Department, Employee, NTCCenter, Sector
 
 
 @pytest.fixture(autouse=True)

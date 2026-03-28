@@ -10,7 +10,7 @@ import logging
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum, Q
+from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.views import View
 

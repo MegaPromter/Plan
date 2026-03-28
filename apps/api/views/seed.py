@@ -17,7 +17,7 @@ from django.http import JsonResponse
 from django.views import View
 
 from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
-from apps.employees.models import Department, Employee, Sector, Vacation, BusinessTrip
+from apps.employees.models import BusinessTrip, Department, Employee, Sector, Vacation
 from apps.works.models import Directory, PPProject, Work, WorkCalendar
 
 logger = logging.getLogger(__name__)

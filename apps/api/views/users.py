@@ -16,10 +16,10 @@ from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views import View
 
+from apps.api.audit import log_action
 from apps.api.mixins import AdminRequiredJsonMixin, LoginRequiredJsonMixin, parse_json_body
 from apps.api.utils import VALID_ROLES
-from apps.api.audit import log_action
-from apps.employees.models import Employee, Department
+from apps.employees.models import Employee
 from apps.works.models import AuditLog
 
 User = get_user_model()
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 from apps.api.utils import resolve_position_key as _resolve_position_key
-
 
 # ── GET / POST /api/users ────────────────────────────────────────────────────
 
@@ -99,7 +98,7 @@ class UserListView(AdminRequiredJsonMixin, View):
                 )
 
                 # Устанавливаем подразделение
-                from apps.employees.models import Department, Sector, NTCCenter
+                from apps.employees.models import Department, NTCCenter, Sector
                 dept_code   = data.get('dept', '').strip()
                 sector_code = data.get('sector', '').strip()
                 center_code = (data.get('ntc_center') or data.get('center') or '').strip()

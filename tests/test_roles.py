@@ -2,10 +2,9 @@
 Тесты ролевой модели — is_writer и доступ к API.
 """
 import json
+
 import pytest
 from django.test import Client
-
-from apps.employees.models import Employee
 
 
 @pytest.mark.django_db

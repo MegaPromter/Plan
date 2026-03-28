@@ -1,6 +1,7 @@
 # Базовый класс конфигурации Django-приложения
 from django.apps import AppConfig
 
+
 # Конфигурация приложения employees
 class EmployeesConfig(AppConfig):
     # Тип первичного ключа по умолчанию для всех моделей приложения

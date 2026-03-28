@@ -7,19 +7,19 @@ POST   /api/enterprise/portfolio/<id>/priority/ — установка прио�
 """
 import logging
 
-from django.db.models import Sum, Count, Q, Subquery, OuterRef, DecimalField, IntegerField, Value
+from django.db.models import Count, DecimalField, IntegerField, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.views import View
 
 from apps.api.mixins import (
+    AdminRequiredJsonMixin,
     LoginRequiredJsonMixin,
     WriterRequiredJsonMixin,
-    AdminRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import Project, Work
 from apps.employees.models import Employee
+from apps.works.models import Project, Work
 
 logger = logging.getLogger(__name__)
 

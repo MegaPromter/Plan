@@ -26,16 +26,21 @@ from django.http import JsonResponse
 from django.views import View
 
 from apps.api.mixins import (
+    AdminRequiredJsonMixin,
     LoginRequiredJsonMixin,
     WriterRequiredJsonMixin,
-    AdminRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import Project
 from apps.enterprise.models import (
-    GGTemplate, GGTemplateStage,
-    GeneralSchedule, GGStage, GGMilestone, GGStageDependency,
+    CrossStage,
+    GeneralSchedule,
+    GGMilestone,
+    GGStage,
+    GGStageDependency,
+    GGTemplate,
+    GGTemplateStage,
 )
+from apps.works.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -293,6 +298,13 @@ class GGStageDetailView(WriterRequiredJsonMixin, View):
 
         if update_fields:
             stage.save(update_fields=update_fields)
+
+            # Каскад: синхронизируем связанные этапы сквозного графика
+            SYNC_FIELDS = ('name', 'date_start', 'date_end')
+            sync_fields = [f for f in update_fields if f in SYNC_FIELDS]
+            if sync_fields:
+                sync_data = {f: getattr(stage, f) for f in sync_fields}
+                stage.cross_stages.update(**sync_data)
 
         return JsonResponse({'ok': True, 'stage': _serialize_stage(stage)})
 

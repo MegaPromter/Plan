@@ -30,7 +30,7 @@ class TestParseJsonBodyValidDict:
     """Валидный JSON-объект — возвращает dict."""
 
     def test_simple_dict(self, rf):
-        body = '{"name": "Test", "value": 42}'.encode('utf-8')
+        body = b'{"name": "Test", "value": 42}'
         request = _make_request(rf, body)
         result = parse_json_body(request)
         assert result == {'name': 'Test', 'value': 42}
@@ -96,7 +96,7 @@ class TestParseJsonBodyNonDict:
         assert result is None
 
     def test_string(self, rf):
-        body = '"just a string"'.encode('utf-8')
+        body = b'"just a string"'
         request = _make_request(rf, body)
         result = parse_json_body(request)
         assert result is None
@@ -130,7 +130,7 @@ class TestParseJsonBodyBinaryGarbage:
         assert result is None
 
     def test_utf8_garbage(self, rf):
-        body = 'Это не JSON, а просто текст кириллицей'.encode('utf-8')
+        body = 'Это не JSON, а просто текст кириллицей'.encode()
         request = _make_request(rf, body)
         result = parse_json_body(request)
         assert result is None

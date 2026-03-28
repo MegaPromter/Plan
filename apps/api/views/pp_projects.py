@@ -12,10 +12,13 @@ import logging
 
 # transaction — для атомарных операций с БД (всё или ничего)
 from django.db import transaction
+
 # Count — агрегационная функция для подсчёта связанных записей
 from django.db.models import Count
+
 # JsonResponse — возврат JSON-ответа
 from django.http import JsonResponse
+
 # View — базовый класс для class-based views
 from django.views import View
 
@@ -25,6 +28,7 @@ from apps.api.mixins import (
     LoginRequiredJsonMixin,
     parse_json_body,
 )
+
 # Модели производственного плана: проект ПП, универсальная запись работы
 from apps.works.models import PPProject, Work
 

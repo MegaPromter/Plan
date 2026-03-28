@@ -10,7 +10,6 @@ API отчётных документов (WorkReport).
 import logging
 import re
 from datetime import date as dt_date
-from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.http import JsonResponse
@@ -22,7 +21,7 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import get_visibility_filter, safe_date, safe_decimal, safe_int
-from apps.works.models import Work, WorkReport, Notice
+from apps.works.models import Notice, Work, WorkReport
 
 logger = logging.getLogger(__name__)
 

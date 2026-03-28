@@ -1,10 +1,14 @@
 # Импорт стандартного модуля администрирования Django
 from django.contrib import admin
+
 # Импорт моделей, которые будут зарегистрированы в Admin
 from .models import (
-    Project, Work, WorkReport, Notice, Holiday,
+    Holiday,
+    Notice,
+    Project,
+    Work,
+    WorkReport,
 )
-
 
 # ── Регистрация модели Project ─────────────────────────────────────────────────
 

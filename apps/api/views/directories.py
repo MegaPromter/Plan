@@ -9,13 +9,16 @@ DELETE  /api/directories/<id>     -- удаление записи (admin)
 """
 # Стандартный логгер Python
 import logging
+
 # defaultdict — словарь с дефолтным значением (используется для группировки)
 from collections import defaultdict, deque
 
 # cache — серверный кэш Django (memcache/redis/locmem в зависимости от настроек)
 from django.core.cache import cache
+
 # JsonResponse — HTTP-ответ с JSON-телом
 from django.http import JsonResponse
+
 # View — базовый класс для CBV
 from django.views import View
 
@@ -26,9 +29,11 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import short_name
+
 # Модели сотрудников: Employee (профиль), Department (отдел),
 # Sector (сектор), NTCCenter (НТЦ-центр)
-from apps.employees.models import Employee, Department, Sector, NTCCenter
+from apps.employees.models import Department, Employee, NTCCenter, Sector
+
 # Модели работ: Directory (справочник), PPProject (проект ПП)
 from apps.works.models import Directory, PPProject, Project, Work
 

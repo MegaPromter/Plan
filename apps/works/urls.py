@@ -1,5 +1,6 @@
 # Импорт функции для объявления URL-маршрутов
 from django.urls import path
+
 # Импорт всех view-классов из текущего пакета
 from . import views
 
@@ -49,6 +50,7 @@ urlpatterns = [
 
 # ── Демо-страницы для показа улучшений дизайна (только DEBUG) ────────────
 from django.conf import settings as django_settings
+
 if django_settings.DEBUG:
     urlpatterns += [
         path('demo/density/',  views.DemoDensityView.as_view(),  name='demo_density'),

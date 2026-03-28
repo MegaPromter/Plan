@@ -4,16 +4,15 @@
 """
 # Стандартный модуль для работы с JSON
 import json
-# functools.wraps — сохраняет метаданные декорируемой функции
-from functools import wraps
 
+# functools.wraps — сохраняет метаданные декорируемой функции
 # JsonResponse — возвращает HTTP-ответ с JSON-телом
 from django.http import JsonResponse
+
 # timezone — работа с датой/временем с учётом часового пояса
 from django.utils import timezone
-# View — базовый класс для class-based views в Django
-from django.views import View
 
+# View — базовый класс для class-based views в Django
 # Модель делегирования ролей (временные права на запись)
 from apps.employees.models import RoleDelegation
 

@@ -9,12 +9,13 @@
                           Vacation          KPI          EmployeeDocument
 """
 # Импорт стандартных инструментов Django ORM
-from django.db import models
 # Получение модели пользователя, определённой в настройках (AUTH_USER_MODEL)
 from django.contrib.auth import get_user_model
+
 # Валидаторы для ограничения диапазона числовых значений
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 # Ссылка на активную модель пользователя (по умолчанию auth.User)
 User = get_user_model()

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib import admin          # встроенная административная панель Django
-from django.urls import path, include     # path — создание маршрута; include — подключение вложенных URLconf
+from django.contrib import admin  # встроенная административная панель Django
+from django.urls import include, path  # path — создание маршрута; include — подключение вложенных URLconf
 from django.views.generic import RedirectView  # класс-view для HTTP-редиректа без написания функции
 
 # Корневой список URL-маршрутов всего проекта

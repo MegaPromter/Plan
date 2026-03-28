@@ -4,10 +4,11 @@
           PUT/DELETE /api/reports/<pk>/detail/
 """
 import json
+
 import pytest
 from django.test import Client
 
-from apps.works.models import Work, WorkReport, PPProject, Project
+from apps.works.models import Work, WorkReport
 
 
 @pytest.fixture

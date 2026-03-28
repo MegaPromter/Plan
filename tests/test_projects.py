@@ -9,7 +9,6 @@ from django.test import Client
 
 from apps.works.models import Project, ProjectProduct
 
-
 # ── Фикстуры ────────────────────────────────────────────────────────────────
 
 @pytest.fixture

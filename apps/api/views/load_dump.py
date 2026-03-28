@@ -5,8 +5,8 @@ API для загрузки дампа данных из data_dump.json.
 POST /api/load_dump/  { "secret": "..." }
 GET  /api/load_dump/  — диагностика (показывает состояние)
 """
-import os
 import logging
+import os
 
 from django.core.management import call_command
 from django.http import JsonResponse

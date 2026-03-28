@@ -2,7 +2,6 @@
 Django settings for planapp_django.
 Django 3.2 / Python 3.11 / PostgreSQL 15
 """
-import os          # стандартная библиотека для работы с ОС (переменные среды, пути)
 from pathlib import Path  # объектно-ориентированная работа с путями файловой системы
 
 import environ  # библиотека django-environ для чтения .env-файлов

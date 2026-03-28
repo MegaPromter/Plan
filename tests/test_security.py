@@ -12,9 +12,6 @@ import json
 import pytest
 from django.test import Client
 
-from apps.employees.models import Employee
-
-
 # ── Неавторизованные запросы (401) ───────────────────────────────────────────
 
 @pytest.mark.django_db

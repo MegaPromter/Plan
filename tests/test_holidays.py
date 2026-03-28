@@ -13,7 +13,6 @@ from apps.api.views.dependencies import (
 )
 from apps.works.models import Holiday
 
-
 # ── _add_work_days() с праздниками ──────────────────────────────────────────
 
 

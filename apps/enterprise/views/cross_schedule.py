@@ -26,13 +26,16 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import Project
 from apps.employees.models import Department
 from apps.enterprise.models import (
-    CrossSchedule, CrossScheduleDeptStatus,
-    CrossStage, CrossMilestone,
-    GeneralSchedule, GGStage,
+    CrossMilestone,
+    CrossSchedule,
+    CrossScheduleDeptStatus,
+    CrossStage,
+    GeneralSchedule,
+    GGStage,
 )
+from apps.works.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -278,16 +281,10 @@ class CrossStageDetailView(WriterRequiredJsonMixin, View):
         return JsonResponse({'ok': True, 'stage': _serialize_cross_stage(stage)})
 
     def delete(self, request, pk):
-        try:
-            stage = CrossStage.objects.select_related('cross_schedule').get(pk=pk)
-        except CrossStage.DoesNotExist:
-            return JsonResponse({'error': 'Этап не найден'}, status=404)
-
-        if stage.cross_schedule.edit_owner == 'locked':
-            return JsonResponse({'error': 'График заблокирован'}, status=403)
-
-        stage.delete()
-        return JsonResponse({'ok': True})
+        return JsonResponse(
+            {'error': 'Удаление этапов сквозного графика запрещено. Управляйте этапами через ГГ.'},
+            status=403,
+        )
 
 
 # ---------------------------------------------------------------------------

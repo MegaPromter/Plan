@@ -10,17 +10,14 @@
 - Уведомления: список, пометка
 """
 import json
+
 import pytest
 from django.test import Client
 
-from apps.works.models import Project, Work, PPProject, WorkCalendar
-from apps.employees.models import Employee, Department
 from apps.enterprise.models import (
-    GeneralSchedule, GGStage, GGMilestone,
-    CrossSchedule, CrossStage,
-    BaselineSnapshot,
     EnterpriseNotification,
 )
+from apps.works.models import Project
 
 pytestmark = pytest.mark.django_db
 

@@ -1,12 +1,18 @@
 # Импорт стандартного модуля администрирования Django
 from django.contrib import admin
 from django.utils.html import format_html
+
 # Импорт всех моделей, которые будут зарегистрированы в Admin
 from .models import (
-    Department, Sector, NTCCenter,
-    Employee, Vacation, KPI, EmployeeDocument, RoleDelegation,
+    KPI,
+    Department,
+    Employee,
+    EmployeeDocument,
+    NTCCenter,
+    RoleDelegation,
+    Sector,
+    Vacation,
 )
-
 
 # ── Регистрация модели Department ─────────────────────────────────────────────
 
