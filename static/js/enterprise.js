@@ -91,18 +91,87 @@ function initTabs() {
   const tabs = document.querySelectorAll('.ent-tab');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-
-      const target = tab.dataset.tab;
-      document.querySelectorAll('.ent-panel').forEach(p => p.style.display = 'none');
-      document.getElementById('panel-' + target).style.display = '';
-
-      // Загружаем данные при первом переключении
-      if (target === 'capacity') loadCapacity();
+      switchToTab(tab.dataset.tab);
     });
   });
+}
+
+function switchToTab(target) {
+  const tabs = document.querySelectorAll('.ent-tab');
+  tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  const activeTab = document.querySelector(`.ent-tab[data-tab="${target}"]`);
+  if (activeTab) {
+    activeTab.classList.add('active');
+    activeTab.setAttribute('aria-selected', 'true');
+  }
+
+  document.querySelectorAll('.ent-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('panel-' + target);
+  if (panel) panel.style.display = '';
+
+  // Загружаем данные при переключении
+  if (target === 'capacity') loadCapacity();
+
+  // Сохраняем в hash
+  _saveHashState({tab: target});
+}
+
+// ── Состояние в URL hash ────────────────────────────────────────────────
+
+function _parseHash() {
+  const h = location.hash.replace('#', '');
+  const params = {};
+  h.split('&').forEach(part => {
+    const [k, v] = part.split('=');
+    if (k) params[k] = decodeURIComponent(v || '');
+  });
+  return params;
+}
+
+function _saveHashState(updates) {
+  const params = _parseHash();
+  Object.assign(params, updates);
+  const parts = [];
+  for (const k in params) {
+    if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k]));
+  }
+  history.replaceState(null, '', '#' + parts.join('&'));
+}
+
+function _restoreFromHash() {
+  const params = _parseHash();
+  const tab = params.tab || 'portfolio';
+  switchToTab(tab);
+
+  // Восстанавливаем выбранный проект
+  const pid = params.project;
+  if (pid) {
+    if (tab === 'gg') {
+      document.getElementById('ggProjectSelect').value = pid;
+      const btn = document.getElementById('ggProjectBtn');
+      if (btn) {
+        const proj = projectsList.find(p => String(p.id) === String(pid));
+        if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
+      }
+      loadGG(pid);
+    } else if (tab === 'cross') {
+      document.getElementById('crossProjectSelect').value = pid;
+      const btn = document.getElementById('crossProjectBtn');
+      if (btn) {
+        const proj = projectsList.find(p => String(p.id) === String(pid));
+        if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
+      }
+      loadCross(pid);
+    } else if (tab === 'capacity') {
+      document.getElementById('capacityProjectSelect').value = pid;
+      const btn = document.getElementById('capacityProjectBtn');
+      if (btn) {
+        const proj = projectsList.find(p => String(p.id) === String(pid));
+        if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
+      }
+      loadCapacity();
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -221,6 +290,11 @@ function loadPortfolio() {
     projectsList  = portfolioData;
     renderPortfolio();
     populateProjectSelects();
+    // Восстанавливаем вкладку и проект из URL hash
+    if (!loadPortfolio._restored) {
+      loadPortfolio._restored = true;
+      _restoreFromHash();
+    }
   }).catch(e => console.error('loadPortfolio:', e));
 }
 
@@ -441,7 +515,8 @@ function selectPickerProject(id) {
 
   closeProjectPicker();
 
-  // Вызываем загрузку данных
+  // Сохраняем в hash и загружаем данные
+  _saveHashState({project: id});
   if (_pickerTarget === 'gg') loadGG(id);
   else if (_pickerTarget === 'cross') loadCross(id);
   else if (_pickerTarget === 'capacity') loadCapacity();
@@ -666,7 +741,9 @@ function renderCross() {
   // Метабар
   const eo = currentCross.edit_owner;
   metaEl.innerHTML = `
-    <div class="ent-meta-item"><span class="ent-meta-label">Версия:</span> ${currentCross.version}</div>
+    <div class="ent-meta-item"><span class="ent-meta-label">Версия:</span>
+      <a href="#" class="baseline-version-link" onclick="openBaselineList(); return false;">${currentCross.version}</a>
+    </div>
     <div class="ent-meta-item"><span class="ent-meta-label">Режим:</span>
       <span class="edit-lock-badge edit-lock-badge--${eo}">${EDIT_OWNER_LABELS[eo] || escapeHtml(eo)}</span>
     </div>
@@ -689,13 +766,12 @@ function renderCross() {
     return `<tr>
       <td>${s.order}</td>
       <td>${escapeHtml(s.name)}</td>
-      <td>${s.department_id || '—'}</td>
       <td>${s.date_start || '—'}</td>
       <td>${s.date_end || '—'}</td>
       <td>${s.gg_stage_id || '—'}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="text-center text-muted">Нет этапов</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет этапов</td></tr>';
 
   // Вехи
   const msBody = document.getElementById('crossMilestonesBody');
@@ -759,13 +835,309 @@ function deleteCrossMilestone(id) {
 function createBaseline() {
   const pid = document.getElementById('crossProjectSelect').value;
   if (!pid) return;
-  const comment = prompt('Комментарий к снимку (необязательно):') || '';
-  fetchJSON(`${API}/cross/${pid}/baselines/`, {
-    method: 'POST',
-    body: JSON.stringify({ comment }),
-  }).then(data => {
-    alert(`Снимок v${data.baseline.version} создан`);
-    loadCross(pid);
+
+  let modal = document.getElementById('baselineCreateModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'baselineCreateModal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+    let _down = null;
+    modal.addEventListener('mousedown', e => { _down = e.target; });
+    modal.addEventListener('click', e => {
+      if (e.target === modal && _down === modal) modal.classList.remove('open');
+    });
+  }
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-header">
+        <h3>Создать снимок</h3>
+        <button class="modal-close" onclick="document.getElementById('baselineCreateModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Комментарий (необязательно)</label>
+        <textarea id="baselineComment" rows="3" style="width:100%; resize:vertical; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit;" placeholder="Опишите причину или содержание снимка..."></textarea>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('baselineCreateModal').classList.remove('open')">Отмена</button>
+        <button class="btn btn-primary btn-sm" id="baselineCreateBtn"><i class="fas fa-camera"></i> Создать</button>
+      </div>
+    </div>
+  `;
+  modal.classList.add('open');
+  modal.querySelector('#baselineComment').focus();
+
+  modal.querySelector('#baselineCreateBtn').addEventListener('click', () => {
+    const comment = modal.querySelector('#baselineComment').value.trim();
+    const btn = modal.querySelector('#baselineCreateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+
+    fetchJSON(`${API}/cross/${pid}/baselines/`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }).then(data => {
+      modal.classList.remove('open');
+      showToast(`Снимок v${data.baseline.version} создан`, 'success');
+      loadCross(pid);
+    }).catch(e => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-camera"></i> Создать';
+      alert(e.error || 'Ошибка');
+    });
+  });
+}
+
+// ── Список снимков (baseline) ───────────────────────────────────────────
+
+let baselinesCache = [];
+
+function openBaselineList() {
+  const pid = document.getElementById('crossProjectSelect').value;
+  if (!pid) return;
+
+  fetchJSON(`${API}/cross/${pid}/baselines/`).then(data => {
+    baselinesCache = data.baselines || [];
+    renderBaselineModal();
+  }).catch(e => alert(e.error || 'Ошибка'));
+}
+
+function renderBaselineModal() {
+  let modal = document.getElementById('baselineModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'baselineModal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+    // Закрытие по клику на overlay
+    let _bDown = null;
+    modal.addEventListener('mousedown', e => { _bDown = e.target; });
+    modal.addEventListener('click', e => {
+      if (e.target === modal && _bDown === modal) modal.classList.remove('open');
+    });
+  }
+
+  const rows = baselinesCache.length
+    ? baselinesCache.map(b => {
+        const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+        return `<tr>
+          <td><strong>v${b.version}</strong></td>
+          <td>${date}</td>
+          <td>${escapeHtml(b.created_by || '—')}</td>
+          <td>${escapeHtml(b.comment || '—')}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="viewBaseline(${b.id})" title="Просмотр"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="compareBaseline(${b.id}, ${b.version})" title="Сравнить с текущим"><i class="fas fa-not-equal"></i></button>
+            ${IS_WRITER ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteBaseline(${b.id})" title="Удалить"><i class="fas fa-trash"></i></button>` : ''}
+          </td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="text-center text-muted">Нет снимков</td></tr>';
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:720px;">
+      <div class="modal-header">
+        <h3>Снимки (Baselines)</h3>
+        <button class="modal-close" onclick="document.getElementById('baselineModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-x:auto;">
+        <table class="baseline-table">
+          <thead><tr>
+            <th>Версия</th><th>Дата</th><th>Автор</th><th>Комментарий</th><th>Действия</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  modal.classList.add('open');
+}
+
+// ── Просмотр снимка ─────────────────────────────────────────────────────
+
+function viewBaseline(id) {
+  fetchJSON(`${API}/baselines/${id}/`).then(data => {
+    const b = data.baseline;
+    renderBaselineView(b);
+  }).catch(e => alert(e.error || 'Ошибка'));
+}
+
+function renderBaselineView(b) {
+  // Ищем запись со state этапов/вех
+  const stateEntry = (b.entries || []).find(e => e.data && e.data._type === 'schedule_state');
+  const stages = stateEntry ? (stateEntry.data.stages || []) : [];
+  const milestones = stateEntry ? (stateEntry.data.milestones || []) : [];
+
+  const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+
+  const stageRows = stages.length
+    ? stages.map(s => `<tr>
+        <td>${s.order}</td>
+        <td>${escapeHtml(s.name)}</td>
+        <td>${s.date_start || '—'}</td>
+        <td>${s.date_end || '—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="text-center text-muted">Нет этапов</td></tr>';
+
+  const msRows = milestones.length
+    ? milestones.map(m => {
+        const stage = stages.find(s => s.id === m.cross_stage_id);
+        return `<tr>
+          <td>${escapeHtml(m.name)}</td>
+          <td>${m.date || '—'}</td>
+          <td>${stage ? escapeHtml(stage.name) : '—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="3" class="text-center text-muted">Нет вех</td></tr>';
+
+  let modal = document.getElementById('baselineModal');
+  modal.innerHTML = `
+    <div class="modal" style="max-width:800px;">
+      <div class="modal-header">
+        <h3>Снимок v${b.version}</h3>
+        <button class="modal-close" onclick="document.getElementById('baselineModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="baseline-view-meta">
+          <span><strong>Дата:</strong> ${date}</span>
+          <span><strong>Автор:</strong> ${escapeHtml(b.created_by || '—')}</span>
+          <span><strong>Комментарий:</strong> ${escapeHtml(b.comment || '—')}</span>
+        </div>
+        <h4 style="margin:16px 0 8px;">Этапы</h4>
+        <table class="baseline-table">
+          <thead><tr><th>№</th><th>Название</th><th>Начало</th><th>Окончание</th></tr></thead>
+          <tbody>${stageRows}</tbody>
+        </table>
+        <h4 style="margin:16px 0 8px;">Вехи</h4>
+        <table class="baseline-table">
+          <thead><tr><th>Название</th><th>Дата</th><th>Этап</th></tr></thead>
+          <tbody>${msRows}</tbody>
+        </table>
+        <div style="margin-top:16px;">
+          <button class="btn btn-outline btn-sm" onclick="openBaselineList()"><i class="fas fa-arrow-left"></i> Назад к списку</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Сравнение снимка с текущим ──────────────────────────────────────────
+
+function compareBaseline(id, version) {
+  if (!currentCross) return;
+
+  fetchJSON(`${API}/baselines/${id}/`).then(data => {
+    const b = data.baseline;
+    renderBaselineComparison(b);
+  }).catch(e => alert(e.error || 'Ошибка'));
+}
+
+function renderBaselineComparison(b) {
+  const stateEntry = (b.entries || []).find(e => e.data && e.data._type === 'schedule_state');
+  const oldStages = stateEntry ? (stateEntry.data.stages || []) : [];
+  const curStages = currentCross.stages || [];
+
+  // Строим map по order для сопоставления
+  const oldMap = {};
+  oldStages.forEach(s => { oldMap[s.order] = s; });
+  const curMap = {};
+  curStages.forEach(s => { curMap[s.order] = s; });
+
+  // Собираем все orders
+  const allOrders = [...new Set([...Object.keys(oldMap), ...Object.keys(curMap)])].sort((a, b) => a - b);
+
+  const rows = allOrders.map(order => {
+    const old = oldMap[order];
+    const cur = curMap[order];
+
+    if (!old && cur) {
+      // Новый этап (нет в снимке)
+      return `<tr class="baseline-added">
+        <td>${cur.order}</td>
+        <td>${escapeHtml(cur.name)}</td>
+        <td>—</td><td>—</td>
+        <td>${cur.date_start || '—'}</td><td>${cur.date_end || '—'}</td>
+        <td><span class="baseline-badge baseline-badge--added">Добавлен</span></td>
+      </tr>`;
+    }
+    if (old && !cur) {
+      // Удалён в текущем
+      return `<tr class="baseline-removed">
+        <td>${old.order}</td>
+        <td>${escapeHtml(old.name)}</td>
+        <td>${old.date_start || '—'}</td><td>${old.date_end || '—'}</td>
+        <td>—</td><td>—</td>
+        <td><span class="baseline-badge baseline-badge--removed">Удалён</span></td>
+      </tr>`;
+    }
+
+    // Оба есть — сравниваем
+    const changes = [];
+    if (old.name !== cur.name) changes.push('название');
+    if (old.date_start !== cur.date_start) changes.push('начало');
+    if (old.date_end !== cur.date_end) changes.push('окончание');
+
+    const cls = changes.length ? 'baseline-changed' : '';
+    const badge = changes.length
+      ? `<span class="baseline-badge baseline-badge--changed">${escapeHtml(changes.join(', '))}</span>`
+      : '<span class="baseline-badge baseline-badge--same">Без изменений</span>';
+
+    const startCls = old.date_start !== cur.date_start ? ' class="baseline-diff"' : '';
+    const endCls = old.date_end !== cur.date_end ? ' class="baseline-diff"' : '';
+
+    return `<tr class="${cls}">
+      <td>${cur.order}</td>
+      <td>${escapeHtml(cur.name)}</td>
+      <td>${old.date_start || '—'}</td><td>${old.date_end || '—'}</td>
+      <td${startCls}>${cur.date_start || '—'}</td><td${endCls}>${cur.date_end || '—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+
+  let modal = document.getElementById('baselineModal');
+  modal.innerHTML = `
+    <div class="modal" style="max-width:960px;">
+      <div class="modal-header">
+        <h3>Сравнение: v${b.version} → текущий (v${currentCross.version})</h3>
+        <button class="modal-close" onclick="document.getElementById('baselineModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-x:auto;">
+        <div class="baseline-view-meta">
+          <span><strong>Снимок v${b.version}:</strong> ${date}</span>
+          <span><strong>Автор:</strong> ${escapeHtml(b.created_by || '—')}</span>
+        </div>
+        <table class="baseline-table baseline-compare-table">
+          <thead>
+            <tr>
+              <th rowspan="2">№</th>
+              <th rowspan="2">Название</th>
+              <th colspan="2" class="baseline-col-group">v${b.version} (снимок)</th>
+              <th colspan="2" class="baseline-col-group">Текущий (v${currentCross.version})</th>
+              <th rowspan="2">Изменение</th>
+            </tr>
+            <tr>
+              <th>Начало</th><th>Окончание</th>
+              <th>Начало</th><th>Окончание</th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="7" class="text-center text-muted">Нет данных</td></tr>'}</tbody>
+        </table>
+        <div style="margin-top:16px;">
+          <button class="btn btn-outline btn-sm" onclick="openBaselineList()"><i class="fas fa-arrow-left"></i> Назад к списку</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function deleteBaseline(id) {
+  if (!confirm('Удалить снимок?')) return;
+  fetchJSON(`${API}/baselines/${id}/`, { method: 'DELETE' }).then(() => {
+    showToast('Снимок удалён', 'success');
+    openBaselineList();
   }).catch(e => alert(e.error || 'Ошибка'));
 }
 

@@ -45,7 +45,10 @@ def _serialize_baseline(snapshot, include_entries=False):
         'cross_schedule_id': snapshot.cross_schedule_id,
         'version': snapshot.version,
         'comment': snapshot.comment or '',
-        'created_by': str(snapshot.created_by) if snapshot.created_by else '',
+        'created_by': (
+            str(snapshot.created_by)
+            or (snapshot.created_by.user.username if snapshot.created_by and snapshot.created_by.user_id else '')
+        ) if snapshot.created_by else '',
         'created_at': snapshot.created_at.isoformat(),
     }
     if include_entries:
@@ -105,8 +108,40 @@ class BaselineListView(LoginRequiredJsonMixin, View):
                 created_by=employee,
             )
 
+            # Сохраняем этапы и вехи графика
+            stages_data = []
+            for s in cs.stages.select_related('department').order_by('order'):
+                stages_data.append({
+                    'id': s.id,
+                    'name': s.name,
+                    'date_start': str(s.date_start) if s.date_start else None,
+                    'date_end': str(s.date_end) if s.date_end else None,
+                    'department_id': s.department_id,
+                    'gg_stage_id': s.gg_stage_id,
+                    'order': s.order,
+                })
+            milestones_data = []
+            for m in cs.milestones.all():
+                milestones_data.append({
+                    'id': m.id,
+                    'name': m.name,
+                    'date': str(m.date) if m.date else None,
+                    'cross_stage_id': m.cross_stage_id,
+                })
+
+            # Мета-запись: этапы + вехи (work=None)
+            BaselineEntry.objects.create(
+                snapshot=snapshot,
+                work=None,
+                data={
+                    '_type': 'schedule_state',
+                    'stages': stages_data,
+                    'milestones': milestones_data,
+                },
+            )
+
             # Сохраняем данные работ, привязанных к этапам графика
-            stage_ids = cs.stages.values_list('id', flat=True)
+            stage_ids = [s['id'] for s in stages_data]
             works = Work.objects.filter(cross_stage_id__in=stage_ids)
             entries = []
             for w in works:
