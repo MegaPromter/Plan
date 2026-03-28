@@ -17,13 +17,9 @@ const USER_DEPT   = _spCfg.userDept;
 const USER_SECTOR = _spCfg.userSector;
 const USER_CENTER = _spCfg.userCenter;
 
-// canModifyRow(), isFullAccess() — в utils.js
-function _canModify(rowDept, rowSector) {
-  return canModifyRow(IS_WRITER, IS_ADMIN, USER_ROLE, USER_DEPT, USER_SECTOR, rowDept, rowSector);
-}
-function _isFullAccess() {
-  return isFullAccess(IS_ADMIN, USER_ROLE);
-}
+// canModifyRow(), isFullAccess() — замыкания из utils.js
+const _canModify = makeCanModify(_spCfg);
+const _isFullAccess = makeIsFullAccess(_spCfg);
 
 let tasks = [];
 let colSettings = _spCfg.colSettings;
@@ -1096,7 +1092,14 @@ function buildMfDropdown(btn, col) {
 
   document.body.appendChild(drop);
   const rect = btn.getBoundingClientRect();
-  drop.style.top = (rect.bottom + window.scrollY + 2) + "px";
+  const dropH = drop.offsetHeight || 300;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  if (spaceBelow < dropH && spaceAbove > spaceBelow) {
+    drop.style.top = (rect.top + window.scrollY - dropH - 2) + "px";
+  } else {
+    drop.style.top = (rect.bottom + window.scrollY + 2) + "px";
+  }
   drop.style.left = Math.min(rect.left, window.innerWidth - 250) + "px";
   activeMfDropdown = drop;
   activeMfBtn = btn;
@@ -1250,7 +1253,7 @@ function _resizeTextareas(container) {
 }
 
 /* ── Infinite scroll: состояние ленивой отрисовки СП ──────────────────── */
-const SP_CHUNK = 50;
+const SP_CHUNK = APP_CONFIG.chunkSize;
 let _spFiltered = [];
 let _spRenderedCount = 0;
 let _spScrollDispose = null;
@@ -1363,7 +1366,7 @@ function _spAppendBatch(count) {
   if (_spRenderedCount < _spFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'spScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="15" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+    spinnerTr.innerHTML = '<td colspan="15" class="scroll-spinner"><i class="fas fa-spinner"></i> Загружено ' + _spRenderedCount + ' из ' + _spFiltered.length + '...</td>';
     tbody.appendChild(spinnerTr);
   }
 }

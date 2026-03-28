@@ -28,10 +28,8 @@ const USER_SECTOR   = _ppCfg.userSector;
 const USER_SECTOR_NAME = _ppCfg.userSectorName;
 const USER_CENTER = _ppCfg.userCenter;
 
-// canModifyRow() — в utils.js
-function _canModify(rowDept, rowSector) {
-  return canModifyRow(IS_WRITER, IS_ADMIN, USER_ROLE, USER_DEPT, USER_SECTOR, rowDept, rowSector);
-}
+// canModifyRow() — замыкание из utils.js
+const _canModify = makeCanModify(_ppCfg);
 
 /* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */
 // skeletonRows() — в utils.js
@@ -708,7 +706,7 @@ function buildSelectHtml(col, row) {
 }
 
 /* ── Infinite scroll: состояние ленивой отрисовки ПП ──────────────────── */
-const PP_CHUNK = 50;
+const PP_CHUNK = APP_CONFIG.chunkSize;
 let _ppFiltered = [];
 let _ppRenderedCount = 0;
 let _ppScrollDispose = null;
@@ -947,7 +945,7 @@ function _ppAppendBatch(count) {
   if (_ppRenderedCount < _ppFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'ppScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="19" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+    spinnerTr.innerHTML = '<td colspan="19" class="scroll-spinner"><i class="fas fa-spinner"></i> Загружено ' + _ppRenderedCount + ' из ' + _ppFiltered.length + '...</td>';
     tbody.appendChild(spinnerTr);
   }
 
@@ -1871,10 +1869,17 @@ function buildMfDropdown(btn, col) {
     drop.appendChild(opt);
   });
 
-  // Позиционируем дропдаун под кнопкой-триггером
+  // Позиционируем дропдаун под кнопкой-триггером (flip вверх если не влезает)
   document.body.appendChild(drop);
   const rect = btn.getBoundingClientRect();
-  drop.style.top = (rect.bottom + 2) + 'px';
+  const dropH = drop.offsetHeight || 300;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  if (spaceBelow < dropH && spaceAbove > spaceBelow) {
+    drop.style.top = (rect.top + window.scrollY - dropH - 2) + 'px';
+  } else {
+    drop.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+  }
   drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
   activeMfDropdown = drop;
   activeMfBtn = btn;

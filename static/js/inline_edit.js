@@ -161,6 +161,12 @@ const InlineEditor = {
             if (resp.updated_at && row) {
                 row.dataset.updatedAt = resp.updated_at;
             }
+            // Зелёный flash — визуальное подтверждение сохранения
+            if (td) {
+                td.style.transition = 'background 0.15s';
+                td.style.background = 'rgba(34,197,94,0.15)';
+                setTimeout(function() { td.style.background = ''; }, 600);
+            }
             if (this._options.onSave) {
                 this._options.onSave(id, field, newValue, resp);
             }

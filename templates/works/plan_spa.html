@@ -512,6 +512,27 @@
   </div>
 </div>
 
+<!-- ACTIVITY / COMMENTS SLIDEOUT PANEL -->
+<div class="slideout-overlay" id="activityOverlay" onclick="closeActivityPanel()"></div>
+<div class="slideout" id="activityPanel">
+  <div class="slideout-header">
+    <div class="slideout-title" id="activityTitle" style="font-size:17px;font-weight:700;color:var(--text);"></div>
+    <button class="slideout-close" onclick="closeActivityPanel()">✕</button>
+  </div>
+  <div class="slideout-tabs">
+    <button class="slideout-tab active" data-tab="details" onclick="switchActivityTab('details')">Детали</button>
+    <button class="slideout-tab" data-tab="activity" onclick="switchActivityTab('activity')">Комментарии</button>
+  </div>
+  <div class="slideout-body" style="padding:0;">
+    <div id="activityDetails" style="padding:24px;"></div>
+    <div id="activityFeed" style="display:none;overflow-y:auto;flex:1;padding:16px 20px;"></div>
+  </div>
+  <div class="slideout-footer" id="activityFooter" style="display:none;">
+    <input type="text" id="commentInput" placeholder="Написать комментарий..." style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;outline:none;">
+    <button class="topbar-btn primary" onclick="postComment()">Отправить</button>
+  </div>
+</div>
+
 <!-- MONTH CHECK MODAL -->
 <div class="month-check-overlay" id="monthCheckModal">
   <div class="month-check-box">

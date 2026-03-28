@@ -14,13 +14,9 @@ const USER_SECTOR = _cfg.userSector;
 
 /* ── Права ───────────────────────────────────────────────────────────────── */
 
-// canModifyRow(), isFullAccess() — в utils.js
-function _canModify(rowDept, rowSector) {
-  return canModifyRow(IS_WRITER, IS_ADMIN, USER_ROLE, USER_DEPT, USER_SECTOR, rowDept, rowSector);
-}
-function _isFullAccess() {
-  return isFullAccess(IS_ADMIN, USER_ROLE);
-}
+// canModifyRow(), isFullAccess() — замыкания из utils.js
+const _canModify = makeCanModify(_cfg);
+const _isFullAccess = makeIsFullAccess(_cfg);
 
 /* ── Skeleton-загрузка ─────────────────────────────────────────────── */
 // skeletonRows() — в utils.js
@@ -123,7 +119,7 @@ function _jiInitSort() {
 
 /* ── Infinite scroll: ленивая отрисовка ──────────────────────────────────── */
 
-const JI_CHUNK = 50;
+const JI_CHUNK = APP_CONFIG.chunkSize;
 let _jiFiltered = [];
 let _jiRenderedCount = 0;
 let _jiScrollDispose = null;
@@ -212,7 +208,7 @@ function _jiAppendBatch(count) {
   if (_jiRenderedCount < _jiFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'jiScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="13" class="scroll-spinner"><i class="fas fa-spinner"></i> Загрузка...</td>';
+    spinnerTr.innerHTML = '<td colspan="13" class="scroll-spinner"><i class="fas fa-spinner"></i> Загружено ' + _jiRenderedCount + ' из ' + _jiFiltered.length + '...</td>';
     tbody.appendChild(spinnerTr);
   }
 }
