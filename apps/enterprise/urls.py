@@ -20,6 +20,7 @@ from .views.cross_schedule import (
     CrossScheduleDetailView,
     CrossStageCreateView,
     CrossStageDetailView,
+    CrossStageWorksView,
 )
 from .views.gg import (
     GGDetailView,
@@ -71,6 +72,7 @@ urlpatterns = [
     path('cross/<int:project_id>/milestones/', CrossMilestoneCreateView.as_view()),
     path('cross/<int:project_id>/dept_status/', CrossDeptStatusListView.as_view()),
     path('cross_stages/<int:pk>/', CrossStageDetailView.as_view()),
+    path('cross_stages/<int:pk>/works/', CrossStageWorksView.as_view()),
     path('cross_milestones/<int:pk>/', CrossMilestoneDetailView.as_view()),
     path('cross_dept_status/<int:pk>/', CrossDeptStatusDetailView.as_view()),
 

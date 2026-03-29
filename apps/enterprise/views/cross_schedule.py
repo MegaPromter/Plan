@@ -35,7 +35,7 @@ from apps.enterprise.models import (
     GeneralSchedule,
     GGStage,
 )
-from apps.works.models import Project
+from apps.works.models import Project, Work
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,21 @@ logger = logging.getLogger(__name__)
 #  Сериализация
 # ---------------------------------------------------------------------------
 
-def _serialize_cross_stage(s):
+def _serialize_work_brief(w):
     return {
+        'id': w.id,
+        'name': w.work_name or w.name or '',
+        'date_start': str(w.date_start) if w.date_start else None,
+        'date_end': str(w.date_end) if w.date_end else None,
+        'labor': float(w.labor) if w.labor else None,
+        'executor': str(w.executor) if w.executor else '',
+        'department': w.department.code if w.department_id else '',
+        'row_code': w.row_code or '',
+    }
+
+
+def _serialize_cross_stage(s, works=None):
+    d = {
         'id': s.id,
         'name': s.name,
         'date_start': str(s.date_start) if s.date_start else None,
@@ -54,6 +67,10 @@ def _serialize_cross_stage(s):
         'gg_stage_id': s.gg_stage_id,
         'order': s.order,
     }
+    if works is not None:
+        d['works'] = [_serialize_work_brief(w) for w in works]
+        d['works_count'] = len(works)
+    return d
 
 
 def _serialize_cross_milestone(m):
@@ -80,6 +97,30 @@ def _serialize_cross_schedule(cs):
     milestones = list(cs.milestones.select_related('cross_stage').all())
     dept_statuses = list(cs.dept_statuses.select_related('department').all())
 
+    # Работы ПП, привязанные к этапам сквозного графика
+    stage_ids = [s.id for s in stages]
+    works_qs = (
+        Work.objects
+        .filter(show_in_pp=True, cross_stage_id__in=stage_ids)
+        .select_related('executor', 'department')
+        .order_by('id')
+    )
+    works_by_stage = {}
+    for w in works_qs:
+        works_by_stage.setdefault(w.cross_stage_id, []).append(w)
+
+    # Неназначенные работы ПП (того же проекта, без cross_stage)
+    unassigned_qs = (
+        Work.objects
+        .filter(
+            show_in_pp=True,
+            pp_project__up_project_id=cs.project_id,
+            cross_stage__isnull=True,
+        )
+        .select_related('executor', 'department')
+        .order_by('id')
+    )
+
     return {
         'id': cs.id,
         'project_id': cs.project_id,
@@ -88,9 +129,13 @@ def _serialize_cross_schedule(cs):
         'granularity': cs.granularity,
         'created_at': cs.created_at.isoformat(),
         'updated_at': cs.updated_at.isoformat(),
-        'stages': [_serialize_cross_stage(s) for s in stages],
+        'stages': [
+            _serialize_cross_stage(s, works_by_stage.get(s.id, []))
+            for s in stages
+        ],
         'milestones': [_serialize_cross_milestone(m) for m in milestones],
         'dept_statuses': [_serialize_dept_status(ds) for ds in dept_statuses],
+        'unassigned_works': [_serialize_work_brief(w) for w in unassigned_qs],
     }
 
 
@@ -406,3 +451,72 @@ class CrossDeptStatusDetailView(WriterRequiredJsonMixin, View):
             ds.save(update_fields=['status'])
 
         return JsonResponse({'ok': True, 'dept_status': _serialize_dept_status(ds)})
+
+
+# ---------------------------------------------------------------------------
+#  Привязка работ ПП к этапам сквозного графика
+# ---------------------------------------------------------------------------
+
+class CrossStageWorksView(WriterRequiredJsonMixin, View):
+    """
+    POST   /api/enterprise/cross_stages/<id>/works/  — п��ивязать работы
+    DELETE /api/enterprise/cross_stages/<id>/works/  — отвязать работы
+
+    Body: { "work_ids": [1, 2, 3] }
+    """
+
+    def post(self, request, pk):
+        """Привязать работы ПП к этапу сквозного графика."""
+        data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+
+        try:
+            stage = CrossStage.objects.select_related('cross_schedule').get(pk=pk)
+        except CrossStage.DoesNotExist:
+            return JsonResponse({'error': 'Этап не найден'}, status=404)
+
+        cs = stage.cross_schedule
+        if cs.edit_owner == 'locked':
+            return JsonResponse({'error': 'График заблокирован'}, status=403)
+
+        work_ids = data.get('work_ids', [])
+        if not work_ids:
+            return JsonResponse({'error': 'work_ids обязательно'}, status=400)
+
+        # Проверяем: работы должны быть ПП и принадлежать тому же проекту
+        works = Work.objects.filter(
+            pk__in=work_ids,
+            show_in_pp=True,
+            pp_project__up_project_id=cs.project_id,
+        )
+        if works.count() != len(work_ids):
+            return JsonResponse(
+                {'error': 'Некоторые работы не найдены или не относятся к этому проекту'},
+                status=400,
+            )
+
+        works.update(cross_stage=stage)
+        return JsonResponse({'ok': True, 'assigned': len(work_ids)})
+
+    def delete(self, request, pk):
+        """Отвязать работы от этапа сквозного графика."""
+        data = parse_json_body(request)
+        if data is None:
+            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+
+        try:
+            stage = CrossStage.objects.select_related('cross_schedule').get(pk=pk)
+        except CrossStage.DoesNotExist:
+            return JsonResponse({'error': 'Этап не найден'}, status=404)
+
+        cs = stage.cross_schedule
+        if cs.edit_owner == 'locked':
+            return JsonResponse({'error': 'График заблокирован'}, status=403)
+
+        work_ids = data.get('work_ids', [])
+        if not work_ids:
+            return JsonResponse({'error': 'work_ids обязательно'}, status=400)
+
+        Work.objects.filter(pk__in=work_ids, cross_stage=stage).update(cross_stage=None)
+        return JsonResponse({'ok': True})
