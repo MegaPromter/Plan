@@ -65,6 +65,8 @@ def _serialize_cross_stage(s, works=None):
         'date_end': str(s.date_end) if s.date_end else None,
         'department_id': s.department_id,
         'gg_stage_id': s.gg_stage_id,
+        'parent_item_id': s.parent_item_id,
+        'is_item': s.parent_item_id is None,  # пункт (True) или этап (False)
         'order': s.order,
     }
     if works is not None:
@@ -270,9 +272,26 @@ class CrossStageCreateView(WriterRequiredJsonMixin, View):
 
         gg_stage_id = data.get('gg_stage_id')
         if gg_stage_id and not GGStage.objects.filter(pk=gg_stage_id).exists():
-            return JsonResponse({'error': 'Этап ГГ не найден'}, status=404)
+            return JsonResponse({'error': 'Пункт ГГ не найден'}, status=404)
 
-        max_order = cs.stages.order_by('-order').values_list('order', flat=True).first() or 0
+        # parent_item_id — ссылка на пункт (CrossStage) для вложенных этапов
+        parent_item_id = data.get('parent_item_id')
+        parent_item = None
+        if parent_item_id:
+            try:
+                parent_item = CrossStage.objects.get(
+                    pk=parent_item_id, cross_schedule=cs, parent_item__isnull=True,
+                )
+            except CrossStage.DoesNotExist:
+                return JsonResponse({'error': 'Родительский пункт не найден'}, status=404)
+
+        # Автонумерация: для этапов (с parent_item) — порядковый внутри пункта
+        if parent_item:
+            max_sub = cs.stages.filter(parent_item=parent_item).order_by('-order').values_list('order', flat=True).first() or 0
+            order = data.get('order', max_sub + 1)
+        else:
+            max_order = cs.stages.filter(parent_item__isnull=True).order_by('-order').values_list('order', flat=True).first() or 0
+            order = data.get('order', max_order + 1)
 
         stage = CrossStage.objects.create(
             cross_schedule=cs,
@@ -281,7 +300,8 @@ class CrossStageCreateView(WriterRequiredJsonMixin, View):
             date_end=data.get('date_end'),
             department_id=department_id,
             gg_stage_id=gg_stage_id,
-            order=data.get('order', max_order + 1),
+            parent_item_id=parent_item.id if parent_item else None,
+            order=order,
         )
         return JsonResponse({
             'ok': True,
@@ -313,7 +333,15 @@ class CrossStageDetailView(WriterRequiredJsonMixin, View):
             if not GGStage.objects.filter(pk=data['gg_stage_id']).exists():
                 return JsonResponse({'error': 'Этап ГГ не найден'}, status=404)
 
-        FIELDS = ('name', 'date_start', 'date_end', 'department_id', 'gg_stage_id', 'order')
+        if 'parent_item_id' in data and data['parent_item_id']:
+            if not CrossStage.objects.filter(
+                pk=data['parent_item_id'],
+                cross_schedule=stage.cross_schedule,
+                parent_item__isnull=True,
+            ).exists():
+                return JsonResponse({'error': 'Родительский пункт не найден'}, status=404)
+
+        FIELDS = ('name', 'date_start', 'date_end', 'department_id', 'gg_stage_id', 'parent_item_id', 'order')
         update_fields = []
         for f in FIELDS:
             if f in data:
@@ -326,10 +354,23 @@ class CrossStageDetailView(WriterRequiredJsonMixin, View):
         return JsonResponse({'ok': True, 'stage': _serialize_cross_stage(stage)})
 
     def delete(self, request, pk):
-        return JsonResponse(
-            {'error': 'Удаление этапов сквозного графика запрещено. Управляйте этапами через ГГ.'},
-            status=403,
-        )
+        try:
+            stage = CrossStage.objects.select_related('cross_schedule').get(pk=pk)
+        except CrossStage.DoesNotExist:
+            return JsonResponse({'error': 'Этап не найден'}, status=404)
+
+        if stage.cross_schedule.edit_owner == 'locked':
+            return JsonResponse({'error': 'График заблокирован'}, status=403)
+
+        # Пункты (без parent_item) нельзя удалять — управляются через ГГ
+        if stage.parent_item_id is None:
+            return JsonResponse(
+                {'error': 'Удаление пунктов запрещено. Управляйте пунктами через ГГ.'},
+                status=403,
+            )
+
+        stage.delete()
+        return JsonResponse({'ok': True})
 
 
 # ---------------------------------------------------------------------------

@@ -587,11 +587,11 @@ function renderGG() {
 
   // Кнопки
   actionsEl.innerHTML = IS_WRITER
-    ? '<button class="btn btn-primary btn-sm" onclick="addGGStage()"><i class="fas fa-plus"></i> Этап</button>' +
+    ? '<button class="btn btn-primary btn-sm" onclick="addGGStage()"><i class="fas fa-plus"></i> Пункт</button>' +
       '<button class="btn btn-outline btn-sm" onclick="addGGMilestone()"><i class="fas fa-flag"></i> Веха</button>'
     : '';
 
-  // Этапы
+  // Пункты
   const stagesBody = document.getElementById('ggStagesBody');
   stagesBody.innerHTML = (currentGG.stages || []).map(s => {
     const actions = IS_WRITER
@@ -606,7 +606,7 @@ function renderGG() {
       <td>${s.labor != null ? s.labor : '—'}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет этапов</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Вехи
   const msBody = document.getElementById('ggMilestonesBody');
@@ -633,7 +633,7 @@ function createGG() {
 }
 
 function addGGStage() {
-  document.getElementById('ggStageModalTitle').textContent = 'Новый этап';
+  document.getElementById('ggStageModalTitle').textContent = 'Новый пункт';
   document.getElementById('ggStageId').value = '';
   document.getElementById('ggStageName').value = '';
   document.getElementById('ggStageDateStart').value = '';
@@ -646,7 +646,7 @@ function addGGStage() {
 function openEditGGStage(id) {
   const s = (currentGG.stages || []).find(x => x.id === id);
   if (!s) return;
-  document.getElementById('ggStageModalTitle').textContent = 'Редактирование этапа';
+  document.getElementById('ggStageModalTitle').textContent = 'Редактирование пункта';
   document.getElementById('ggStageId').value = id;
   document.getElementById('ggStageName').value = s.name || '';
   document.getElementById('ggStageDateStart').value = s.date_start || '';
@@ -690,7 +690,7 @@ function addGGMilestone() {
 }
 
 function deleteGGStage(id) {
-  if (!confirm('Удалить этап?')) return;
+  if (!confirm('Удалить пункт?')) return;
   const pid = document.getElementById('ggProjectSelect').value;
   fetchJSON(`${API}/gg_stages/${id}/`, { method: 'DELETE' })
     .then(() => loadGG(pid)).catch(e => alert(e.error || 'Ошибка'));
@@ -714,6 +714,14 @@ function initCross() {
 function loadCross(projectId) {
   fetchJSON(`${API}/cross/${projectId}/`).then(data => {
     currentCross = data.schedule;
+    // Заголовок с названием проекта
+    const proj = portfolioData.find(p => p.id === +projectId);
+    const titleEl = document.getElementById('crossTitle');
+    if (titleEl) {
+      titleEl.textContent = proj
+        ? 'Сквозной график по проекту ' + (proj.name_short || proj.name_full)
+        : 'Сквозной график';
+    }
     renderCross();
   }).catch(e => console.error('loadCross:', e));
 }
@@ -810,31 +818,56 @@ function renderCross() {
   `;
 
   // Кнопки
-  actionsEl.innerHTML = IS_WRITER
+  actionsEl.innerHTML = IS_WRITER && eo !== 'locked'
     ? '<button class="btn btn-primary btn-sm" onclick="addCrossStage()"><i class="fas fa-plus"></i> Этап</button>' +
       '<button class="btn btn-outline btn-sm" onclick="addCrossMilestone()"><i class="fas fa-flag"></i> Веха</button>' +
       '<button class="btn btn-outline btn-sm" onclick="createBaseline()"><i class="fas fa-camera"></i> Снимок</button>'
     : '';
 
-  // Этапы + работы
+  // Пункты (из ГГ) + этапы (вложенные) + работы
   const canAssign = IS_WRITER && eo === 'cross';
+  const stages = currentCross.stages || [];
+
+  // Пункты: is_item=true (parent_item_id === null)
+  // Этапы: is_item=false (parent_item_id !== null)
+  const ggItems = stages.filter(s => s.is_item);
+  const subStages = stages.filter(s => !s.is_item);
+  const subByParent = {};
+  subStages.forEach(s => {
+    const pid = s.parent_item_id;
+    if (!subByParent[pid]) subByParent[pid] = [];
+    subByParent[pid].push(s);
+  });
+
   const stagesBody = document.getElementById('crossStagesBody');
-  stagesBody.innerHTML = (currentCross.stages || []).map(s => {
-    const wc = s.works_count || 0;
+  let rowsHtml = '';
+
+  ggItems.forEach(item => {
+    const itemNum = item.order;
+    const wc = item.works_count || 0;
     const badge = wc > 0 ? `<span class="cross-works-badge">${wc}</span>` : '';
     const toggleCls = wc > 0 ? ' cross-stage-toggle' : '';
-    const toggleClick = wc > 0 ? ` onclick="toggleCrossStageWorks(${s.id})"` : '';
+    const toggleClick = wc > 0 ? ` onclick="toggleCrossStageWorks(${item.id})"` : '';
     const chevron = wc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
     const assignBtn = canAssign
-      ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${s.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
+      ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${item.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
       : '';
 
-    // Строка работ (скрыта по умолчанию)
-    let worksRow = '';
+    // Строка пункта ГГ (жирная)
+    rowsHtml += `<tr class="cross-item-row${toggleCls}" style="font-weight:600; background:var(--surface2);"${toggleClick}>
+      <td>${chevron}${itemNum}</td>
+      <td>${escapeHtml(item.name)} ${badge}</td>
+      <td>${item.date_start || '—'}</td>
+      <td>${item.date_end || '—'}</td>
+      <td>—</td>
+      <td>${assignBtn}</td>
+    </tr>`;
+
+    // Строка работ (скрыта)
     if (wc > 0) {
-      const worksHtml = s.works.map(w => {
+      const worksHtml = item.works.map(w => {
         const unlink = canAssign
-          ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${s.id}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
+          ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${item.id}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
           : '';
         return `<tr>
           <td class="text-muted">${escapeHtml(w.row_code)}</td>
@@ -847,7 +880,7 @@ function renderCross() {
           <td>${unlink}</td>
         </tr>`;
       }).join('');
-      worksRow = `<tr class="cross-works-row" id="crossWorks_${s.id}" style="display:none;">
+      rowsHtml += `<tr class="cross-works-row" id="crossWorks_${item.id}" style="display:none;">
         <td colspan="6" style="padding:0;">
           <table class="cross-works-table">
             <thead><tr>
@@ -859,15 +892,62 @@ function renderCross() {
       </tr>`;
     }
 
-    return `<tr class="${toggleCls}"${toggleClick}>
-      <td>${chevron}${s.order}</td>
-      <td>${escapeHtml(s.name)} ${badge}</td>
-      <td>${s.date_start || '—'}</td>
-      <td>${s.date_end || '—'}</td>
-      <td>${s.gg_stage_id || '—'}</td>
-      <td>${assignBtn}</td>
-    </tr>${worksRow}`;
-  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет этапов</td></tr>';
+    // Вложенные этапы (нумерация А.Б)
+    const subs = subByParent[item.id] || [];
+    subs.forEach((sub, idx) => {
+      const subNum = itemNum + '.' + (idx + 1);
+      const swc = sub.works_count || 0;
+      const sBadge = swc > 0 ? `<span class="cross-works-badge">${swc}</span>` : '';
+      const sToggleCls = swc > 0 ? ' cross-stage-toggle' : '';
+      const sToggleClick = swc > 0 ? ` onclick="toggleCrossStageWorks(${sub.id})"` : '';
+      const sChevron = swc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
+      const sAssignBtn = canAssign
+        ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${sub.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
+        : '';
+      const editBtn = IS_WRITER && eo !== 'locked'
+        ? `<button class="btn btn-ghost btn-sm" onclick="openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
+        : '';
+
+      rowsHtml += `<tr class="cross-sub-stage${sToggleCls}" style="padding-left:24px;"${sToggleClick}>
+        <td style="padding-left:24px;">${sChevron}${subNum}</td>
+        <td>${escapeHtml(sub.name)} ${sBadge}</td>
+        <td>${sub.date_start || '—'}</td>
+        <td>${sub.date_end || '—'}</td>
+        <td>${itemNum}</td>
+        <td>${editBtn}${sAssignBtn}</td>
+      </tr>`;
+
+      if (swc > 0) {
+        const sWorksHtml = sub.works.map(w => {
+          const unlink = canAssign
+            ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${sub.id}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
+            : '';
+          return `<tr>
+            <td class="text-muted">${escapeHtml(w.row_code)}</td>
+            <td>${escapeHtml(w.name)}</td>
+            <td>${w.date_start || '—'}</td>
+            <td>${w.date_end || '—'}</td>
+            <td>${w.labor != null ? w.labor : '—'}</td>
+            <td>${escapeHtml(w.executor)}</td>
+            <td>${escapeHtml(w.department)}</td>
+            <td>${unlink}</td>
+          </tr>`;
+        }).join('');
+        rowsHtml += `<tr class="cross-works-row" id="crossWorks_${sub.id}" style="display:none;">
+          <td colspan="6" style="padding:0;">
+            <table class="cross-works-table">
+              <thead><tr>
+                <th>Код</th><th>Работа</th><th>Начало</th><th>Окончание</th><th>Труд.</th><th>Исполнитель</th><th>Отдел</th><th></th>
+              </tr></thead>
+              <tbody>${sWorksHtml}</tbody>
+            </table>
+          </td>
+        </tr>`;
+      }
+    });
+  });
+
+  stagesBody.innerHTML = rowsHtml || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Неназначенные работы ПП
   const unassigned = currentCross.unassigned_works || [];
@@ -901,14 +981,22 @@ function renderCross() {
   // Вехи
   const msBody = document.getElementById('crossMilestonesBody');
   msBody.innerHTML = (currentCross.milestones || []).map(m => {
-    const stage = (currentCross.stages || []).find(s => s.id === m.cross_stage_id);
+    const linked = (currentCross.stages || []).find(s => s.id === m.cross_stage_id);
+    // Для вехи показываем пункт: если linked — gg_stage_id, ищем пункт
+    let itemName = '—';
+    if (linked) {
+      const parent = linked.gg_stage_id
+        ? ggItems.find(g => g.id === linked.gg_stage_id)
+        : linked;
+      itemName = parent ? escapeHtml(parent.name) : escapeHtml(linked.name);
+    }
     const actions = IS_WRITER && eo !== 'locked'
       ? `<button class="btn btn-ghost btn-sm" onclick="deleteCrossMilestone(${m.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
       : '';
     return `<tr>
       <td>${escapeHtml(m.name)}</td>
       <td>${m.date || '—'}</td>
-      <td>${stage ? escapeHtml(stage.name) : '—'}</td>
+      <td>${itemName}</td>
       <td>${actions}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="4" class="text-center text-muted">Нет вех</td></tr>';
@@ -1024,13 +1112,59 @@ function createCross() {
 }
 
 function addCrossStage() {
-  const name = prompt('Название этапа:');
-  if (!name) return;
+  document.getElementById('crossStageModalTitle').textContent = 'Новый этап';
+  document.getElementById('crossStageId').value = '';
+  document.getElementById('crossStageName').value = '';
+  document.getElementById('crossStageDateStart').value = '';
+  document.getElementById('crossStageDateEnd').value = '';
+
+  // Заполнить дропдаун пунктами (is_item = true)
+  const sel = document.getElementById('crossStageGGItem');
+  const items = (currentCross.stages || []).filter(s => s.is_item);
+  sel.innerHTML = '<option value="">— Выберите пункт —</option>' +
+    items.map(s => `<option value="${s.id}">${s.order}. ${escapeHtml(s.name)}</option>`).join('');
+
+  openModal('crossStageModal');
+}
+
+function openEditCrossStage(id) {
+  const s = (currentCross.stages || []).find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('crossStageModalTitle').textContent = 'Редактирование этапа';
+  document.getElementById('crossStageId').value = id;
+  document.getElementById('crossStageName').value = s.name || '';
+  document.getElementById('crossStageDateStart').value = s.date_start || '';
+  document.getElementById('crossStageDateEnd').value = s.date_end || '';
+
+  const sel = document.getElementById('crossStageGGItem');
+  const items = (currentCross.stages || []).filter(x => x.is_item);
+  sel.innerHTML = '<option value="">— Выберите пункт —</option>' +
+    items.map(x => `<option value="${x.id}"${x.id === s.parent_item_id ? ' selected' : ''}>${x.order}. ${escapeHtml(x.name)}</option>`).join('');
+
+  openModal('crossStageModal');
+}
+
+function saveCrossStage() {
+  const stageId = document.getElementById('crossStageId').value;
+  const name = document.getElementById('crossStageName').value.trim();
+  if (!name) { alert('Название обязательно'); return; }
+
+  const parentItemId = document.getElementById('crossStageGGItem').value;
+  if (!parentItemId) { alert('Выберите пункт'); return; }
+
+  const body = { name, parent_item_id: +parentItemId };
+  const ds = document.getElementById('crossStageDateStart').value;
+  const de = document.getElementById('crossStageDateEnd').value;
+  if (ds) body.date_start = ds;
+  if (de) body.date_end = de;
+
   const pid = document.getElementById('crossProjectSelect').value;
-  fetchJSON(`${API}/cross/${pid}/stages/`, {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  }).then(() => loadCross(pid)).catch(e => alert(e.error || 'Ошибка'));
+  const url = stageId ? `${API}/cross_stages/${stageId}/` : `${API}/cross/${pid}/stages/`;
+  const method = stageId ? 'PUT' : 'POST';
+
+  fetchJSON(url, { method, body: JSON.stringify(body) })
+    .then(() => { closeModal('crossStageModal'); loadCross(pid); })
+    .catch(e => alert(e.error || 'Ошибка сохранения'));
 }
 
 function addCrossMilestone() {

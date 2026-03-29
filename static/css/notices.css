@@ -18,7 +18,7 @@
 }
 .ji-table th {
   background:var(--surface2); font-weight:700; font-size:11px;
-  color:var(--text2); text-transform:uppercase; letter-spacing:.05em;
+  color:var(--text2); letter-spacing:.05em;
   position:sticky; top:0; z-index:3; padding-bottom:2px;
 }
 

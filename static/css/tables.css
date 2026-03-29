@@ -33,7 +33,6 @@
   font-weight: 700;
   color: var(--th-color);
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   white-space: nowrap;
   text-align: center;
 }
@@ -336,7 +335,6 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     font-weight:600;
     color:var(--muted);
     font-size:12px;
-    text-transform:uppercase;
     letter-spacing:0.03em;
     flex-shrink:0;
     margin-right:12px;
@@ -365,7 +363,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   .pp-table tbody td::before {
     content: attr(data-label);
     font-weight:600; color:var(--muted); font-size:11px;
-    text-transform:uppercase; flex-shrink:0; margin-right:8px;
+    flex-shrink:0; margin-right:8px;
   }
   .pp-table tbody td:first-child::before { content:'#'; }
 

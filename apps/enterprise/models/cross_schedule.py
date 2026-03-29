@@ -106,7 +106,12 @@ class CrossScheduleDeptStatus(models.Model):
 
 class CrossStage(models.Model):
     """
-    Этап сквозного графика. Детализирует стадию ГГ.
+    Пункт или этап сквозного графика.
+
+    Иерархия:
+      Пункт (parent_item=NULL, gg_stage → GGStage) — копия пункта ГГ
+        → Этап (parent_item → пункт) — детализация пункта, нумерация А.Б
+
     Работы (Work) привязываются к этапу через FK work.cross_stage.
     """
     cross_schedule = models.ForeignKey(
@@ -116,7 +121,12 @@ class CrossStage(models.Model):
     gg_stage = models.ForeignKey(
         'enterprise.GGStage', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='cross_stages',
-        verbose_name='Стадия ГГ',
+        verbose_name='Пункт ГГ',
+    )
+    parent_item = models.ForeignKey(
+        'self', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='sub_stages',
+        verbose_name='Родительский пункт',
     )
     name = models.CharField('Название', max_length=300)
     date_start = models.DateField('Дата начала', null=True, blank=True)

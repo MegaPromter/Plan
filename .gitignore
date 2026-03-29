@@ -58,3 +58,25 @@ test_templates2.py
 planning_system_report.md
 *.docx
 .claude/
+
+# Презентации и временные файлы
+*.pptx
+_pptx_tmp/
+PRESENTATION_DIALOGUE_SCENARIOS.md
+
+# Чувствительные данные
+cookies.txt
+
+# Прототипы
+prototype_*.html
+static/datepicker_compare.html
+
+# Сторонние JS-библиотеки (datepicker)
+static/lib/flatpickr/
+static/lib/pikaday/
+static/lib/vanillajs-datepicker/
+static/css/flatpickr-theme.css
+static/css/pikaday-theme.css
+
+# Мусорные файлы
+=1.1.0

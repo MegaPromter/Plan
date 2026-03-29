@@ -179,6 +179,12 @@ function buildExportDropdown(containerId, config) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Нормализуем заголовки в UPPERCASE один раз при инициализации
+    config.columns = config.columns.map(col => ({
+        ...col,
+        header: col.header.toUpperCase(),
+    }));
+
     const wrap = document.createElement('div');
     wrap.className = 'export-dropdown';
 
