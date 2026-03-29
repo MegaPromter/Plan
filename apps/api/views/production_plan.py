@@ -93,6 +93,8 @@ def _serialize_pp(work, today=None):
         'labor': _round_labor(work.labor) if work.labor is not None else '',
         'sector_head': (work.sector.name or work.sector.code if work.sector else '') or '',
         'task_type': work.task_type or '',
+        'cross_stage_id': work.cross_stage_id,
+        'cross_stage_name': (work.cross_stage.name if work.cross_stage else '') or '',
         'project_id': work.pp_project_id,
         'predecessors_count': getattr(work, '_pred_count', 0) or 0,
         'has_reports': has_reports,
@@ -151,7 +153,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
             _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
             'department', 'department__ntc_center', 'ntc_center',
-            'executor', 'sector', 'pp_project',
+            'executor', 'sector', 'pp_project', 'cross_stage',
         ).order_by('id')
 
         # Общее количество (до пагинации) — для клиента
@@ -283,7 +285,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             Work.objects.annotate(
                 _pred_count=Count('predecessor_links'),
                 _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
-            ).select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project')
+            ).select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project', 'cross_stage')
             .get(pk=work.pk)
         )
         return JsonResponse({'id': work.id, 'work': work_data})
@@ -378,7 +380,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         with transaction.atomic():
             work = (Work.objects.select_for_update(of=('self',))
                     .filter(pk=pk, show_in_pp=True)
-                    .select_related('department', 'ntc_center', 'executor', 'sector')
+                    .select_related('department', 'ntc_center', 'executor', 'sector', 'cross_stage')
                     .first())
             if not work:
                 return JsonResponse({'error': 'Запись ПП не найдена'}, status=404)
@@ -459,6 +461,16 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 work.sector = None
         elif field == 'task_type':
             work.task_type = value or ''
+        elif field == 'cross_stage':
+            if value:
+                from apps.enterprise.models import CrossStage
+                try:
+                    cs = CrossStage.objects.get(pk=int(value))
+                    work.cross_stage = cs
+                except (CrossStage.DoesNotExist, ValueError, TypeError):
+                    work.cross_stage = None
+            else:
+                work.cross_stage = None
         else:
             # row_code, work_order, stage_num, milestone_num, work_num, work_designation
             setattr(work, field, value or '')
@@ -528,3 +540,36 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
         log_action(request, AuditLog.ACTION_PP_SYNC,
                    details={'synced': synced})
         return JsonResponse({'synced': synced})
+
+
+# ---------------------------------------------------------------------------
+#  GET /api/pp_projects/<pk>/cross_stages — этапы сквозного графика
+# ---------------------------------------------------------------------------
+
+class PPCrossStagesView(LoginRequiredJsonMixin, View):
+    """GET /api/pp_projects/<pk>/cross_stages/ — этапы сквозного графика для ПП-проекта."""
+
+    def get(self, request, pk):
+        from apps.works.models import PPProject
+        pp = PPProject.objects.select_related('up_project').filter(pk=pk).first()
+        if not pp or not pp.up_project_id:
+            return JsonResponse([], safe=False)
+        from apps.enterprise.models import CrossSchedule
+        cross = CrossSchedule.objects.filter(project=pp.up_project).first()
+        if not cross:
+            return JsonResponse([], safe=False)
+        stages_qs = cross.stages.select_related('parent_item').filter(
+            parent_item__isnull=False,
+        ).order_by('parent_item__order', 'order', 'id')
+        result = []
+        for s in stages_qs:
+            if s.parent_item:
+                num = '%s.%s' % (s.parent_item.order, s.order)
+            else:
+                num = str(s.order) if s.order else ''
+            result.append({
+                'id': s.id, 'num': num, 'name': s.name or '',
+                'date_start': s.date_start.isoformat() if s.date_start else '',
+                'date_end': s.date_end.isoformat() if s.date_end else '',
+            })
+        return JsonResponse(result, safe=False)

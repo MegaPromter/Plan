@@ -193,7 +193,7 @@
           <th style="width:100px;" rowspan="2" data-sort="milestone_num">№ вехи</th>
           <th style="width:90px;" rowspan="2" data-sort="work_num">№ работы</th>
           <th colspan="2" style="text-align:center;">Группа</th>
-          <th style="width:130px;" rowspan="2" data-sort="date_end">Сроки выполнения</th>
+          <th colspan="2" style="text-align:center;">Сроки</th>
           <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
           <th style="width:100px;" rowspan="2" data-sort="ntc_center">Подразделение</th>
           <th style="width:60px;" rowspan="2" data-sort="department">Отдел</th>
@@ -206,6 +206,8 @@
         <tr>
           <th style="width:300px;" data-sort="work_designation">Обозначение</th>
           <th style="width:350px;" data-sort="work_name">Наименование</th>
+          <th style="width:110px;" data-sort="date_start">Начало</th>
+          <th style="width:110px;" data-sort="date_end">Окончание</th>
           <th style="width:100px;">Ф, А4</th>
           <th style="width:100px;">Норматив</th>
           <th style="width:100px;">Коэфф</th>
@@ -229,7 +231,9 @@
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по наименованию работы -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
-          <!-- Мультифильтр по дате выполнения -->
+          <!-- Мультифильтр по дате начала -->
+          <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по дате окончания -->
           <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Столбцы расчёта — без фильтров (листы, норматив, коэфф, трудоёмкость) -->
           <th></th><th></th><th></th><th></th>
@@ -427,7 +431,7 @@
 }</script>
 <script src="{% static 'js/shared-toolbar.js' %}?v=3"></script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/production_plan.js' %}?v=12"></script>
+<script src="{% static 'js/production_plan.js' %}?v=22"></script>
 <script src="{% static 'js/sandbox.js' %}?v=8"></script>
 <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>

@@ -80,6 +80,7 @@ from .views.pp_projects import PPProjectCreateView, PPProjectDetailView, PPProje
 
 # Вьюхи производственного плана (PPWork)
 from .views.production_plan import (
+    PPCrossStagesView,
     ProductionPlanCreateView,
     ProductionPlanDetailView,
     ProductionPlanListView,
@@ -244,6 +245,8 @@ urlpatterns = [
     path('pp_projects/create/', PPProjectCreateView.as_view()),
     # PUT/DELETE /api/pp_projects/<pk>/ — обновление/удаление проекта ПП (admin)
     path('pp_projects/<int:pk>/', PPProjectDetailView.as_view()),
+    # GET /api/pp_projects/<pk>/cross_stages/ — этапы сквозного графика
+    path('pp_projects/<int:pk>/cross_stages/', PPCrossStagesView.as_view()),
 
     # ── Отпуска ─────────────────────────────────────────────────────────
     # GET /api/vacations/ — список отпусков (с фильтрацией по роли)

@@ -75,7 +75,7 @@ let dirs = {};
 const PP_COLUMNS = [
   'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
   'work_designation', 'work_name',
-  'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
+  'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
   'center', 'dept', 'sector_head', 'executor', 'task_type'
 ];
 
@@ -83,11 +83,14 @@ const PP_COLUMNS = [
 const PP_COL_LABELS = {
   row_code:'Код строки', work_order:'Наряд-заказ', stage_num:'№ этапа',
   milestone_num:'№ вехи', work_num:'№ работы', work_designation:'Обозначение',
-  work_name:'Наименование', date_end:'Сроки', sheets_a4:'Ф, А4',
+  work_name:'Наименование', date_start:'Начало', date_end:'Окончание', sheets_a4:'Ф, А4',
   norm:'Норматив', coeff:'Коэфф', labor:'Трудоёмкость',
   center:'Подразделение', dept:'Отдел', sector_head:'Сектор',
   executor:'Разработчик', task_type:'Тип задачи'
 };
+
+// Этапы сквозного графика текущего проекта (загружается при openProject)
+let _crossStages = [];
 
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _ppStatusFilter = 'all';
@@ -112,6 +115,8 @@ function _ppRowsWithoutStatusFilter() {
           if (field === 'date_end' || field === 'date_start') {
             var cellVal = (r[field] || '').slice(0, 7);
             if (!val.has(cellVal)) return false;
+          } else if (field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) {
+            if (!val.has(r.cross_stage_name || '')) return false;
           } else {
             if (!val.has(r[field] || '')) return false;
           }
@@ -591,8 +596,14 @@ async function openProject(id, name) {
   // Показываем skeleton-загрузку в таблице
   const _ppTbody = document.getElementById('ppTableBody');
   if (_ppTbody) _ppTbody.innerHTML = skeletonRows(10, 19);
-  // Загружаем строки плана и рендерим таблицу
-  await loadPPRows(id);
+  // Загружаем строки плана и этапы сквозного графика
+  await Promise.all([
+    loadPPRows(id),
+    fetch('/api/pp_projects/' + id + '/cross_stages/')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { _crossStages = data; })
+      .catch(() => { _crossStages = []; }),
+  ]);
 
   // Восстанавливаем фильтры из URL (год, месяц, отдел) — для расшаренных ссылок
   _ppRestoreFiltersFromUrl();
@@ -701,6 +712,15 @@ function buildSelectHtml(col, row) {
     taskTypes.forEach(d => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
+  } else if (col === 'cross_stage') {
+    // Этап сквозного графика: дропдаун из _crossStages
+    const csId = row.cross_stage_id || '';
+    options = '<option value="">--</option>';
+    _crossStages.forEach(cs => {
+      const label = cs.num ? (cs.num + '. ' + cs.name) : cs.name;
+      options += `<option value="${cs.id}"${String(cs.id) === String(csId) ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    });
+    return `<select class="cell-edit" data-col="cross_stage" data-id="${row.id}">${options}</select>`;
   }
   return `<select class="cell-edit" data-col="${col}" data-id="${row.id}">${options}</select>`;
 }
@@ -802,9 +822,9 @@ function renderPPTable() {
         const field = col.slice(3);
         if (val.size > 0) {
             // Для date_end сравниваем по году-месяцу (первые 7 символов)
-            const cellVal = (field === 'date_end')
+            const cellVal = (field === 'date_end' || field === 'date_start')
               ? (row[field] || '').slice(0, 7)
-              : (row[field] || '');
+              : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
             if (!val.has(cellVal)) return false;
         }
         continue;
@@ -876,12 +896,13 @@ function _ppAppendBatch(count) {
 
     // Для каждого поля колонки — определяем тип ячейки и строим HTML
     for (const col of PP_COLUMNS) {
-      const val = row[col] || '';
+      const val = col === 'stage_num' ? (row.cross_stage_name || row[col] || '') : (row[col] || '');
       const lbl = PP_COL_LABELS[col] || col; // метка для мобильного card-layout
       // Классификация типа ячейки
       const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
+      const isCrossStageCol = col === 'stage_num' && _crossStages.length > 0;
       const isTextCol = ['work_name', 'work_order', 'work_designation'].includes(col);
-      const isDateCol = col === 'date_end';
+      const isDateCol = col === 'date_start' || col === 'date_end';
 
       if (!IS_WRITER || !rowEditable || col === 'row_code') {
         // Режим только для чтения: статичный текст (row_code всегда read-only — автогенерация)
@@ -894,6 +915,9 @@ function _ppAppendBatch(count) {
         } else {
           html += `<td data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
         }
+      } else if (isCrossStageCol) {
+        // Этап сквозного графика — дропдаун в колонке «№ этапа»
+        html += `<td data-label="${lbl}">${buildSelectHtml('cross_stage', row)}</td>`;
       } else if (isSelectCol) {
         // Выпадающий список с учётом роли пользователя
         if (col === 'sector_head' && val) {
@@ -1126,7 +1150,15 @@ async function handleCellChange(e) {
 
   // Обновляем данные в локальном массиве
   const rowObj = rows.find(r => String(r.id) === String(id));
-  if (rowObj) rowObj[field] = value;
+  if (rowObj) {
+    if (field === 'cross_stage') {
+      rowObj.cross_stage_id = value || null;
+      const cs = _crossStages.find(s => String(s.id) === String(value));
+      rowObj.cross_stage_name = cs ? cs.name : '';
+    } else {
+      rowObj[field] = value;
+    }
+  }
 
   // Автоматический пересчёт трудоёмкости при изменении листов/норматива/коэффициента
   if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
@@ -1232,12 +1264,15 @@ function openAddRowModal() {
   for (const col of PP_COLUMNS) {
     const lbl = PP_COL_LABELS[col] || col;
     const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
+    const isCrossStageCol = col === 'stage_num' && _crossStages.length > 0;
     const isTextCol   = ['work_name', 'work_order', 'work_designation'].includes(col);
     const isDateCol   = col === 'date_end';
 
     if (col === 'row_code') {
       // row_code — автогенерация на сервере, read-only
       html += `<td data-label="${lbl}" style="font-size:11px;color:var(--muted);padding:4px 6px;">авто</td>`;
+    } else if (isCrossStageCol) {
+      html += `<td data-label="${lbl}">${buildSelectHtml('cross_stage', newRow)}</td>`;
     } else if (isSelectCol) {
       html += `<td data-label="${lbl}">${buildSelectHtml(col, newRow)}</td>`;
     } else if (isTextCol) {
@@ -1504,7 +1539,7 @@ async function syncToTasks() {
         if (val.size > 0) {
           const cellVal = (field === 'date_end')
             ? (row[field] || '').slice(0, 7)
-            : (row[field] || '');
+            : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
           if (!val.has(cellVal)) return false;
         }
         continue;
@@ -1758,11 +1793,13 @@ function getMfValues(col) {
       sourceRows = rows.filter(r => validSectors.has(r[col]));
     }
   }
-  if (col === 'date_end') {
-    // Срок выполнения: берём только год-месяц (первые 7 символов «YYYY-MM»)
+  if (col === 'date_end' || col === 'date_start') {
+    // Дата: берём только год-месяц (первые 7 символов «YYYY-MM»)
     sourceRows.forEach(r => {
       if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
     });
+  } else if (col === 'cross_stage' || (col === 'stage_num' && _crossStages.length > 0)) {
+    sourceRows.forEach(r => { if (r.cross_stage_name) vals.add(r.cross_stage_name); });
   } else {
     sourceRows.forEach(r => { if (r[col]) vals.add(r[col]); });
   }
@@ -2117,7 +2154,8 @@ window.addEventListener('popstate', async () => {
       { key: 'work_num',         header: '№ работы',       width: 60,  forceText: true },
       { key: 'work_designation', header: 'Обозначение',    width: 140 },
       { key: 'work_name',        header: 'Наименование',   width: 240 },
-      { key: 'date_end',         header: 'Срок выполнения',width: 100 },
+      { key: 'date_start',       header: 'Начало',         width: 100 },
+      { key: 'date_end',         header: 'Окончание',     width: 100 },
       { key: 'sheets_a4',        header: 'Ф, А4',          width: 60 },
       { key: 'norm',             header: 'Норматив',       width: 70 },
       { key: 'coeff',            header: 'Коэфф',          width: 60 },
@@ -2139,9 +2177,9 @@ function ppGetFilteredRows() {
       if (col.startsWith('mf_')) {
         const field = col.slice(3);
         if (val.size > 0) {
-            const cellVal = (field === 'date_end')
+            const cellVal = (field === 'date_end' || field === 'date_start')
               ? (row[field] || '').slice(0, 7)
-              : (row[field] || '');
+              : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
             if (!val.has(cellVal)) return false;
         }
         continue;

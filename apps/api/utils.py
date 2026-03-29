@@ -79,7 +79,7 @@ PRODUCTION_ALLOWED_FIELDS = {
     'work_num', 'work_designation', 'work_name',
     'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
     'total_2d', 'total_3d', 'labor', 'center', 'dept',
-    'sector_head', 'executor', 'task_type',
+    'sector_head', 'executor', 'task_type', 'cross_stage',
 }
 
 # Поля, разрешённые для inline-обновления (vacations)

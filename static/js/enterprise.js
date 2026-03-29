@@ -136,10 +136,19 @@ function _saveHashState(updates) {
     if (params[k]) parts.push(k + '=' + encodeURIComponent(params[k]));
   }
   history.replaceState(null, '', '#' + parts.join('&'));
+  // Дублируем в localStorage для восстановления при повторном визите
+  try { localStorage.setItem('ent_last_state', JSON.stringify(params)); } catch(e) {}
 }
 
 function _restoreFromHash() {
-  const params = _parseHash();
+  let params = _parseHash();
+  // Если hash пуст — восстанавливаем из localStorage
+  if (!params.tab && !params.project) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ent_last_state') || '{}');
+      if (saved.tab) params = saved;
+    } catch(e) {}
+  }
   const tab = params.tab || 'portfolio';
   switchToTab(tab);
 
@@ -1023,55 +1032,49 @@ function renderCross() {
   const stagesBody = document.getElementById('crossStagesBody');
   let rowsHtml = '';
 
+  // Вспомогательная функция: строки работ для этапа (inline в единой таблице)
+  function _workRows(stageId, works) {
+    return works.map(w => {
+      const unlink = canAssign
+        ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${stageId}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
+        : '';
+      return `<tr class="cross-work-row" data-stage="${stageId}" style="display:none;">
+        <td></td>
+        <td style="padding-left:48px;font-size:12px;">${escapeHtml(w.name)}</td>
+        <td class="text-muted" style="font-size:12px;">${escapeHtml(w.row_code)}</td>
+        <td style="font-size:12px;">${w.date_start || '—'}</td>
+        <td style="font-size:12px;">${w.date_end || '—'}</td>
+        <td style="font-size:12px;">${w.labor != null ? w.labor : '—'}</td>
+        <td style="font-size:12px;">${escapeHtml(w.executor)}</td>
+        <td style="font-size:12px;">${escapeHtml(w.department)}</td>
+        <td>${unlink}</td>
+      </tr>`;
+    }).join('');
+  }
+
   ggItems.forEach(item => {
     const itemNum = item.order;
     const wc = item.works_count || 0;
     const badge = wc > 0 ? `<span class="cross-works-badge">${wc}</span>` : '';
-    const toggleCls = wc > 0 ? ' cross-stage-toggle' : '';
-    const toggleClick = wc > 0 ? ` onclick="toggleCrossStageWorks(${item.id})"` : '';
+    const toggleClick = wc > 0 ? ` onclick="toggleCrossStageWorks(${item.id})" style="cursor:pointer;"` : '';
     const chevron = wc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
     const assignBtn = canAssign
       ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${item.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
       : '';
 
-    // Строка пункта ГГ (жирная)
-    rowsHtml += `<tr class="cross-item-row${toggleCls}" style="font-weight:600; background:var(--surface2);"${toggleClick}>
+    // Строка пункта ГГ (жирная, spanning)
+    rowsHtml += `<tr class="cross-item-row"${toggleClick}>
       <td>${chevron}${itemNum}</td>
       <td>${escapeHtml(item.name)} ${badge}</td>
+      <td></td>
       <td>${item.date_start || '—'}</td>
       <td>${item.date_end || '—'}</td>
-      <td>—</td>
+      <td></td><td></td><td></td>
       <td>${assignBtn}</td>
     </tr>`;
 
-    // Строка работ (скрыта)
-    if (wc > 0) {
-      const worksHtml = item.works.map(w => {
-        const unlink = canAssign
-          ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${item.id}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
-          : '';
-        return `<tr>
-          <td class="text-muted">${escapeHtml(w.row_code)}</td>
-          <td>${escapeHtml(w.name)}</td>
-          <td>${w.date_start || '—'}</td>
-          <td>${w.date_end || '—'}</td>
-          <td>${w.labor != null ? w.labor : '—'}</td>
-          <td>${escapeHtml(w.executor)}</td>
-          <td>${escapeHtml(w.department)}</td>
-          <td>${unlink}</td>
-        </tr>`;
-      }).join('');
-      rowsHtml += `<tr class="cross-works-row" id="crossWorks_${item.id}" style="display:none;">
-        <td colspan="6" style="padding:0;">
-          <table class="cross-works-table">
-            <thead><tr>
-              <th>Код</th><th>Работа</th><th>Начало</th><th>Окончание</th><th>Труд.</th><th>Исполнитель</th><th>Отдел</th><th></th>
-            </tr></thead>
-            <tbody>${worksHtml}</tbody>
-          </table>
-        </td>
-      </tr>`;
-    }
+    // Работы пункта (скрыты, inline)
+    if (wc > 0) rowsHtml += _workRows(item.id, item.works);
 
     // Вложенные этапы (нумерация А.Б)
     const subs = subByParent[item.id] || [];
@@ -1079,8 +1082,7 @@ function renderCross() {
       const subNum = itemNum + '.' + (idx + 1);
       const swc = sub.works_count || 0;
       const sBadge = swc > 0 ? `<span class="cross-works-badge">${swc}</span>` : '';
-      const sToggleCls = swc > 0 ? ' cross-stage-toggle' : '';
-      const sToggleClick = swc > 0 ? ` onclick="toggleCrossStageWorks(${sub.id})"` : '';
+      const sToggleClick = swc > 0 ? ` onclick="toggleCrossStageWorks(${sub.id})" style="cursor:pointer;"` : '';
       const sChevron = swc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
       const sAssignBtn = canAssign
         ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${sub.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
@@ -1089,46 +1091,22 @@ function renderCross() {
         ? `<button class="btn btn-ghost btn-sm" onclick="openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
         : '';
 
-      rowsHtml += `<tr class="cross-sub-stage${sToggleCls}" style="padding-left:24px;"${sToggleClick}>
+      rowsHtml += `<tr class="cross-sub-stage"${sToggleClick}>
         <td style="padding-left:24px;">${sChevron}${subNum}</td>
-        <td>${escapeHtml(sub.name)} ${sBadge}</td>
+        <td style="padding-left:24px;">${escapeHtml(sub.name)} ${sBadge}</td>
+        <td></td>
         <td>${sub.date_start || '—'}</td>
         <td>${sub.date_end || '—'}</td>
-        <td>${itemNum}</td>
+        <td></td><td></td><td></td>
         <td>${editBtn}${sAssignBtn}</td>
       </tr>`;
 
-      if (swc > 0) {
-        const sWorksHtml = sub.works.map(w => {
-          const unlink = canAssign
-            ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${sub.id}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
-            : '';
-          return `<tr>
-            <td class="text-muted">${escapeHtml(w.row_code)}</td>
-            <td>${escapeHtml(w.name)}</td>
-            <td>${w.date_start || '—'}</td>
-            <td>${w.date_end || '—'}</td>
-            <td>${w.labor != null ? w.labor : '—'}</td>
-            <td>${escapeHtml(w.executor)}</td>
-            <td>${escapeHtml(w.department)}</td>
-            <td>${unlink}</td>
-          </tr>`;
-        }).join('');
-        rowsHtml += `<tr class="cross-works-row" id="crossWorks_${sub.id}" style="display:none;">
-          <td colspan="6" style="padding:0;">
-            <table class="cross-works-table">
-              <thead><tr>
-                <th>Код</th><th>Работа</th><th>Начало</th><th>Окончание</th><th>Труд.</th><th>Исполнитель</th><th>Отдел</th><th></th>
-              </tr></thead>
-              <tbody>${sWorksHtml}</tbody>
-            </table>
-          </td>
-        </tr>`;
-      }
+      // Работы этапа (скрыты, inline)
+      if (swc > 0) rowsHtml += _workRows(sub.id, sub.works);
     });
   });
 
-  stagesBody.innerHTML = rowsHtml || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
+  stagesBody.innerHTML = rowsHtml || '<tr><td colspan="9" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Неназначенные работы ПП
   const unassigned = currentCross.unassigned_works || [];
@@ -1142,16 +1120,18 @@ function renderCross() {
     unassignedEl.innerHTML = `
       <div class="ent-section">
         <div class="ent-section-title">Неназначенные работы ПП <span class="cross-works-badge">${unassigned.length}</span></div>
-        <table class="cross-works-table">
-          <thead><tr><th>Код</th><th>Работа</th><th>Начало</th><th>Окончание</th><th>Труд.</th><th>Исполнитель</th><th>Отдел</th></tr></thead>
-          <tbody>${unassigned.map(w => `<tr>
-            <td class="text-muted">${escapeHtml(w.row_code)}</td>
-            <td>${escapeHtml(w.name)}</td>
-            <td>${w.date_start || '—'}</td>
-            <td>${w.date_end || '—'}</td>
-            <td>${w.labor != null ? w.labor : '—'}</td>
-            <td>${escapeHtml(w.executor)}</td>
-            <td>${escapeHtml(w.department)}</td>
+        <table class="data-table cross-unified-table">
+          <thead><tr><th style="width:60px;">№</th><th>Название</th><th style="width:90px;">Код</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:120px;">Исполнитель</th><th style="width:70px;">Отдел</th><th style="width:50px;"></th></tr></thead>
+          <tbody>${unassigned.map(w => `<tr class="cross-work-row">
+            <td></td>
+            <td style="font-size:12px;">${escapeHtml(w.name)}</td>
+            <td class="text-muted" style="font-size:12px;">${escapeHtml(w.row_code)}</td>
+            <td style="font-size:12px;">${w.date_start || '—'}</td>
+            <td style="font-size:12px;">${w.date_end || '—'}</td>
+            <td style="font-size:12px;">${w.labor != null ? w.labor : '—'}</td>
+            <td style="font-size:12px;">${escapeHtml(w.executor)}</td>
+            <td style="font-size:12px;">${escapeHtml(w.department)}</td>
+            <td></td>
           </tr>`).join('')}</tbody>
         </table>
       </div>`;
@@ -1186,13 +1166,15 @@ function renderCross() {
 // ── Работы в этапах сквозного графика ────────────────────────────────────
 
 function toggleCrossStageWorks(stageId) {
-  const row = document.getElementById('crossWorks_' + stageId);
-  if (!row) return;
-  const visible = row.style.display !== 'none';
-  row.style.display = visible ? 'none' : '';
+  const workRows = document.querySelectorAll(`tr.cross-work-row[data-stage="${stageId}"]`);
+  if (!workRows.length) return;
+  const visible = workRows[0].style.display !== 'none';
+  workRows.forEach(r => r.style.display = visible ? 'none' : '');
 
-  // Поворот шеврона
-  const parentRow = row.previousElementSibling;
+  // Поворот шеврона — ищем в предшествующей строке этапа
+  const first = workRows[0];
+  const parentRow = first.previousElementSibling;
+  // Если первая work-row не сразу после этапа — ищем через closest
   const chevron = parentRow && parentRow.querySelector('.cross-chevron');
   if (chevron) {
     chevron.classList.toggle('fa-chevron-right', visible);

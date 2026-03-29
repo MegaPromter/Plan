@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/enterprise.css' %}">
+<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -208,15 +208,18 @@
       <div class="ent-meta-bar" id="crossMeta"></div>
       <div class="ent-section" id="crossStagesSection">
         <h3 class="ent-section-title">Пункты и этапы</h3>
-        <table class="data-table" id="crossStagesTable">
+        <table class="data-table cross-unified-table" id="crossStagesTable">
           <thead>
             <tr>
-              <th>№</th>
+              <th style="width:60px;">№</th>
               <th>Название</th>
-              <th>Начало</th>
-              <th>Окончание</th>
-              <th>Связь с ГГ</th>
-              <th></th>
+              <th style="width:90px;">Код</th>
+              <th style="width:100px;">Начало</th>
+              <th style="width:100px;">Окончание</th>
+              <th style="width:70px;">Труд.</th>
+              <th style="width:120px;">Исполнитель</th>
+              <th style="width:70px;">Отдел</th>
+              <th style="width:50px;"></th>
             </tr>
           </thead>
           <tbody id="crossStagesBody"></tbody>
@@ -501,5 +504,5 @@
   const EMPLOYEES = {{ employees_json|safe }};
 </script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/enterprise.js' %}"></script>
+<script src="{% static 'js/enterprise.js' %}?v=3"></script>
 {% endblock %}

@@ -491,26 +491,26 @@
   margin-left: 6px;
 }
 
-.cross-works-row td { padding: 0 !important; background: var(--surface2, #f8f9fb); }
-
-.cross-works-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.cross-works-table thead th {
-  padding: 6px 8px;
-  font-size: 11px;
+/* ── Единая таблица сквозного графика ────────────────────────── */
+.cross-unified-table .cross-item-row {
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
   background: var(--surface2, #f1f5f9);
-  border-bottom: 1px solid var(--border);
-  text-align: left;
 }
-.cross-works-table td {
-  padding: 6px 8px;
+.cross-unified-table .cross-item-row td { padding: 8px; }
+
+.cross-unified-table .cross-sub-stage {
+  background: var(--surface, #fafbfc);
+}
+.cross-unified-table .cross-sub-stage td { padding: 6px 8px; }
+
+.cross-unified-table .cross-work-row {
+  background: #fff;
+}
+.cross-unified-table .cross-work-row td {
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.cross-unified-table .cross-work-row:last-child td {
   border-bottom: 1px solid var(--border);
 }
 
