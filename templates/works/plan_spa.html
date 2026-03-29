@@ -567,7 +567,8 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/plan.js' %}?v=12"></script>
+<script src="{% static 'js/gantt_common.js' %}?v=2"></script>
+<script src="{% static 'js/plan.js' %}?v=14"></script>
 <script>
 // Калибровка sticky top для multi-row thead (rowspan-совместимо)
 (function(){

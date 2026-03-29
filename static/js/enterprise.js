@@ -745,112 +745,60 @@ function switchGGView(view) {
 // ── Lazy-load dhtmlxGantt ─────────────────────────────────────────────────
 
 function loadGGGantt() {
-  // CSS
-  if (!document.querySelector('link[href*="dhtmlxgantt.css"]')) {
-    const css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = '/static/lib/dhtmlxgantt/dhtmlxgantt.css';
-    document.head.appendChild(css);
-  }
-  // JS (если уже загружен глобально — не грузим повторно)
-  if (typeof gantt !== 'undefined') {
+  ganttLoad(() => {
     ggGanttLoaded = true;
     setupGGGantt();
     renderGGGantt();
-    return;
-  }
-  const script = document.createElement('script');
-  script.src = '/static/lib/dhtmlxgantt/dhtmlxgantt.js';
-  script.onload = () => {
-    ggGanttLoaded = true;
-    setupGGGantt();
-    renderGGGantt();
-  };
-  script.onerror = () => {
-    document.getElementById('ggGanttContainer').innerHTML =
-      '<div style="padding:40px;text-align:center;color:var(--muted);">' +
-      '⚠ Библиотека dhtmlxGantt не загружена.</div>';
-  };
-  document.head.appendChild(script);
+  }, 'ggGanttContainer');
 }
 
 // ── Настройка Ганта ───────────────────────────────────────────────────────
+
+const _GG_COL_KEY = 'gg_gantt_col_widths';
+const _GG_COL_DEFAULTS = { text: 200, start_date: 70, end_date: 70, grid: 340 };
 
 function setupGGGantt() {
   if (typeof gantt === 'undefined' || ggGanttInited) return;
   ggGanttInited = true;
 
-  // Русская локаль
-  gantt.locale = {
-    date: {
-      month_full: ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"],
-      month_short: ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
-      day_full: ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"],
-      day_short: ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"]
-    },
-    labels: {
-      new_task: "Новый пункт", icon_save: "Сохранить", icon_cancel: "Отмена",
-      icon_details: "Детали", icon_edit: "Редактировать", icon_delete: "Удалить",
-      confirm_closing: "", confirm_deleting: "Удалить запись?",
-      section_description: "Описание", section_time: "Период", section_type: "Тип",
-      column_text: "Название", column_start_date: "Начало", column_duration: "Длительность",
-      column_add: "", link: "Связь", confirm_link_deleting: "Удалить связь?",
-      link_start: "(начало)", link_end: "(конец)",
-      type_task: "Задача", type_project: "Проект", type_milestone: "Веха",
-      minutes: "мин", hours: "ч", days: "дн", weeks: "нед", months: "мес", years: "лет"
-    }
-  };
+  ganttSetupBase();
 
-  gantt.config.date_format = "%Y-%m-%d";
-  gantt.config.grid_width = 340;
-  gantt.config.grid_resize = true;
+  // Колонки с восстановлением ширин
+  const savedCols = ganttLoadColWidths(_GG_COL_KEY, _GG_COL_DEFAULTS);
+  gantt.config.grid_width = savedCols.grid;
   gantt.config.columns = [
-    { name: "text", label: "Название", width: 200, tree: true, resize: true },
-    { name: "start_date", label: "Начало", align: "center", width: 70, resize: true },
-    { name: "end_date", label: "Окончание", align: "center", width: 70, resize: true },
+    { name: "text", label: "Название", width: savedCols.text, tree: true, resize: true },
+    { name: "start_date", label: "Начало", align: "center", width: savedCols.start_date, resize: true },
+    { name: "end_date", label: "Окончание", align: "center", width: savedCols.end_date, resize: true },
   ];
 
-  // Разрешаем перетаскивание и изменение размеров
+  // Интерактивный режим для writers
   gantt.config.readonly = !IS_WRITER;
   gantt.config.drag_move = IS_WRITER;
   gantt.config.drag_resize = IS_WRITER;
   gantt.config.drag_progress = false;
-  gantt.config.drag_links = false;  // связи управляются отдельно
+  gantt.config.drag_links = false;
   gantt.config.show_links = true;
-  gantt.config.auto_scheduling = false;
-  gantt.config.fit_tasks = true;
-  gantt.config.open_tree_initially = true;
-  gantt.config.smart_rendering = false;  // данных мало — рендерим все полоски
 
-  // Масштаб по умолчанию — год (для обзора всего графика)
-  gantt.config.scales = [
-    { unit: 'year', step: 1, format: '%Y' },
-    { unit: 'month', step: 1, format: '%M' },
-  ];
-  gantt.config.min_column_width = 50;
-
+  ganttRestoreScale('gg_gantt_scale');
   gantt.init("ggGanttContainer");
 
-  // ── Обработчик перетаскивания ────────────────────────────────────────
-  gantt.attachEvent("onAfterTaskDrag", function(id, mode) {
+  // Resize колонок
+  gantt.attachEvent("onGanttRender", () => ganttInjectResizers('ggGanttContainer', _GG_COL_KEY));
+
+  // Drag → сохранение дат на сервере
+  gantt.attachEvent("onAfterTaskDrag", function(id) {
     const task = gantt.getTask(id);
     if (!task || !task.server_id) return;
-
-    // dhtmlxGantt хранит даты как Date-объекты
-    const startStr = _formatGanttDate(task.start_date);
-    const endStr = _formatGanttDate(task.end_date);
-
+    const startStr = ganttFormatDate(task.start_date);
+    const endStr = ganttFormatDate(task.end_date);
     const isMilestone = task.type === gantt.config.types.milestone;
     const url = isMilestone
       ? `${API}/gg_milestones/${task.server_id}/`
       : `${API}/gg_stages/${task.server_id}/`;
-    const body = isMilestone
-      ? { date: startStr }
-      : { date_start: startStr, date_end: endStr };
-
+    const body = isMilestone ? { date: startStr } : { date_start: startStr, date_end: endStr };
     fetchJSON(url, { method: 'PUT', body: JSON.stringify(body) })
-      .then(data => {
-        // Обновляем локальные данные ГГ
+      .then(() => {
         if (isMilestone) {
           const m = (currentGG.milestones || []).find(x => x.id === task.server_id);
           if (m) m.date = startStr;
@@ -859,72 +807,23 @@ function setupGGGantt() {
           if (s) { s.date_start = startStr; s.date_end = endStr; }
         }
       })
-      .catch(e => {
-        alert(e.error || 'Ошибка сохранения');
-        // Откатываем — перерисовываем из данных
-        renderGGGantt();
-      });
+      .catch(e => { alert(e.error || 'Ошибка сохранения'); renderGGGantt(); });
   });
 
-  // Запрещаем inline-редактирование через lightbox — используем нашу модалку
+  // Двойной клик → модалка редактирования
   gantt.attachEvent("onBeforeLightbox", function(id) {
     const task = gantt.getTask(id);
     if (task && task.server_id && task.type !== gantt.config.types.milestone) {
       openEditGGStage(task.server_id);
     }
-    return false; // отменяем стандартный lightbox
+    return false;
   });
-}
-
-function _formatGanttDate(d) {
-  // Date → "YYYY-MM-DD"
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
 }
 
 // ── Масштаб Ганта ─────────────────────────────────────────────────────────
 
 function setGGGanttScale(scale) {
-  if (typeof gantt === 'undefined') return;
-
-  // Подсветка активной кнопки масштаба
-  document.querySelectorAll('#ggGanttScales .btn').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`#ggGanttScales [onclick="setGGGanttScale('${scale}')"]`);
-  if (btn) btn.classList.add('active');
-
-  switch (scale) {
-    case 'day':
-      gantt.config.scales = [
-        { unit: 'month', step: 1, format: '%M %Y' },
-        { unit: 'day', step: 1, format: '%d' },
-      ];
-      gantt.config.min_column_width = 28;
-      break;
-    case 'week':
-      gantt.config.scales = [
-        { unit: 'month', step: 1, format: '%M %Y' },
-        { unit: 'week', step: 1, format: '%d' },
-      ];
-      gantt.config.min_column_width = 60;
-      break;
-    case 'month':
-      gantt.config.scales = [
-        { unit: 'year', step: 1, format: '%Y' },
-        { unit: 'month', step: 1, format: '%M' },
-      ];
-      gantt.config.min_column_width = 50;
-      break;
-    case 'year':
-      gantt.config.scales = [
-        { unit: 'year', step: 1, format: '%Y' },
-      ];
-      gantt.config.min_column_width = 80;
-      break;
-  }
-
-  if (ggGanttInited) gantt.render();
+  ganttSetScale(scale, 'gg_gantt_scale', '#ggGanttScales');
 }
 
 // ── Отрисовка данных в Ганте ──────────────────────────────────────────────
@@ -980,12 +879,9 @@ function renderGGGantt() {
   gantt.clearAll();
   gantt.parse({ data: tasks, links: links });
 
-  // Принудительно применить текущий масштаб после загрузки данных
-  const activeScaleBtn = document.querySelector('#ggGanttScales .btn.active');
-  if (activeScaleBtn) {
-    const match = activeScaleBtn.getAttribute('onclick')?.match(/setGGGanttScale\('(\w+)'\)/);
-    if (match) setGGGanttScale(match[1]);
-  }
+  // Авто-высота строк + масштаб
+  ganttAutoFitRowHeights();
+  setGGGanttScale(localStorage.getItem('gg_gantt_scale') || 'year');
 }
 
 // ══════════════════════════════════════════════════════════════════════════

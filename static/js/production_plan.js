@@ -2541,114 +2541,61 @@ function ppSwitchView(view) {
 }
 
 function ppSetGanttScale(scale) {
-  if (typeof gantt === 'undefined') return;
-  document.querySelectorAll('#ppGanttScaleGroup .gantt-scale-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.scale === scale));
-  if (scale === 'day') {
-    gantt.config.scale_unit = 'month';
-    gantt.config.date_scale = '%M %Y';
-    gantt.config.subscales = [{ unit: 'day', step: 1, date: '%d' }];
-    gantt.config.min_column_width = 28;
-  } else if (scale === 'week') {
-    gantt.config.scale_unit = 'month';
-    gantt.config.date_scale = '%M %Y';
-    gantt.config.subscales = [{ unit: 'week', step: 1, date: '%d — ' }];
-    gantt.config.min_column_width = 60;
-  } else if (scale === 'month') {
-    gantt.config.scale_unit = 'year';
-    gantt.config.date_scale = '%Y';
-    gantt.config.subscales = [{ unit: 'month', step: 1, date: '%M' }];
-    gantt.config.min_column_width = 50;
-  } else if (scale === 'year') {
-    gantt.config.scale_unit = 'year';
-    gantt.config.date_scale = '%Y';
-    gantt.config.subscales = [];
-    gantt.config.min_column_width = 80;
-  }
-  gantt.render();
+  ganttSetScale(scale, 'pp_gantt_scale', '#ppGanttScaleGroup');
 }
 
 function ppLoadGantt() {
-  // Проверить загружен ли уже gantt (может быть из СП)
-  if (typeof gantt !== 'undefined') { ppSetupGantt(); ppRenderGantt(); return; }
-  const cssLink = document.createElement('link');
-  cssLink.rel = 'stylesheet';
-  cssLink.href = '/static/lib/dhtmlxgantt/dhtmlxgantt.css';
-  document.head.appendChild(cssLink);
-  const script = document.createElement('script');
-  script.src = '/static/lib/dhtmlxgantt/dhtmlxgantt.js';
-  script.onload = () => { ppSetupGantt(); ppRenderGantt(); };
-  script.onerror = () => {
-    document.getElementById('ppGanttContainer').innerHTML =
-      '<div style="padding:40px;text-align:center;color:var(--muted);font-size:16px;">' +
-      '⚠ Библиотека dhtmlxGantt не загружена.</div>';
-  };
-  document.head.appendChild(script);
+  ganttLoad(() => { ppSetupGantt(); ppRenderGantt(); }, 'ppGanttContainer');
 }
 
-function _applyGanttLocaleRu() {
-  if (typeof gantt === 'undefined') return;
-  gantt.locale = {
-    date: {
-      month_full: ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"],
-      month_short: ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"],
-      day_full: ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"],
-      day_short: ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"]
-    },
-    labels: {
-      new_task: "Новая задача",
-      icon_save: "Сохранить",
-      icon_cancel: "Отмена",
-      icon_details: "Детали",
-      icon_edit: "Редактировать",
-      icon_delete: "Удалить",
-      confirm_closing: "",
-      confirm_deleting: "Удалить запись?",
-      section_description: "Описание",
-      section_time: "Период",
-      section_type: "Тип",
-      column_text: "Задача",
-      column_start_date: "Начало",
-      column_duration: "Длительность",
-      column_add: "",
-      link: "Связь",
-      confirm_link_deleting: "Удалить связь?",
-      link_start: "(начало)",
-      link_end: "(конец)",
-      type_task: "Задача",
-      type_project: "Проект",
-      type_milestone: "Веха",
-      minutes: "мин",
-      hours: "ч",
-      days: "дн",
-      weeks: "нед",
-      months: "мес",
-      years: "лет"
-    }
-  };
-}
+const _PP_COL_KEY = 'pp_gantt_col_widths';
+const _PP_COL_DEFAULTS = { text: 200, designation: 140, work_name_full: 160, start_date: 90, end_date: 90, grid: 670 };
 
 function ppSetupGantt() {
   if (typeof gantt === 'undefined') return;
-  _applyGanttLocaleRu();
-  gantt.config.date_format = "%Y-%m-%d";
-  gantt.config.scale_unit = "year";
-  gantt.config.date_scale = "%Y";
-  gantt.config.subscales = [{ unit: "month", step: 1, date: "%M" }];
-  gantt.config.min_column_width = 50;
+  ganttSetupBase();
+  const cw = ganttLoadColWidths(_PP_COL_KEY, _PP_COL_DEFAULTS);
   gantt.config.columns = [
-    { name: "text", label: "Задача", width: 200, tree: false },
-    { name: "designation", label: "Обозначение", width: 140, align: "left" },
-    { name: "work_name_full", label: "Наименование", width: 160, align: "left" },
-    { name: "start_date", label: "Начало", align: "center", width: 90 },
-    { name: "end_date", label: "Окончание", align: "center", width: 90 },
+    { name: "text", label: "Задача", width: cw.text, tree: false },
+    { name: "designation", label: "Обозначение", width: cw.designation, align: "left" },
+    { name: "work_name_full", label: "Наименование", width: cw.work_name_full, align: "left" },
+    { name: "start_date", label: "Начало", align: "center", width: cw.start_date },
+    { name: "end_date", label: "Окончание", align: "center", width: cw.end_date },
   ];
-  gantt.config.readonly = true;
+  gantt.config.grid_width = cw.grid;
+  gantt.config.readonly = !IS_WRITER;
   gantt.config.show_links = false;
   gantt.config.drag_links = false;
-  gantt.config.drag_move = false;
-  gantt.config.drag_resize = false;
+  gantt.config.drag_move = IS_WRITER;
+  gantt.config.drag_resize = IS_WRITER;
+  gantt.config.drag_progress = false;
+  ganttRestoreScale('pp_gantt_scale');
   gantt.init("ppGanttContainer");
+  gantt.attachEvent("onGanttRender", () => ganttInjectResizers('ppGanttContainer', _PP_COL_KEY));
+
+  // Drag → сохранение дат на сервере
+  gantt.attachEvent("onAfterTaskDrag", function(id) {
+    const task = gantt.getTask(id);
+    if (!task) return;
+    const startStr = ganttFormatDate(task.start_date);
+    const endStr = ganttFormatDate(task.end_date);
+    Promise.all([
+      fetchJson('/api/production_plan/' + id + '/?field=date_start', {
+        method: 'PUT', body: JSON.stringify({ value: startStr }),
+      }),
+      fetchJson('/api/production_plan/' + id + '/?field=date_end', {
+        method: 'PUT', body: JSON.stringify({ value: endStr }),
+      }),
+    ]).then(([r1, r2]) => {
+      // Обновить локальные данные
+      const row = rows.find(r => r.id === id);
+      if (row) { row.date_start = startStr; row.date_end = endStr; }
+      if (r1._error || r2._error) {
+        alert('Ошибка сохранения дат');
+        ppRenderGantt();
+      }
+    }).catch(() => { alert('Ошибка сохранения'); ppRenderGantt(); });
+  });
 }
 
 async function ppRenderGantt() {
@@ -2668,6 +2615,7 @@ async function ppRenderGantt() {
     };
     gantt.clearAll();
     gantt.parse(ganttData);
+    ganttAutoFitRowHeights();
     gantt.render();
   } catch (e) { console.error('ppRenderGantt error:', e); }
 }

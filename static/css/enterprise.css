@@ -548,9 +548,6 @@
   border-radius: 8px;
   overflow: hidden;
 }
-#ggGanttContainer .gantt_task_line {
-  border-radius: 4px;
-}
 #ggGanttContainer .gantt_task_line.gantt_project {
   background: var(--accent);
   border-color: var(--accent);

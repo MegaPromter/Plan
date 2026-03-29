@@ -1146,6 +1146,31 @@
 .gantt-filter-btn:hover { color:var(--text); background:var(--surface2); }
 .gantt-filter-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; background:rgba(139,92,246,0.06); }
 
+/* ── Общие стили Ганта (gantt_common.js) ─────────────────────────── */
+.gantt-col-resizer {
+  position: absolute; right: -2px; top: 0; width: 5px; height: 100%;
+  cursor: col-resize; z-index: 10;
+}
+.gantt-col-resizer:hover { background: var(--accent-light, rgba(37,99,235,0.2)); }
+.gantt-grid-resizer {
+  position: absolute; right: -3px; top: 0; width: 6px; height: 100%;
+  cursor: col-resize; z-index: 10; background: transparent;
+}
+.gantt-grid-resizer:hover { background: var(--accent-light, rgba(37,99,235,0.3)); }
+.gantt_grid_data .gantt_cell {
+  white-space: normal !important; overflow: hidden; vertical-align: top;
+}
+.gantt_grid_data .gantt_cell[data-column-name="start_date"],
+.gantt_grid_data .gantt_cell[data-column-name="end_date"],
+.gantt_grid_data .gantt_cell[data-column-name="duration"] {
+  white-space: nowrap !important;
+}
+.gantt_grid_data .gantt_tree_content {
+  white-space: normal; line-height: 1.4; word-break: break-word;
+  overflow: hidden; padding: 4px 0;
+}
+.gantt_task_line { border-radius: 4px; }
+
 /* ── Bulk Mode Button & Checkboxes ────────────────────────────────── */
 #ppBulkModeBtn.active,
 #bulkModeBtn.active {

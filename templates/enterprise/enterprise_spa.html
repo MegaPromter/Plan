@@ -143,7 +143,7 @@
           <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('day')">День</button>
           <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('week')">Неделя</button>
           <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('month')">Месяц</button>
-          <button class="btn btn-xs btn-ghost active" onclick="setGGGanttScale('year')">Год</button>
+          <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('year')">Год</button>
         </div>
       </div>
       {# ── Табличный вид ────────────────────────────────────── #}
@@ -500,5 +500,6 @@
   const IS_WRITER = {{ is_writer|yesno:"true,false" }};
   const EMPLOYEES = {{ employees_json|safe }};
 </script>
+<script src="{% static 'js/gantt_common.js' %}?v=2"></script>
 <script src="{% static 'js/enterprise.js' %}"></script>
 {% endblock %}
