@@ -273,9 +273,12 @@ class TestCapacity:
         assert r.status_code == 200
         data = r.json()
         assert data['year'] == 2026
-        assert isinstance(data['departments'], list)
-        # Отдел из фикстуры должен быть в результате
-        dept_names = [d['department_name'] for d in data['departments']]
+        assert isinstance(data['centers'], list)
+        # Отдел из фикстуры должен быть в результате (в центрах или без центра)
+        dept_names = []
+        for c in data['centers']:
+            dept_names += [d['department_name'] for d in c['departments']]
+        dept_names += [d['department_name'] for d in data.get('no_center_departments', [])]
         assert 'Тестовый отдел' in dept_names
 
 

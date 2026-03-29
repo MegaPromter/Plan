@@ -1029,24 +1029,21 @@ function renderCross() {
     subByParent[pid].push(s);
   });
 
-  const stagesBody = document.getElementById('crossStagesBody');
+  const tableBody = document.getElementById('crossTableBody');
   let rowsHtml = '';
 
-  // Вспомогательная функция: строки работ для этапа (inline в единой таблице)
+  // Вспомогательная: строки работ для этапа
   function _workRows(stageId, works) {
     return works.map(w => {
       const unlink = canAssign
         ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${stageId}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
         : '';
-      return `<tr class="cross-work-row" data-stage="${stageId}" style="display:none;">
-        <td></td>
-        <td style="padding-left:48px;font-size:12px;">${escapeHtml(w.name)}</td>
-        <td class="text-muted" style="font-size:12px;">${escapeHtml(w.row_code)}</td>
-        <td style="font-size:12px;">${w.date_start || '—'}</td>
-        <td style="font-size:12px;">${w.date_end || '—'}</td>
-        <td style="font-size:12px;">${w.labor != null ? w.labor : '—'}</td>
-        <td style="font-size:12px;">${escapeHtml(w.executor)}</td>
-        <td style="font-size:12px;">${escapeHtml(w.department)}</td>
+      return `<tr class="cross-lv2" data-stage="${stageId}" style="display:none;">
+        <td>${escapeHtml(w.name)}</td>
+        <td>${w.date_start || '—'}</td>
+        <td>${w.date_end || '—'}</td>
+        <td>${w.labor != null ? w.labor : '—'}</td>
+        <td>${escapeHtml(w.department)}</td>
         <td>${unlink}</td>
       </tr>`;
     }).join('');
@@ -1054,59 +1051,51 @@ function renderCross() {
 
   ggItems.forEach(item => {
     const itemNum = item.order;
-    const wc = item.works_count || 0;
-    const badge = wc > 0 ? `<span class="cross-works-badge">${wc}</span>` : '';
-    const toggleClick = wc > 0 ? ` onclick="toggleCrossStageWorks(${item.id})" style="cursor:pointer;"` : '';
-    const chevron = wc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
+    const totalWorks = (item.works_count || 0) + (subByParent[item.id] || []).reduce((s, sub) => s + (sub.works_count || 0), 0);
     const assignBtn = canAssign
-      ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${item.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
+      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openAssignWorks(${item.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
       : '';
 
-    // Строка пункта ГГ (жирная, spanning)
-    rowsHtml += `<tr class="cross-item-row"${toggleClick}>
-      <td>${chevron}${itemNum}</td>
-      <td>${escapeHtml(item.name)} ${badge}</td>
-      <td></td>
+    // Пункт ГГ — lv0
+    rowsHtml += `<tr class="cross-lv0">
+      <td>${itemNum}. ${escapeHtml(item.name)} ${totalWorks > 0 ? `<span class="cross-works-badge">${totalWorks}</span>` : ''}</td>
       <td>${item.date_start || '—'}</td>
       <td>${item.date_end || '—'}</td>
-      <td></td><td></td><td></td>
+      <td></td><td></td>
       <td>${assignBtn}</td>
     </tr>`;
 
-    // Работы пункта (скрыты, inline)
-    if (wc > 0) rowsHtml += _workRows(item.id, item.works);
+    // Работы пункта напрямую
+    if ((item.works_count || 0) > 0) rowsHtml += _workRows(item.id, item.works);
 
-    // Вложенные этапы (нумерация А.Б)
+    // Вложенные этапы
     const subs = subByParent[item.id] || [];
     subs.forEach((sub, idx) => {
       const subNum = itemNum + '.' + (idx + 1);
       const swc = sub.works_count || 0;
       const sBadge = swc > 0 ? `<span class="cross-works-badge">${swc}</span>` : '';
-      const sToggleClick = swc > 0 ? ` onclick="toggleCrossStageWorks(${sub.id})" style="cursor:pointer;"` : '';
+      const sToggleClick = swc > 0 ? `onclick="toggleCrossStageWorks(${sub.id})" style="cursor:pointer;"` : '';
       const sChevron = swc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
       const sAssignBtn = canAssign
-        ? `<button class="btn btn-ghost btn-sm" onclick="openAssignWorks(${sub.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
+        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openAssignWorks(${sub.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
         : '';
       const editBtn = IS_WRITER && eo !== 'locked'
-        ? `<button class="btn btn-ghost btn-sm" onclick="openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
+        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
         : '';
 
-      rowsHtml += `<tr class="cross-sub-stage"${sToggleClick}>
-        <td style="padding-left:24px;">${sChevron}${subNum}</td>
-        <td style="padding-left:24px;">${escapeHtml(sub.name)} ${sBadge}</td>
-        <td></td>
+      rowsHtml += `<tr class="cross-lv1" ${sToggleClick}>
+        <td>${sChevron}${subNum}. ${escapeHtml(sub.name)} ${sBadge}</td>
         <td>${sub.date_start || '—'}</td>
         <td>${sub.date_end || '—'}</td>
-        <td></td><td></td><td></td>
+        <td></td><td></td>
         <td>${editBtn}${sAssignBtn}</td>
       </tr>`;
 
-      // Работы этапа (скрыты, inline)
       if (swc > 0) rowsHtml += _workRows(sub.id, sub.works);
     });
   });
 
-  stagesBody.innerHTML = rowsHtml || '<tr><td colspan="9" class="text-center text-muted">Нет пунктов</td></tr>';
+  tableBody.innerHTML = rowsHtml || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Неназначенные работы ПП
   const unassigned = currentCross.unassigned_works || [];
@@ -1120,17 +1109,14 @@ function renderCross() {
     unassignedEl.innerHTML = `
       <div class="ent-section">
         <div class="ent-section-title">Неназначенные работы ПП <span class="cross-works-badge">${unassigned.length}</span></div>
-        <table class="data-table cross-unified-table">
-          <thead><tr><th style="width:60px;">№</th><th>Название</th><th style="width:90px;">Код</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:120px;">Исполнитель</th><th style="width:70px;">Отдел</th><th style="width:50px;"></th></tr></thead>
-          <tbody>${unassigned.map(w => `<tr class="cross-work-row">
-            <td></td>
-            <td style="font-size:12px;">${escapeHtml(w.name)}</td>
-            <td class="text-muted" style="font-size:12px;">${escapeHtml(w.row_code)}</td>
-            <td style="font-size:12px;">${w.date_start || '—'}</td>
-            <td style="font-size:12px;">${w.date_end || '—'}</td>
-            <td style="font-size:12px;">${w.labor != null ? w.labor : '—'}</td>
-            <td style="font-size:12px;">${escapeHtml(w.executor)}</td>
-            <td style="font-size:12px;">${escapeHtml(w.department)}</td>
+        <table class="cross-table">
+          <thead><tr><th>Название</th><th style="width:110px;">Начало</th><th style="width:110px;">Окончание</th><th style="width:80px;">Труд.</th><th style="width:100px;">Отдел</th><th style="width:60px;"></th></tr></thead>
+          <tbody>${unassigned.map(w => `<tr class="cross-lv2">
+            <td>${escapeHtml(w.name)}</td>
+            <td>${w.date_start || '—'}</td>
+            <td>${w.date_end || '—'}</td>
+            <td>${w.labor != null ? w.labor : '—'}</td>
+            <td>${escapeHtml(w.department)}</td>
             <td></td>
           </tr>`).join('')}</tbody>
         </table>
@@ -1166,20 +1152,34 @@ function renderCross() {
 // ── Работы в этапах сквозного графика ────────────────────────────────────
 
 function toggleCrossStageWorks(stageId) {
-  const workRows = document.querySelectorAll(`tr.cross-work-row[data-stage="${stageId}"]`);
+  const workRows = document.querySelectorAll(`tr.cross-lv2[data-stage="${stageId}"]`);
   if (!workRows.length) return;
   const visible = workRows[0].style.display !== 'none';
   workRows.forEach(r => r.style.display = visible ? 'none' : '');
 
-  // Поворот шеврона — ищем в предшествующей строке этапа
   const first = workRows[0];
   const parentRow = first.previousElementSibling;
-  // Если первая work-row не сразу после этапа — ищем через closest
   const chevron = parentRow && parentRow.querySelector('.cross-chevron');
   if (chevron) {
     chevron.classList.toggle('fa-chevron-right', visible);
     chevron.classList.toggle('fa-chevron-down', !visible);
   }
+}
+
+function crossExpandAll() {
+  document.querySelectorAll('.cross-lv2').forEach(r => r.style.display = '');
+  document.querySelectorAll('.cross-chevron').forEach(ch => {
+    ch.classList.remove('fa-chevron-right');
+    ch.classList.add('fa-chevron-down');
+  });
+}
+
+function crossCollapseAll() {
+  document.querySelectorAll('.cross-lv2').forEach(r => r.style.display = 'none');
+  document.querySelectorAll('.cross-chevron').forEach(ch => {
+    ch.classList.remove('fa-chevron-down');
+    ch.classList.add('fa-chevron-right');
+  });
 }
 
 function openAssignWorks(stageId) {
@@ -1742,6 +1742,9 @@ function initCapacity() {
   // Выбор проекта теперь через picker-модалку
 }
 
+let _capData = { centers: [], no_center_departments: [] };
+let _capFilterCenter = null; // null = все
+
 function loadCapacity() {
   const year = document.getElementById('capacityYear').value;
   const mode = document.getElementById('capacityMode').value;
@@ -1750,28 +1753,314 @@ function loadCapacity() {
   let url = `${API}/capacity/?year=${year}&mode=${mode}`;
   if (projectId) url += `&project_id=${projectId}`;
 
-  fetchJSON(url).then(data => renderCapacity(data.departments || []))
-    .catch(e => console.error('loadCapacity:', e));
+  fetchJSON(url).then(data => {
+    _capData = data;
+    _renderCapChips(data.centers || []);
+    _renderCapAll();
+  }).catch(e => console.error('loadCapacity:', e));
 }
 
-function renderCapacity(departments) {
-  const body = document.getElementById('capacityBody');
-  body.innerHTML = departments.map(d => {
-    const barWidth = Math.min(d.loading_pct, 150);
-    return `<tr>
-      <td>${escapeHtml(d.department_name)}</td>
-      <td>${d.headcount}</td>
-      <td>${d.capacity_hours.toLocaleString('ru-RU')}</td>
-      <td>${d.demand_hours.toLocaleString('ru-RU')}</td>
-      <td>
-        <div class="capacity-cell">
-          <div class="loading-bar"><div class="loading-bar-fill loading-bar-fill--${d.level}" style="width:${barWidth}%"></div></div>
-          <span class="capacity-pct capacity-pct--${d.level}">${d.loading_pct}%</span>
-        </div>
-      </td>
-      <td>${levelLabel(d.level)}</td>
+function _capSetFilter(centerId) {
+  _capFilterCenter = _capFilterCenter === centerId ? null : centerId;
+  _renderCapAll();
+}
+
+function _renderCapChips(centers) {
+  const el = document.getElementById('capCenterChips');
+  if (!centers.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<button class="cap-chip ${!_capFilterCenter ? 'active' : ''}" onclick="_capSetFilter(null)">Все</button>` +
+    centers.map(c =>
+      `<button class="cap-chip ${_capFilterCenter === c.center_id ? 'active' : ''}" onclick="_capSetFilter(${c.center_id})">${escapeHtml(c.center_name)}</button>`
+    ).join('');
+}
+
+function _renderCapAll() {
+  const centers = _capData.centers || [];
+  const noCenterDepts = _capData.no_center_departments || [];
+
+  // Фильтрация
+  const filtered = _capFilterCenter
+    ? centers.filter(c => c.center_id === _capFilterCenter)
+    : centers;
+  const showNoCenter = !_capFilterCenter;
+
+  // KPI
+  _renderCapKpi(filtered, showNoCenter ? noCenterDepts : []);
+  // Чипы — обновляем active
+  _renderCapChips(centers);
+  // Карточки
+  renderCapacity(filtered, showNoCenter ? noCenterDepts : []);
+}
+
+function _renderCapKpi(centers, noCenterDepts) {
+  const allDepts = centers.flatMap(c => c.departments).concat(noCenterDepts);
+  const totalHead = allDepts.reduce((s, d) => s + d.headcount, 0);
+  const totalCap = allDepts.reduce((s, d) => s + d.capacity_hours, 0);
+  const totalDem = allDepts.reduce((s, d) => s + d.demand_hours, 0);
+  const avgPct = totalCap > 0 ? (totalDem / totalCap * 100) : 0;
+  const overloaded = allDepts.filter(d => d.level === 'overload').length;
+  const lvl = avgPct < 60 ? 'low' : avgPct < 80 ? 'normal' : avgPct <= 100 ? 'high' : 'overload';
+
+  document.getElementById('capKpiRow').innerHTML = `
+    <div class="cap-kpi"><span class="cap-kpi-label">Сотрудников</span><span class="cap-kpi-value">${totalHead}</span><span class="cap-kpi-sub">в ${allDepts.length} отд.</span></div>
+    <div class="cap-kpi"><span class="cap-kpi-label">Мощность</span><span class="cap-kpi-value">${totalCap.toLocaleString('ru-RU')} ч</span></div>
+    <div class="cap-kpi"><span class="cap-kpi-label">Потребность</span><span class="cap-kpi-value">${totalDem.toLocaleString('ru-RU')} ч</span></div>
+    <div class="cap-kpi"><span class="cap-kpi-label">Загрузка</span><span class="cap-kpi-value cap-kpi-value--${lvl}">${avgPct.toFixed(1)}%</span></div>
+    <div class="cap-kpi"><span class="cap-kpi-label">Перегрузка</span><span class="cap-kpi-value ${overloaded ? 'cap-kpi-value--overload' : ''}">${overloaded}</span><span class="cap-kpi-sub">из ${allDepts.length}</span></div>
+  `;
+}
+
+function _capacityBar(d) {
+  const barWidth = Math.min(d.loading_pct, 150);
+  return `<div class="capacity-cell">
+    <div class="loading-bar"><div class="loading-bar-fill loading-bar-fill--${d.level}" style="width:${barWidth}%"></div></div>
+    <span class="capacity-pct capacity-pct--${d.level}">${d.loading_pct}%</span>
+  </div>`;
+}
+
+const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function _deptRows(departments) {
+  return departments.map(d => `<tr class="cap-dept-row" onclick="showDeptDrill(${d.department_id})" style="cursor:pointer;" title="Помесячная детализация">
+    <td>${escapeHtml(d.department_name)}</td>
+    <td>${d.headcount}</td>
+    <td>${d.capacity_hours.toLocaleString('ru-RU')}</td>
+    <td>${d.demand_hours.toLocaleString('ru-RU')}</td>
+    <td>${_capacityBar(d)}</td>
+    <td>${levelLabel(d.level)}</td>
+  </tr>`).join('');
+}
+
+let _drillChart = null;
+
+function showDeptDrill(deptId) {
+  const allDepts = (_capData.centers || []).flatMap(c => c.departments)
+    .concat(_capData.no_center_departments || []);
+  const dept = allDepts.find(d => d.department_id === deptId);
+  if (!dept || !dept.monthly) return;
+
+  let modal = document.getElementById('capDrillModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'capDrillModal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  const balance = dept.capacity_hours - dept.demand_hours;
+  const balanceStr = balance >= 0
+    ? `<span style="color:var(--success)">+${balance.toLocaleString('ru-RU')} ч</span>`
+    : `<span style="color:var(--danger)">${balance.toLocaleString('ru-RU')} ч</span>`;
+
+  const monthRows = dept.monthly.map(m => {
+    const balM = m.balance;
+    const balStr = balM >= 0
+      ? `<span style="color:var(--success)">+${balM.toLocaleString('ru-RU')}</span>`
+      : `<span style="color:var(--danger);font-weight:600">${balM.toLocaleString('ru-RU')}</span>`;
+    const rowClass = m.level === 'overload' ? 'cap-month-over' : '';
+    const barW = Math.min(m.loading_pct, 150);
+    return `<tr class="${rowClass}">
+      <td style="text-align:left;font-weight:500;">${MONTH_NAMES[m.month - 1]}</td>
+      <td>${m.capacity.toLocaleString('ru-RU')}</td>
+      <td>${m.demand.toLocaleString('ru-RU')}</td>
+      <td><div class="capacity-cell">
+        <div class="loading-bar" style="width:80px;"><div class="loading-bar-fill loading-bar-fill--${m.level}" style="width:${barW}%"></div></div>
+        <span class="capacity-pct capacity-pct--${m.level}">${m.loading_pct}%</span>
+      </div></td>
+      <td>${balStr}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет данных</td></tr>';
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-dialog" style="max-width:950px;">
+      <div class="modal-header">
+        <h3>${escapeHtml(dept.department_name)} — помесячная загрузка</h3>
+        <button class="modal-close" onclick="document.getElementById('capDrillModal').classList.remove('open')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="cap-kpi-row" style="margin-bottom:16px;">
+          <div class="cap-kpi"><span class="cap-kpi-label">Численность</span><span class="cap-kpi-value">${dept.headcount}</span></div>
+          <div class="cap-kpi"><span class="cap-kpi-label">Мощность (год)</span><span class="cap-kpi-value">${dept.capacity_hours.toLocaleString('ru-RU')} ч</span></div>
+          <div class="cap-kpi"><span class="cap-kpi-label">Потребность (год)</span><span class="cap-kpi-value">${dept.demand_hours.toLocaleString('ru-RU')} ч</span></div>
+          <div class="cap-kpi"><span class="cap-kpi-label">Загрузка</span><span class="cap-kpi-value cap-kpi-value--${dept.level}">${dept.loading_pct}%</span></div>
+          <div class="cap-kpi"><span class="cap-kpi-label">Баланс</span><span class="cap-kpi-value">${balanceStr}</span></div>
+        </div>
+        <div class="cap-drill-toggle" style="margin-bottom:12px;">
+          <button class="btn btn-sm btn-outline active" id="drillViewTable" onclick="switchDrillView('table')"><i class="fas fa-table"></i> Таблица</button>
+          <button class="btn btn-sm btn-outline" id="drillViewChart" onclick="switchDrillView('chart')"><i class="fas fa-chart-bar"></i> График</button>
+        </div>
+        <div id="drillTableWrap">
+          <table class="cap-table" style="width:100%;">
+            <thead><tr>
+              <th style="text-align:left;">Месяц</th>
+              <th style="width:140px;">Мощность, ч</th>
+              <th style="width:140px;">Потребн., ч</th>
+              <th style="width:200px;">Загрузка</th>
+              <th style="width:120px;">Баланс</th>
+            </tr></thead>
+            <tbody>${monthRows}</tbody>
+          </table>
+        </div>
+        <div id="drillChartWrap" style="display:none;position:relative;height:320px;">
+          <canvas id="drillChartCanvas"></canvas>
+        </div>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+
+  // Подготовим данные для графика (создадим при переключении)
+  modal._drillMonthly = dept.monthly;
+}
+
+function switchDrillView(view) {
+  const tableWrap = document.getElementById('drillTableWrap');
+  const chartWrap = document.getElementById('drillChartWrap');
+  const btnTable = document.getElementById('drillViewTable');
+  const btnChart = document.getElementById('drillViewChart');
+
+  if (view === 'table') {
+    tableWrap.style.display = '';
+    chartWrap.style.display = 'none';
+    btnTable.classList.add('active');
+    btnChart.classList.remove('active');
+  } else {
+    tableWrap.style.display = 'none';
+    chartWrap.style.display = '';
+    btnTable.classList.remove('active');
+    btnChart.classList.add('active');
+    _renderDrillChart();
+  }
+}
+
+function _renderDrillChart() {
+  const modal = document.getElementById('capDrillModal');
+  const monthly = modal?._drillMonthly;
+  if (!monthly) return;
+
+  if (_drillChart) { _drillChart.destroy(); _drillChart = null; }
+
+  const ctx = document.getElementById('drillChartCanvas');
+  if (!ctx) return;
+
+  const labels = monthly.map(m => MONTH_NAMES[m.month - 1].slice(0, 3));
+  const demands = monthly.map(m => m.demand);
+  const capacities = monthly.map(m => m.capacity);
+
+  _drillChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Потребн. (ч)',
+          data: demands,
+          backgroundColor: 'rgba(59,130,246,0.5)',
+          borderColor: 'rgba(59,130,246,0.8)',
+          borderWidth: 1,
+          borderRadius: 3,
+          order: 2,
+        },
+        {
+          label: 'Мощность (ч)',
+          data: capacities,
+          type: 'line',
+          borderColor: '#dc2626',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointBackgroundColor: '#dc2626',
+          pointRadius: 4,
+          tension: 0.1,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 13 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ru-RU')} ч`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: v => v.toLocaleString('ru-RU') },
+          title: { display: true, text: 'Часы', font: { size: 12 } },
+        },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderCapacity(centers, noCenterDepts) {
+  const container = document.getElementById('capacityCardsContainer');
+  let html = '';
+
+  centers.forEach(c => {
+    const deptCount = c.departments.length;
+    html += `<div class="cap-card">
+      <div class="cap-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="cap-card-title">
+          <i class="fas fa-chevron-down cap-card-chevron"></i>
+          <strong>${escapeHtml(c.center_name)}</strong>
+          <span class="cap-dept-count">${deptCount} отд.</span>
+        </div>
+        <div class="cap-card-summary">
+          <span class="cap-summary-item"><span class="cap-summary-label">Числ.:</span> ${c.headcount}</span>
+          <span class="cap-summary-item"><span class="cap-summary-label">Мощн.:</span> ${c.capacity_hours.toLocaleString('ru-RU')} ч</span>
+          <span class="cap-summary-item"><span class="cap-summary-label">Потр.:</span> ${c.demand_hours.toLocaleString('ru-RU')} ч</span>
+          <span class="cap-summary-item">${_capacityBar(c)}</span>
+          <span class="cap-summary-item">${levelLabel(c.level)}</span>
+        </div>
+      </div>
+      <div class="cap-card-body">
+        <table class="cap-table">
+          <thead><tr>
+            <th>Отдел</th>
+            <th style="width:120px;">Числ.</th>
+            <th style="width:180px;">Мощность, ч</th>
+            <th style="width:180px;">Потребн., ч</th>
+            <th style="width:220px;">Загрузка</th>
+            <th style="width:140px;">Уровень</th>
+          </tr></thead>
+          <tbody>${_deptRows(c.departments)}</tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  if (noCenterDepts.length) {
+    html += `<div class="cap-card">
+      <div class="cap-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="cap-card-title">
+          <i class="fas fa-chevron-down cap-card-chevron"></i>
+          <strong>Без НТЦ-центра</strong>
+          <span class="cap-dept-count">${noCenterDepts.length} отд.</span>
+        </div>
+      </div>
+      <div class="cap-card-body">
+        <table class="cap-table">
+          <thead><tr>
+            <th>Отдел</th>
+            <th style="width:120px;">Числ.</th>
+            <th style="width:180px;">Мощность, ч</th>
+            <th style="width:180px;">Потребн., ч</th>
+            <th style="width:220px;">Загрузка</th>
+            <th style="width:140px;">Уровень</th>
+          </tr></thead>
+          <tbody>${_deptRows(noCenterDepts)}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  container.innerHTML = html || '<div class="empty-state"><p>Нет данных о загрузке</p></div>';
 }
 
 function levelLabel(level) {

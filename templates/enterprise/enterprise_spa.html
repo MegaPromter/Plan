@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=17">
 {% endblock %}
 
 {% block content %}
@@ -207,23 +207,28 @@
       <h2 class="ent-section-title" id="crossTitle" style="font-size:17px; margin-bottom:12px;"></h2>
       <div class="ent-meta-bar" id="crossMeta"></div>
       <div class="ent-section" id="crossStagesSection">
-        <h3 class="ent-section-title">Пункты и этапы</h3>
-        <table class="data-table cross-unified-table" id="crossStagesTable">
-          <thead>
-            <tr>
-              <th style="width:60px;">№</th>
-              <th>Название</th>
-              <th style="width:90px;">Код</th>
-              <th style="width:100px;">Начало</th>
-              <th style="width:100px;">Окончание</th>
-              <th style="width:70px;">Труд.</th>
-              <th style="width:120px;">Исполнитель</th>
-              <th style="width:70px;">Отдел</th>
-              <th style="width:50px;"></th>
-            </tr>
-          </thead>
-          <tbody id="crossStagesBody"></tbody>
-        </table>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 class="ent-section-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">Пункты и этапы</h3>
+          <div class="cross-expand-btns">
+            <button class="btn btn-ghost btn-sm" onclick="crossExpandAll()" title="Развернуть все"><i class="fas fa-expand-alt"></i> Развернуть</button>
+            <button class="btn btn-ghost btn-sm" onclick="crossCollapseAll()" title="Свернуть все"><i class="fas fa-compress-alt"></i> Свернуть</button>
+          </div>
+        </div>
+        <div class="cross-table-wrap" id="crossTableWrap">
+          <table class="cross-table" id="crossTable">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th style="width:110px;">Начало</th>
+                <th style="width:110px;">Окончание</th>
+                <th style="width:80px;">Труд.</th>
+                <th style="width:100px;">Отдел</th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="crossTableBody"></tbody>
+          </table>
+        </div>
       </div>
       <div class="ent-section">
         <h3 class="ent-section-title">Вехи</h3>
@@ -264,21 +269,9 @@
     </div>
   </div>
 
-  <div class="table-responsive">
-    <table class="data-table" id="capacityTable">
-      <thead>
-        <tr>
-          <th>Отдел</th>
-          <th>Численность</th>
-          <th>Располагаемая мощность, ч</th>
-          <th>Потребная трудоёмкость, ч</th>
-          <th>Загрузка, %</th>
-          <th>Уровень</th>
-        </tr>
-      </thead>
-      <tbody id="capacityBody"></tbody>
-    </table>
-  </div>
+  <div class="cap-chips" id="capCenterChips"></div>
+  <div class="cap-kpi-row" id="capKpiRow"></div>
+  <div id="capacityCardsContainer"></div>
 </div>
 
 {# ── Модалка создания/редактирования этапа ГГ ────────────────────────── #}
@@ -503,6 +496,7 @@
   const IS_WRITER = {{ is_writer|yesno:"true,false" }};
   const EMPLOYEES = {{ employees_json|safe }};
 </script>
+<script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/enterprise.js' %}?v=3"></script>
+<script src="{% static 'js/enterprise.js' %}?v=15"></script>
 {% endblock %}

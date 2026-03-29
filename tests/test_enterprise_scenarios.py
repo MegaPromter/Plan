@@ -465,11 +465,18 @@ class TestCapacityCalculation:
         data = r.json()
         assert data['year'] == 2026
 
-        # 4. Наш отдел в результате
-        our_dept = next(
-            (d for d in data['departments'] if d['department_id'] == dept.id),
-            None,
-        )
+        # 4. Наш отдел в результате (API группирует по НТЦ-центрам)
+        def _find_dept(resp_data, dept_id):
+            for c in resp_data.get('centers', []):
+                for d in c.get('departments', []):
+                    if d['department_id'] == dept_id:
+                        return d
+            for d in resp_data.get('no_center_departments', []):
+                if d['department_id'] == dept_id:
+                    return d
+            return None
+
+        our_dept = _find_dept(data, dept.id)
         assert our_dept is not None, 'Отдел не найден в результатах capacity'
         assert our_dept['headcount'] >= 1
         # Мощность = headcount × sum(hours_norm за 12 месяцев)
@@ -480,9 +487,7 @@ class TestCapacityCalculation:
         dept.save(update_fields=['staff_count'])
 
         r = reader_client.get(f'{API}/capacity/?year=2026&mode=staff')
-        our_dept_staff = next(
-            d for d in r.json()['departments'] if d['department_id'] == dept.id
-        )
+        our_dept_staff = _find_dept(r.json(), dept.id)
         assert our_dept_staff['headcount'] == 5
 
         # 6. Проверяем фильтр по проекту (без работ → demand_hours=0)
@@ -490,7 +495,12 @@ class TestCapacityCalculation:
             name_full='Пустой проект', name_short='Пустой', code='EMPTY-001',
         )
         r = reader_client.get(f'{API}/capacity/?year=2026&project_id={proj.id}')
-        for d in r.json()['departments']:
+        resp = r.json()
+        all_depts = []
+        for c in resp.get('centers', []):
+            all_depts.extend(c.get('departments', []))
+        all_depts.extend(resp.get('no_center_departments', []))
+        for d in all_depts:
             assert d['demand_hours'] == 0
 
 

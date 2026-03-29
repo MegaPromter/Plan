@@ -179,6 +179,163 @@
 .capacity-pct--high     { color: #ca8a04; }
 .capacity-pct--overload { color: var(--danger); }
 
+/* ── Чипы фильтра НТЦ ─────────────────────────────────────── */
+.cap-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.cap-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cap-chip:hover { border-color: var(--accent); color: var(--accent); }
+.cap-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── KPI-карточки загрузки ────────────────────────────────── */
+.cap-kpi-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.cap-kpi {
+  flex: 1;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cap-kpi-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.cap-kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+.cap-kpi-value--low { color: var(--muted); }
+.cap-kpi-value--normal { color: var(--success); }
+.cap-kpi-value--high { color: #ca8a04; }
+.cap-kpi-value--overload { color: var(--danger); }
+.cap-kpi-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── Карточки загрузки (НТЦ-центры → отделы) ──────────────── */
+.cap-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.cap-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.cap-card.collapsed .cap-card-body { display: none; }
+.cap-card.collapsed .cap-card-chevron { transform: rotate(-90deg); }
+
+.cap-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface2, #f1f5f9);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cap-card-header:hover { background: color-mix(in srgb, var(--surface2) 80%, var(--accent-light)); }
+.cap-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.cap-card-chevron {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.cap-dept-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.cap-card-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.cap-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.cap-summary-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cap-card-body { padding: 0; }
+
+.cap-table {
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.cap-table thead th {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: var(--surface, #fafbfc);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+.cap-table thead th:first-child { text-align: left; }
+.cap-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+}
+.cap-table td:first-child { text-align: left; }
+.cap-table tbody tr:hover { background: var(--accent-light, rgba(59,130,246,0.04)); }
+.cap-drill-toggle { display: flex; gap: 4px; }
+.cap-drill-toggle .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.cap-month-over { background: rgba(220,38,38,0.04); }
+.cap-month-over:hover { background: rgba(220,38,38,0.08) !important; }
+
 /* Действия в табтопбаре */
 .ent-tab-actions {
   display: flex;
@@ -491,28 +648,77 @@
   margin-left: 6px;
 }
 
-/* ── Единая таблица сквозного графика ────────────────────────── */
-.cross-unified-table .cross-item-row {
+/* ── Единая таблица сквозного графика (вариант 6) ─────────────── */
+.cross-table-wrap {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cross-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cross-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 10px;
+  font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: #fff;
+  border-bottom: 2px solid var(--border2, #cbd5e1);
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+.cross-table thead th:first-child { text-align: left; }
+.cross-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Пункт ГГ — lv0 */
+.cross-table .cross-lv0 td {
+  font-weight: 700;
+  font-size: 14px;
   background: var(--surface2, #f1f5f9);
 }
-.cross-unified-table .cross-item-row td { padding: 8px; }
-
-.cross-unified-table .cross-sub-stage {
-  background: var(--surface, #fafbfc);
+.cross-table .cross-lv0 td:first-child {
+  text-align: left;
+  padding-left: 8px;
 }
-.cross-unified-table .cross-sub-stage td { padding: 6px 8px; }
 
-.cross-unified-table .cross-work-row {
+/* Этап — lv1 */
+.cross-table .cross-lv1 td {
+  font-weight: 600;
   background: #fff;
 }
-.cross-unified-table .cross-work-row td {
-  padding: 4px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+.cross-table .cross-lv1 td:first-child {
+  text-align: left;
+  padding-left: 24px;
 }
-.cross-unified-table .cross-work-row:last-child td {
-  border-bottom: 1px solid var(--border);
+
+/* Работа — lv2 */
+.cross-table .cross-lv2 td {
+  color: var(--muted);
+  background: #fafcff;
 }
+.cross-table .cross-lv2 td:first-child {
+  text-align: left;
+  padding-left: 44px;
+}
+
+.cross-table tbody tr:hover td { background: #dbeafe !important; }
+
+.cross-expand-btns { display: flex; gap: 4px; }
+.cross-expand-btns .btn { font-size: 12px; }
 
 /* ── Переключатель Таблица / Гант в ГГ ───────────────────────── */
 .gg-view-toggle {
