@@ -897,6 +897,17 @@
       clearTourUI();
     };
 
+    // Клик по backdrop (вне карточки) — закрывает модал
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) {
+        var s = { step: 0, completed: true, skipped: true, version: 2 };
+        setState(s);
+        syncToServer(s);
+        removeWelcomeBackdrop();
+        clearTourUI();
+      }
+    });
+
     function removeWelcomeBackdrop() {
       var el = document.getElementById('tourWelcomeBackdrop');
       if (el) el.remove();
@@ -1016,7 +1027,23 @@
     var state = getState();
 
     if (!state) {
-      setTimeout(showWelcomeModal, 1200);
+      // Welcome-модал показываем только на главной странице,
+      // и только после первого взаимодействия пользователя со страницей,
+      // чтобы не перекрывать нативные диалоги браузера (напр. «Смените пароль»)
+      if (matchPage('/accounts/dashboard/')) {
+        var shown = false;
+        var showOnce = function() {
+          if (shown) return;
+          shown = true;
+          document.removeEventListener('click', showOnce, true);
+          document.removeEventListener('keydown', showOnce, true);
+          document.removeEventListener('scroll', showOnce, true);
+          setTimeout(showWelcomeModal, 300);
+        };
+        document.addEventListener('click', showOnce, true);
+        document.addEventListener('keydown', showOnce, true);
+        document.addEventListener('scroll', showOnce, true);
+      }
       return;
     }
 
