@@ -78,5 +78,9 @@ static/lib/vanillajs-datepicker/
 static/css/flatpickr-theme.css
 static/css/pikaday-theme.css
 
+# Node.js (Vue frontend)
+node_modules/
+frontend/node_modules/
+
 # Мусорные файлы
 =1.1.0

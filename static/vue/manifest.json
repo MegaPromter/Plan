@@ -1,0 +1,11 @@
+{
+  "src/notices.js": {
+    "file": "assets/notices-CTwF4Z2D.js",
+    "name": "notices",
+    "src": "src/notices.js",
+    "isEntry": true,
+    "css": [
+      "assets/notices-DdmhuIbf.css"
+    ]
+  }
+}
