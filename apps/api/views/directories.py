@@ -145,14 +145,19 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
             for p in Project.objects.order_by('name_short', 'name_full')
         ]
 
-        # Виртуальный справочник этапов (уникальные stage_num из Work)
-        stage_vals = sorted(set(
-            Work.objects.exclude(stage_num='')
-            .values_list('stage_num', flat=True)
-        ))
+        # Этапы из УП (PPStage) — единый источник (ЕТБД)
+        from apps.works.models import PPStage
         result['stage'] = [
-            {'id': idx, 'value': v, 'parent_id': None}
-            for idx, v in enumerate(stage_vals, start=1)
+            {
+                'id': s.id,
+                'value': s.stage_number or s.name,
+                'label': f'{s.stage_number}. {s.name}' if s.stage_number else s.name,
+                'project_id': s.project_id,
+                'row_code': s.row_code or '',
+                'work_order': s.work_order or '',
+                'parent_id': None,
+            }
+            for s in PPStage.objects.select_related('project').order_by('project_id', 'order', 'id')
         ]
 
         # Виртуальный справочник типов задач (не зависит от seed-данных в Directory)

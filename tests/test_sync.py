@@ -260,10 +260,9 @@ class TestSerialization:
         resp = client.get('/api/tasks/')
         tasks = resp.json()
         task = tasks[0]
-        # Формат: «ПП-план; Этап X; Веха Y; Работа Z»
+        # Формат: «ПП-план; Этап X; Работа Z»
         assert 'Персей' in task['justification']
         assert 'Этап 1' in task['justification']
-        assert 'Веха 2' in task['justification']
         assert '№ работы 001' in task['justification']
 
     def test_sp_deadline_is_own(self, admin_user, pure_sp_work):

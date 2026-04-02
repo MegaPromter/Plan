@@ -850,8 +850,8 @@ var _VM_HIDDEN = {
 };
 // СП: свои наборы скрытых столбцов
 var _VM_HIDDEN_SP = {
-    compact: [1,3,4,5,13],
-    normal:  [1,3,4],
+    compact: [2,3,4,5,6,12,13],
+    normal:  [2,3,4],
     full:    []
 };
 
@@ -871,6 +871,25 @@ function _applyViewMode(wrap, mode, animate) {
     var laborGroup = wrap.querySelector('th[data-col-group="labor"]');
     if (laborGroup) {
         laborGroup.style.display = (mode === 'compact') ? 'none' : '';
+    }
+    // Группа «Сроки согласно ПП» (colspan=2) — скрываем если оба подстолбца скрыты
+    // Группа «Сроки согласно ПП» — скрываем если оба подстолбца скрыты
+    var ppDatesGroup = wrap.querySelector('th[data-col-group="pp-dates"]');
+    if (ppDatesGroup) {
+        // Находим col-idx подстолбцов из DOM
+        var nextRow = ppDatesGroup.closest('tr').nextElementSibling;
+        var subIdxs = [];
+        if (nextRow) {
+            // Подстолбцы сроков — последние th с data-col-idx во второй строке thead
+            var allTh = nextRow.querySelectorAll('th[data-col-idx]');
+            for (var i = allTh.length - 2; i < allTh.length; i++) {
+                if (i >= 0) subIdxs.push(parseInt(allTh[i].dataset.colIdx));
+            }
+        }
+        var bothHidden = subIdxs.length === 2
+            && newHidden.indexOf(subIdxs[0]) !== -1
+            && newHidden.indexOf(subIdxs[1]) !== -1;
+        ppDatesGroup.style.display = bothHidden ? 'none' : '';
     }
 
     // Подсветка появившихся столбцов (были скрыты, стали видимы)

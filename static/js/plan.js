@@ -73,7 +73,7 @@ function _spTasksWithoutStatusFilter() {
           } else if (field === "task_type") {
             // task_type: пустые считаются «ПП» (ПП-записи без типа)
             if (!val.has(t.task_type || "ПП")) return false;
-          } else if (field === "date_start" || field === "date_end" || field === "deadline") {
+          } else if (field === "date_start" || field === "date_end") {
             // Для дат сравниваем только год-месяц (YYYY-MM) — первые 7 символов
             const cellVal = (t[field] || "").slice(0, 7);
             if (!val.has(cellVal)) return false;
@@ -1004,9 +1004,9 @@ let activeMfDropdown = null;
 const MF_DEFAULTS = {
   dept: "▼", sector: "▼",
   project: "▼", stage: "▼", executor: "▼",
-  task_type: "▼", work_number: "▼", justification: "▼",
+  task_type: "▼", work_order: "▼", work_number: "▼", justification: "▼",
   description: "▼", work_name: "▼",
-  date_start: "▼", date_end: "▼", deadline: "▼"
+  date_start: "▼", date_end: "▼"
 };
 
 function getMfValues(col) {
@@ -1022,7 +1022,7 @@ function getMfValues(col) {
       vals.add((t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей");
     } else if (col === "task_type") {
       vals.add(t.task_type || "ПП");
-    } else if (col === "date_start" || col === "date_end" || col === "deadline") {
+    } else if (col === "date_start" || col === "date_end") {
       // Даты группируем по году-месяцу (YYYY-MM)
       if (t[col] && t[col].length >= 7) vals.add(t[col].slice(0, 7));
     } else {
@@ -1045,7 +1045,7 @@ function buildMfDropdown(btn, col) {
   const searchInp = document.createElement("input");
   searchInp.placeholder = "Поиск...";
   searchInp.autocomplete = "off";
-  const _isDateCol = (col === "date_start" || col === "date_end" || col === "deadline");
+  const _isDateCol = (col === "date_start" || col === "date_end");
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
     drop.querySelectorAll(".mf-option").forEach(opt => {
@@ -1305,7 +1305,7 @@ function renderTable() {
             if (!val.has(label)) return false;
           } else if (field === "task_type") {
             if (!val.has(t.task_type || "ПП")) return false;
-          } else if (field === "date_start" || field === "date_end" || field === "deadline") {
+          } else if (field === "date_start" || field === "date_end") {
             // Даты сравниваем по году-месяцу (YYYY-MM)
             const cellVal = (t[field] || "").slice(0, 7);
             if (!val.has(cellVal)) return false;
@@ -1467,9 +1467,10 @@ function makeRow(t, num) {
   tr.appendChild(numTd);
 
   // ── Колонка «Код строки» — бейдж типа задачи + row_code ──
+  // Код строки (col-idx=2) — вставляется после project
   const rcTd = document.createElement("td");
   rcTd.dataset.label = "Код строки";
-  rcTd.dataset.colIdx = "1";
+  rcTd.dataset.colIdx = "2";
   rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
   if (t.row_code) {
     const rcSpan = document.createElement("div");
@@ -1483,7 +1484,14 @@ function makeRow(t, num) {
     ttWrap.innerHTML = taskTypeBadgeHtml(t.task_type, {short: true});
     rcTd.appendChild(ttWrap);
   }
-  tr.appendChild(rcTd);
+
+  // Наряд-заказ (col-idx=3) — read-only из ЕТБД
+  const woTd = document.createElement("td");
+  woTd.dataset.label = "Наряд-заказ";
+  woTd.dataset.colIdx = "3";
+  woTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);";
+  woTd.textContent = t.work_order || '';
+  // rcTd и woTd вставляются ниже, после project
 
   // ── Определение колонок данных ──
   // Каждая колонка: field — поле в объекте задачи, type — тип ячейки,
@@ -1491,7 +1499,7 @@ function makeRow(t, num) {
   // extraField — дополнительное отображение (напр. ФИО руководителя сектора)
   const cols = [
     {field:"project",      type:"select", dirKey:"project", readOnly:true, label:"Проект"},
-    {field:"stage",        type:"select", dirKey:"stage",   readOnly:true, label:"№ Этапа"},
+    {field:"stage",        type:"select", dirKey:"stage",   parentField:"project", parentDirKey:"project", readOnly:true, label:"№ Этапа"},
     {field:"work_number",  type:"text",   label:"№ работы"},
     {field:"justification",type:"text",   label:"Обоснование"},
     {field:"description",  type:"text",   label:"Обозначение"},
@@ -1499,15 +1507,14 @@ function makeRow(t, num) {
     {field:"dept",         type:"select", dirKey:"dept", label:"Отдел"},
     {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head", label:"Сектор"},
     {field:"executor",     type:"select", dirKey:"executor", label:"Разработчик"},
-    {field:"date_start",   type:"date",   label:"Дата начала"},
-    {field:"date_end",     type:"date",   label:"Дата окончания"},
-    {field:"deadline",     type:"date",   label:"Срок выполнения"},
+    {field:"date_start",   type:"date",   readOnly:true, label:"Начало (ПП)"},
+    {field:"date_end",     type:"date",   readOnly:true, label:"Окончание (ПП)"},
   ];
   // Сокращённые ключи колонок — для привязки ширин через th-элементы
-  const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ds","de","dead"];
+  const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ppds","ppde"];
 
-  // Маппинг индекса в cols → data-col-idx (cols[0]=project→2, cols[1]=stage→3, ...)
-  const SP_COL_IDX_MAP = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+  // Маппинг индекса в cols → data-col-idx (cols[0]=project→1, cols[1]=stage→4, ...)
+  const SP_COL_IDX_MAP = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
   // ── Цикл по колонкам: создание ячеек данных ──
   cols.forEach((col, idx) => {
@@ -1674,7 +1681,8 @@ function makeRow(t, num) {
         sel.addEventListener("change", () => {
           // При смене отдела — обновляем список секторов
           if (col.field === "dept") { const s = tr.querySelector("select[data-field='sector']"); if(s) fillSelect(s,"sector",null,sel.value,"dept"); }
-          // stage не зависит от project — каскад не нужен
+          // Каскад: project→stage (этапы фильтруются по проекту из ЕТБД)
+          if (col.field === "project") { const s = tr.querySelector("select[data-field='stage']"); if(s) fillSelect(s,"stage",null,sel.value,"project"); }
           saveTask(t.id, tr);
         });
       }
@@ -1693,6 +1701,14 @@ function makeRow(t, num) {
         }
       }
     } else {
+      // ── Read-only date (Сроки согласно ПП) ──
+      if (col.readOnly && col.type === "date") {
+        td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;text-align:center;";
+        const v = t[col.field] || '';
+        td.textContent = v ? v.split('-').reverse().join('.') : '';
+        tr.appendChild(td);
+        return; // forEach continue
+      }
       // ── Text/date поля (work_number, justification, description, etc.) ──
       // text → textarea, date → input[type=date]
       const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
@@ -1773,10 +1789,11 @@ function makeRow(t, num) {
       td.appendChild(inp);
     }
     tr.appendChild(td);
+    // Вставляем «Код строки» и «Наряд-заказ» после «Проект» (idx=0 → project)
+    if (idx === 0) { tr.appendChild(rcTd); tr.appendChild(woTd); }
   });
 
   // ── Колонка «Действия» — кнопки в зависимости от роли ──
-  // data-col-idx="14" добавляется ниже
   // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
   // User:   📄 отчёт, 🔗 зависимости (только просмотр)
   const actTd = document.createElement("td");
@@ -1841,6 +1858,18 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
       ghost.value = selectedVal; ghost.textContent = selectedVal; ghost.selected = true;
       sel.appendChild(ghost);
     }
+  } else if (dirKey === 'stage' && parentVal && parentDirKey === 'project') {
+    // Этапы: фильтруем по project_id выбранного проекта (ЕТБД)
+    const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
+    if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
+    else items = [];
+    // Фантомная опция для текущего значения из другого проекта
+    if (selectedVal && !items.find(i => i.value === selectedVal)) {
+      const o = document.createElement("option");
+      o.value = selectedVal; o.textContent = selectedVal; o.selected = true;
+      o.style.color = 'var(--muted)';
+      sel.appendChild(o);
+    }
   } else if (parentVal && parentDirKey) {
     const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
     if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
@@ -1858,7 +1887,8 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   items.forEach(item => {
     const o = document.createElement("option");
     o.value = item.value;
-    o.textContent = item.value;
+    // Для этапов показываем label (номер + название) вместо голого номера
+    o.textContent = item.label || item.value;
     if (item.value === selectedVal) o.selected = true;
     // Ограничения по роли: dept_head/sect_head/dept_deputy могут выбрать только свой отдел
     if (dirKey === 'dept' && !IS_ADMIN && USER_DEPT && item.value !== USER_DEPT &&
@@ -2081,35 +2111,23 @@ function openInlineNewRow() {
   // № колонка
   const numTd = document.createElement('td');
   numTd.className = 'num-cell';
+  numTd.dataset.colIdx = '0';
   numTd.innerHTML = '<span style="color:var(--accent);font-weight:700;">+</span>';
   tr.appendChild(numTd);
 
-  // Код строки — неактивная ячейка (генерируется на сервере)
-  const typeTd = document.createElement('td');
-  typeTd.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
-  typeTd.textContent = '(авто)';
-  // Hidden select для task_type — используется при отправке
-  const typeSel = document.createElement('select');
-  typeSel.id = 'inr-task_type';
-  typeSel.style.display = 'none';
-  TASK_TYPES.forEach(t => {
-    const o = document.createElement('option');
-    o.value = t; o.textContent = t;
-    typeSel.appendChild(o);
-  });
-  typeTd.appendChild(typeSel);
-  tr.appendChild(typeTd);
-
-  // Колонки: project, stage, work_number, justification, description, work_name, dept, sector
+  // Колонки: project (ci:1), код строки (ci:2), stage, ...
+  // Код строки вставляется отдельно после project
   const colDefs = [
-    {id:'inr-project',       type:'select', dirKey:'project'},
-    {id:'inr-stage',         type:'select', dirKey:'stage'},
-    {id:'inr-work_number',   type:'text',   placeholder:'№ работы'},
-    {id:'inr-justification', type:'text',   placeholder:'Обоснование'},
-    {id:'inr-description',   type:'text',   placeholder:'Обозначение'},
-    {id:'inr-work_name',     type:'text',   placeholder:'Наименование'},
-    {id:'inr-dept',          type:'select', dirKey:'dept'},
-    {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept'},
+    {id:'inr-project',       type:'select', dirKey:'project', ci:1},
+    {id:'_rc_', type:'static', ci:2}, // Код строки — read-only placeholder
+    {id:'_wo_', type:'static_text', ci:3, text:'—'}, // Наряд-заказ — read-only из ЕТБД
+    {id:'inr-stage',         type:'select', dirKey:'stage',   parentId:'inr-project', parentDirKey:'project', ci:4},
+    {id:'inr-work_number',   type:'text',   placeholder:'№ работы', ci:5},
+    {id:'inr-justification', type:'text',   placeholder:'Обоснование', ci:6},
+    {id:'inr-description',   type:'text',   placeholder:'Обозначение', ci:7},
+    {id:'inr-work_name',     type:'text',   placeholder:'Наименование', ci:8},
+    {id:'inr-dept',          type:'select', dirKey:'dept', ci:9},
+    {id:'inr-sector',        type:'select', dirKey:'sector',  parentId:'inr-dept',    parentDirKey:'dept', ci:10},
   ];
 
   // Авто-значения из профиля пользователя для dept/sector
@@ -2118,6 +2136,30 @@ function openInlineNewRow() {
 
   colDefs.forEach(def => {
     const td = document.createElement('td');
+    if (def.ci !== undefined) td.dataset.colIdx = String(def.ci);
+    if (def.type === 'static') {
+      // Код строки — read-only, авто из ЕТБД
+      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
+      td.textContent = '(авто)';
+      // Hidden select для task_type — используется при отправке
+      const typeSel = document.createElement('select');
+      typeSel.id = 'inr-task_type';
+      typeSel.style.display = 'none';
+      TASK_TYPES.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t; o.textContent = t;
+        typeSel.appendChild(o);
+      });
+      td.appendChild(typeSel);
+      tr.appendChild(td);
+      return;
+    }
+    if (def.type === 'static_text') {
+      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
+      td.textContent = def.text || '—';
+      tr.appendChild(td);
+      return;
+    }
     if (def.type === 'select') {
       const sel = document.createElement('select');
       sel.id = def.id;
@@ -2125,7 +2167,10 @@ function openInlineNewRow() {
       // Автовыбор своего отдела/сектора из профиля
       const defVal = def.id === 'inr-dept' ? _inrDefDept
                    : def.id === 'inr-sector' ? _inrDefSector : null;
-      const defParent = def.id === 'inr-sector' ? _inrDefDept : null;
+      // Родительское значение для каскада (sector←dept, stage←project)
+      let defParent = null;
+      if (def.id === 'inr-sector') defParent = _inrDefDept;
+      else if (def.parentId) { const pSel = document.getElementById(def.parentId); defParent = pSel ? pSel.value : null; }
       fillSelect(sel, def.dirKey, defVal, defParent, def.parentDirKey || null);
       // Каскад: dept→sector→executor, project→stage
       if (def.id === 'inr-dept') {
@@ -2150,7 +2195,28 @@ function openInlineNewRow() {
           }
         });
       }
-      // stage не зависит от project — каскад не нужен
+      // Каскад: project→stage (этапы фильтруются по проекту, ЕТБД)
+      if (def.id === 'inr-project') {
+        sel.addEventListener('change', () => {
+          const stageSel = document.getElementById('inr-stage');
+          if (stageSel) fillSelect(stageSel, 'stage', null, sel.value, 'project');
+          // При смене проекта сбрасываем код строки и наряд-заказ
+          const rcCell = tr.querySelector('td[data-col-idx="2"]');
+          const woCell = tr.querySelector('td[data-col-idx="3"]');
+          if (rcCell) { rcCell.childNodes[0].textContent = '(авто)'; }
+          if (woCell) { woCell.textContent = '—'; }
+        });
+      }
+      // При смене этапа — обновляем код строки и наряд-заказ из ЕТБД
+      if (def.id === 'inr-stage') {
+        sel.addEventListener('change', () => {
+          const stgItem = (dirs['_ids_stage']||[]).find(s => s.value === sel.value);
+          const rcCell = tr.querySelector('td[data-col-idx="2"]');
+          const woCell = tr.querySelector('td[data-col-idx="3"]');
+          if (rcCell) { rcCell.childNodes[0].textContent = stgItem ? (stgItem.row_code || '(авто)') : '(авто)'; }
+          if (woCell) { woCell.textContent = stgItem ? (stgItem.work_order || '—') : '—'; }
+        });
+      }
       td.appendChild(sel);
     } else {
       const ta = document.createElement('textarea');
@@ -2167,6 +2233,7 @@ function openInlineNewRow() {
 
   // Исполнитель (select — одиночный при создании)
   const execTd = document.createElement('td');
+  execTd.dataset.colIdx = '11';
   const execSel = document.createElement('select');
   execSel.id = 'inr-executor';
   execSel.className = 'cell-select';
@@ -2175,25 +2242,21 @@ function openInlineNewRow() {
   tr.appendChild(execTd);
 
   // Дата начала
-  const dsTd = document.createElement('td');
-  const dsInp = document.createElement('input');
-  dsInp.id = 'inr-date_start'; dsInp.type = 'date'; dsInp.className = 'cell-edit date date-pick';
-  dsTd.appendChild(dsInp); tr.appendChild(dsTd);
-
-  // Дата окончания
-  const deTd = document.createElement('td');
-  const deInp = document.createElement('input');
-  deInp.id = 'inr-date_end'; deInp.type = 'date'; deInp.className = 'cell-edit date date-pick';
-  deTd.appendChild(deInp); tr.appendChild(deTd);
-
-  // Срок ПП/ПГ/ТР
-  const deadTd = document.createElement('td');
-  const deadInp = document.createElement('input');
-  deadInp.id = 'inr-deadline'; deadInp.type = 'date'; deadInp.className = 'cell-edit date date-pick';
-  deadTd.appendChild(deadInp); tr.appendChild(deadTd);
+  // Сроки согласно ПП — read-only (заполняются из ПП после создания)
+  const ppDsTd = document.createElement('td');
+  ppDsTd.dataset.colIdx = '12';
+  ppDsTd.style.cssText = 'font-size:11px;color:var(--muted);padding:4px 6px;text-align:center;';
+  ppDsTd.textContent = '—';
+  tr.appendChild(ppDsTd);
+  const ppDeTd = document.createElement('td');
+  ppDeTd.dataset.colIdx = '13';
+  ppDeTd.style.cssText = 'font-size:11px;color:var(--muted);padding:4px 6px;text-align:center;';
+  ppDeTd.textContent = '—';
+  tr.appendChild(ppDeTd);
 
   // Кнопки ✓ / ✕
   const actTd = document.createElement('td');
+  actTd.dataset.colIdx = '14';
   actTd.style.cssText = 'white-space:nowrap;padding:6px 8px;vertical-align:middle;';
   actTd.innerHTML = `
     <button id="taskNewRowSave" title="Сохранить" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
@@ -2214,11 +2277,6 @@ function openInlineNewRow() {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
 
     const executor = document.getElementById('inr-executor')?.value || null;
-    const ds = document.getElementById('inr-date_start')?.value || null;
-    const de = document.getElementById('inr-date_end')?.value || null;
-    const keys = ds && de ? getTaskMonthKeys(ds, de) : [];
-    let planHours = {};
-    if (keys.length === 1 && executor) planHours[keys[0]] = 0;
 
     const _v = id => document.getElementById(id)?.value || '';
     const data = {
@@ -2231,11 +2289,8 @@ function openInlineNewRow() {
       work_number:   _v('inr-work_number'),
       justification: _v('inr-justification'),
       description:   _v('inr-description'),
-      date_start:    ds || '',
-      date_end:      de || '',
-      deadline:      _v('inr-deadline'),
       executor:      executor || '',
-      plan_hours:    planHours,
+      plan_hours:    {},
       executors_list: executor ? [{name: executor, hours: {}}] : [],
     };
 
@@ -2312,7 +2367,7 @@ function openNewTaskModal(taskType, prefill) {
   populateFormSelect(document.getElementById("nt-dept"),     "dept",     _ntDefDept,   null, null);
   populateFormSelect(document.getElementById("nt-sector"),   "sector",   _ntDefSector, _ntDefDept || null, "dept");
   populateFormSelect(document.getElementById("nt-project"),  "project",  prefill?.project  || null, null, null);
-  populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, null, null);
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, prefill?.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
   ["work_name","work_number","justification","date_start","date_end","deadline","actions"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = prefill?.[f] || ""; });
@@ -2348,7 +2403,7 @@ function openEditTaskModal(t) {
   populateFormSelect(document.getElementById("nt-dept"),     "dept",     t.dept     || null, null, null);
   populateFormSelect(document.getElementById("nt-sector"),   "sector",   t.sector   || null, t.dept || null, "dept");
   populateFormSelect(document.getElementById("nt-project"),  "project",  t.project  || null, null, null);
-  populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, null, null);
+  populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, t.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
   ["work_name","work_number","justification","date_start","date_end","deadline"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = t[f] || ""; });
@@ -2431,7 +2486,12 @@ function onNewTaskSectorChange() {
   }
 }
 function onNewTaskProjectChange() {
-  // stage не зависит от project — каскад не нужен
+  // Каскад: project→stage (этапы фильтруются по проекту из ЕТБД)
+  const projVal = document.getElementById("nt-project").value;
+  populateFormSelect(document.getElementById("nt-stage"), "stage", null, projVal, "project");
+  // При смене проекта сбрасываем row_code
+  const rcEl = document.getElementById("newTaskRowCode");
+  if (rcEl) { rcEl.textContent = ''; rcEl.style.display = 'none'; }
 }
 
 // При изменении дат задачи — перестраиваем поля помесячных часов
@@ -2527,6 +2587,17 @@ function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
     } else if (parentVal && parentDirKey === 'dept') {
       items = allItems.filter(e => e.dept === parentVal);
     }
+  } else if (dirKey === 'stage' && parentVal && parentDirKey === 'project') {
+    // Этапы: фильтруем по project_id выбранного проекта (ЕТБД)
+    const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
+    if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
+    else items = [];
+    if (selectedVal && !items.find(i => i.value === selectedVal)) {
+      const ghost = document.createElement("option");
+      ghost.value = selectedVal; ghost.textContent = selectedVal; ghost.selected = true;
+      ghost.style.color = 'var(--muted)';
+      sel.appendChild(ghost);
+    }
   } else if (parentVal && parentDirKey) {
     const parentItem = (dirs[`_ids_${parentDirKey}`]||[]).find(i => i.value === parentVal);
     if (parentItem) items = allItems.filter(i => i.parent_id === parentItem.id);
@@ -2541,7 +2612,9 @@ function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
   let found = false;
   items.forEach(item => {
     const o = document.createElement("option");
-    o.value = item.value; o.textContent = item.value;
+    o.value = item.value;
+    // Для этапов показываем label (номер + название) вместо голого номера
+    o.textContent = item.label || item.value;
     if (item.value === selectedVal) { o.selected = true; found = true; }
     // Ограничения по роли: dept_head/dept_deputy/sector_head могут выбрать только свой отдел
     if (dirKey === 'dept' && !IS_ADMIN && USER_DEPT && item.value !== USER_DEPT &&
@@ -3218,7 +3291,7 @@ function initColResize() {
 
 // Применяет сохранённые ширины колонок из colSettings (загружены с сервера)
 function applyColSettings() {
-  const DATE_COLS_MIN = {ds:150, de:160, dead:175};   // Минимальная ширина для колонок дат
+  const DATE_COLS_MIN = {ppds:150, ppde:160};   // Минимальная ширина для колонок дат ПП
   // Устанавливаем сохранённую ширину (но не меньше минимума для дат)
   for(const[key,val]of Object.entries(colSettings)){const th=document.getElementById(`th-${key}`);if(th&&val.width){const minW=DATE_COLS_MIN[key]||0;th.style.width=Math.max(val.width,minW)+"px";}}
   // Для колонок дат без сохранённой ширины — задаём minWidth
@@ -4057,9 +4130,8 @@ buildExportDropdown('exportBtnContainer', {
     { key: 'work_number',  header: 'Номер работы',    width: 100 },
     { key: 'description',  header: 'Описание',        width: 200 },
     { key: 'executor',     header: 'Исполнитель',     width: 140 },
-    { key: 'date_start',   header: 'Дата начала',     width: 100 },
-    { key: 'date_end',     header: 'Дата окончания',  width: 100 },
-    { key: 'deadline',     header: 'Крайний срок',    width: 100 },
+    { key: 'date_start',   header: 'Начало (ПП)',     width: 100 },
+    { key: 'date_end',     header: 'Окончание (ПП)',  width: 100 },
     { key: 'plan_hours',   header: 'Плановые часы',   width: 100,
       format: r => Object.values(r.plan_hours_all || {}).reduce((s,v) => s + (parseFloat(v)||0), 0) },
     { key: 'stage',        header: 'Этап',            width: 120 },

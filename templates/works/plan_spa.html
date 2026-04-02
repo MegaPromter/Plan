@@ -119,39 +119,40 @@
 <thead>
 <tr>
   <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="1"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="3"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="4"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="5"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="2"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3"><div class="th-inner">Наряд-заказ<div class="col-resize" data-col="wo"></div></div></th>
+  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="4"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="5"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="6"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
-  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="8"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="9"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="10"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
-  <th id="th-ds" rowspan="2" data-sort="date_start" data-col-idx="11"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
-  <th id="th-de" rowspan="2" data-sort="date_end" data-col-idx="12"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
-  <th id="th-dead" rowspan="2" data-sort="deadline" data-col-idx="13"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
+  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th colspan="2" style="text-align:center;" data-col-group="pp-dates"><div class="th-inner" style="justify-content:center;">Сроки согласно ПП</div></th>
   <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="14"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
-  <th id="th-desc" data-sort="description" data-col-idx="6"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname" data-sort="work_name" data-col-idx="7"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-desc" data-sort="description" data-col-idx="7"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname" data-sort="work_name" data-col-idx="8"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-ppds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<div class="col-resize" data-col="ppds"></div></div></th>
+  <th id="th-ppde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<div class="col-resize" data-col="ppde"></div></div></th>
 </tr>
 <tr class="filter-row" id="filterRow">
   <th class="th-num" data-col-idx="0"></th>
-  <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="10"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="11"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="12"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="13"><div class="mf-wrap"><button class="mf-trigger" data-col="deadline" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="10"><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="11"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="12"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="13"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
   <th data-col-idx="14"></th>
 </tr>
 </thead>
@@ -570,39 +571,14 @@
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
 <script src="{% static 'js/plan.js' %}?v=14"></script>
 <script>
-// Калибровка sticky top для multi-row thead (rowspan-совместимо)
+// Гарантийная калибровка sticky top для multi-row thead
+// _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),
+// но при первой загрузке layout может быть не готов — повторяем с задержкой
 (function(){
-  function fixStickyOffsets() {
-    var tbl = document.getElementById('mainTable');
-    if (!tbl) return;
-    var theadRows = tbl.querySelectorAll('thead tr');
-    if (theadRows.length < 3) return;
-
-    var rowspan2H = 0;
-    var row0ths = theadRows[0].querySelectorAll('th');
-    for (var i = 0; i < row0ths.length; i++) {
-      if ((parseInt(row0ths[i].getAttribute('rowspan')) || 1) >= 2) {
-        rowspan2H = row0ths[i].getBoundingClientRect().height;
-        break;
-      }
-    }
-    if (rowspan2H < 1) { setTimeout(fixStickyOffsets, 50); return; }
-
-    var row1th = theadRows[1].querySelector('th');
-    var row1H = row1th ? row1th.getBoundingClientRect().height : 0;
-    var row1Top = rowspan2H - row1H;
-
-    var ths1 = theadRows[1].querySelectorAll('th');
-    for (var j = 0; j < ths1.length; j++) ths1[j].style.top = row1Top + 'px';
-    var ths2 = theadRows[2].querySelectorAll('th');
-    for (var k = 0; k < ths2.length; k++) ths2[k].style.top = rowspan2H + 'px';
-  }
-  // Двойной rAF гарантирует что стили применены после layout
-  function schedule() { requestAnimationFrame(function(){ requestAnimationFrame(fixStickyOffsets); }); }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', schedule);
-  } else {
-    schedule();
+  var wrap = document.querySelector('.table-wrap');
+  if (wrap && typeof _fixStickyHeaderTops === 'function') {
+    setTimeout(function(){ _fixStickyHeaderTops(wrap); }, 100);
+    setTimeout(function(){ _fixStickyHeaderTops(wrap); }, 300);
   }
 })();
 </script>

@@ -62,8 +62,6 @@ def _build_pp_justification(work):
     parts = [pp_plan_name] if pp_plan_name else []
     if work.stage_num:
         parts.append(f'Этап {work.stage_num}')
-    if work.milestone_num:
-        parts.append(f'Веха {work.milestone_num}')
     if work.work_num:
         parts.append(f'№ работы {work.work_num}')
     return '; '.join(parts)
@@ -97,6 +95,7 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
     d = {
         'id': work.id,
         'row_code': (work.pp_stage.row_code if work.pp_stage else work.row_code) or '',
+        'work_order': (work.pp_stage.work_order if work.pp_stage else work.work_order) or '',
         'task_type': (work.task_type or 'Выпуск нового документа') if is_from_pp
                      else (work.task_type or ''),
         'dept': (work.department.code if work.department else '') or '',
@@ -747,6 +746,19 @@ def _set_work_fk_fields(work, d, request):
         ).first()
         if proj_obj:
             work.project = proj_obj
+
+    # pp_stage — привязка этапа ПП (ЕТБД) по stage_number + project
+    stage_val = d.get('stage', '')
+    if stage_val and work.project:
+        from apps.works.models import PPStage
+        pp_stg = PPStage.objects.filter(
+            project=work.project,
+            stage_number=stage_val,
+        ).first()
+        if pp_stg:
+            work.pp_stage = pp_stg
+    elif not stage_val:
+        work.pp_stage = None
 
     # executor — строгий поиск по ФИО (только при точном совпадении)
     executor_name = d.get('executor', '')

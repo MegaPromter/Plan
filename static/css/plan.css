@@ -547,18 +547,20 @@ tr.pp-locked .pp-lock-badge {
    Режимы отображения столбцов СП (compact / normal / full)
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Normal: скрываем код строки, № этапа, № работы */
-.sp-view-normal [data-col-idx="1"],
+/* Normal: скрываем код строки, наряд-заказ, № этапа */
+.sp-view-normal [data-col-idx="2"],
 .sp-view-normal [data-col-idx="3"],
 .sp-view-normal [data-col-idx="4"] {
   display: none !important;
 }
 
-/* Compact: скрываем всё из normal + обоснование, срок выполнения */
-.sp-view-compact [data-col-idx="1"],
+/* Compact: скрываем всё из normal + № работы, обоснование, сроки ПП */
+.sp-view-compact [data-col-idx="2"],
 .sp-view-compact [data-col-idx="3"],
 .sp-view-compact [data-col-idx="4"],
 .sp-view-compact [data-col-idx="5"],
+.sp-view-compact [data-col-idx="6"],
+.sp-view-compact [data-col-idx="12"],
 .sp-view-compact [data-col-idx="13"] {
   display: none !important;
 }
