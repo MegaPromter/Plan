@@ -98,7 +98,7 @@ def _serialize_work_brief(w):
         'labor': float(w.labor) if w.labor else None,
         'executor': str(w.executor) if w.executor else '',
         'department': w.department.code if w.department_id else '',
-        'row_code': w.row_code or '',
+        'row_code': (w.pp_stage.row_code if w.pp_stage_id else w.row_code) or '',
     }
 
 
@@ -149,7 +149,7 @@ def _serialize_cross_schedule(cs):
     works_qs = (
         Work.objects
         .filter(show_in_pp=True, cross_stage_id__in=stage_ids)
-        .select_related('executor', 'department')
+        .select_related('executor', 'department', 'pp_stage')
         .order_by('id')
     )
     works_by_stage = {}
@@ -164,7 +164,7 @@ def _serialize_cross_schedule(cs):
             pp_project__up_project_id=cs.project_id,
             cross_stage__isnull=True,
         )
-        .select_related('executor', 'department')
+        .select_related('executor', 'department', 'pp_stage')
         .order_by('id')
     )
 

@@ -82,10 +82,10 @@
         ⟳ <span class="num" id="spCountInWork">0</span>
       </button>
     </div>
-    <div class="density-toggle" id="densityToggle" style="margin-left:auto;">
-      <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
-      <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
-      <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
+    <div class="density-toggle" id="spViewModeToggle" data-tip="Режим отображения столбцов" style="margin-left:auto;">
+      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i></button>
+      <button data-view="normal" data-tip="Обычно (12 колонок)"><i class="fas fa-bars"></i></button>
+      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i></button>
     </div>
   </div>
 
@@ -118,41 +118,41 @@
 <table id="mainTable">
 <thead>
 <tr>
-  <th class="th-num" rowspan="2"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-project" rowspan="2" data-sort="project"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-stage" rowspan="2" data-sort="stage"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2" data-sort="work_number"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2" data-sort="justification"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№</div></th>
+  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="1"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="2"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="3"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="4"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="5"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
-  <th id="th-dept" rowspan="2" data-sort="department"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2" data-sort="sector"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-exec" rowspan="2" data-sort="executor"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
-  <th id="th-ds" rowspan="2" data-sort="date_start"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
-  <th id="th-de" rowspan="2" data-sort="date_end"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
-  <th id="th-dead" rowspan="2" data-sort="deadline"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
-  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;"><div class="th-inner">Действия</div></th>
+  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="8"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="9"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="10"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-ds" rowspan="2" data-sort="date_start" data-col-idx="11"><div class="th-inner">Дата начала<div class="col-resize" data-col="ds"></div></div></th>
+  <th id="th-de" rowspan="2" data-sort="date_end" data-col-idx="12"><div class="th-inner">Дата окончания<div class="col-resize" data-col="de"></div></div></th>
+  <th id="th-dead" rowspan="2" data-sort="deadline" data-col-idx="13"><div class="th-inner">Срок выполнения<div class="col-resize" data-col="dead"></div></div></th>
+  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="14"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
-  <th id="th-desc" data-sort="description"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname" data-sort="work_name"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-desc" data-sort="description" data-col-idx="6"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname" data-sort="work_name" data-col-idx="7"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
 </tr>
 <tr class="filter-row" id="filterRow">
-  <th class="th-num"></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
-  <th><div class="mf-wrap"><button class="mf-trigger" data-col="deadline" onclick="toggleMf(this)">▼</button></div></th>
-  <th></th>
+  <th class="th-num" data-col-idx="0"></th>
+  <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="10"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="11"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="12"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="13"><div class="mf-wrap"><button class="mf-trigger" data-col="deadline" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="14"></th>
 </tr>
 </thead>
 <tbody id="taskBody"></tbody>

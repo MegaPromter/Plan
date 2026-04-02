@@ -12,6 +12,19 @@ let currentCross   = null;
 
 // ── Утилиты ──────────────────────────────────────────────────────────────
 
+/**
+ * Обёртка fetch с автоматической подстановкой CSRF-токена и JSON-заголовков.
+ *
+ * В отличие от глобального fetchJson() из utils.js, этот вариант:
+ * - Нет дедупликации GET-запросов (enterprise-компоненты делают целевые запросы)
+ * - При ошибке возвращает Promise.reject(data) вместо объекта с флагом _error,
+ *   что позволяет обрабатывать ошибки через .catch(d => ...)
+ *
+ * Пример использования:
+ *   fetchJSON('/api/enterprise/portfolio/')
+ *     .then(data => { ... })
+ *     .catch(err => alert(err.error || 'Ошибка'));
+ */
 function fetchJSON(url, opts) {
   const defaults = {
     headers: {
@@ -21,6 +34,7 @@ function fetchJSON(url, opts) {
     credentials: 'same-origin',
   };
   return fetch(url, { ...defaults, ...opts }).then(r => {
+    // При HTTP-ошибке (4xx/5xx) — парсим JSON тела и отклоняем промис
     if (!r.ok) return r.json().then(d => Promise.reject(d));
     return r.json();
   });
@@ -42,15 +56,29 @@ function closeModal(id) {
 
 // ── Список сотрудников для селектов ГК ──────────────────────────────────
 
+/**
+ * Заполняет выпадающие списки «Главный конструктор» в модальных окнах
+ * создания и редактирования проекта.
+ *
+ * EMPLOYEES — глобальный массив, подставляется Django-шаблоном через JSON:
+ *   <script>var EMPLOYEES = {{ employees_json|safe }};</script>
+ * Каждый элемент: { id: number, name: "Фамилия И.О." }
+ *
+ * При повторном вызове (например, после добавления сотрудника)
+ * сохраняем текущее выбранное значение (cur) и восстанавливаем его после
+ * пересборки option-элементов.
+ */
 function populateChiefSelects() {
   ['createProjectChief', 'editProjectChief'].forEach(selId => {
     const sel = document.getElementById(selId);
     if (!sel) return;
+    // Запоминаем текущее выбранное значение перед пересборкой
     const cur = sel.value;
     sel.innerHTML = '<option value="">—</option>' +
       (typeof EMPLOYEES !== 'undefined' ? EMPLOYEES : []).map(e =>
         `<option value="${e.id}">${escapeHtml(e.name)}</option>`
       ).join('');
+    // Восстанавливаем ранее выбранный вариант
     if (cur) sel.value = cur;
   });
 }
@@ -111,6 +139,7 @@ function switchToTab(target) {
 
   // Загружаем данные при переключении
   if (target === 'capacity') loadCapacity();
+  if (target === 'scenarios') loadScenarios();
 
   // Сохраняем в hash
   _saveHashState({tab: target});
@@ -433,7 +462,8 @@ let _pickerSortDir = 'asc';
 const PICKER_BTN_MAP = {
   gg:       { btn: 'ggProjectBtn',       input: 'ggProjectSelect',    empty: 'Выберите проект...' },
   cross:    { btn: 'crossProjectBtn',    input: 'crossProjectSelect', empty: 'Выберите проект...' },
-  capacity: { btn: 'capacityProjectBtn', input: 'capacityProject',    empty: 'Все проекты' },
+  capacity:  { btn: 'capacityProjectBtn',  input: 'capacityProject',   empty: 'Все проекты' },
+  scenarios: { btn: 'scenarioProjectBtn',  input: 'scenarioProject',   empty: 'Все проекты' },
 };
 
 function openProjectPicker(target) {
@@ -529,6 +559,7 @@ function selectPickerProject(id) {
   if (_pickerTarget === 'gg') loadGG(id);
   else if (_pickerTarget === 'cross') loadCross(id);
   else if (_pickerTarget === 'capacity') loadCapacity();
+  else if (_pickerTarget === 'scenarios') loadScenarios();
 }
 
 // Для Загрузки — кнопка «Все проекты» (сброс)
@@ -2088,6 +2119,219 @@ document.addEventListener('DOMContentLoaded', () => {
   initHelpPanel();
   loadPortfolio();
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// Сценарии «что-если»
+// ══════════════════════════════════════════════════════════════════════════
+
+let _scenariosList = [];
+let _currentScenario = null;
+
+const SCENARIO_STATUS_LABELS = {
+  draft: 'Черновик',
+  active: 'Активный',
+  archived: 'Архив',
+};
+
+function _scenarioStatusBadge(status) {
+  const cls = status === 'active' ? 'status--active'
+    : status === 'archived' ? 'status--closed'
+    : 'status--draft';
+  return `<span class="scenario-status ${cls}">${SCENARIO_STATUS_LABELS[status] || status}</span>`;
+}
+
+function loadScenarios() {
+  const params = new URLSearchParams();
+  const statusFilter = document.getElementById('scenarioFilterStatus')?.value;
+  if (statusFilter) params.set('status', statusFilter);
+  const projId = document.getElementById('scenarioProject')?.value;
+  if (projId) params.set('project_id', projId);
+
+  fetchJSON(`${API}/scenarios/?${params}`).then(data => {
+    _scenariosList = data.scenarios || [];
+    renderScenarioList();
+  }).catch(e => showToast(e.error || 'Ошибка загрузки сценариев', 'danger'));
+}
+
+function renderScenarioList() {
+  const tbody = document.getElementById('scenarioTableBody');
+  if (!_scenariosList.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нет сценариев</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _scenariosList.map(s => {
+    const projName = s.project_id
+      ? (projectsList.find(p => p.id === s.project_id)?.name_short || projectsList.find(p => p.id === s.project_id)?.name_full || '—')
+      : '—';
+    const updated = s.updated_at ? s.updated_at.substring(0, 10) : '';
+    const actions = IS_WRITER
+      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openScenarioEdit(${s.id})" title="Редактировать"><i class="fas fa-pen"></i></button>
+         <button class="btn btn-ghost btn-sm btn-danger-text" onclick="event.stopPropagation(); deleteScenario(${s.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+      : '';
+    return `<tr style="cursor:pointer;" onclick="openScenarioDetail(${s.id})">
+      <td style="text-align:left; font-weight:600;">${escapeHtml(s.name)}</td>
+      <td>${escapeHtml(projName)}</td>
+      <td>${_scenarioStatusBadge(s.status)}</td>
+      <td>${escapeHtml(s.created_by || '')}</td>
+      <td>${updated}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openScenarioCreate() {
+  document.getElementById('scenarioModalTitle').textContent = 'Новый сценарий';
+  document.getElementById('scenarioEditId').value = '';
+  document.getElementById('scenarioName').value = '';
+  document.getElementById('scenarioStatusGroup').style.display = 'none';
+  _fillScenarioProjectSelect('');
+  openModal('scenarioModal');
+}
+
+function openScenarioEdit(id) {
+  const s = _scenariosList.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('scenarioModalTitle').textContent = 'Редактировать сценарий';
+  document.getElementById('scenarioEditId').value = id;
+  document.getElementById('scenarioName').value = s.name;
+  document.getElementById('scenarioStatusGroup').style.display = '';
+  document.getElementById('scenarioStatus').value = s.status;
+  _fillScenarioProjectSelect(s.project_id || '');
+  openModal('scenarioModal');
+}
+
+function _fillScenarioProjectSelect(selectedId) {
+  const sel = document.getElementById('scenarioProjectSelect');
+  sel.innerHTML = '<option value="">— без проекта —</option>' +
+    projectsList.map(p =>
+      `<option value="${p.id}"${String(p.id) === String(selectedId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`
+    ).join('');
+}
+
+function saveScenario() {
+  const id = document.getElementById('scenarioEditId').value;
+  const name = document.getElementById('scenarioName').value.trim();
+  if (!name) { showToast('Укажите название', 'warning'); return; }
+
+  const body = { name };
+  const projVal = document.getElementById('scenarioProjectSelect').value;
+  if (projVal) body.project_id = parseInt(projVal);
+  if (id) body.status = document.getElementById('scenarioStatus').value;
+
+  const url = id ? `${API}/scenarios/${id}/` : `${API}/scenarios/`;
+  const method = id ? 'PUT' : 'POST';
+
+  fetchJSON(url, { method, body: JSON.stringify(body) }).then(() => {
+    closeModal('scenarioModal');
+    loadScenarios();
+    showToast(id ? 'Сценарий обновлён' : 'Сценарий создан', 'success');
+  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+}
+
+function deleteScenario(id) {
+  if (!confirm('Удалить сценарий?')) return;
+  fetchJSON(`${API}/scenarios/${id}/`, { method: 'DELETE' }).then(() => {
+    loadScenarios();
+    showToast('Сценарий удалён', 'success');
+  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+}
+
+function openScenarioDetail(id) {
+  fetchJSON(`${API}/scenarios/${id}/`).then(data => {
+    _currentScenario = data.scenario;
+    renderScenarioDetail();
+    document.getElementById('scenarioListView').style.display = 'none';
+    document.getElementById('scenarioDetailView').style.display = '';
+  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+}
+
+function closeScenarioDetail() {
+  _currentScenario = null;
+  document.getElementById('scenarioDetailView').style.display = 'none';
+  document.getElementById('scenarioListView').style.display = '';
+}
+
+function renderScenarioDetail() {
+  const s = _currentScenario;
+  if (!s) return;
+
+  document.getElementById('scenarioDetailTitle').textContent = s.name;
+  document.getElementById('scenarioDetailStatus').innerHTML = _scenarioStatusBadge(s.status);
+
+  const projName = s.project_id
+    ? (projectsList.find(p => p.id === s.project_id)?.name_short || projectsList.find(p => p.id === s.project_id)?.name_full || '—')
+    : '—';
+
+  document.getElementById('scenarioDetailMeta').innerHTML = `
+    <div class="ent-meta-item"><span class="ent-meta-label">Проект:</span> ${escapeHtml(projName)}</div>
+    <div class="ent-meta-item"><span class="ent-meta-label">Автор:</span> ${escapeHtml(s.created_by || '—')}</div>
+    <div class="ent-meta-item"><span class="ent-meta-label">Создан:</span> ${s.created_at?.substring(0, 10) || '—'}</div>
+    ${IS_WRITER ? `<button class="btn btn-outline btn-sm" onclick="openScenarioEdit(${s.id})"><i class="fas fa-pen"></i> Редактировать</button>` : ''}
+  `;
+
+  const entries = s.entries || [];
+  const tbody = document.getElementById('scenarioEntriesBody');
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нет записей. Добавьте работы для моделирования.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map(e => {
+    const d = e.data || {};
+    const name = d.name || (e.work_id ? `Работа #${e.work_id}` : '(без названия)');
+    const deleteBtn = IS_WRITER
+      ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteScenarioEntry(${s.id}, ${e.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+      : '';
+    return `<tr>
+      <td style="text-align:left;">${escapeHtml(name)}</td>
+      <td>${escapeHtml(d.department || '—')}</td>
+      <td>${d.labor != null ? d.labor : '—'}</td>
+      <td>${d.date_start || '—'}</td>
+      <td>${d.date_end || '—'}</td>
+      <td>${deleteBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openScenarioEntryCreate() {
+  document.getElementById('entryWorkName').value = '';
+  document.getElementById('entryDept').value = '';
+  document.getElementById('entryLabor').value = '';
+  document.getElementById('entryDateStart').value = '';
+  document.getElementById('entryDateEnd').value = '';
+  openModal('scenarioEntryModal');
+}
+
+function saveScenarioEntry() {
+  if (!_currentScenario) return;
+  const name = document.getElementById('entryWorkName').value.trim();
+  if (!name) { showToast('Укажите название работы', 'warning'); return; }
+
+  const data = { name };
+  const dept = document.getElementById('entryDept').value.trim();
+  if (dept) data.department = dept;
+  const labor = document.getElementById('entryLabor').value;
+  if (labor) data.labor = parseFloat(labor);
+  const ds = document.getElementById('entryDateStart').value;
+  if (ds) data.date_start = ds;
+  const de = document.getElementById('entryDateEnd').value;
+  if (de) data.date_end = de;
+
+  fetchJSON(`${API}/scenarios/${_currentScenario.id}/entries/`, {
+    method: 'POST',
+    body: JSON.stringify({ data }),
+  }).then(() => {
+    closeModal('scenarioEntryModal');
+    openScenarioDetail(_currentScenario.id);
+    showToast('Запись добавлена', 'success');
+  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+}
+
+function deleteScenarioEntry(scenarioId, entryId) {
+  if (!confirm('Удалить запись?')) return;
+  // API не имеет отдельного DELETE для entry, удалим через пересоздание сценария
+  // Пока просто перезагружаем — в будущем добавим endpoint
+  showToast('Удаление записей пока не реализовано', 'warning');
+}
 
 /* ── Справка-панель: localStorage persistence ──────────────── */
 function initHelpPanel() {

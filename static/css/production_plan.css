@@ -105,6 +105,7 @@
   white-space: nowrap;
   text-align: center;
 }
+/* top для sticky thead пересчитывается JS (_fixStickyHeaderTops) при смене режима */
 .pp-table thead tr:first-child th  { top: 0; }
 .pp-table thead tr:nth-child(2) th { top: 0; }
 .pp-table thead tr.filter-row th   { top: 0; }
@@ -461,6 +462,35 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 }
 .diff-summary-item { display:flex; align-items:center; gap:4px; }
 .diff-summary-count { font-weight:700; font-size:15px; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Режимы отображения столбцов (compact / normal / full)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Normal: скрываем код строки, наряд-заказ, № этапа, № вехи, № работы */
+.pp-view-normal [data-col-idx="1"],
+.pp-view-normal [data-col-idx="2"],
+.pp-view-normal [data-col-idx="3"],
+.pp-view-normal [data-col-idx="4"],
+.pp-view-normal [data-col-idx="5"] {
+  display: none !important;
+}
+
+/* Compact: скрываем всё из normal + Ф.А4, Норматив, Коэфф, Труд., Подразделение */
+.pp-view-compact [data-col-idx="1"],
+.pp-view-compact [data-col-idx="2"],
+.pp-view-compact [data-col-idx="3"],
+.pp-view-compact [data-col-idx="4"],
+.pp-view-compact [data-col-idx="5"],
+.pp-view-compact [data-col-idx="10"],
+.pp-view-compact [data-col-idx="11"],
+.pp-view-compact [data-col-idx="12"],
+.pp-view-compact [data-col-idx="13"],
+.pp-view-compact [data-col-idx="14"] {
+  display: none !important;
+}
+
+/* Подсветка появившихся столбцов — в components.css (.pp-col-highlight) */
 
 /* ══════════════════════════════════════════════════════════════════════
    Responsive: PP-specific mobile overrides

@@ -27,7 +27,6 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import (
-    generate_row_code,
     get_visibility_filter,
     mcc_finish_data,
     parse_json_hours,
@@ -97,7 +96,7 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
 
     d = {
         'id': work.id,
-        'row_code': work.row_code or '',     # код строки (автогенерация)
+        'row_code': (work.pp_stage.row_code if work.pp_stage else work.row_code) or '',
         'task_type': (work.task_type or 'Выпуск нового документа') if is_from_pp
                      else (work.task_type or ''),
         'dept': (work.department.code if work.department else '') or '',
@@ -273,7 +272,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
         ).select_related(
             'department', 'sector', 'project',
             'executor', 'ntc_center', 'created_by',
-            'pp_project', 'pp_project__up_project',
+            'pp_project', 'pp_project__up_project', 'pp_stage',
         ).prefetch_related(
             'task_executors', 'task_executors__executor',
         ).order_by('-id')
@@ -406,11 +405,6 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             _set_work_fk_fields(work, d, request)
             _set_date_fields(work, d)
             work.save()
-
-            # Автогенерация row_code
-            if work.project and not work.row_code:
-                work.row_code = generate_row_code(work.project)
-                work.save(update_fields=['row_code'])
 
             if executors_list:
                 _save_executors(work, executors_list)
@@ -572,11 +566,6 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.actions = actions
 
                 work.save()
-
-                # Автогенерация row_code при назначении/смене проекта
-                if 'project' in d and work.project and work.project_id != _orig_project_id:
-                    work.row_code = generate_row_code(work.project)
-                    work.save(update_fields=['row_code'])
 
                 # Синхронизация ЖИ при смене task_type
                 if 'task_type' in d:

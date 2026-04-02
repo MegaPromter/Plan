@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=17">
+<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=18">
 {% endblock %}
 
 {% block content %}
@@ -32,6 +32,9 @@
   </button>
   <button class="ent-tab" id="tab-capacity" data-tab="capacity" role="tab" aria-selected="false" aria-controls="panel-capacity">
     <i class="fas fa-tachometer-alt"></i> Загрузка / Мощность
+  </button>
+  <button class="ent-tab" id="tab-scenarios" data-tab="scenarios" role="tab" aria-selected="false" aria-controls="panel-scenarios">
+    <i class="fas fa-flask"></i> Сценарии «что-если»
   </button>
 </div>
 
@@ -274,6 +277,159 @@
   <div id="capacityCardsContainer"></div>
 </div>
 
+{# ── Сценарии «что-если» ────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-scenarios" role="tabpanel" aria-labelledby="tab-scenarios" style="display:none;">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <select id="scenarioFilterStatus" class="form-select form-select-sm" onchange="loadScenarios()">
+        <option value="">Все статусы</option>
+        <option value="draft">Черновик</option>
+        <option value="active">Активный</option>
+        <option value="archived">Архив</option>
+      </select>
+      <button class="project-picker-btn" id="scenarioProjectBtn" onclick="openProjectPicker('scenarios')">
+        <i class="fas fa-folder-open"></i>
+        <span class="picker-label">Все проекты</span>
+      </button>
+      <input type="hidden" id="scenarioProject" value="">
+    </div>
+    <div class="ent-toolbar-right" id="scenarioActions">
+      {% if is_writer %}
+      <button class="btn btn-primary btn-sm" onclick="openScenarioCreate()">
+        <i class="fas fa-plus"></i> Новый сценарий
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Список сценариев #}
+  <div id="scenarioListView">
+    <table class="cross-table" id="scenarioTable">
+      <thead>
+        <tr>
+          <th style="width:35%;">Название</th>
+          <th style="width:20%;">Проект</th>
+          <th style="width:100px;">Статус</th>
+          <th style="width:15%;">Автор</th>
+          <th style="width:120px;">Обновлён</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody id="scenarioTableBody">
+        <tr><td colspan="6" class="text-center text-muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  {# Детальный вид сценария #}
+  <div id="scenarioDetailView" style="display:none;">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+      <button class="btn btn-ghost btn-sm" onclick="closeScenarioDetail()">
+        <i class="fas fa-arrow-left"></i> Назад
+      </button>
+      <h3 class="ent-section-title" id="scenarioDetailTitle" style="margin:0; border:none; padding:0;"></h3>
+      <span id="scenarioDetailStatus"></span>
+    </div>
+    <div class="ent-meta-bar" id="scenarioDetailMeta"></div>
+    <div class="ent-section">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 class="ent-section-title" style="margin:0; border:none; padding:0;">Записи сценария</h4>
+        {% if is_writer %}
+        <button class="btn btn-primary btn-sm" id="scenarioAddEntryBtn" onclick="openScenarioEntryCreate()">
+          <i class="fas fa-plus"></i> Добавить запись
+        </button>
+        {% endif %}
+      </div>
+      <table class="cross-table" id="scenarioEntriesTable">
+        <thead>
+          <tr>
+            <th>Работа / Описание</th>
+            <th style="width:100px;">Отдел</th>
+            <th style="width:100px;">Труд., ч</th>
+            <th style="width:110px;">Начало</th>
+            <th style="width:110px;">Окончание</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="scenarioEntriesBody">
+          <tr><td colspan="6" class="text-center text-muted">Нет записей</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка создания/редактирования сценария ────────────────────────── #}
+<div class="modal-overlay" id="scenarioModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="scenarioModalTitle">Новый сценарий</h3>
+      <button class="modal-close" onclick="closeModal('scenarioModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="scenarioEditId">
+      <div class="form-group">
+        <label>Название <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="scenarioName" class="form-input" placeholder="Название сценария">
+      </div>
+      <div class="form-group">
+        <label>Проект</label>
+        <select id="scenarioProjectSelect" class="form-select">
+          <option value="">— без проекта —</option>
+        </select>
+      </div>
+      <div class="form-group" id="scenarioStatusGroup" style="display:none;">
+        <label>Статус</label>
+        <select id="scenarioStatus" class="form-select">
+          <option value="draft">Черновик</option>
+          <option value="active">Активный</option>
+          <option value="archived">Архив</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('scenarioModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveScenario()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка добавления записи в сценарий ────────────────────────────── #}
+<div class="modal-overlay" id="scenarioEntryModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Новая запись</h3>
+      <button class="modal-close" onclick="closeModal('scenarioEntryModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Описание / название работы <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="entryWorkName" class="form-input" placeholder="Что моделируем">
+      </div>
+      <div class="form-group">
+        <label>Отдел</label>
+        <input type="text" id="entryDept" class="form-input" placeholder="Код отдела">
+      </div>
+      <div class="form-group">
+        <label>Трудоёмкость, ч</label>
+        <input type="number" id="entryLabor" class="form-input" min="0" step="0.01" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Дата начала</label>
+        <input type="date" id="entryDateStart" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Дата окончания</label>
+        <input type="date" id="entryDateEnd" class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('scenarioEntryModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveScenarioEntry()">Добавить</button>
+    </div>
+  </div>
+</div>
+
 {# ── Модалка создания/редактирования этапа ГГ ────────────────────────── #}
 <div class="modal-overlay" id="ggStageModal">
   <div class="modal" style="max-width:460px;">
@@ -498,5 +654,5 @@
 </script>
 <script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/enterprise.js' %}?v=15"></script>
+<script src="{% static 'js/enterprise.js' %}?v=16"></script>
 {% endblock %}

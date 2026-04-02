@@ -288,7 +288,7 @@ function readNotif(id, link) {
     .then(function() { updateNotifBadge(); });
   var el = document.querySelector('.notif-item[data-id="' + id + '"]');
   if (el) el.classList.remove('unread');
-  if (link) window.location.href = link;
+  if (link && /^https?:\/\/|^\//.test(link)) window.location.href = link;
 }
 
 function markAllNotifRead() {

@@ -89,8 +89,16 @@ const PP_COL_LABELS = {
   executor:'Разработчик', task_type:'Тип задачи'
 };
 
-// Этапы сквозного графика текущего проекта (загружается при openProject)
-let _crossStages = [];
+// Маппинг колонки → индекс для data-col-idx (режимы отображения)
+const PP_COL_IDX = {
+  row_code:1, work_order:2, stage_num:3, milestone_num:4, work_num:5,
+  work_designation:6, work_name:7, date_start:8, date_end:9,
+  sheets_a4:10, norm:11, coeff:12, labor:13,
+  center:14, dept:15, sector_head:16, executor:17, task_type:18
+};
+
+// Этапы ПП текущего проекта (загружается при openProject)
+let _ppStages = [];
 
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _ppStatusFilter = 'all';
@@ -102,7 +110,19 @@ function _ppGetStatus(row) {
   return 'inwork';
 }
 
-// Фильтрует rows по colFilters (без status-фильтра) — для подсчёта в панели статусов
+/**
+ * Фильтрует rows по colFilters (без status-фильтра).
+ * Нужно для корректного подсчёта в панели статусов — если бы учитывался
+ * и status-фильтр, цифры в панели "обнулялись" бы при активном фильтре.
+ *
+ * colFilters — объект вида:
+ *   { "mf_dept": Set(["021","022"]), "mf_date_end": Set(["2026-03"]) }
+ *
+ * Типы ключей (только mf_* в ПП — нет текстовых/числовых фильтров как в СП):
+ *   "mf_XXX" — мультифильтр (Set значений), строка подходит если её значение есть в Set
+ *   "mf_date_end" / "mf_date_start" — значение усекается до "YYYY-MM" перед сравнением
+ *   "mf_pp_stage" / "mf_stage_num" — фильтруем по pp_stage_name (читаемое имя)
+ */
 function _ppRowsWithoutStatusFilter() {
   if (Object.keys(colFilters).length === 0) return rows;
   return rows.filter(function(r) {
@@ -110,13 +130,15 @@ function _ppRowsWithoutStatusFilter() {
       if (!colFilters.hasOwnProperty(col)) continue;
       var val = colFilters[col];
       if (col.startsWith('mf_')) {
-        var field = col.slice(3);
+        var field = col.slice(3); // убираем префикс "mf_"
         if (val.size > 0) {
           if (field === 'date_end' || field === 'date_start') {
+            // Даты хранятся как "YYYY-MM-DD", в мультифильтре они по месяцу "YYYY-MM"
             var cellVal = (r[field] || '').slice(0, 7);
             if (!val.has(cellVal)) return false;
-          } else if (field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) {
-            if (!val.has(r.cross_stage_name || '')) return false;
+          } else if (field === 'pp_stage' || (field === 'stage_num')) {
+            // Этапы ПП: фильтруем по читаемому имени, а не ID
+            if (!val.has(r.pp_stage_name || '')) return false;
           } else {
             if (!val.has(r[field] || '')) return false;
           }
@@ -596,13 +618,16 @@ async function openProject(id, name) {
   // Показываем skeleton-загрузку в таблице
   const _ppTbody = document.getElementById('ppTableBody');
   if (_ppTbody) _ppTbody.innerHTML = skeletonRows(10, 19);
-  // Загружаем строки плана и этапы сквозного графика
+  // Загружаем строки плана и этапы проекта УП
+  const upId = projObj && projObj.up_project_id;
   await Promise.all([
     loadPPRows(id),
-    fetch('/api/pp_projects/' + id + '/cross_stages/')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { _crossStages = data; })
-      .catch(() => { _crossStages = []; }),
+    upId
+      ? fetch('/api/projects/' + upId + '/stages/')
+          .then(r => r.ok ? r.json() : [])
+          .then(data => { _ppStages = data; })
+          .catch(() => { _ppStages = []; })
+      : Promise.resolve(_ppStages = []),
   ]);
 
   // Восстанавливаем фильтры из URL (год, месяц, отдел) — для расшаренных ссылок
@@ -712,15 +737,15 @@ function buildSelectHtml(col, row) {
     taskTypes.forEach(d => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
-  } else if (col === 'cross_stage') {
-    // Этап сквозного графика: дропдаун из _crossStages
-    const csId = row.cross_stage_id || '';
+  } else if (col === 'pp_stage') {
+    // Этап ПП: дропдаун из _ppStages
+    const stId = row.pp_stage_id || '';
     options = '<option value="">--</option>';
-    _crossStages.forEach(cs => {
-      const label = cs.num ? (cs.num + '. ' + cs.name) : cs.name;
-      options += `<option value="${cs.id}"${String(cs.id) === String(csId) ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    _ppStages.forEach(s => {
+      const label = s.stage_number ? (s.stage_number + '. ' + s.name) : s.name;
+      options += `<option value="${s.id}"${String(s.id) === String(stId) ? ' selected' : ''}>${escapeHtml(label)}</option>`;
     });
-    return `<select class="cell-edit" data-col="cross_stage" data-id="${row.id}">${options}</select>`;
+    return `<select class="cell-edit" data-col="pp_stage" data-id="${row.id}">${options}</select>`;
   }
   return `<select class="cell-edit" data-col="${col}" data-id="${row.id}">${options}</select>`;
 }
@@ -824,7 +849,7 @@ function renderPPTable() {
             // Для date_end сравниваем по году-месяцу (первые 7 символов)
             const cellVal = (field === 'date_end' || field === 'date_start')
               ? (row[field] || '').slice(0, 7)
-              : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
+              : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
             if (!val.has(cellVal)) return false;
         }
         continue;
@@ -868,6 +893,9 @@ function renderPPTable() {
   _ppAppendBatch(PP_CHUNK);
   // Ставим слушатель прокрутки для подгрузки следующих порций
   _ppAttachScrollListener();
+  // Пересчёт sticky top для строк thead (зависит от режима отображения)
+  const _wrap = document.querySelector('.pp-table-wrap');
+  if (_wrap) requestAnimationFrame(() => _fixStickyHeaderTops(_wrap));
 }
 
 /* ── Добавление порции строк в таблицу ПП ─────────────────────────── */
@@ -889,59 +917,60 @@ function _ppAppendBatch(count) {
     else if (_st === 'overdue') tr.classList.add('row-overdue');
     else tr.classList.add('row-inwork');
     // Первый столбец — порядковый номер (1-based)
-    let html = `<td>${idx + 1}</td>`;
+    let html = `<td data-col-idx="0">${idx + 1}</td>`;
 
     // Может ли текущий пользователь редактировать эту строку (свой отдел/сектор)
     const rowEditable = _canModify(row.dept, row.sector_head);
 
     // Для каждого поля колонки — определяем тип ячейки и строим HTML
     for (const col of PP_COLUMNS) {
-      const val = col === 'stage_num' ? (row.cross_stage_name || row[col] || '') : (row[col] || '');
+      const val = col === 'stage_num' ? (row.pp_stage_name || row[col] || '') : (row[col] || '');
       const lbl = PP_COL_LABELS[col] || col; // метка для мобильного card-layout
+      const ci = PP_COL_IDX[col]; // индекс колонки для режимов отображения
       // Классификация типа ячейки
       const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
-      const isCrossStageCol = col === 'stage_num' && _crossStages.length > 0;
-      const isTextCol = ['work_name', 'work_order', 'work_designation'].includes(col);
+      const isPPStageCol = col === 'stage_num';
+      const isTextCol = ['work_name', 'work_designation'].includes(col);
       const isDateCol = col === 'date_start' || col === 'date_end';
 
-      if (!IS_WRITER || !rowEditable || col === 'row_code') {
-        // Режим только для чтения: статичный текст (row_code всегда read-only — автогенерация)
+      if (!IS_WRITER || !rowEditable || col === 'row_code' || col === 'work_order') {
+        // Режим только для чтения: row_code и work_order — из ЕТБД (PPStage), read-only
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
-          html += `<td data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else if (col === 'task_type' && val) {
-          html += `<td data-label="${lbl}" style="padding:4px 6px;text-align:center;">${taskTypeBadgeHtml(val, {short: true})}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;text-align:center;">${taskTypeBadgeHtml(val, {short: true})}</td>`;
         } else {
-          html += `<td data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
         }
-      } else if (isCrossStageCol) {
+      } else if (isPPStageCol) {
         // Этап сквозного графика — дропдаун в колонке «№ этапа»
-        html += `<td data-label="${lbl}">${buildSelectHtml('cross_stage', row)}</td>`;
+        html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml('pp_stage', row)}</td>`;
       } else if (isSelectCol) {
         // Выпадающий список с учётом роли пользователя
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
-          html += `<td data-label="${lbl}">${buildSelectHtml(col, row)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>` : ''}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else {
-          html += `<td data-label="${lbl}">${buildSelectHtml(col, row)}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}</td>`;
         }
       } else if (isTextCol) {
         // Текстовое поле ввода
-        html += `<td data-label="${lbl}"><input class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+        html += `<td data-col-idx="${ci}" data-label="${lbl}"><input class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       } else if (isDateCol) {
         // Поле выбора даты
-        html += `<td data-label="${lbl}"><input type="date" class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+        html += `<td data-col-idx="${ci}" data-label="${lbl}"><input type="date" class="cell-edit" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       } else {
         // Числовое поле (трудоёмкость, листы, коэффициент и т.д.)
-        html += `<td data-label="${lbl}"><input class="cell-edit cell-num" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
+        html += `<td data-col-idx="${ci}" data-label="${lbl}"><input class="cell-edit cell-num" data-col="${col}" data-id="${row.id}" value="${escapeHtml(val)}"></td>`;
       }
     }
 
     // Последний столбец: кнопки действий
     const pc = row.predecessors_count || 0;
-    html += '<td data-label="Действия" style="text-align:center;white-space:nowrap;">';
+    html += '<td data-col-idx="19" data-label="Действия" style="text-align:center;white-space:nowrap;">';
     html += `<span class="dep-badge action-dep${pc === 0 ? ' zero' : ''}" style="cursor:pointer;margin-right:4px;" onclick="openPPDepsModal(${row.id})" title="Зависимости">🔗</span>`;
     if (rowEditable) {
       html += `<button class="btn-delete" data-id="${row.id}" title="Удалить"><i class="fas fa-times"></i></button>`;
@@ -1014,8 +1043,17 @@ async function handleCellChange(e) {
   if (id !== '_new_' && input._ppLastSaved === value) return;
   input._ppLastSaved = value;
 
-  // Для новой (ещё не сохранённой) строки — только авто-расчёт трудоёмкости, без PUT
+  // Для новой (ещё не сохранённой) строки — авто-расчёт трудоёмкости + ЕТБД поля
   if (id === '_new_') {
+    if (field === 'pp_stage') {
+      // При смене этапа в новой строке — обновляем row_code и work_order из ЕТБД
+      const tr = input.closest('tr');
+      const stg = _ppStages.find(s => String(s.id) === String(value));
+      const rcTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.row_code + '"]');
+      const woTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.work_order + '"]');
+      if (rcTd) rcTd.textContent = stg ? (stg.row_code || 'авто') : 'авто';
+      if (woTd) woTd.textContent = stg ? (stg.work_order || 'авто') : 'авто';
+    }
     if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
       const tr = input.closest('tr');
       let sheets = null, norm = null, coeff = null;
@@ -1151,10 +1189,21 @@ async function handleCellChange(e) {
   // Обновляем данные в локальном массиве
   const rowObj = rows.find(r => String(r.id) === String(id));
   if (rowObj) {
-    if (field === 'cross_stage') {
-      rowObj.cross_stage_id = value || null;
-      const cs = _crossStages.find(s => String(s.id) === String(value));
-      rowObj.cross_stage_name = cs ? cs.name : '';
+    if (field === 'pp_stage') {
+      rowObj.pp_stage_id = value || null;
+      const cs = _ppStages.find(s => String(s.id) === String(value));
+      rowObj.pp_stage_name = cs ? cs.name : '';
+      // Обновляем row_code и work_order из ЕТБД (PPStage)
+      rowObj.row_code = cs ? (cs.row_code || '') : '';
+      rowObj.work_order = cs ? (cs.work_order || '') : '';
+      // Обновляем отображение в DOM
+      const tr = input.closest('tr');
+      if (tr) {
+        const rcTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.row_code + '"]');
+        const woTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.work_order + '"]');
+        if (rcTd) rcTd.textContent = rowObj.row_code || '';
+        if (woTd) woTd.textContent = rowObj.work_order || '';
+      }
     } else {
       rowObj[field] = value;
     }
@@ -1258,34 +1307,35 @@ function openAddRowModal() {
   }
 
   // Первый столбец — знак «+» вместо номера
-  let html = `<td style="color:var(--accent);font-weight:600;">+</td>`;
+  let html = `<td data-col-idx="0" style="color:var(--accent);font-weight:600;">+</td>`;
 
   // Строим ячейки для каждого поля (те же типы, что и в renderPPTable)
   for (const col of PP_COLUMNS) {
     const lbl = PP_COL_LABELS[col] || col;
+    const ci = PP_COL_IDX[col];
     const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
-    const isCrossStageCol = col === 'stage_num' && _crossStages.length > 0;
-    const isTextCol   = ['work_name', 'work_order', 'work_designation'].includes(col);
-    const isDateCol   = col === 'date_end';
+    const isPPStageCol = col === 'stage_num';
+    const isTextCol   = ['work_name', 'work_designation'].includes(col);
+    const isDateCol   = col === 'date_start' || col === 'date_end';
 
-    if (col === 'row_code') {
-      // row_code — автогенерация на сервере, read-only
-      html += `<td data-label="${lbl}" style="font-size:11px;color:var(--muted);padding:4px 6px;">авто</td>`;
-    } else if (isCrossStageCol) {
-      html += `<td data-label="${lbl}">${buildSelectHtml('cross_stage', newRow)}</td>`;
+    if (col === 'row_code' || col === 'work_order') {
+      // row_code и work_order — из ЕТБД (PPStage), read-only
+      html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:11px;color:var(--muted);padding:4px 6px;">авто</td>`;
+    } else if (isPPStageCol) {
+      html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml('pp_stage', newRow)}</td>`;
     } else if (isSelectCol) {
-      html += `<td data-label="${lbl}">${buildSelectHtml(col, newRow)}</td>`;
+      html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, newRow)}</td>`;
     } else if (isTextCol) {
-      html += `<td data-label="${lbl}"><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : ''}"></td>`;
+      html += `<td data-col-idx="${ci}" data-label="${lbl}"><input class="cell-edit" data-col="${col}" data-id="_new_" value="" placeholder="${col === 'work_name' ? 'Наименование' : ''}"></td>`;
     } else if (isDateCol) {
-      html += `<td data-label="${lbl}"><input type="date" class="cell-edit" data-col="${col}" data-id="_new_" value=""></td>`;
+      html += `<td data-col-idx="${ci}" data-label="${lbl}"><input type="date" class="cell-edit" data-col="${col}" data-id="_new_" value=""></td>`;
     } else {
-      html += `<td data-label="${lbl}"><input class="cell-edit cell-num" data-col="${col}" data-id="_new_" value=""></td>`;
+      html += `<td data-col-idx="${ci}" data-label="${lbl}"><input class="cell-edit cell-num" data-col="${col}" data-id="_new_" value=""></td>`;
     }
   }
 
   // Последний столбец: кнопки «Сохранить» (✓) и «Отмена» (✕) — в колонке «Действия»
-  html += `<td data-label="Действия" style="text-align:center;white-space:nowrap;">
+  html += `<td data-col-idx="19" data-label="Действия" style="text-align:center;white-space:nowrap;">
     <button id="ppNewRowSave" title="Сохранить строку" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
     <button id="ppNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
   </td>`;
@@ -1539,7 +1589,7 @@ async function syncToTasks() {
         if (val.size > 0) {
           const cellVal = (field === 'date_end')
             ? (row[field] || '').slice(0, 7)
-            : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
+            : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
           if (!val.has(cellVal)) return false;
         }
         continue;
@@ -1798,8 +1848,8 @@ function getMfValues(col) {
     sourceRows.forEach(r => {
       if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
     });
-  } else if (col === 'cross_stage' || (col === 'stage_num' && _crossStages.length > 0)) {
-    sourceRows.forEach(r => { if (r.cross_stage_name) vals.add(r.cross_stage_name); });
+  } else if (col === 'pp_stage' || (col === 'stage_num')) {
+    sourceRows.forEach(r => { if (r.pp_stage_name) vals.add(r.pp_stage_name); });
   } else {
     sourceRows.forEach(r => { if (r[col]) vals.add(r[col]); });
   }
@@ -2120,7 +2170,7 @@ window.addEventListener('popstate', async () => {
 
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
-  initDensityToggle('.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.density) || 'comfortable');
+  initViewModeToggle('#ppViewModeToggle', '.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.pp_view_mode) || 'full');
   _ppInitSort();
   // Параллельно загружаем справочники и список ПП-проектов
   await Promise.all([loadDirs(), loadProjects()]);
@@ -2179,7 +2229,7 @@ function ppGetFilteredRows() {
         if (val.size > 0) {
             const cellVal = (field === 'date_end' || field === 'date_start')
               ? (row[field] || '').slice(0, 7)
-              : ((field === 'cross_stage' || (field === 'stage_num' && _crossStages.length > 0)) ? (row.cross_stage_name || '') : (row[field] || ''));
+              : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
             if (!val.has(cellVal)) return false;
         }
         continue;

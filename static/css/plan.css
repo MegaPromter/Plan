@@ -542,3 +542,25 @@ tr.pp-locked .pp-lock-badge {
     transition: none !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Режимы отображения столбцов СП (compact / normal / full)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Normal: скрываем код строки, № этапа, № работы */
+.sp-view-normal [data-col-idx="1"],
+.sp-view-normal [data-col-idx="3"],
+.sp-view-normal [data-col-idx="4"] {
+  display: none !important;
+}
+
+/* Compact: скрываем всё из normal + обоснование, срок выполнения */
+.sp-view-compact [data-col-idx="1"],
+.sp-view-compact [data-col-idx="3"],
+.sp-view-compact [data-col-idx="4"],
+.sp-view-compact [data-col-idx="5"],
+.sp-view-compact [data-col-idx="13"] {
+  display: none !important;
+}
+
+/* Подсветка появившихся столбцов (анимация в production_plan.css) */

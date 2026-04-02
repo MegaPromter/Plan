@@ -173,10 +173,10 @@
       <button class="gantt-scale-btn active" data-scale="month" onclick="ppSetGanttScale('month')">Месяцы</button>
       <button class="gantt-scale-btn" data-scale="year" onclick="ppSetGanttScale('year')">Годы</button>
     </span>
-    <div class="density-toggle" id="densityToggle" data-tip="Плотность таблицы" style="margin-left:auto;">
-      <button data-density="compact" data-tip="Компактно"><i class="fas fa-compress-alt"></i></button>
-      <button data-density="comfortable" data-tip="Обычно"><i class="fas fa-bars"></i></button>
-      <button data-density="spacious" data-tip="Просторно"><i class="fas fa-expand-alt"></i></button>
+    <div class="density-toggle" id="ppViewModeToggle" data-tip="Режим отображения столбцов" style="margin-left:auto;">
+      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i></button>
+      <button data-view="normal" data-tip="Обычно (15 колонок)"><i class="fas fa-bars"></i></button>
+      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i></button>
     </div>
   </div>
 
@@ -186,69 +186,69 @@
       <thead>
         <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
-          <th style="width:40px;" rowspan="2">№</th>
-          <th style="width:100px;" rowspan="2" data-sort="row_code">Код строки</th>
-          <th style="width:110px;" rowspan="2" data-sort="work_order">Наряд-заказ</th>
-          <th style="width:90px;" rowspan="2" data-sort="stage_num">№ этапа</th>
-          <th style="width:100px;" rowspan="2" data-sort="milestone_num">№ вехи</th>
-          <th style="width:90px;" rowspan="2" data-sort="work_num">№ работы</th>
+          <th style="width:40px;" rowspan="2" data-col-idx="0">№</th>
+          <th style="width:100px;" rowspan="2" data-sort="row_code" data-col-idx="1">Код строки</th>
+          <th style="width:110px;" rowspan="2" data-sort="work_order" data-col-idx="2">Наряд-заказ</th>
+          <th style="width:90px;" rowspan="2" data-sort="stage_num" data-col-idx="3">№ этапа</th>
+          <th style="width:100px;" rowspan="2" data-sort="milestone_num" data-col-idx="4">№ вехи</th>
+          <th style="width:90px;" rowspan="2" data-sort="work_num" data-col-idx="5">№ работы</th>
           <th colspan="2" style="text-align:center;">Группа</th>
           <th colspan="2" style="text-align:center;">Сроки</th>
-          <th style="width:500px;" colspan="4">Расчёт трудозатрат</th>
-          <th style="width:100px;" rowspan="2" data-sort="ntc_center">Подразделение</th>
-          <th style="width:60px;" rowspan="2" data-sort="department">Отдел</th>
-          <th style="width:130px;" rowspan="2" data-sort="sector">Сектор /<br>Нач. сектора</th>
-          <th style="width:140px;" rowspan="2" data-sort="executor">Разработчик</th>
-          <th style="width:120px;" rowspan="2" data-sort="task_type">Тип задачи</th>
-          <th style="width:70px;" rowspan="2">Действия</th>
+          <th style="width:500px;" colspan="4" data-col-group="labor">Расчёт трудозатрат</th>
+          <th style="width:100px;" rowspan="2" data-sort="ntc_center" data-col-idx="14">Подразделение</th>
+          <th style="width:60px;" rowspan="2" data-sort="department" data-col-idx="15">Отдел</th>
+          <th style="width:130px;" rowspan="2" data-sort="sector" data-col-idx="16">Сектор /<br>Нач. сектора</th>
+          <th style="width:140px;" rowspan="2" data-sort="executor" data-col-idx="17">Разработчик</th>
+          <th style="width:120px;" rowspan="2" data-sort="task_type" data-col-idx="18">Тип задачи</th>
+          <th style="width:70px;" rowspan="2" data-col-idx="19">Действия</th>
         </tr>
         <!-- Вторая строка заголовков: детализация -->
         <tr>
-          <th style="width:300px;" data-sort="work_designation">Обозначение</th>
-          <th style="width:350px;" data-sort="work_name">Наименование</th>
-          <th style="width:110px;" data-sort="date_start">Начало</th>
-          <th style="width:110px;" data-sort="date_end">Окончание</th>
-          <th style="width:100px;">Ф, А4</th>
-          <th style="width:100px;">Норматив</th>
-          <th style="width:100px;">Коэфф</th>
-          <th style="width:130px;">Плановая<br>трудоёмкость</th>
+          <th style="width:300px;" data-sort="work_designation" data-col-idx="6">Обозначение</th>
+          <th style="width:350px;" data-sort="work_name" data-col-idx="7">Наименование</th>
+          <th style="width:110px;" data-sort="date_start" data-col-idx="8">Начало</th>
+          <th style="width:110px;" data-sort="date_end" data-col-idx="9">Окончание</th>
+          <th style="width:100px;" data-col-idx="10">Ф, А4</th>
+          <th style="width:100px;" data-col-idx="11">Норматив</th>
+          <th style="width:100px;" data-col-idx="12">Коэфф</th>
+          <th style="width:130px;" data-col-idx="13">Плановая<br>трудоёмкость</th>
         </tr>
         <!-- Строка мультифильтров по каждому столбцу -->
         <tr class="filter-row" id="filterRow">
           <!-- Номер строки — без фильтра -->
-          <th></th>
+          <th data-col-idx="0"></th>
           <!-- Мультифильтр по коду строки -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="row_code" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="row_code" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по наряд-заказу -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по номеру этапа -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="stage_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="stage_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по номеру вехи -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="milestone_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="milestone_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по номеру работы -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="work_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по обозначению -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по наименованию работы -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по дате начала -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по дате окончания -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Столбцы расчёта — без фильтров (листы, норматив, коэфф, трудоёмкость) -->
-          <th></th><th></th><th></th><th></th>
+          <th data-col-idx="10"></th><th data-col-idx="11"></th><th data-col-idx="12"></th><th data-col-idx="13"></th>
           <!-- Мультифильтр по подразделению (НТЦ) -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="center" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="14"><div class="mf-wrap"><button class="mf-trigger" data-col="center" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по отделу -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="15"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по начальнику сектора -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector_head" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="16"><div class="mf-wrap"><button class="mf-trigger" data-col="sector_head" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по исполнителю -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="17"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Мультифильтр по типу задачи -->
-          <th><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <th data-col-idx="18"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
           <!-- Столбец удаления — без фильтра -->
-          <th></th>
+          <th data-col-idx="19"></th>
         </tr>
       </thead>
       <!-- Тело таблицы: заполняется функцией renderPPTable() -->

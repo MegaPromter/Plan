@@ -37,7 +37,7 @@ function openModal(options = {}) {
         <h3 class="modal-title"></h3>
         <button class="modal-close-btn" title="Закрыть">&times;</button>
     `;
-    header.querySelector('h3').textContent = title;
+    header.querySelector('h3').innerHTML = title;
 
     // Body
     const bodyDiv = document.createElement('div');

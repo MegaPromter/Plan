@@ -73,13 +73,14 @@ ROLE_LABELS = {
 
 # Поля, разрешённые для inline-обновления (production_plan)
 # Только эти поля можно обновлять через PUT ?field=... в ПП
-# NB: row_code НЕ входит — генерируется автоматически (generate_row_code)
+# NB: row_code и work_order НЕ входят — read-only, читаются из PPStage (ЕТБД)
 PRODUCTION_ALLOWED_FIELDS = {
-    'work_order', 'stage_num', 'milestone_num',
+    'stage_num', 'milestone_num',
     'work_num', 'work_designation', 'work_name',
     'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
     'total_2d', 'total_3d', 'labor', 'center', 'dept',
-    'sector_head', 'executor', 'task_type', 'cross_stage',
+    'sector_head', 'executor', 'task_type', 'cross_stage', 'pp_stage',
+    # work_order и row_code — read-only, читаются из PPStage (ЕТБД)
 }
 
 # Поля, разрешённые для inline-обновления (vacations)
@@ -87,29 +88,6 @@ PRODUCTION_ALLOWED_FIELDS = {
 VACATION_ALLOWED_FIELDS = {
     'executor', 'date_start', 'date_end', 'notes',
 }
-
-
-# ── Автогенерация row_code ────────────────────────────────────────────────────
-
-def generate_row_code(project):
-    """Атомарно генерирует следующий row_code для проекта.
-    Вызывать внутри transaction.atomic().
-    Формат: «краткое_название_проекта.N» (НИР-11.1, НИР-11.2, …).
-    Удалённые номера не переиспользуются."""
-    if not project:
-        return ''
-    from apps.works.models import Project as ProjectModel
-    try:
-        locked = ProjectModel.objects.select_for_update().get(pk=project.pk)
-    except ProjectModel.DoesNotExist:
-        return ''
-    # Проверяем prefix ДО инкремента — чтобы не тратить seq впустую
-    prefix = (locked.name_short or locked.name_full or '').strip()
-    if not prefix:
-        return ''
-    locked.row_code_seq += 1
-    locked.save(update_fields=['row_code_seq'])
-    return f'{prefix}.{locked.row_code_seq}'
 
 
 # ── IP-адрес клиента ──────────────────────────────────────────────────────────
@@ -296,7 +274,7 @@ def get_visibility_filter(user):
         elif d.scope_type == 'sector':
             q = q | Q(sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            q = q | Q(executor__last_name__icontains=d.scope_value)
+            q = q | Q(executor__last_name__iexact=d.scope_value)
 
     return q
 
@@ -358,7 +336,7 @@ def get_vacation_visibility_filter(user):
         elif d.scope_type == 'sector':
             q = q | Q(employee__sector__code=d.scope_value)
         elif d.scope_type == 'executor':
-            q = q | Q(employee__last_name__icontains=d.scope_value)
+            q = q | Q(employee__last_name__iexact=d.scope_value)
 
     return q
 

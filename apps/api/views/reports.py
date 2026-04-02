@@ -128,8 +128,9 @@ class ReportListView(LoginRequiredJsonMixin, View):
 
     def get(self, request, task_id):
         try:
-            # Проверяем, что задача существует (чтение отчётов доступно всем авторизованным)
-            if not Work.objects.filter(pk=task_id).exists():
+            # Проверяем, что задача существует И видима для текущего пользователя
+            vis_q = get_visibility_filter(request.user)
+            if not Work.objects.filter(vis_q, pk=task_id).exists():
                 return JsonResponse(
                     {'error': 'Задача не найдена'}, status=404,
                 )

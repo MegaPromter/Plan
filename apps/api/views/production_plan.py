@@ -24,7 +24,6 @@ from apps.api.mixins import (
 )
 from apps.api.utils import (
     PRODUCTION_ALLOWED_FIELDS,
-    generate_row_code,
     resolve_employee,
     safe_date,
     safe_decimal,
@@ -78,9 +77,9 @@ def _serialize_pp(work, today=None):
         'created_by': work.created_by_id,
         'created_at': work.created_at.isoformat() if work.created_at else '',
         'updated_at': work.updated_at.isoformat() if work.updated_at else '',
-        # PP-поля (теперь прямо в Work)
-        'row_code': work.row_code or '',
-        'work_order': work.work_order or '',
+        # PP-поля: row_code и work_order читаются из PPStage (ЕТБД)
+        'row_code': (work.pp_stage.row_code if work.pp_stage else work.row_code) or '',
+        'work_order': (work.pp_stage.work_order if work.pp_stage else work.work_order) or '',
         'stage_num': work.stage_num or '',
         'milestone_num': work.milestone_num or '',
         'work_num': work.work_num or '',
@@ -95,6 +94,8 @@ def _serialize_pp(work, today=None):
         'task_type': work.task_type or '',
         'cross_stage_id': work.cross_stage_id,
         'cross_stage_name': (work.cross_stage.name if work.cross_stage else '') or '',
+        'pp_stage_id': work.pp_stage_id,
+        'pp_stage_name': (work.pp_stage.name if work.pp_stage else '') or '',
         'project_id': work.pp_project_id,
         'predecessors_count': getattr(work, '_pred_count', 0) or 0,
         'has_reports': has_reports,
@@ -153,7 +154,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
             _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
         ).select_related(
             'department', 'department__ntc_center', 'ntc_center',
-            'executor', 'sector', 'pp_project', 'cross_stage',
+            'executor', 'sector', 'pp_project', 'cross_stage', 'pp_stage',
         ).order_by('id')
 
         # Общее количество (до пагинации) — для клиента
@@ -247,18 +248,6 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 created_by=employee,
             )
 
-            # Автогенерация row_code
-            up_project = work.pp_project.up_project if work.pp_project else None
-            if up_project:
-                work.row_code = generate_row_code(up_project)
-                if work.row_code:
-                    work.save(update_fields=['row_code'])
-                else:
-                    logger.warning(
-                        "row_code не сгенерирован для work=%s, project=%s",
-                        work.pk, up_project.pk,
-                    )
-
             # Применяем остальные поля без промежуточных save()
             detail_view = ProductionPlanDetailView()
             changed = False
@@ -285,7 +274,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             Work.objects.annotate(
                 _pred_count=Count('predecessor_links'),
                 _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef('pk'))),
-            ).select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project', 'cross_stage')
+            ).select_related('department', 'ntc_center', 'executor', 'sector', 'pp_project', 'cross_stage', 'pp_stage')
             .get(pk=work.pk)
         )
         return JsonResponse({'id': work.id, 'work': work_data})
@@ -471,6 +460,18 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                     work.cross_stage = None
             else:
                 work.cross_stage = None
+        elif field == 'pp_stage':
+            if value:
+                from apps.works.models import PPStage
+                try:
+                    ps = PPStage.objects.get(pk=int(value))
+                    work.pp_stage = ps
+                    work.stage_num = ps.stage_number or ''
+                except (PPStage.DoesNotExist, ValueError, TypeError):
+                    work.pp_stage = None
+            else:
+                work.pp_stage = None
+                work.stage_num = ''
         else:
             # row_code, work_order, stage_num, milestone_num, work_num, work_designation
             setattr(work, field, value or '')

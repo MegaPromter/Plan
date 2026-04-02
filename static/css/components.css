@@ -176,6 +176,15 @@
   box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
 }
 
+/* ── Подсветка появившихся столбцов при смене режима отображения ─── */
+@keyframes colHighlight {
+  0%   { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(37,99,235,0.08); }
+  100% { box-shadow: inset 0 0 0 0 transparent;     background: transparent; }
+}
+.pp-col-highlight {
+  animation: colHighlight 1.2s ease-out forwards;
+}
+
 /* ── Slideout-панель ─────────────────────────────────────────────── */
 .slideout-overlay {
   position: fixed;

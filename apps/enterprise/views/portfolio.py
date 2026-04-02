@@ -47,19 +47,42 @@ def _serialize_portfolio_project(proj):
 
 
 def _annotate_portfolio(qs):
-    """Добавляет подзапросы pp_count, sp_count, labor_total к QuerySet проектов."""
+    """
+    Добавляет к QuerySet проектов три подзапроса через Subquery.
+    Такой подход позволяет получить агрегаты за ОДИН SQL-запрос вместо N+1.
+
+    Subquery работает как коррелированный подзапрос: для каждого Project
+    выполняется вложенный SELECT, связанный через OuterRef('pk').
+
+    - pp_count: количество строк ПП (Work.show_in_pp=True), связанных через
+      pp_project.up_project → Project. Нужен group by + COUNT, поэтому
+      используется .values(...).annotate(...).values('c')[:1]
+      (трюк с [:1] даёт LIMIT 1 для одного скалярного значения).
+
+    - sp_count: количество задач СП (Work.show_in_plan=True), связанных напрямую
+      через project_id → Project.pk.
+
+    - labor_total: сумма трудозатрат по всем работам проекта (и ПП, и СП).
+      Используем Q(... | ...) чтобы охватить оба источника.
+
+    Coalesce(subquery, Value(0)) заменяет NULL на 0 — если у проекта нет работ,
+    подзапрос вернёт NULL, а не 0.
+    """
+    # Считаем строки ПП, привязанные к проекту через PPProject.up_project
     pp_count_sq = Subquery(
         Work.objects.filter(
             pp_project__up_project=OuterRef('pk'), show_in_pp=True,
         ).order_by().values('pp_project__up_project').annotate(c=Count('id')).values('c')[:1],
         output_field=IntegerField(),
     )
+    # Считаем задачи СП, напрямую привязанные к проекту
     sp_count_sq = Subquery(
         Work.objects.filter(
             project=OuterRef('pk'), show_in_plan=True,
         ).order_by().values('project').annotate(c=Count('id')).values('c')[:1],
         output_field=IntegerField(),
     )
+    # Суммируем трудозатраты по всем работам проекта (ПП + СП)
     labor_sq = Subquery(
         Work.objects.filter(
             Q(pp_project__up_project=OuterRef('pk')) | Q(project=OuterRef('pk')),

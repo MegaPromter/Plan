@@ -95,6 +95,28 @@ class PPProject(models.Model):
         return self.name
 
 
+class PPStage(models.Model):
+    """Этап — привязан к проекту УП (Project)."""
+    project      = models.ForeignKey(
+        'Project', on_delete=models.CASCADE,
+        related_name='stages', verbose_name='Проект УП',
+    )
+    name         = models.CharField('Наименование этапа', max_length=255)
+    stage_number = models.CharField('Номер этапа', max_length=50, blank=True, default='')
+    work_order   = models.CharField('Наряд-заказ', max_length=100, blank=True, default='')
+    row_code     = models.CharField('Код строки', max_length=50, blank=True, default='')
+    order        = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        db_table     = 'work_pp_stage'
+        verbose_name = 'Этап ПП'
+        verbose_name_plural = 'Этапы ПП'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f'{self.stage_number}. {self.name}' if self.stage_number else self.name
+
+
 # ── Справочники проектов УП ────────────────────────────────────────────────────
 
 class Project(models.Model):
@@ -133,7 +155,7 @@ class Project(models.Model):
     name_full  = models.CharField('Полное наименование', max_length=500)
     name_short = models.CharField('Краткое наименование', max_length=100, blank=True)
     code       = models.CharField('Шифр / код', max_length=100, blank=True)
-    row_code_seq = models.PositiveIntegerField('Счётчик row_code', default=0)
+
 
     # ── Поля Enterprise ──────────────────────────────────────────────────
     status = models.CharField(
@@ -260,6 +282,13 @@ class Work(models.Model):
         'enterprise.CrossStage', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='works',
         verbose_name='Этап сквозного графика',
+    )
+
+    # ── Привязка к этапу ПП ─────────────────────────────────────────────
+    pp_stage = models.ForeignKey(
+        PPStage, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='works',
+        verbose_name='Этап ПП',
     )
 
     # ── Поля ПП (+ единые поля stage_num, work_num, work_designation) ────

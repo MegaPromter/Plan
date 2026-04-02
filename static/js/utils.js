@@ -806,6 +806,113 @@ function initDensityToggle(wrapSelector, savedDensity) {
     });
 }
 
+/* ── Переключатель режима отображения столбцов (compact/normal/full) ──── */
+
+function initViewModeToggle(toggleSelector, wrapSelector, savedMode, options) {
+    var toggle = document.querySelector(toggleSelector);
+    var wrap   = document.querySelector(wrapSelector);
+    if (!toggle || !wrap) return;
+    var opts = options || {};
+    var hiddenMap = opts.hiddenMap || _VM_HIDDEN;
+    var settingKey = opts.settingKey || 'pp_view_mode';
+    var cssPrefix = opts.cssPrefix || 'pp-view';
+    // Привязываем настройки к wrap для использования в _applyViewMode
+    wrap._vmHiddenMap = hiddenMap;
+    wrap._vmCssPrefix = cssPrefix;
+
+    var mode = savedMode || 'full';
+    _applyViewMode(wrap, mode, false);
+
+    toggle.querySelectorAll('button').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.view === mode);
+        btn.addEventListener('click', function() {
+            var m = this.dataset.view;
+            _applyViewMode(wrap, m, true);
+            toggle.querySelectorAll('button').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.view === m);
+            });
+            var body = {};
+            body[settingKey] = m;
+            fetch('/api/col_settings/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+                body: JSON.stringify(body)
+            }).catch(function() {});
+        });
+    });
+}
+
+// Скрытые индексы столбцов для каждого режима (по умолчанию — ПП)
+var _VM_HIDDEN = {
+    compact: [1,2,3,4,5,10,11,12,13,14],
+    normal:  [1,2,3,4,5],
+    full:    []
+};
+// СП: свои наборы скрытых столбцов
+var _VM_HIDDEN_SP = {
+    compact: [1,3,4,5,13],
+    normal:  [1,3,4],
+    full:    []
+};
+
+function _applyViewMode(wrap, mode, animate) {
+    // Определяем, какие столбцы были скрыты ранее
+    var hiddenMap = wrap._vmHiddenMap || _VM_HIDDEN;
+    var prefix = wrap._vmCssPrefix || 'pp-view';
+    var prevMode = wrap.dataset.viewMode || 'full';
+    var prevHidden = hiddenMap[prevMode] || [];
+    var newHidden  = hiddenMap[mode] || [];
+
+    wrap.classList.remove(prefix + '-compact', prefix + '-normal', prefix + '-full');
+    wrap.classList.add(prefix + '-' + mode);
+    wrap.dataset.viewMode = mode;
+
+    // Группа «Расчёт трудозатрат» (colspan=4) — скрываем в compact
+    var laborGroup = wrap.querySelector('th[data-col-group="labor"]');
+    if (laborGroup) {
+        laborGroup.style.display = (mode === 'compact') ? 'none' : '';
+    }
+
+    // Подсветка появившихся столбцов (были скрыты, стали видимы)
+    if (animate && prevMode !== mode) {
+        // Столбцы, которые были скрыты в prevMode, но не скрыты в newMode
+        var appeared = prevHidden.filter(function(idx) {
+            return newHidden.indexOf(idx) === -1;
+        });
+        if (appeared.length > 0) {
+            // Убираем предыдущие подсветки
+            wrap.querySelectorAll('.pp-col-highlight').forEach(function(el) {
+                el.classList.remove('pp-col-highlight');
+            });
+            // Добавляем подсветку к появившимся
+            appeared.forEach(function(idx) {
+                wrap.querySelectorAll('[data-col-idx="' + idx + '"]').forEach(function(cell) {
+                    cell.classList.add('pp-col-highlight');
+                });
+            });
+            // Подсветка группы «Расчёт трудозатрат» при переходе compact → normal/full
+            if (laborGroup && prevHidden.indexOf(10) !== -1 && newHidden.indexOf(10) === -1) {
+                laborGroup.classList.add('pp-col-highlight');
+            }
+        }
+    }
+
+    // Пересчёт sticky top для строк thead после изменения видимости столбцов
+    requestAnimationFrame(function() { _fixStickyHeaderTops(wrap); });
+}
+
+function _fixStickyHeaderTops(wrap) {
+    var table = wrap.querySelector('table');
+    if (!table) return;
+    var rows = table.querySelectorAll('thead tr');
+    var cumTop = 0;
+    for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i].querySelectorAll('th');
+        cells.forEach(function(th) { th.style.top = cumTop + 'px'; });
+        cumTop += rows[i].offsetHeight;
+    }
+}
+
 /* ── Skeleton rows (общая заглушка загрузки таблицы) ──────────────────── */
 
 function skeletonRows(count, cols) {

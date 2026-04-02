@@ -136,7 +136,7 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
             'id': w.id,
             'work_name': w.work_name or w.work_num or '',
             'work_num': w.work_num or '',
-            'project': w.row_code or '',
+            'project': (w.pp_stage.row_code if w.pp_stage_id else w.row_code) or '',
             'project_name': (
                 w.project.name if w.project else
                 (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
@@ -302,7 +302,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
             .annotate(_done=has_reports)
-            .select_related('department', 'sector', 'executor', 'project', 'pp_project', 'pp_project__up_project')
+            .select_related('department', 'sector', 'executor', 'project', 'pp_project', 'pp_project__up_project', 'pp_stage')
         )
 
         # Фильтр по годам: включаем работы с датами в выбранных годах

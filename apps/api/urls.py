@@ -77,6 +77,7 @@ from .views.notifications import (
 
 # Вьюхи проектов производственного плана (PPProject)
 from .views.pp_projects import PPProjectCreateView, PPProjectDetailView, PPProjectListView
+from .views.pp_stages import PPStageCreateView, PPStageDetailView, PPStageListView
 
 # Вьюхи производственного плана (PPWork)
 from .views.production_plan import (
@@ -247,6 +248,10 @@ urlpatterns = [
     path('pp_projects/<int:pk>/', PPProjectDetailView.as_view()),
     # GET /api/pp_projects/<pk>/cross_stages/ — этапы сквозного графика
     path('pp_projects/<int:pk>/cross_stages/', PPCrossStagesView.as_view()),
+    # Этапы проекта (PPStage)
+    path('projects/<int:pk>/stages/', PPStageListView.as_view()),
+    path('projects/<int:pk>/stages/create/', PPStageCreateView.as_view()),
+    path('projects/<int:pk>/stages/<int:stage_id>/', PPStageDetailView.as_view()),
 
     # ── Отпуска ─────────────────────────────────────────────────────────
     # GET /api/vacations/ — список отпусков (с фильтрацией по роли)

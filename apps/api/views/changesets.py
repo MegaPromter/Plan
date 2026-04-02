@@ -34,7 +34,6 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import (
-    generate_row_code,
     safe_date,
     safe_decimal,
 )
@@ -103,8 +102,8 @@ def _snapshot_work(work):
     return {
         'id': work.id,
         'work_name': work.work_name or '',
-        'row_code': work.row_code or '',
-        'work_order': work.work_order or '',
+        'row_code': (work.pp_stage.row_code if work.pp_stage_id else work.row_code) or '',
+        'work_order': (work.pp_stage.work_order if work.pp_stage_id else work.work_order) or '',
         'stage_num': work.stage_num or '',
         'milestone_num': work.milestone_num or '',
         'work_num': work.work_num or '',
@@ -490,9 +489,6 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
         )
         # Применяем поля из field_changes
         self._set_fields(work, fc)
-        # Генерируем row_code
-        if not work.row_code and cs.pp_project and cs.pp_project.up_project:
-            work.row_code = generate_row_code(cs.pp_project.up_project)
         work.save()
 
     def _apply_update(self, item):

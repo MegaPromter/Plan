@@ -44,8 +44,11 @@ class LoadDumpView(View):
             body = {}
 
         expected_secret = os.environ.get('LOAD_DUMP_SECRET', '')
+        if not expected_secret:
+            logger.error('load_dump: LOAD_DUMP_SECRET не настроен')
+            return JsonResponse({'error': 'Endpoint не настроен'}, status=500)
         secret = body.get('secret', '').strip()
-        if not expected_secret or secret != expected_secret:
+        if secret != expected_secret:
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         # Проверяем наличие файла

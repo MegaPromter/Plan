@@ -40,24 +40,41 @@ function _spGetStatus(t) {
   return 'inwork';
 }
 
-// Фильтрует tasks по всем colFilters (без статус-фильтра) — для подсчёта в панели статусов
+/**
+ * Фильтрует tasks по всем colFilters (без статус-фильтра).
+ * Нужно для корректного подсчёта в панели статусов (иначе панель обнуляется
+ * когда сам статус-фильтр уже применён, и цифры не совпадут).
+ *
+ * colFilters — объект вида:
+ *   { "dept": "021",  "mf_executor": Set(["Иванов"]), "plan_hours_total": "10" }
+ *
+ * Типы ключей:
+ *   "mf_XXX" — мультифильтр (Set значений), совпадение любого из них
+ *   "plan_hours_total" — числовой порог (сумма часов >= threshold)
+ *   остальные — подстрока (case-insensitive contains)
+ */
 function _spTasksWithoutStatusFilter() {
   if (Object.keys(colFilters).length === 0) return tasks;
   return tasks.filter(t => {
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith("mf_")) {
+        // Мультифильтр: col = "mf_field", val = Set выбранных значений
         const field = col.slice(3);
         if (val.size > 0) {
           if (field === "executor") {
+            // Исполнитель может быть как основным (t.executor), так и в списке (t.executors_list)
             const inSingle = val.has(t.executor || "");
             const inList = (t.executors_list || []).some(ex => val.has(ex.name || ""));
             if (!inSingle && !inList) return false;
           } else if (field === "has_deps") {
+            // Псевдо-поле: "Со связями" / "Без связей" — вычисляется на лету
             const label = (t.predecessors_count || 0) > 0 ? "Со связями" : "Без связей";
             if (!val.has(label)) return false;
           } else if (field === "task_type") {
+            // task_type: пустые считаются «ПП» (ПП-записи без типа)
             if (!val.has(t.task_type || "ПП")) return false;
           } else if (field === "date_start" || field === "date_end" || field === "deadline") {
+            // Для дат сравниваем только год-месяц (YYYY-MM) — первые 7 символов
             const cellVal = (t[field] || "").slice(0, 7);
             if (!val.has(cellVal)) return false;
           } else {
@@ -67,11 +84,13 @@ function _spTasksWithoutStatusFilter() {
         continue;
       }
       if (col === "plan_hours_total") {
+        // Числовой порог: показываем только задачи с суммой плановых часов >= threshold
         const total = Object.values(t.plan_hours_all || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
         const threshold = parseFloat(val);
         if (!isNaN(threshold) && total < threshold) return false;
         continue;
       }
+      // Текстовый contains-фильтр (case-insensitive)
       const cellVal = (t[col] || "").toString().toLowerCase();
       if (!cellVal.includes(val)) return false;
     }
@@ -314,7 +333,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   const si = document.getElementById("searchInput");
   si.value = "";
-  initDensityToggle('.table-wrap', (colSettings && colSettings.density) || 'comfortable');
+  initViewModeToggle('#spViewModeToggle', '.table-wrap', (colSettings && colSettings.sp_view_mode) || 'full', {hiddenMap: _VM_HIDDEN_SP, settingKey: 'sp_view_mode', cssPrefix: 'sp-view'});
   _syncToolbarHeight();
   var _resizePending = false;
   window.addEventListener('resize', function() {
@@ -1336,6 +1355,9 @@ function renderTable() {
   requestAnimationFrame(() => { _resizeTextareas(tbody); updatePlanSummary(); });
   // Ставим слушатель прокрутки для подгрузки следующих порций
   _spAttachScrollListener();
+  // Пересчёт sticky top для строк thead (зависит от режима отображения)
+  const _wrap = document.querySelector('.table-wrap');
+  if (_wrap) requestAnimationFrame(() => _fixStickyHeaderTops(_wrap));
 }
 
 /* ── Добавление порции строк в таблицу СП ─────────────────────────── */
@@ -1431,6 +1453,7 @@ function makeRow(t, num) {
   // ── Колонка «№» с бейджем 🔒 ПП для перенесённых задач ──
   const numTd = document.createElement("td");
   numTd.className = "num-cell"; numTd.textContent = num; numTd.dataset.label = "№";
+  numTd.dataset.colIdx = "0";
   numTd.style.cursor = "pointer";
   numTd.title = "Открыть детали задачи";
   numTd.addEventListener("click", function(e) { e.stopPropagation(); openActivityPanel(t.id); });
@@ -1446,6 +1469,7 @@ function makeRow(t, num) {
   // ── Колонка «Код строки» — бейдж типа задачи + row_code ──
   const rcTd = document.createElement("td");
   rcTd.dataset.label = "Код строки";
+  rcTd.dataset.colIdx = "1";
   rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
   if (t.row_code) {
     const rcSpan = document.createElement("div");
@@ -1482,9 +1506,13 @@ function makeRow(t, num) {
   // Сокращённые ключи колонок — для привязки ширин через th-элементы
   const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ds","de","dead"];
 
+  // Маппинг индекса в cols → data-col-idx (cols[0]=project→2, cols[1]=stage→3, ...)
+  const SP_COL_IDX_MAP = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+
   // ── Цикл по колонкам: создание ячеек данных ──
   cols.forEach((col, idx) => {
     const td = document.createElement("td");
+    td.dataset.colIdx = String(SP_COL_IDX_MAP[idx]);
     if (col.label) td.dataset.label = col.label;
     if (col.type === "date") td.classList.add("td-date");
     // Синхронизируем ширину ячейки с заголовком таблицы
@@ -1748,11 +1776,13 @@ function makeRow(t, num) {
   });
 
   // ── Колонка «Действия» — кнопки в зависимости от роли ──
+  // data-col-idx="14" добавляется ниже
   // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
   // User:   📄 отчёт, 🔗 зависимости (только просмотр)
   const actTd = document.createElement("td");
   actTd.className = "actions-cell";
   actTd.dataset.label = "Действия";
+  actTd.dataset.colIdx = "14";
   actTd.style.display = "table-cell";
   // Кнопка «Редактировать» — открывает полный модал редактирования задачи
   // Для ПП-записей: частичное редактирование (иконка 🔒 ✏️)

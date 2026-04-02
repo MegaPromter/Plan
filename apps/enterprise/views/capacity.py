@@ -37,10 +37,28 @@ def _level(pct):
 
 
 def _dept_capacity(dept, year, mode, cal_norms, project_id=None):
-    """Считает мощность и потребность отдела за год + помесячно."""
+    """
+    Считает мощность и потребность отдела за год + помесячно.
+
+    Мощность (capacity) = численность × норма часов по производственному календарю.
+    Потребность (demand) = трудозатраты (Work.labor) задач, закрытых в данном году.
+
+    mode:
+      'staff'  — численность из Department.staff_count (штатное расписание)
+      'actual' — фактический count активных Employee в отделе
+
+    Загрузка = demand / capacity × 100%.
+    Уровень определяется через _level(pct):
+      <60% → low, 60-80% → normal, 80-100% → high, >100% → overload.
+
+    cal_norms: {month_int: hours_norm} — нормы из таблицы WorkCalendar.
+    project_id: опциональный фильтр — считать только работы данного проекта.
+    """
     if mode == 'staff':
+        # Штатная численность — берём из атрибута модели (задаётся вручную)
         headcount = dept.staff_count or 0
     else:
+        # Фактическая численность — считаем активных сотрудников отдела
         headcount = Employee.objects.filter(
             department=dept, is_active=True,
         ).count()

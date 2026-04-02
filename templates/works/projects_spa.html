@@ -286,8 +286,18 @@ async function openProjectMetrics(id) {
       </div>`,
     footer: `
       <button class="btn btn-outline modal-cancel">Закрыть</button>
+      <button class="btn btn-secondary" id="mStagesBtn"><i class="fas fa-layer-group"></i> Этапы</button>
       ${editBtn}`,
   });
+
+  // Кнопка «Этапы» — открывает управление этапами ПП
+  const stagesBtn = modal.dialog.querySelector('#mStagesBtn');
+  if (stagesBtn) {
+    stagesBtn.addEventListener('click', () => {
+      modal.close();
+      openStagesModal(id);
+    });
+  }
 
   // Клик по ПП плану → переход на страницу этого ПП
   modal.dialog.querySelectorAll('.pp-link').forEach(el => {
@@ -308,6 +318,190 @@ async function openProjectMetrics(id) {
       });
     }
   }
+}
+
+/* ── Модал управления этапами проекта ──────────────────────────────────── */
+async function openStagesModal(projectId) {
+  const modal = openModal({
+    title: '<i class="fas fa-layer-group" style="color:var(--accent);margin-right:8px;"></i>Этапы проекта',
+    width: '780px',
+    body: `
+      <div id="stagesTableWrap" style="margin-bottom:16px;"></div>
+      ${IS_WRITER ? `
+      <div style="background:var(--bg);border-radius:10px;padding:16px 20px;border:1px dashed var(--border);">
+        <div style="font-size:12px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">
+          <i class="fas fa-plus-circle" style="margin-right:4px;color:var(--accent);"></i> Новый этап
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-bottom:14px;">
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>Наименование</label>
+            <input id="stNewName" placeholder="Наименование этапа">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>№ этапа</label>
+            <input id="stNewNum" placeholder="Например: 3.1">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>Наряд-заказ</label>
+            <input id="stNewOrder" placeholder="Например: НЗ-789">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>Код строки</label>
+            <input id="stNewCode" placeholder="Например: КС-432">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="stAddBtn" style="width:100%;border-radius:8px;">
+          <i class="fas fa-plus" style="margin-right:6px;"></i> Добавить этап
+        </button>
+      </div>` : ''}`,
+    footer: `<button class="btn btn-outline modal-cancel">Закрыть</button>`,
+  });
+
+  async function loadStages() {
+    const data = await fetchJson(`/api/projects/${projectId}/stages/`);
+    const wrap = document.getElementById('stagesTableWrap');
+    if (!wrap) return;
+    if (!data || data._error || !data.length) {
+      wrap.innerHTML = `
+        <div style="text-align:center;padding:32px 0;color:var(--muted);">
+          <i class="fas fa-inbox" style="font-size:32px;margin-bottom:8px;display:block;opacity:.4;"></i>
+          <div style="font-size:13px;">Этапов пока нет</div>
+        </div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <thead>
+          <tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+            <th style="width:35%;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Наименование</th>
+            <th style="width:12%;padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">№ этапа</th>
+            <th style="width:18%;padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Наряд-заказ</th>
+            <th style="width:15%;padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Код строки</th>
+            ${IS_WRITER ? '<th style="width:20%;padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);"></th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((s, i) => `
+            <tr data-stage-id="${s.id}" style="border-bottom:1px solid var(--border);transition:background .15s;${i % 2 ? 'background:var(--bg);' : ''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${i % 2 ? 'var(--bg)' : ''}'">
+              <td style="padding:10px 12px;font-weight:500;">${escapeHtml(s.name)}</td>
+              <td style="padding:10px 8px;text-align:center;">
+                <span style="background:var(--accent);color:#fff;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${escapeHtml(s.stage_number)}</span>
+              </td>
+              <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(s.work_order)}</td>
+              <td style="padding:10px 8px;">
+                <code style="background:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(s.row_code)}</code>
+              </td>
+              ${IS_WRITER ? `<td style="padding:10px 8px;text-align:center;">
+                <button class="btn-icon st-edit" title="Редактировать" style="margin-right:4px;"><i class="fas fa-pen" style="font-size:12px;"></i></button>
+                <button class="btn-icon st-del" title="Удалить" style="color:var(--danger);"><i class="fas fa-trash" style="font-size:12px;"></i></button>
+              </td>` : ''}
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    wrap.querySelectorAll('.st-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tr = btn.closest('tr');
+        const sid = tr.getAttribute('data-stage-id');
+        if (!confirm('Удалить этап?')) return;
+        const r = await fetchJson(`/api/projects/${projectId}/stages/${sid}/`, {method:'DELETE'});
+        if (r && !r._error) { loadStages(); showToast('Этап удалён'); }
+        else showToast('Ошибка удаления', 'error');
+      });
+    });
+
+    wrap.querySelectorAll('.st-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tr = btn.closest('tr');
+        const sid = tr.getAttribute('data-stage-id');
+        const s = data.find(x => String(x.id) === sid);
+        if (!s) return;
+        openEditStageModal(projectId, s, () => loadStages());
+      });
+    });
+  }
+
+  const addBtn = document.getElementById('stAddBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', async () => {
+      const name = document.getElementById('stNewName').value.trim();
+      if (!name) { showToast('Введите наименование', 'warning'); return; }
+      const body = {
+        name,
+        stage_number: document.getElementById('stNewNum').value.trim(),
+        work_order: document.getElementById('stNewOrder').value.trim(),
+        row_code: document.getElementById('stNewCode').value.trim(),
+      };
+      const r = await fetchJson(`/api/projects/${projectId}/stages/create/`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      if (r && !r._error && r.id) {
+        document.getElementById('stNewName').value = '';
+        document.getElementById('stNewNum').value = '';
+        document.getElementById('stNewOrder').value = '';
+        document.getElementById('stNewCode').value = '';
+        loadStages();
+        showToast('Этап добавлен');
+      } else {
+        showToast(r?.error || 'Ошибка создания', 'error');
+      }
+    });
+  }
+
+  loadStages();
+}
+
+/* ── Модал редактирования этапа ──────────────────────────────────────────── */
+function openEditStageModal(projectId, stage, onSave) {
+  const modal = openModal({
+    title: '<i class="fas fa-pen" style="color:var(--accent);margin-right:8px;"></i>Редактировать этап',
+    width: '520px',
+    body: `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;">
+        <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
+          <label>Наименование</label>
+          <input id="stEditName" value="${escapeHtml(stage.name)}">
+        </div>
+        <div class="modal-form-group" style="margin-bottom:0;">
+          <label>№ этапа</label>
+          <input id="stEditNum" value="${escapeHtml(stage.stage_number)}">
+        </div>
+        <div class="modal-form-group" style="margin-bottom:0;">
+          <label>Наряд-заказ</label>
+          <input id="stEditOrder" value="${escapeHtml(stage.work_order)}">
+        </div>
+        <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
+          <label>Код строки</label>
+          <input id="stEditCode" value="${escapeHtml(stage.row_code)}">
+        </div>
+      </div>`,
+    footer: `
+      <button class="btn btn-outline modal-cancel">Отмена</button>
+      <button class="btn btn-primary" id="stEditSaveBtn"><i class="fas fa-check" style="margin-right:6px;"></i>Сохранить</button>`,
+  });
+
+  document.getElementById('stEditSaveBtn').addEventListener('click', async () => {
+    const name = document.getElementById('stEditName').value.trim();
+    if (!name) { showToast('Введите наименование', 'warning'); return; }
+    const body = {
+      name,
+      stage_number: document.getElementById('stEditNum').value.trim(),
+      work_order: document.getElementById('stEditOrder').value.trim(),
+      row_code: document.getElementById('stEditCode').value.trim(),
+    };
+    const r = await fetchJson(`/api/projects/${projectId}/stages/${stage.id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    if (r && !r._error) {
+      modal.close();
+      if (onSave) onSave();
+      showToast('Этап обновлён');
+    } else {
+      showToast(r?.error || 'Ошибка сохранения', 'error');
+    }
+  });
 }
 
 /* ── Модал создания нового проекта ──────────────────────────────────────── */
