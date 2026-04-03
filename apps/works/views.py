@@ -197,8 +197,30 @@ class FeedbackSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 
 
 class EnterpriseSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
-    """SPA-страница «Управление предприятием» — временно на тестировании."""
-    template_name = 'enterprise/enterprise_stub.html'
+    """SPA-страница «Управление предприятием»."""
+    template_name = 'enterprise/enterprise_spa.html'
+
+    def get_context_data(self, **kwargs):
+        import json as _json
+        ctx = super().get_context_data(**kwargs)
+        current_year = timezone.now().date().year
+        ctx['current_year'] = current_year
+        ctx['years'] = list(range(current_year - 3, current_year + 4))
+        # Сотрудники для селектов «Главный конструктор»
+        emps = list(
+            Employee.objects.filter(is_active=True)
+            .order_by('last_name', 'first_name')
+            .values('id', 'last_name', 'first_name', 'patronymic')
+        )
+        employees_list = []
+        for e in emps:
+            ln = e['last_name'] or ''
+            fn = (e['first_name'] or '')[:1]
+            pat = (e['patronymic'] or '')[:1]
+            name = f"{ln} {fn}.{pat}." if pat else f"{ln} {fn}."
+            employees_list.append({'id': e['id'], 'name': name.strip()})
+        ctx['employees_json'] = _json.dumps(employees_list, ensure_ascii=False).replace('</', '<\\/')
+        return ctx
 
 
 class ERDiagramView(TemplateView):
