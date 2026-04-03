@@ -552,6 +552,10 @@
       showSpotlight(el, step, idx, desc, adminNote);
     } else if (step.needProject && matchPage(step.page)) {
       tryOpenFirstProject(step, idx, desc, adminNote);
+    } else if (step.selector && !step.infoOnly) {
+      // Целевой элемент не найден — не блокируем интерфейс, переходим к следующему шагу
+      console.warn('[tour] element not found:', step.selector, '— skipping step', idx);
+      setTimeout(function() { goNext(); }, 100);
     } else {
       showInfoCard(step, idx, desc, adminNote);
     }
@@ -1026,6 +1030,28 @@
     migrateOldState();
     var state = getState();
 
+    // Проверяем серверный _tour_completed: если тур завершён на сервере,
+    // синхронизируем localStorage и не запускаем тур
+    // (защита от ситуации: localStorage очищен, а на сервере тур уже пройден)
+    fetch('/api/col_settings/', { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : {}; })
+      .then(function(serverSettings) {
+        if (serverSettings._tour_completed) {
+          // Тур завершён на сервере — синхронизируем localStorage
+          if (!state || !state.completed) {
+            setState({ step: TOTAL, completed: true, version: 2 });
+          }
+          return; // не запускаем тур
+        }
+        _tourAutoInit(state);
+      })
+      .catch(function() {
+        // При ошибке сети — запускаем по localStorage
+        _tourAutoInit(state);
+      });
+  });
+
+  function _tourAutoInit(state) {
     if (!state) {
       // Welcome-модал показываем только на главной странице,
       // и только после первого взаимодействия пользователя со страницей,
@@ -1065,6 +1091,6 @@
     if (state.skipped && typeof state.step === 'number' && state.step < TOTAL) {
       setTimeout(function() { showProgressWidget(state.step); }, 800);
     }
-  });
+  }
 
 })();

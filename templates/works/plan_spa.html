@@ -554,7 +554,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/utils.js' %}?v=11"></script>
+<!-- utils.js уже загружен из base.html -->
 <script src="{% static 'js/shared-toolbar.js' %}?v=2"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}?v=4"></script>
@@ -569,7 +569,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=14"></script>
+<script src="{% static 'js/plan.js' %}?v=15"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

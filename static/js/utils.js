@@ -875,10 +875,10 @@ function _applyViewMode(wrap, mode, animate) {
     // Группа «Сроки согласно ПП» (colspan=2) — скрываем если оба подстолбца скрыты
     // Группа «Сроки согласно ПП» — скрываем если оба подстолбца скрыты
     var ppDatesGroup = wrap.querySelector('th[data-col-group="pp-dates"]');
+    var subIdxs = [];
     if (ppDatesGroup) {
         // Находим col-idx подстолбцов из DOM
         var nextRow = ppDatesGroup.closest('tr').nextElementSibling;
-        var subIdxs = [];
         if (nextRow) {
             // Подстолбцы сроков — последние th с data-col-idx во второй строке thead
             var allTh = nextRow.querySelectorAll('th[data-col-idx]');
@@ -899,20 +899,42 @@ function _applyViewMode(wrap, mode, animate) {
             return newHidden.indexOf(idx) === -1;
         });
         if (appeared.length > 0) {
-            // Убираем предыдущие подсветки
-            wrap.querySelectorAll('.pp-col-highlight').forEach(function(el) {
-                el.classList.remove('pp-col-highlight');
-            });
-            // Добавляем подсветку к появившимся
-            appeared.forEach(function(idx) {
-                wrap.querySelectorAll('[data-col-idx="' + idx + '"]').forEach(function(cell) {
-                    cell.classList.add('pp-col-highlight');
+            // Подсветка контуров столбцов: box-shadow inset на th + td
+            setTimeout(function() {
+                var cells = [];
+                appeared.forEach(function(idx) {
+                    wrap.querySelectorAll('[data-col-idx="' + idx + '"]').forEach(function(el) {
+                        cells.push(el);
+                    });
                 });
-            });
-            // Подсветка группы «Расчёт трудозатрат» при переходе compact → normal/full
-            if (laborGroup && prevHidden.indexOf(10) !== -1 && newHidden.indexOf(10) === -1) {
-                laborGroup.classList.add('pp-col-highlight');
-            }
+                if (laborGroup && prevHidden.indexOf(10) !== -1 && newHidden.indexOf(10) === -1) {
+                    cells.push(laborGroup);
+                }
+                if (ppDatesGroup && ppDatesGroup.style.display !== 'none') {
+                    var ppWasHidden = subIdxs && subIdxs.length === 2
+                        && prevHidden.indexOf(subIdxs[0]) !== -1
+                        && prevHidden.indexOf(subIdxs[1]) !== -1;
+                    if (ppWasHidden) cells.push(ppDatesGroup);
+                }
+                if (!cells.length) return;
+                var alpha = 0.7;
+                var steps = 30;
+                var step = alpha / steps;
+                function applyShadow(a) {
+                    var shadow = a > 0.01 ? 'inset 0 0 0 2px rgba(37,99,235,' + a.toFixed(3) + ')' : '';
+                    cells.forEach(function(el) { el.style.boxShadow = shadow; });
+                }
+                applyShadow(alpha);
+                var interval = setInterval(function() {
+                    alpha -= step;
+                    if (alpha <= 0) {
+                        clearInterval(interval);
+                        cells.forEach(function(el) { el.style.boxShadow = ''; });
+                        return;
+                    }
+                    applyShadow(alpha);
+                }, 50);
+            }, 50);
         }
     }
 

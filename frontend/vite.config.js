@@ -15,8 +15,7 @@ export default defineConfig({
       input: {
         notices: resolve(__dirname, 'src/notices.js'),
         enterprise: resolve(__dirname, 'src/enterprise.js'),
-        // Сюда будут добавляться новые entry points по мере миграции:
-        // production_plan: resolve(__dirname, 'src/production_plan.js'),
+        production_plan: resolve(__dirname, 'src/production_plan.js'),
         // plan: resolve(__dirname, 'src/plan.js'),
       },
     },

@@ -170,7 +170,7 @@
 .pp-view-tab:hover { color:var(--text); background:var(--surface2); }
 .pp-view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
 /* gantt-scale-btn, gantt-filter-btn — в components.css */
-#ppGanttContainer { height:calc(100vh - 200px); display:none; }
+#ppGanttContainer { height:calc(100vh - 200px); }
 
 /* ── Строка фильтров ───────────────────────────────────────────────── */
 .filter-row th {
@@ -486,7 +486,8 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .pp-view-compact [data-col-idx="11"],
 .pp-view-compact [data-col-idx="12"],
 .pp-view-compact [data-col-idx="13"],
-.pp-view-compact [data-col-idx="14"] {
+.pp-view-compact [data-col-idx="14"],
+.pp-view-compact [data-col-group="labor"] {
   display: none !important;
 }
 
