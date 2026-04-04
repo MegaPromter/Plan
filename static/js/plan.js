@@ -1385,6 +1385,9 @@ function _spAppendBatch(count) {
     textareas.forEach((ta, i) => { ta.style.height = heights[i] + "px"; });
   });
 
+  /* ── Кастомные dropdown-ы для select ──────────────────────────────── */
+  if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tbody);
+
   _spRenderedCount = end;
 
   // Показываем спиннер, если ещё есть строки
@@ -1474,7 +1477,7 @@ function makeRow(t, num) {
   rcTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;";
   if (t.row_code) {
     const rcSpan = document.createElement("div");
-    rcSpan.style.cssText = "font-family:var(--mono);font-size:12px;color:var(--text2);";
+    rcSpan.style.cssText = "font-family:var(--mono);color:var(--text2);";
     rcSpan.textContent = t.row_code;
     rcTd.appendChild(rcSpan);
   }
@@ -1489,7 +1492,7 @@ function makeRow(t, num) {
   const woTd = document.createElement("td");
   woTd.dataset.label = "Наряд-заказ";
   woTd.dataset.colIdx = "3";
-  woTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);";
+  woTd.style.cssText = "padding:4px 6px;vertical-align:middle;text-align:center;font-family:var(--mono);color:var(--text2);";
   woTd.textContent = t.work_order || '';
   // rcTd и woTd вставляются ниже, после project
 
@@ -1531,7 +1534,7 @@ function makeRow(t, num) {
     // Бэкенд дополнительно защищён WriterRequiredJsonMixin (403 при попытке PUT).
     // Для ПП-записей (isFromPP) не применяем — у них своя логика блокировки.
     if (!IS_WRITER || (!_canModify(t.dept, t.sector) && !isFromPP)) {
-      td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;";
+      td.style.cssText = "padding:6px 8px;vertical-align:middle;";
       if (col.field === "executor") {
         // Исполнители: отображаем как список бейджей (без интерактива)
         const execList = t.executors_list || [];
@@ -1662,7 +1665,7 @@ function makeRow(t, num) {
       // ── Select-поля (dept, sector, project, stage) ──
       if (col.readOnly) {
         // Read-only select: отображаем как текст (редактирование через модалку)
-        td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;";
+        td.style.cssText = "padding:6px 8px;vertical-align:middle;";
         td.textContent = t[col.field] || '';
       } else {
       const sel = document.createElement("select");
@@ -1703,7 +1706,7 @@ function makeRow(t, num) {
     } else {
       // ── Read-only date (Сроки согласно ПП) ──
       if (col.readOnly && col.type === "date") {
-        td.style.cssText = "padding:6px 8px;vertical-align:middle;font-size:13px;text-align:center;";
+        td.style.cssText = "padding:6px 8px;vertical-align:middle;text-align:center;";
         const v = t[col.field] || '';
         td.textContent = v ? v.split('-').reverse().join('.') : '';
         tr.appendChild(td);
@@ -1902,6 +1905,8 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
     }
     sel.appendChild(o);
   });
+  // Обновляем кастомный dropdown (триггер-текст) после перезаполнения
+  if (typeof refreshCustomDropdown === 'function') refreshCustomDropdown(sel);
 }
 
 // Собирает данные из ячеек строки таблицы в объект для отправки на сервер
@@ -2139,7 +2144,7 @@ function openInlineNewRow() {
     if (def.ci !== undefined) td.dataset.colIdx = String(def.ci);
     if (def.type === 'static') {
       // Код строки — read-only, авто из ЕТБД
-      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
+      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);';
       td.textContent = '(авто)';
       // Hidden select для task_type — используется при отправке
       const typeSel = document.createElement('select');
@@ -2155,7 +2160,7 @@ function openInlineNewRow() {
       return;
     }
     if (def.type === 'static_text') {
-      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);font-size:12px;';
+      td.style.cssText = 'padding:4px 6px;vertical-align:middle;text-align:center;color:var(--muted);';
       td.textContent = def.text || '—';
       tr.appendChild(td);
       return;
@@ -2268,7 +2273,11 @@ function openInlineNewRow() {
   const wrap = document.getElementById('tableView');
   if (wrap) wrap.scrollTop = 0;
   tbody.prepend(tr);
-  const firstInput = tr.querySelector('select:not([style*="display: none"]), textarea, input');
+
+  // Инициализируем кастомные dropdown-ы для новой строки
+  if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tr);
+
+  const firstInput = tr.querySelector('.cd-trigger, textarea, input');
   if (firstInput) firstInput.focus();
 
   // Сохранение

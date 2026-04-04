@@ -31,6 +31,23 @@ const USER_CENTER = _ppCfg.userCenter;
 // canModifyRow() — замыкание из utils.js
 const _canModify = makeCanModify(_ppCfg);
 
+/* ── Хелпер: замена select с поддержкой кастомного dropdown ───────── */
+/* Если select обёрнут в .cd-wrap — уничтожаем обёртку, заменяем HTML,
+   затем инициализируем кастомный dropdown на новом select. */
+function _ppReplaceSelect(oldSel, newHtml) {
+  const wrap = oldSel._cdWrap || oldSel.closest('.cd-wrap');
+  const parentTd = oldSel.closest('td');
+  if (wrap) {
+    wrap.outerHTML = newHtml;
+  } else {
+    oldSel.outerHTML = newHtml;
+  }
+  // Новый select уже в DOM — инициализируем кастомный dropdown
+  if (parentTd && typeof initCustomDropdowns === 'function') {
+    initCustomDropdowns(parentTd);
+  }
+}
+
 /* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */
 // skeletonRows() — в utils.js
 
@@ -938,11 +955,11 @@ function _ppAppendBatch(count) {
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
-          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;">${escapeHtml(val)}${headName ? `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else if (col === 'task_type' && val) {
           html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;text-align:center;">${taskTypeBadgeHtml(val, {short: true})}</td>`;
         } else {
-          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:12px;padding:4px 6px;">${escapeHtml(val)}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;">${escapeHtml(val)}</td>`;
         }
       } else if (isPPStageCol) {
         // Этап сквозного графика — дропдаун в колонке «№ этапа»
@@ -952,7 +969,7 @@ function _ppAppendBatch(count) {
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
-          html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}${headName ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>` : ''}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}${headName ? `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else {
           html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}</td>`;
         }
@@ -991,6 +1008,9 @@ function _ppAppendBatch(count) {
 
   /* ── Делегированные обработчики (один раз на tbody) ────────────────── */
   _ppAttachDelegatedListeners(tbody);
+
+  /* ── Кастомные dropdown-ы для select ──────────────────────────────── */
+  if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tbody);
 
   _ppRenderedCount = end;
 
@@ -1091,14 +1111,14 @@ async function handleCellChange(e) {
       // Обновляем нач. секторов
       const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
       if (headSel) {
-        headSel.outerHTML = buildSelectHtml('sector_head', rowObj);
+        _ppReplaceSelect(headSel, buildSelectHtml('sector_head', rowObj));
         const newHead = input.closest('tr').querySelector('select[data-col="sector_head"]');
         if (newHead) newHead._ppLastSaved = newHead.value;
       }
       // Обновляем исполнителей по новому отделу (сектор сброшен — показываем весь отдел)
       const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
       if (execSel) {
-        execSel.outerHTML = buildSelectHtml('executor', rowObj);
+        _ppReplaceSelect(execSel, buildSelectHtml('executor', rowObj));
         const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
         if (newSel) newSel._ppLastSaved = newSel.value;
       }
@@ -1111,20 +1131,21 @@ async function handleCellChange(e) {
     if (rowObj) {
       rowObj.sector_head = value;
       // Обновляем div с ФИО начальника сектора
-      const headDiv = input.closest('td').querySelector('div');
+      const _shTd = input.closest('td');
+      const headDiv = _shTd.querySelector('div.sh-name');
       const sh = (dirs.sector_head || []).find(h => h.value === value);
       const headName = sh ? (sh.head_name || '') : '';
       if (headDiv) {
         headDiv.textContent = headName;
         headDiv.style.display = headName ? '' : 'none';
       } else if (headName) {
-        input.closest('td').insertAdjacentHTML('beforeend',
-          `<div style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>`);
+        _shTd.insertAdjacentHTML('beforeend',
+          `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>`);
       }
       // Пересобираем исполнителей
       const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
       if (execSel) {
-        execSel.outerHTML = buildSelectHtml('executor', rowObj);
+        _ppReplaceSelect(execSel, buildSelectHtml('executor', rowObj));
         const newSel = input.closest('tr').querySelector('select[data-col="executor"]');
         if (newSel) newSel._ppLastSaved = newSel.value;
       }
@@ -1343,11 +1364,20 @@ function openAddRowModal() {
   tr.innerHTML = html;
   tbody.prepend(tr);
 
+  // Инициализируем кастомные dropdown-ы для новой строки
+  if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tr);
+
   // Автофокус на первое редактируемое поле
-  const firstInput = tr.querySelector('input, select');
+  const firstInput = tr.querySelector('input, .cd-trigger');
   if (firstInput) {
     firstInput.focus();
     tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Хелпер: заменить содержимое td и переинициализировать dropdown
+  function _replaceInTd(td, html) {
+    td.innerHTML = html;
+    if (typeof initCustomDropdowns === 'function') initCustomDropdowns(td);
   }
 
   // Зависимость: при смене отдела — обновить список нач. секторов И исполнителей
@@ -1357,13 +1387,13 @@ function openAddRowModal() {
     // Обновляем нач. секторов
     const tdSector = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
     if (tdSector) {
-      tdSector.innerHTML = buildSelectHtml('sector_head', newRow);
+      _replaceInTd(tdSector, buildSelectHtml('sector_head', newRow));
       tdSector.querySelector('select').addEventListener('change', function() { newRow.sector_head = this.value; });
     }
     // Обновляем список исполнителей по новому отделу
     const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
     if (tdExec) {
-      tdExec.innerHTML = buildSelectHtml('executor', newRow);
+      _replaceInTd(tdExec, buildSelectHtml('executor', newRow));
       tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
     }
   });
@@ -1373,7 +1403,7 @@ function openAddRowModal() {
     newRow.sector_head = this.value;
     const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
     if (tdExec) {
-      tdExec.innerHTML = buildSelectHtml('executor', newRow);
+      _replaceInTd(tdExec, buildSelectHtml('executor', newRow));
       tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
     }
   });

@@ -176,7 +176,7 @@ function _makeJiRow(n, idx) {
   }
   actions += '</td>';
   return '<tr>' +
-    '<td style="color:var(--muted);font-size:12px;text-align:center;">' + (idx + 1) + '</td>' +
+    '<td style="color:var(--muted);text-align:center;">' + (idx + 1) + '</td>' +
     '<td title="' + esc(n.ii_pi) + '">' + (esc(n.ii_pi) || '\u2014') + autoTag + '</td>' +
     '<td title="' + esc(n.notice_number) + '">' + (esc(n.notice_number) || '\u2014') + '</td>' +
     '<td title="' + esc(n.subject) + '">' + (esc(n.subject) || '\u2014') + '</td>' +

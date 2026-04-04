@@ -119,6 +119,8 @@
   padding: 3px;
   vertical-align: middle;
   text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
 }
 .pp-table td:first-child {
   text-align: center;

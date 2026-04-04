@@ -79,6 +79,20 @@
 .data-table th:last-child,
 .data-table td:last-child { border-right: none; }
 
+/* ── Единообразие шрифтов внутри таблиц ──────────────────────────── */
+/* КОРНЕВОЕ ПРАВИЛО: ВСЕ input/select/textarea/button внутри ЛЮБОЙ
+   ячейки таблицы наследуют font от td. Гарантирует единый шрифт
+   во всех таблицах приложения (ПП, СП, ЖИ, модалки и т.д.). */
+td input, td input[type], td input[type="text"], td input[type="date"],
+td input[type="number"], td input[type="email"], td input[type="url"],
+td select, td textarea, td button,
+th input, th input[type], th select, th button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
 /* ── Инлайн-редактирование ячеек ─────────────────────────────────── */
 .cell-edit {
   width: 100%;
@@ -88,8 +102,9 @@
   border: none;
   outline: none;
   color: var(--text);
-  font-family: var(--font);
-  font-size: var(--td-font);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   resize: none;
   overflow: hidden;
   text-align: center;
@@ -123,6 +138,168 @@ select.cell-edit option {
 @keyframes pulse-error {
   0%,100% { outline-color: var(--danger); }
   50% { outline-color: rgba(239,68,68,0.4); }
+}
+
+/* ── Кастомный dropdown (замена нативного select) ───────────────── */
+/* Обёртка: встраивается в ячейку вместо <select> */
+.cd-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 28px;
+}
+
+/* Триггер (кнопка, показывающая текущее значение) */
+.cd-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: inherit;
+  padding: 4px 24px 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.cd-trigger:hover {
+  background: var(--accent-glow);
+}
+.cd-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Шеврон */
+.cd-trigger::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: translateY(-65%) rotate(45deg);
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+.cd-wrap.open .cd-trigger::after {
+  transform: translateY(-25%) rotate(-135deg);
+}
+.cd-wrap.open .cd-trigger {
+  background: var(--accent-glow);
+  box-shadow: 0 0 0 2px var(--accent);
+  border-radius: 4px;
+}
+
+/* Выпадающий список */
+.cd-menu {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  overscroll-behavior: contain;
+}
+.cd-wrap.open .cd-menu { display: block; }
+
+/* Поле поиска */
+.cd-search {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface2);
+  outline: none;
+  box-sizing: border-box;
+}
+.cd-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+.cd-search::placeholder { color: var(--muted); }
+
+/* Пункт меню */
+.cd-item {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+  gap: 8px;
+}
+.cd-item:hover,
+.cd-item.highlighted {
+  background: var(--accent-glow);
+  color: var(--accent2);
+}
+.cd-item.selected {
+  background: color-mix(in srgb, var(--accent), transparent 88%);
+  color: var(--accent);
+  font-weight: 600;
+}
+.cd-item.selected::before {
+  content: '✓';
+  flex-shrink: 0;
+  font-size: 11px;
+  width: 16px;
+  text-align: center;
+  color: var(--accent);
+}
+/* Placeholder пункт (--) */
+.cd-item.placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+/* Нет результатов */
+.cd-empty {
+  padding: 12px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Скроллбар в списке */
+.cd-menu::-webkit-scrollbar { width: 5px; }
+.cd-menu::-webkit-scrollbar-track { background: transparent; }
+.cd-menu::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 3px;
+}
+.cd-menu::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Анимация появления */
+@keyframes cdSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cd-menu { animation: cdSlideIn 0.15s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-menu { animation: none !important; }
 }
 
 /* ── Resize-ручки колонок ────────────────────────────────────────── */
