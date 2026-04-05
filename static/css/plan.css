@@ -31,7 +31,7 @@
 .topbar-sep { flex:1; }
 
 /* ── Кнопки топбара (план-специфичные) ────────────────────────────────── */
-.topbar-btn { padding:6px 14px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);
+.topbar-btn { padding:6px 14px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.2);
   background:transparent; color:var(--nav-text2); font-family:var(--font);
   font-size:14px; cursor:pointer; transition:all 0.15s; }
 .topbar-btn:hover { border-color:rgba(255,255,255,0.45); color:#fff; }
@@ -49,14 +49,14 @@
 .toolbar .density-toggle { margin-top:2px; }
 .cal-block { display:flex; align-items:center; gap:8px; }
 .cal-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; font-weight:600; }
-.cal-nav { width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
+.cal-nav { width:28px; height:28px; border-radius:var(--radius-sm); border:1px solid var(--border);
   background:transparent; color:var(--text2); cursor:pointer;
   display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.15s; }
 .cal-nav:hover { border-color:var(--accent); color:var(--accent); }
 .cal-display { min-width:130px; text-align:center; font-size:16px; font-weight:600;
-  background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 14px; color:var(--text); }
+  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-md); padding:5px 14px; color:var(--text); }
 .cal-months { display:flex; gap:4px; flex-wrap:wrap; }
-.cal-month { padding:6px 10px; min-height:36px; border-radius:5px; font-size:13px; cursor:pointer;
+.cal-month { padding:6px 10px; min-height:36px; border-radius:var(--radius-xs); font-size:13px; cursor:pointer;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s;
   display:inline-flex; align-items:center; }
 .cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
@@ -66,11 +66,11 @@
 
 /* ── Строка поиска ────────────────────────────────────────────────────── */
 .searchbar {
-  background:var(--surface2); border-radius:6px;
+  background:var(--surface2); border-radius:var(--radius-sm);
   padding:6px 12px; display:flex; align-items:center; gap:10px; }
 .search-icon { color:var(--muted); font-size:16px; }
 .search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font); font-size:15px; }
-.search-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.search-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--radius-xs); }
 .search-input::placeholder { color:var(--muted); }
 .search-count { font-size:13px; color:var(--muted); font-family:var(--mono); }
 
@@ -143,19 +143,19 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 .cell-select option { background:var(--surface); color:var(--text); }
 
 /* ── Кнопки действий в строке таблицы ─────────────────────────────────── */
-.btn-edit-row { padding:4px 8px; border-radius:5px; border:1px solid var(--border2);
+.btn-edit-row { padding:4px 8px; border-radius:var(--radius-xs); border:1px solid var(--border2);
   background:transparent; color:var(--text2); font-size:14px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
 .btn-edit-row:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
-.btn-report { padding:4px 10px; border-radius:5px; border:1px solid var(--accent);
+.btn-report { padding:4px 10px; border-radius:var(--radius-xs); border:1px solid var(--accent);
   background:var(--accent-glow); color:var(--accent); font-size:13px;
   cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
 .btn-report:hover { background:var(--accent); color:#fff; }
 .btn-report.has-report { background:rgba(34,197,94,0.35); border-color:rgba(22,163,74,0.7); color:#15803d; font-weight:600; }
 .btn-report.has-report:hover { background:rgba(34,197,94,0.5); }
-.btn-del { padding:4px 8px; border-radius:5px; border:1px solid rgba(220,38,38,0.3);
+.btn-del { padding:4px 8px; border-radius:var(--radius-xs); border:1px solid rgba(220,38,38,0.3);
   background:transparent; color:var(--danger); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
 .btn-del:hover { background:rgba(220,38,38,0.08); }
-.btn-reset-pw { padding:4px 8px; border-radius:5px; border:1px solid rgba(217,119,6,0.3);
+.btn-reset-pw { padding:4px 8px; border-radius:var(--radius-xs); border:1px solid rgba(217,119,6,0.3);
   background:transparent; color:var(--warning); font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; margin-right:4px; }
 .btn-reset-pw:hover { background:rgba(217,119,6,0.08); }
 .actions-cell { padding:6px 6px; display:flex; gap:3px; align-items:center; flex-wrap:nowrap; width:190px; min-width:190px; }
@@ -163,7 +163,7 @@ thead th:first-child { position:sticky; left:0; z-index:13; }
 /* Бейджи типа задачи — стили в components.css (.badge-sm) */
 
 /* ── Зависимости (dep) ────────────────────────────────────────────────── */
-.btn-deps { padding:3px 8px; border-radius:5px; border:1px solid rgba(139,92,246,0.3);
+.btn-deps { padding:3px 8px; border-radius:var(--radius-xs); border:1px solid rgba(139,92,246,0.3);
   background:transparent; color:#7c3aed; font-size:13px; cursor:pointer; font-family:var(--font); transition:all 0.15s; white-space:nowrap; }
 .btn-deps:hover { background:rgba(139,92,246,0.1); }
 /* dep-badge — базовые стили в components.css */
@@ -214,7 +214,7 @@ tr.pp-locked .pp-lock-badge {
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -232,14 +232,14 @@ tr.pp-locked .pp-lock-badge {
   border-right-color: rgba(75, 85, 99, 0.4);
 }
 .pp-edit-hint { background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25);
-  border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
+  border-radius:var(--radius-md); padding:10px 14px; margin-bottom:14px; font-size:14px; color:var(--muted2); }
 .pp-edit-hint b { color:var(--accent); }
 
 /* ── Фиксированная нижняя панель добавления задачи ────────────────────── */
 .add-row-wrap { padding:12px 20px; background:var(--surface2); border-top:1px solid var(--border);
   position:fixed; bottom:0; left:var(--sidebar-width); right:0; z-index:10000; }
 .main-content.sidebar-collapsed .add-row-wrap { left:0; }
-.btn-add { padding:7px 18px; border-radius:6px; border:1px dashed var(--border2);
+.btn-add { padding:7px 18px; border-radius:var(--radius-sm); border:1px dashed var(--border2);
   background:transparent; color:var(--muted2); font-family:var(--font); font-size:16px; cursor:pointer; transition:all 0.15s; }
 .btn-add:hover { border-color:var(--success); color:var(--success); }
 
@@ -271,11 +271,11 @@ tr.pp-locked .pp-lock-badge {
   width:100%; box-sizing:border-box;
   opacity:1 !important;
 }
-.r-save { padding:3px 9px; border-radius:4px; border:none;
+.r-save { padding:3px 9px; border-radius:var(--radius-xs); border:none;
   background:var(--success); color:#fff; font-size:14px; cursor:pointer; font-family:var(--font); font-weight:700; margin-right:2px; }
 .r-save:hover { opacity:0.85; }
 .r-save:disabled { opacity:0.5; cursor:default; }
-.r-del { padding:3px 7px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+.r-del { padding:3px 7px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
 .r-del:hover { background:rgba(239,68,68,0.1); }
 
@@ -295,15 +295,15 @@ tr.pp-locked .pp-lock-badge {
   50%      { box-shadow:0 0 0 4px rgba(239,68,68,0.25); }
 }
 .err-badge { display:inline-flex; align-items:center; background:var(--danger); color:#fff;
-  border-radius:10px; font-size:14px; padding:6px 8px; min-height:36px; margin-left:4px; font-weight:700; }
+  border-radius:var(--radius-md); font-size:14px; padding:6px 8px; min-height:36px; margin-left:4px; font-weight:700; }
 
 /* ── Модал «Ошибки планирования» (pe = Planning Errors) ───────────────── */
 .pe-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
   display:flex; align-items:center; justify-content:center;
   opacity:0; pointer-events:none; transition:opacity 0.2s; }
 .pe-overlay.open { opacity:1; pointer-events:all; }
-.pe-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
-  width:780px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column;
+.pe-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  width:920px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column;
   box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
 .pe-header { padding:18px 24px 12px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between; }
@@ -315,7 +315,7 @@ tr.pp-locked .pp-lock-badge {
   cursor:pointer; user-select:none; background:var(--surface2); }
 .pe-section-hdr:hover { background:var(--accent-light); }
 .pe-section-title { font-size:17px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
-.pe-count-badge { background:var(--danger); color:#fff; border-radius:8px;
+.pe-count-badge { background:var(--danger); color:#fff; border-radius:var(--radius-md);
   font-size:14px; padding:6px 8px; min-height:36px; font-weight:700;
   display:inline-flex; align-items:center; }
 .pe-count-badge.warn { background:#f59e0b; }
@@ -330,7 +330,7 @@ tr.pp-locked .pp-lock-badge {
 .pe-item-meta { font-size:15px; color:var(--muted); }
 .pe-item-meta span { color:#f87171; font-weight:600; }
 .pe-item-actions { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
-.pe-btn { padding:4px 10px; border-radius:5px; font-size:15px; font-family:var(--font);
+.pe-btn { padding:4px 10px; border-radius:var(--radius-xs); font-size:15px; font-family:var(--font);
   cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
   color:var(--text); transition:all 0.15s; }
 .pe-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -340,11 +340,95 @@ tr.pp-locked .pp-lock-badge {
   display:flex; justify-content:space-between; align-items:center; }
 .pe-last-check { font-size:15px; color:var(--muted); }
 
+/* ── Вариант C: визуализация ошибок ──────────────────────────────────── */
+.vc-top { display:grid; grid-template-columns:1fr 2fr; border-bottom:1px solid var(--border); }
+.vc-score { padding:28px; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; border-right:1px solid var(--border); }
+.vc-ring { width:100px; height:100px; margin-bottom:8px; position:relative; }
+.vc-ring svg { transform:rotate(-90deg); }
+.vc-ring-text { position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; font-size:24px; font-weight:800; }
+.vc-score-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+.vc-score-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+
+.vc-bars { padding:16px 20px; display:flex; flex-direction:column; gap:10px; justify-content:center; }
+.vc-bar-row { display:flex; align-items:center; gap:10px; }
+.vc-bar-label { font-size:12px; color:var(--text2); min-width:140px; }
+.vc-bar-track { flex:1; height:20px; background:var(--surface2); border-radius:4px; overflow:hidden; position:relative; }
+.vc-bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:8px;
+  font-size:11px; font-weight:700; color:#fff; min-width:30px; }
+.vc-bar-fill.danger { background:var(--danger); }
+.vc-bar-fill.warn { background:#f59e0b; }
+.vc-bar-fill.ok { background:#22c55e; }
+
+/* Прогноз */
+.forecast-bar { padding:14px 28px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+  background:linear-gradient(90deg, #fffbeb, var(--surface)); }
+.forecast-icon { font-size:20px; }
+.forecast-text { font-size:13px; color:var(--text2); flex:1; }
+.forecast-text strong { color:#f59e0b; font-weight:700; }
+.forecast-badge { background:#f59e0b; color:#fff; font-size:12px; font-weight:700;
+  padding:4px 12px; border-radius:10px; }
+
+/* Разбивка по отделам */
+.dept-breakdown { padding:16px 28px; border-bottom:1px solid var(--border); background:var(--surface2); }
+.dept-breakdown-title { font-size:11px; text-transform:uppercase; letter-spacing:0.5px;
+  color:var(--muted); margin-bottom:10px; font-weight:600; }
+.dept-rows { display:flex; flex-direction:column; gap:6px; }
+.dept-row { display:flex; align-items:center; gap:10px; }
+.dept-name { font-size:12px; color:var(--text2); min-width:90px; font-weight:500; }
+.dept-bar-track { flex:1; height:16px; background:var(--surface); border-radius:3px;
+  overflow:hidden; display:flex; }
+.dept-bar-seg { height:100%; display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:700; color:#fff; min-width:16px; }
+.dept-bar-seg.danger { background:var(--danger); }
+.dept-bar-seg.warn { background:#f59e0b; }
+.dept-total { font-size:11px; color:var(--muted); min-width:40px; text-align:right; }
+
+/* Таймлайн месяца */
+.timeline-panel { padding:16px 28px; border-bottom:1px solid var(--border); }
+.timeline-title { font-size:11px; text-transform:uppercase; letter-spacing:0.5px;
+  color:var(--muted); margin-bottom:10px; font-weight:600; }
+.timeline-track { display:flex; align-items:flex-end; gap:2px; height:60px; }
+.timeline-day { flex:1; border-radius:2px 2px 0 0; min-width:0; position:relative;
+  transition:all 0.15s; cursor:default; }
+.timeline-day:hover { opacity:0.8; }
+.timeline-labels { display:flex; gap:2px; margin-top:4px; }
+.timeline-label { flex:1; font-size:9px; color:var(--muted); text-align:center; min-width:0; }
+.timeline-label.today { color:var(--accent); font-weight:700; }
+.timeline-today-marker { position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:4px solid transparent;
+  border-right:4px solid transparent; border-top:5px solid var(--accent); }
+.timeline-legend { display:flex; gap:16px; margin-top:10px; }
+.timeline-leg-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); }
+.timeline-leg-dot { width:10px; height:10px; border-radius:2px; }
+
+/* Аккордеон-секции (вариант C) */
+.va-section { border-bottom:1px solid var(--border); }
+.va-section:last-child { border-bottom:none; }
+.va-sec-hdr { padding:14px 28px; display:flex; align-items:center; gap:12px;
+  cursor:pointer; user-select:none; transition:background 0.1s; }
+.va-sec-hdr:hover { background:var(--surface2); }
+.va-sec-icon { width:32px; height:32px; border-radius:8px; display:flex;
+  align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.va-sec-icon.danger { background:#fef2f2; color:var(--danger); }
+.va-sec-icon.warn { background:#fffbeb; color:#f59e0b; }
+.va-sec-icon.ok { background:#f0fdf4; color:#22c55e; }
+.va-sec-title { flex:1; font-size:14px; font-weight:600; }
+.va-sec-count { font-size:13px; font-weight:700; padding:2px 10px; border-radius:12px; }
+.va-sec-count.danger { background:var(--danger); color:#fff; }
+.va-sec-count.warn { background:#f59e0b; color:#fff; }
+.va-sec-count.ok { background:#22c55e; color:#fff; }
+.va-sec-arrow { color:var(--muted); font-size:12px; transition:transform 0.2s; }
+.va-sec-body { display:none; }
+.va-sec-body.open { display:block; }
+
 /* ── Модал проверки начала месяца (month check) ───────────────────────── */
 .month-check-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500;
   display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
 .month-check-overlay.open { opacity:1; pointer-events:all; }
-.month-check-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+.month-check-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   width:700px; max-width:95vw; max-height:88vh; display:flex; flex-direction:column;
   box-shadow:0 8px 40px rgba(0,0,0,0.15); overflow:hidden; }
 .month-check-header { padding:18px 24px 14px; border-bottom:1px solid var(--border); }
@@ -356,7 +440,7 @@ tr.pp-locked .pp-lock-badge {
 .mcc-task-name { font-size:17px; font-weight:600; color:var(--text); margin-bottom:4px; }
 .mcc-task-meta { font-size:15px; color:var(--muted); margin-bottom:12px; }
 .mcc-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.mcc-btn { padding:6px 14px; border-radius:6px; font-size:16px; font-family:var(--font);
+.mcc-btn { padding:6px 14px; border-radius:var(--radius-sm); font-size:16px; font-family:var(--font);
   cursor:pointer; border:1px solid var(--border2); background:var(--surface2);
   color:var(--text); transition:all 0.15s; white-space:nowrap; }
 .mcc-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -366,13 +450,13 @@ tr.pp-locked .pp-lock-badge {
 .mcc-btn.danger:hover { background:var(--danger); color:#fff; }
 .mcc-btn.done { border-color:#22c55e; color:#22c55e; opacity:0.5; cursor:default; }
 .mcc-postpone-form { margin-top:10px; padding:12px; background:var(--bg);
-  border-radius:8px; border:1px solid var(--border); display:none; }
+  border-radius:var(--radius-md); border:1px solid var(--border); display:none; }
 .mcc-postpone-form.open { display:block; }
 .mcc-form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; align-items:flex-end; }
 .mcc-form-field { display:flex; flex-direction:column; gap:4px; }
 .mcc-form-field label { font-size:14px; color:var(--muted); text-transform:uppercase; font-weight:600; }
 .mcc-form-field input, .mcc-form-field select { padding:5px 8px; background:var(--surface2);
-  border:1px solid var(--border); border-radius:5px; color:var(--text);
+  border:1px solid var(--border); border-radius:var(--radius-xs); color:var(--text);
   font-family:var(--font); font-size:16px; outline:none; }
 .mcc-form-field input:focus, .mcc-form-field select:focus { border-color:var(--accent); }
 .month-check-footer { padding:12px 24px; border-top:1px solid var(--border);
@@ -389,7 +473,7 @@ tr.pp-locked .pp-lock-badge {
 
 /* ── Блок «Суммарная трудоёмкость» в тулбаре ─────────────────────────── */
 .plan-summary { display:flex; align-items:center; gap:10px; margin-left:auto;
-  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-md);
   padding:8px 16px; flex-shrink:0; }
 .plan-summary-label { font-size:15px; color:var(--muted); text-transform:uppercase;
   letter-spacing:0.06em; font-weight:600; white-space:nowrap; }
@@ -400,7 +484,7 @@ tr.pp-locked .pp-lock-badge {
 /* ── Строка фильтров под заголовками колонок ──────────────────────────── */
 .filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
 .col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
-  border-radius:4px; color:var(--text); font-family:var(--font); font-size:15px; outline:none;
+  border-radius:var(--radius-xs); color:var(--text); font-family:var(--font); font-size:15px; outline:none;
   transition:border-color 0.15s; box-sizing:border-box; text-align:center; }
 .col-filter:focus { border-color:var(--accent); background:var(--accent-light); }
 .col-filter.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
@@ -425,19 +509,19 @@ tr.pp-locked .pp-lock-badge {
 .type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
   display:none; align-items:center; justify-content:center; }
 .type-modal.open { display:flex; }
-.type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+.type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   padding:32px 36px; width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.15); }
 .type-modal-title { font-size:20px; font-weight:600; margin-bottom:6px; }
 .type-modal-sub { font-size:16px; color:var(--muted); margin-bottom:24px; }
 .type-options { display:flex; flex-direction:column; gap:10px; }
-.type-option { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:10px;
+.type-option { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:var(--radius-md);
   border:1px solid var(--border); cursor:pointer; transition:all 0.15s; background:var(--surface2); }
 .type-option:hover { border-color:var(--accent); background:var(--accent-glow); transform:translateX(4px); }
 .type-icon { font-size:26px; width:36px; text-align:center; }
 .type-label { font-size:17px; font-weight:500; }
 
 /* ── Цветные бейджи типов задач ───────────────────────────────────────── */
-.type-badge { display:inline-flex; align-items:center; padding:6px 10px; min-height:36px; border-radius:4px;
+.type-badge { display:inline-flex; align-items:center; padding:6px 10px; min-height:36px; border-radius:var(--radius-xs);
   font-size:14px; font-weight:600; letter-spacing:0.04em; white-space:nowrap; }
 .type-badge.разработка { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
 .type-badge.выпуск { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
@@ -448,7 +532,7 @@ tr.pp-locked .pp-lock-badge {
 .new-task-modal { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
   display:none; align-items:center; justify-content:center; }
 .new-task-modal.open { display:flex; }
-.new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+.new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
   box-shadow:0 8px 40px rgba(0,0,0,0.15); }
 .new-task-header { padding:20px 24px; border-bottom:1px solid var(--border);
@@ -463,17 +547,17 @@ tr.pp-locked .pp-lock-badge {
 .form-field.full { grid-column:1/-1; }
 .form-label { font-size:15px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
 .form-input { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none; }
+  border-radius:var(--radius-md); color:var(--text); font-family:var(--font); font-size:17px; outline:none; }
 .form-input:focus { border-color:var(--accent); }
 .form-select { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  border-radius:var(--radius-md); color:var(--text); font-family:var(--font); font-size:17px; outline:none;
   appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 .form-select:focus { border-color:var(--accent); }
 .form-select option { background:var(--surface); }
 .form-textarea { padding:8px 12px; background:var(--bg); border:1px solid var(--border);
-  border-radius:8px; color:var(--text); font-family:var(--font); font-size:17px; outline:none;
+  border-radius:var(--radius-md); color:var(--text); font-family:var(--font); font-size:17px; outline:none;
   resize:vertical; min-height:60px; }
 .form-textarea:focus { border-color:var(--accent); }
 .form-input:not(:disabled), .form-select:not(:disabled), .form-textarea:not(:disabled) {
@@ -485,25 +569,25 @@ tr.pp-locked .pp-lock-badge {
 }
 
 /* ── Блок исполнителя в модале управления ──────────────────────────────── */
-.executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
 .executor-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
 .executor-name { font-size:18px; font-weight:600; color:var(--text); }
-.executor-remove { padding:4px 10px; border-radius:5px; border:1px solid rgba(239,68,68,0.3);
+.executor-remove { padding:4px 10px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
 .executor-remove:hover { background:rgba(239,68,68,0.1); border-color:var(--danger); }
 .executor-hours { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
 .executor-month { display:flex; flex-direction:column; gap:4px; }
 .executor-month-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
 .executor-month-input { padding:6px 8px; background:var(--bg); border:1px solid var(--border);
-  border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; outline:none;
+  border-radius:var(--radius-sm); color:var(--text); font-family:var(--mono); font-size:16px; outline:none;
   text-align:center; width:100%; }
 .executor-month-input:focus { border-color:var(--accent); }
 
 /* ── Блок исполнителя в форме новой задачи (nt = new task) ────────────── */
-.nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+.nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-md);
   padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
 .nt-executor-name { font-size:17px; font-weight:500; color:var(--text); }
-.nt-executor-remove { padding:3px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);
+.nt-executor-remove { padding:3px 8px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
 .nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
 
@@ -513,7 +597,7 @@ tr.pp-locked .pp-lock-badge {
 }
 .new-task-modal.slideout-mode .new-task-box {
   max-width:min(560px, 90vw); width:min(560px, 90vw); max-height:100vh;
-  border-radius:16px 0 0 16px; margin:0;
+  border-radius:var(--radius-xl) 0 0 var(--radius-xl); margin:0;
   animation:slideInRight 0.25s ease;
 }
 @keyframes slideInRight { from{transform:translateX(100%)}to{transform:translateX(0)} }

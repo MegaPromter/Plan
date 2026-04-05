@@ -315,6 +315,19 @@ function _syncDeptFilter() {
 window.addEventListener("DOMContentLoaded", async () => {
   // Sidebar dropdowns и scroll — управляется base.html
 
+  // Delegated focus/blur for active row highlight
+  document.addEventListener('focusin', function(e) {
+    if (e.target.closest && e.target.closest('.data-table td')) setActiveRow(e.target);
+  });
+  document.addEventListener('focusout', function(e) {
+    if (e.target.closest && e.target.closest('.data-table td')) {
+      setTimeout(function() {
+        var active = document.activeElement;
+        if (!active || !active.closest || !active.closest('.data-table td')) clearActiveRow();
+      }, 50);
+    }
+  });
+
   // Регистрируем кастомные close-функции для модалок со сбросом состояния
   // ESC/click обрабатываются глобально в utils.js/modal.js
   registerModalCloser('newTaskModal', function() { closeNewTaskModal(); });
@@ -418,33 +431,40 @@ async function calcPlanningErrors() {
   const todayStr = now.toISOString().slice(0,10);
   // MONTHS_FULL — в utils.js
 
-  // Загружаем задачи текущего месяца
-  let allTasks;
-  if (!showAll && selectedYear === curYear && selectedMonth === curMonth && tasks.length > 0) {
-    allTasks = tasks;
-  } else {
-    try {
-      allTasks = await fetch(`/api/tasks/?year=${curYear}&month=${curMonth}`).then(r=>r.ok?r.json():[]);
-    } catch(e) { console.error('calcPlanningErrors: fetch tasks error', e); allTasks = []; }
+  // Кеш ignored — парсим localStorage один раз (не на каждый вызов peIsIgnored)
+  const _ignored = peGetIgnored();
+  const isIgn = (key) => !!_ignored[key];
+
+  // Параллельная загрузка данных (tasks + calendar + vacations одновременно)
+  let allTasks, calData, vacData;
+  const tasksPromise = (!showAll && selectedYear === curYear && selectedMonth === curMonth && tasks.length > 0)
+    ? Promise.resolve(tasks)
+    : fetch(`/api/tasks/?year=${curYear}&month=${curMonth}`).then(r => r.ok ? r.json() : []).catch(() => []);
+
+  const calPromise = fetch(`/api/work_calendar/?year=${curYear}`).then(r => r.ok ? r.json() : []).catch(() => []);
+  const vacPromise = fetch(`/api/vacations/?year=${curYear}`).then(r => r.ok ? r.json() : []).catch(() => []);
+
+  [allTasks, calData, vacData] = await Promise.all([tasksPromise, calPromise, vacPromise]);
+
+  // Фильтр по видимости: не-admin видят только задачи своего подразделения
+  if (!_isFullAccess()) {
+    allTasks = allTasks.filter(t => {
+      if (USER_DEPT && t.department === USER_DEPT) return true;
+      if (USER_SECTOR && t.sector_head === USER_SECTOR) return true;
+      if (USER_CENTER && t.ntc_center === USER_CENTER) return true;
+      return false;
+    });
   }
 
   // Норма рабочего времени из производственного календаря
   let monthNorm = DEFAULT_MONTH_NORM;
-  try {
-    const cal = await fetch(`/api/work_calendar/?year=${curYear}`).then(r=>r.ok?r.json():[]);
-    const entry = cal.find(c => c.month === curMonth);
-    if (entry && entry.hours_norm) monthNorm = entry.hours_norm;
-  } catch {}
+  const calEntry = calData.find(c => c.month === curMonth);
+  if (calEntry && calEntry.hours_norm) monthNorm = calEntry.hours_norm;
 
-  // Отпуска сотрудников в текущем месяце
-  let vacations = [];
-  try {
-    vacations = await fetch(`/api/vacations/?year=${curYear}`).then(r=>r.ok?r.json():[]);
-    // Фильтруем: отпуска которые пересекаются с текущим месяцем
-    const monthStart = `${curYear}-${String(curMonth).padStart(2,"0")}-01`;
-    const monthEnd   = `${curYear}-${String(curMonth).padStart(2,"0")}-31`;
-    vacations = vacations.filter(v => v.date_start <= monthEnd && v.date_end >= monthStart);
-  } catch {}
+  // Фильтруем отпуска: пересекаются с текущим месяцем
+  const monthStartStr = `${curYear}-${String(curMonth).padStart(2,"0")}-01`;
+  const monthEndStr   = `${curYear}-${String(curMonth).padStart(2,"0")}-31`;
+  let vacations = vacData.filter(v => v.date_start <= monthEndStr && v.date_end >= monthStartStr);
 
   // ── 1. Просроченные задачи (срок прошёл, отчёт не заполнен) ──────────────
   // has_reports приходит из API задач (annotate), N+1 fetch не нужен
@@ -452,18 +472,17 @@ async function calcPlanningErrors() {
     const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
     const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
     const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
-    return isOverdue && !t.has_reports && !peIsIgnored(`overdue_${t.id}`);
+    return isOverdue && !t.has_reports && !isIgn(`overdue_${t.id}`);
   });
 
   // ── 2. Задачи с датами уже просроченными при создании ────────────────────
-  // date_start > date_end ИЛИ date_start > deadline
   const badDates = allTasks.filter(t => {
     const ds   = t.date_start ? t.date_start.slice(0,10) : null;
     const de   = t.date_end   ? t.date_end.slice(0,10)   : null;
     const dead = t.deadline   ? t.deadline.slice(0,10)   : null;
     if (!ds) return false;
-    return (de && ds > de) || (dead && ds > dead);
-  }).filter(t => !peIsIgnored(`baddates_${t.id}`));
+    return ((de && ds > de) || (dead && ds > dead)) && !isIgn(`baddates_${t.id}`);
+  });
 
   // ── 3. Загрузка сотрудников (перегруз/недогруз) ──────────────────────────
   const execLoad = {};
@@ -482,23 +501,20 @@ async function calcPlanningErrors() {
     }
   });
 
-  const threshold = monthNorm * 1.10; // перегруз если > 110% нормы
-  const overloaded  = []; // > 110% нормы
-  const underloaded = []; // < нормы
+  const threshold = monthNorm * 1.10;
+  const overloaded  = [];
+  const underloaded = [];
 
-  // Перегруженные — из execLoad (только кто в задачах)
   Object.entries(execLoad).forEach(([name, hours]) => {
-    if (hours > threshold && !peIsIgnored(`overload_${name}_${curKey}`)) {
+    if (hours > threshold && !isIgn(`overload_${name}_${curKey}`)) {
       overloaded.push({ name, hours });
     }
   });
 
-  // Недозагруженные — ВСЕ сотрудники (dirs._ids_employees), не только назначенные
-  // Учитываем отпуска: дни отпуска в текущем месяце уменьшают норму пропорционально
+  // Недозагруженные — ВСЕ сотрудники, учитываем отпуска
   const _monthStart = new Date(curYear, curMonth - 1, 1);
-  const _monthEnd   = new Date(curYear, curMonth, 0); // последний день месяца
-  const _totalDays  = _monthEnd.getDate(); // рабочих дней ≈ кол-во дней (упрощённо)
-  // Считаем дни отпуска каждого сотрудника в текущем месяце
+  const _monthEnd   = new Date(curYear, curMonth, 0);
+  const _totalDays  = _monthEnd.getDate();
   const _vacDays = {};
   vacations.forEach(v => {
     const name = v.executor || v.executor_name || '';
@@ -510,34 +526,85 @@ async function calcPlanningErrors() {
       _vacDays[name] = (_vacDays[name] || 0) + days;
     }
   });
-  // Уникальные сотрудники (по ФИО)
+
   const _allEmps = new Set((dirs['_ids_employees'] || []).map(e => e.value));
   _allEmps.forEach(name => {
     const hours = execLoad[name] || 0;
-    // Скорректированная норма: уменьшаем пропорционально дням отпуска
     const vacD = _vacDays[name] || 0;
     const adjNorm = vacD >= _totalDays ? 0 : monthNorm * (1 - vacD / _totalDays);
-    if (adjNorm > 0 && hours < adjNorm && !peIsIgnored(`underload_${name}_${curKey}`)) {
+    if (adjNorm > 0 && hours < adjNorm && !isIgn(`underload_${name}_${curKey}`)) {
       underloaded.push({ name, hours, norm: Math.round(adjNorm) });
     }
   });
 
   // ── 4. Отпуска сотрудников с запланированными задачами ───────────────────
+  // Предварительный Set исполнителей для быстрого поиска (вместо allTasks.some на каждый отпуск)
+  const _execInTasks = new Set();
+  allTasks.forEach(t => {
+    (t.executors_list || []).forEach(ex => { if (ex.name) _execInTasks.add(ex.name); });
+    if (t.executor) _execInTasks.add(t.executor);
+  });
+
   const vacConflicts = [];
   vacations.forEach(v => {
     const name = v.executor || v.executor_name || "";
     if (!name) return;
     const ignKey = `vacation_${name}_${v.date_start}`;
-    if (peIsIgnored(ignKey)) return;
-    const hasWork = allTasks.some(t => {
-      const execNames = (t.executors_list||[]).map(e=>e.name);
-      return execNames.includes(name) || t.executor === name;
-    });
-    if (hasWork) vacConflicts.push({ ...v, ignKey });
+    if (isIgn(ignKey)) return;
+    if (_execInTasks.has(name)) vacConflicts.push({ ...v, ignKey });
+  });
+
+  // ── 5. Разбивка ошибок по отделам ─────────────────────────────────────
+  const deptStats = {};
+  overdue.forEach(t => {
+    const d = t.department || '—';
+    if (!deptStats[d]) deptStats[d] = { danger: 0, warn: 0 };
+    deptStats[d].danger++;
+  });
+  underloaded.forEach(e => {
+    // underloaded не имеет department — пропускаем
+  });
+  badDates.forEach(t => {
+    const d = t.department || '—';
+    if (!deptStats[d]) deptStats[d] = { danger: 0, warn: 0 };
+    deptStats[d].warn++;
+  });
+  // Сортируем по общему количеству ошибок (убывание)
+  const deptBreakdown = Object.entries(deptStats)
+    .map(([name, v]) => ({ name, danger: v.danger, warn: v.warn, total: v.danger + v.warn }))
+    .sort((a, b) => b.total - a.total);
+
+  // ── 6. Прогноз: дедлайны в ближайшие 7 дней ────────────────────────────
+  const _7days = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+  const soonExpiring = allTasks.filter(t => {
+    const de   = t.date_end ? t.date_end.slice(0, 10) : null;
+    const dead = t.deadline ? t.deadline.slice(0, 10) : null;
+    const d = de || dead;
+    return d && d >= todayStr && d <= _7days && !t.has_reports;
+  });
+  const soonNoExec = soonExpiring.filter(t => !t.executor && !(t.executors_list && t.executors_list.length));
+
+  // ── 7. Таймлайн: дедлайны по дням месяца ───────────────────────────────
+  const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+  const dayDeadlines = new Array(daysInMonth).fill(0);
+  const dayOverdue   = new Array(daysInMonth).fill(0);
+  allTasks.forEach(t => {
+    const de   = t.date_end ? t.date_end.slice(0, 10) : null;
+    const dead = t.deadline ? t.deadline.slice(0, 10) : null;
+    const d = de || dead;
+    if (!d) return;
+    const dp = new Date(d);
+    if (dp.getFullYear() === curYear && dp.getMonth() + 1 === curMonth) {
+      const dayIdx = dp.getDate() - 1;
+      dayDeadlines[dayIdx]++;
+      if (d < todayStr && !t.has_reports) dayOverdue[dayIdx]++;
+    }
   });
 
   return { overdue, badDates, overloaded, underloaded, vacConflicts,
-           curYear, curMonth, curKey, todayStr, monthNorm, MONTHS_RU };
+           curYear, curMonth, curKey, todayStr, monthNorm, MONTHS_FULL,
+           deptBreakdown, soonExpiring, soonNoExec, dayDeadlines, dayOverdue, daysInMonth,
+           totalTasks: allTasks.length };
 }
 
 async function refreshPlanningErrors() {
@@ -569,121 +636,205 @@ async function openPlanningErrors() {
 
   const result = await refreshPlanningErrors();
   const { overdue, badDates, overloaded, underloaded, vacConflicts,
-          curYear, curMonth, curKey, total, monthNorm, MONTHS_RU, todayStr } = result;
+          curYear, curMonth, curKey, total, monthNorm, MONTHS_FULL, todayStr,
+          deptBreakdown, soonExpiring, soonNoExec, dayDeadlines, dayOverdue, daysInMonth, totalTasks } = result;
 
   document.getElementById("peMeta").textContent =
-    `${MONTHS_FULL[curMonth]} ${curYear} · Найдено ошибок: ${total} · Норма: ${monthNorm} ч/мес`;
+    `${MONTHS_FULL[curMonth]} ${curYear} · Норма: ${monthNorm} ч/мес`;
   document.getElementById("peLastCheck").textContent =
     "Проверено: " + new Date().toLocaleTimeString("ru-RU");
 
   const body = document.getElementById("peBody");
   body.innerHTML = "";
 
-  // ── Секция 1: Просроченные задачи ────────────────────────────────────────
-  const sec1 = buildPeSection(
-    "🔴 Просроченные работы", overdue.length, overdue.length > 0 ? "danger" : "ok",
-    overdue.map(t => {
-      const de   = t.date_end  ? t.date_end.slice(0,10)  : null;
-      const dead = t.deadline  ? t.deadline.slice(0,10)  : null;
-      const daysCalc = de
-        ? Math.floor((new Date(todayStr)-new Date(de))/86400000)
-        : (dead ? Math.floor((new Date(todayStr)-new Date(dead))/86400000) : 0);
-      return {
-        title: t.work_name || `Работа #${t.id}`,
-        meta: `${t.task_type||""} · ${t.executor||"—"} · Дата окончания: ${de||"—"} · Срок выполнения: ${dead||"—"}`,
-        highlight: `Просрочено на ${daysCalc} дн.`,
-        actions: [
-          { label: "✏️ Редактировать", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
-          { label: "📝 Внести отчёт",  fn: () => { closePeModal(); openReportModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
-          { label: "Игнорировать",     fn: () => { peSetIgnored('overdue_'+t.id); closePeModal(); } },
-        ]
-      };
-    })
-  );
-  body.appendChild(sec1);
+  // ── Кольцо здоровья + полосы ─────────────────────────────────────────────
+  const healthPct = totalTasks > 0 ? Math.round(((totalTasks - total) / totalTasks) * 100) : 100;
+  const circumference = 2 * Math.PI * 42; // ≈264
+  const offset = circumference - (circumference * healthPct / 100);
+  const ringColor = healthPct >= 80 ? 'var(--ok)' : healthPct >= 50 ? '#f59e0b' : 'var(--danger)';
+  const ringTextColor = healthPct >= 80 ? '#22c55e' : healthPct >= 50 ? '#f59e0b' : 'var(--danger)';
 
-  // ── Секция 2: Ошибочные даты ─────────────────────────────────────────────
-  const sec2 = buildPeSection(
-    "🟠 Ошибки в датах (начало позже окончания)", badDates.length, badDates.length > 0 ? "warn" : "ok",
-    badDates.map(t => {
-      const ds   = t.date_start ? t.date_start.slice(0,10) : "—";
-      const de   = t.date_end   ? t.date_end.slice(0,10)   : "—";
-      const dead = t.deadline   ? t.deadline.slice(0,10)   : "—";
-      return {
+  const barMax = Math.max(overdue.length, badDates.length, overloaded.length, underloaded.length, vacConflicts.length, 1);
+  const barPct = (n) => Math.max(3, Math.round(n / barMax * 100));
+  const barCls = (n, threshDanger) => n > 0 ? (n >= threshDanger ? 'danger' : 'warn') : 'ok';
+
+  const vcTop = document.createElement("div");
+  vcTop.className = "vc-top";
+  vcTop.innerHTML = `
+    <div class="vc-score">
+      <div class="vc-ring">
+        <svg viewBox="0 0 100 100" width="100" height="100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="${ringColor}" stroke-width="10"
+            stroke-dasharray="${circumference.toFixed(0)}" stroke-dashoffset="${offset.toFixed(0)}" stroke-linecap="round"/>
+        </svg>
+        <div class="vc-ring-text" style="color:${ringTextColor}">${healthPct}%</div>
+      </div>
+      <div class="vc-score-label">Здоровье плана</div>
+      <div class="vc-score-sub">${total} ошибок из ${totalTasks} задач</div>
+    </div>
+    <div class="vc-bars">
+      <div class="vc-bar-row"><span class="vc-bar-label">Просроченные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(overdue.length, 10)}" style="width:${barPct(overdue.length)}%">${overdue.length}</div></div></div>
+      <div class="vc-bar-row"><span class="vc-bar-label">Ошибки в датах</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(badDates.length, 5)}" style="width:${barPct(badDates.length)}%">${badDates.length}</div></div></div>
+      <div class="vc-bar-row"><span class="vc-bar-label">Перегруженные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(overloaded.length, 5)}" style="width:${barPct(overloaded.length)}%">${overloaded.length}</div></div></div>
+      <div class="vc-bar-row"><span class="vc-bar-label">Недозагруженные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(underloaded.length, 10)}" style="width:${barPct(underloaded.length)}%">${underloaded.length}</div></div></div>
+      <div class="vc-bar-row"><span class="vc-bar-label">Конфликт отпусков</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(vacConflicts.length, 5)}" style="width:${barPct(vacConflicts.length)}%">${vacConflicts.length}</div></div></div>
+    </div>`;
+  body.appendChild(vcTop);
+
+  // ── Прогноз (ближайшие 7 дней) ──────────────────────────────────────────
+  if (soonExpiring.length > 0) {
+    const fc = document.createElement("div");
+    fc.className = "forecast-bar";
+    const noExecMsg = soonNoExec.length > 0 ? `, из них ${soonNoExec.length} без исполнителя` : '';
+    fc.innerHTML = `<span class="forecast-icon">⏰</span>
+      <span class="forecast-text">В ближайшие <strong>7 дней</strong> истекает срок у <strong>${soonExpiring.length} работ</strong>${escapePe(noExecMsg)}</span>
+      <span class="forecast-badge">+${soonExpiring.length}</span>`;
+    body.appendChild(fc);
+  }
+
+  // ── Разбивка по отделам ──────────────────────────────────────────────────
+  if (deptBreakdown.length > 0) {
+    const maxDept = deptBreakdown[0].total;
+    const deptDiv = document.createElement("div");
+    deptDiv.className = "dept-breakdown";
+    let rowsHtml = deptBreakdown.slice(0, 6).map(d => {
+      const dPct = maxDept > 0 ? Math.round(d.danger / maxDept * 100) : 0;
+      const wPct = maxDept > 0 ? Math.round(d.warn / maxDept * 100) : 0;
+      return `<div class="dept-row">
+        <span class="dept-name">${escapePe(d.name)}</span>
+        <div class="dept-bar-track">
+          ${d.danger > 0 ? `<div class="dept-bar-seg danger" style="width:${dPct}%">${d.danger}</div>` : ''}
+          ${d.warn > 0 ? `<div class="dept-bar-seg warn" style="width:${wPct}%">${d.warn}</div>` : ''}
+        </div>
+        <span class="dept-total">${d.total}</span>
+      </div>`;
+    }).join('');
+    deptDiv.innerHTML = `<div class="dept-breakdown-title">Ошибки по отделам</div>
+      <div class="dept-rows">${rowsHtml}</div>
+      <div class="timeline-legend" style="margin-top:8px">
+        <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--danger)"></span> Просрочено</span>
+        <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#f59e0b"></span> Ошибки дат</span>
+      </div>`;
+    body.appendChild(deptDiv);
+  }
+
+  // ── Таймлайн дедлайнов по дням ───────────────────────────────────────────
+  const maxDay = Math.max(...dayDeadlines, 1);
+  const todayDay = new Date().getDate();
+  const todayMonth = new Date().getMonth() + 1;
+  const todayYear = new Date().getFullYear();
+  const isCurrentMonth = (curYear === todayYear && curMonth === todayMonth);
+
+  const tlDiv = document.createElement("div");
+  tlDiv.className = "timeline-panel";
+  let daysHtml = '', labelsHtml = '';
+  for (let i = 0; i < daysInMonth; i++) {
+    const dt = new Date(curYear, curMonth - 1, i + 1);
+    const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+    const hPct = Math.max(5, Math.round(dayDeadlines[i] / maxDay * 100));
+    const isToday = isCurrentMonth && (i + 1) === todayDay;
+    let bg;
+    if (isWeekend && dayDeadlines[i] === 0) {
+      bg = 'var(--muted);opacity:0.3';
+    } else if (dayOverdue[i] > 0) {
+      bg = 'var(--danger)';
+    } else if (dayDeadlines[i] > 0 && isCurrentMonth && (i + 1) <= todayDay + 7 && (i + 1) >= todayDay) {
+      bg = '#f59e0b';
+    } else if (dayDeadlines[i] > 0) {
+      bg = '#22c55e';
+    } else {
+      bg = 'var(--border)';
+    }
+    const marker = isToday ? '<div class="timeline-today-marker"></div>' : '';
+    daysHtml += `<div class="timeline-day" style="height:${hPct}%;background:${bg}" title="${i+1}: ${dayDeadlines[i]} дедлайнов">${marker}</div>`;
+    labelsHtml += `<span class="timeline-label${isToday ? ' today' : ''}"${isWeekend ? ' style="opacity:0.4"' : ''}>${i+1}</span>`;
+  }
+  tlDiv.innerHTML = `<div class="timeline-title">Дедлайны в ${MONTHS_FULL[curMonth].toLowerCase()} ${curYear}</div>
+    <div class="timeline-track">${daysHtml}</div>
+    <div class="timeline-labels">${labelsHtml}</div>
+    <div class="timeline-legend">
+      <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--danger)"></span> Просрочено</span>
+      <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#f59e0b"></span> Скоро</span>
+      <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#22c55e"></span> В срок</span>
+      <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--muted);opacity:0.3"></span> Выходной</span>
+      ${isCurrentMonth ? '<span class="timeline-leg-item" style="color:var(--accent);font-weight:600">▼ Сегодня</span>' : ''}
+    </div>`;
+  body.appendChild(tlDiv);
+
+  // ── Аккордеон секций ─────────────────────────────────────────────────────
+  const sections = [
+    { icon: "🔴", cls: "danger", title: `Просроченные работы (всего ${overdue.length})`, count: overdue.length,
+      items: overdue.map(t => {
+        const de = t.date_end ? t.date_end.slice(0,10) : null;
+        const dead = t.deadline ? t.deadline.slice(0,10) : null;
+        const daysCalc = de ? Math.floor((new Date(todayStr)-new Date(de))/86400000)
+          : (dead ? Math.floor((new Date(todayStr)-new Date(dead))/86400000) : 0);
+        return {
+          title: t.work_name || `Работа #${t.id}`,
+          meta: `${t.task_type||""} · ${t.executor||"—"} · Окончание: ${de||"—"} · Срок: ${dead||"—"}`,
+          highlight: `Просрочено на ${daysCalc} дн.`,
+          actions: [
+            { label: "✏️ Редактировать", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
+            { label: "📝 Внести отчёт",  fn: () => { closePeModal(); openReportModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
+            { label: "Игнорировать",     fn: () => { peSetIgnored('overdue_'+t.id); closePeModal(); } },
+          ]
+        };
+      })
+    },
+    { icon: "🟠", cls: "warn", title: `Ошибки в датах (всего ${badDates.length})`, count: badDates.length,
+      items: badDates.map(t => ({
         title: t.work_name || `Работа #${t.id}`,
-        meta: `${t.executor||"—"} · Начало: ${ds} · Окончание: ${de} · Срок: ${dead}`,
+        meta: `${t.executor||"—"} · Начало: ${(t.date_start||"").slice(0,10)||"—"} · Окончание: ${(t.date_end||"").slice(0,10)||"—"}`,
         highlight: "Дата начала позже даты окончания/срока",
         actions: [
           { label: "✏️ Исправить", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x=>x.id===t.id)||{id:t.id}); } },
           { label: "Игнорировать", fn: () => { peSetIgnored('baddates_'+t.id); closePeModal(); } },
         ]
-      };
-    })
-  );
-  body.appendChild(sec2);
-
-  // ── Секция 3: Перегруженные сотрудники (> 110% нормы) ────────────────────
-  const sec3 = buildPeSection(
-    `🔴 Перегруженные сотрудники (>${Math.round(monthNorm*1.1)} ч, норма ${monthNorm} ч)`,
-    overloaded.length, overloaded.length > 0 ? "danger" : "ok",
-    overloaded.map(e => ({
-      title: e.name,
-      meta: `Загрузка в ${MONTHS_FULL[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
-      highlight: `Перегруз: +${(e.hours - monthNorm).toFixed(1)} ч`,
-      actions: [
-        { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
-        { label: "Оставить как есть",     fn: () => { peSetIgnored('overload_'+e.name+'_'+curKey); closePeModal(); } },
-      ]
-    }))
-  );
-  body.appendChild(sec3);
-
-  // ── Секция 4: Недозагруженные сотрудники (< нормы) ───────────────────────
-  const sec4 = buildPeSection(
-    `🟡 Недозагруженные сотрудники (норма ${monthNorm} ч)`,
-    underloaded.length, underloaded.length > 0 ? "warn" : "ok",
-    underloaded.map(e => ({
-      title: e.name,
-      meta: `Загрузка в ${MONTHS_FULL[curMonth]} ${curYear}: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
-      highlight: `Дефицит: ${((e.norm || monthNorm) - e.hours).toFixed(1)} ч`,
-      actions: [
-        { label: "🔍 Показать работы",    fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
-        { label: "Оставить как есть",     fn: () => { peSetIgnored('underload_'+e.name+'_'+curKey); closePeModal(); } },
-      ]
-    }))
-  );
-  body.appendChild(sec4);
-
-  // ── Секция 5: Конфликт с отпуском ────────────────────────────────────────
-  const sec5 = buildPeSection(
-    "📅 Отпуск сотрудника пересекается с плановыми задачами",
-    vacConflicts.length, vacConflicts.length > 0 ? "warn" : "ok",
-    vacConflicts.map(v => {
-      const name = v.executor || v.executor_name || "—";
-      const ign = v.ignKey;
-      return {
-        title: name,
-        meta: `Отпуск: ${v.date_start||"—"} — ${v.date_end||"—"} · ${v.vac_type||""}`,
-        highlight: "Запланированы задачи в период отпуска",
+      }))
+    },
+    { icon: "🔴", cls: "danger", title: `Перегруженные (всего ${overloaded.length}, >${Math.round(monthNorm*1.1)} ч)`, count: overloaded.length,
+      items: overloaded.map(e => ({
+        title: e.name,
+        meta: `Загрузка: ${e.hours.toFixed(1)} ч · Норма: ${monthNorm} ч`,
+        highlight: `Перегруз: +${(e.hours - monthNorm).toFixed(1)} ч`,
         actions: [
-          { label: "Игнорировать",              fn: () => { peSetIgnored(ign); closePeModal(); } },
-          { label: "✏️ Скорректировать план",   fn: () => { closePeModal(); filterByExecutorCurMonth(name, curYear, curMonth); } },
-          { label: "📅 Скорректировать отпуск", fn: () => { closePeModal(); window.location.href='/employees/vacation-plan/'; } },
+          { label: "🔍 Показать работы", fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
+          { label: "Оставить как есть",  fn: () => { peSetIgnored('overload_'+e.name+'_'+curKey); closePeModal(); } },
         ]
-      };
-    })
-  );
-  body.appendChild(sec5);
+      }))
+    },
+    { icon: "🟡", cls: "warn", title: `Недозагруженные (всего ${underloaded.length}, норма ${monthNorm} ч)`, count: underloaded.length,
+      items: underloaded.map(e => ({
+        title: e.name,
+        meta: `Загрузка: ${e.hours.toFixed(1)} ч · Норма: ${e.norm || monthNorm} ч`,
+        highlight: `Дефицит: ${((e.norm || monthNorm) - e.hours).toFixed(1)} ч`,
+        actions: [
+          { label: "🔍 Показать работы", fn: () => { closePeModal(); filterByExecutorCurMonth(e.name, curYear, curMonth); } },
+          { label: "Оставить как есть",  fn: () => { peSetIgnored('underload_'+e.name+'_'+curKey); closePeModal(); } },
+        ]
+      }))
+    },
+    { icon: "📅", cls: "warn", title: `Конфликт с отпуском (всего ${vacConflicts.length})`, count: vacConflicts.length,
+      items: vacConflicts.map(v => {
+        const name = v.executor || v.executor_name || "—";
+        return {
+          title: name,
+          meta: `Отпуск: ${v.date_start||"—"} — ${v.date_end||"—"} · ${v.vac_type||""}`,
+          highlight: "Задачи в период отпуска",
+          actions: [
+            { label: "Игнорировать",              fn: () => { peSetIgnored(v.ignKey); closePeModal(); } },
+            { label: "✏️ Скорректировать план",   fn: () => { closePeModal(); filterByExecutorCurMonth(name, curYear, curMonth); } },
+            { label: "📅 Скорректировать отпуск", fn: () => { closePeModal(); window.location.href='/employees/vacation-plan/'; } },
+          ]
+        };
+      })
+    },
+  ];
 
-  // Раскрываем секции с ошибками
-  [sec1, sec2, sec3, sec4, sec5].forEach(sec => {
-    const badge = sec.querySelector(".pe-count-badge");
-    if (badge && !badge.classList.contains("ok")) {
-      sec.querySelector(".pe-section-body").classList.add("open");
-      const arrow = sec.querySelector(".pe-section-hdr span:last-child");
-      if (arrow) arrow.textContent = "▲";
-    }
-  });
+  sections.forEach(s => body.appendChild(buildPeSection(s)));
+
+  // Секции всегда свёрнуты — пользователь сам развернёт нужные
 }
 
 function escapePe(str) {
@@ -692,51 +843,51 @@ function escapePe(str) {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function buildPeSection(title, count, badgeClass, items) {
+function buildPeSection({ icon, cls, title, count, items }) {
   const sec = document.createElement("div");
-  sec.className = "pe-section";
-  const badge = `<span class="pe-count-badge ${count > 0 ? badgeClass : 'ok'}">${count}</span>`;
-  const body = document.createElement("div");
-  body.className = "pe-section-body";
-  const arrow = document.createElement("span");
-  arrow.style.cssText = "font-size:14px;color:var(--muted);transition:transform 0.2s;margin-left:8px;";
-  arrow.textContent = "▼";
+  sec.className = "va-section";
+  const badgeCls = count > 0 ? cls : "ok";
+  const iconCls  = count > 0 ? cls : "ok";
+
+  const secBody = document.createElement("div");
+  secBody.className = "va-sec-body";
 
   const hdr = document.createElement("div");
-  hdr.className = "pe-section-hdr";
-  hdr.innerHTML = `<span class="pe-section-title">${title} ${badge}</span>`;
-  hdr.appendChild(arrow);
+  hdr.className = "va-sec-hdr";
+  hdr.innerHTML = `<div class="va-sec-icon ${iconCls}">${count > 0 ? icon : '✓'}</div>
+    <div class="va-sec-title">${escapePe(title)}</div>
+    <span class="va-sec-count ${badgeCls}">${count}</span>
+    <span class="va-sec-arrow">▼</span>`;
   hdr.onclick = () => {
-    body.classList.toggle("open");
-    arrow.textContent = body.classList.contains("open") ? "▲" : "▼";
+    secBody.classList.toggle("open");
+    hdr.querySelector(".va-sec-arrow").textContent = secBody.classList.contains("open") ? "▲" : "▼";
   };
 
   items.forEach(item => {
     const row = document.createElement("div");
     row.className = "pe-item";
-    row.innerHTML = `
-      <div class="pe-item-info">
+    row.innerHTML = `<div class="pe-item-info">
         <div class="pe-item-name">${escapePe(item.title)}</div>
         <div class="pe-item-meta">${escapePe(item.meta)} · <span>${escapePe(item.highlight)}</span></div>
         <div class="pe-item-actions"></div>
       </div>`;
-    const actionsContainer = row.querySelector(".pe-item-actions");
+    const ac = row.querySelector(".pe-item-actions");
     item.actions.forEach(a => {
       const btn = document.createElement("button");
       btn.className = "pe-btn";
       btn.textContent = a.label;
       btn.addEventListener("click", a.fn);
-      actionsContainer.appendChild(btn);
+      ac.appendChild(btn);
     });
-    body.appendChild(row);
+    secBody.appendChild(row);
   });
 
   if (items.length === 0) {
-    body.innerHTML = '<div style="padding:14px 24px;font-size:16px;color:var(--muted)">✓ Ошибок не найдено</div>';
+    secBody.innerHTML = '<div style="padding:14px 24px;font-size:16px;color:var(--muted)">✓ Ошибок не найдено</div>';
   }
 
   sec.appendChild(hdr);
-  sec.appendChild(body);
+  sec.appendChild(secBody);
   return sec;
 }
 
@@ -1343,6 +1494,12 @@ function renderTable() {
   document.getElementById("searchCount").textContent =
     shown ? (hasFilters ? `${shown} из ${total} зап.` : `${shown} зап.`) : "";
 
+  // Пустое состояние: вообще нет задач
+  if (tasks.length === 0) {
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-tasks', title:'Нет задач', desc:'Создайте первую задачу для начала работы', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Создать задачу</button>' : '', colspan:15});
+    updatePlanSummary();
+    return;
+  }
   // Пустое состояние: нет строк после фильтрации
   if (_spFiltered.length === 0 && (hasFilters || _spStatusFilter !== 'all')) {
     tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action:'<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Новая задача</button>', colspan:15});
@@ -1940,15 +2097,18 @@ async function saveTask(id, tr) {
       const err = await res.json();
       tr.style.outline = '1px solid rgba(239,68,68,0.6)';
       setTimeout(() => { tr.style.outline = ''; }, 3000);
+      tr.querySelectorAll('td').forEach(function(td) { flashCell(td, 'error'); });
       notify("⚠ " + (err.message || "Конфликт: данные изменены другим пользователем"), "err");
       return;
     }
     if (!res.ok) throw new Error("HTTP " + res.status);
     tr.style.outline = '1px solid rgba(34,197,94,0.5)';
     setTimeout(() => { tr.style.outline = ''; }, 800);
+    tr.querySelectorAll('td').forEach(function(td) { flashCell(td); });
   } catch(e) {
     tr.style.outline = '1px solid rgba(239,68,68,0.6)';
     setTimeout(() => { tr.style.outline = ''; }, 3000);
+    tr.querySelectorAll('td').forEach(function(td) { flashCell(td, 'error'); });
     notify("Ошибка сохранения: " + e.message, "err");
   }
 }
@@ -1965,16 +2125,14 @@ async function deleteTask(id, tr) {
     }
     // Удаляем из локального массива задач
     tasks = tasks.filter(t => t.id !== id);
-    tr.style.transition = "opacity 0.2s, transform 0.2s";
-    tr.style.opacity = "0"; tr.style.transform = "translateX(20px)";
-    setTimeout(() => {
+    animateRowExit(tr, function() {
       tr.remove();
       document.querySelectorAll("#taskBody .num-cell").forEach((td,i) => {
         const cb = td.querySelector('input[type="checkbox"]');
         if (cb) { cb.nextSibling ? cb.nextSibling.textContent = ' ' + (i+1) : td.appendChild(document.createTextNode(' ' + (i+1))); }
         else { td.textContent = i+1; }
       });
-    }, 200);
+    });
     notify("Задача удалена", "ok");
   } catch(e) {
     notify("Ошибка сети: " + e.message, "err");
@@ -2273,6 +2431,7 @@ function openInlineNewRow() {
   const wrap = document.getElementById('tableView');
   if (wrap) wrap.scrollTop = 0;
   tbody.prepend(tr);
+  animateRowEnter(tr);
 
   // Инициализируем кастомные dropdown-ы для новой строки
   if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tr);
@@ -3419,7 +3578,7 @@ function renderNewTaskExecutorsList() {
     item.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div style="font-size:14px;font-weight:600;color:var(--text);">${escapeHtml(executor.name)}</div>
-        <button class="nt-executor-remove" type="button" onclick="removeExecutorFromNewTask(${index})" style="padding:2px 7px;font-size:13px;">✕</button>
+        <button class="nt-executor-remove" type="button" onclick="removeExecutorFromNewTask(${index})" title="Удалить исполнителя" style="padding:2px 7px;font-size:13px;">✕</button>
       </div>
       ${hoursHTML}`;
     container.appendChild(item);
@@ -3488,7 +3647,7 @@ function renderExecutorsList() {
     item.innerHTML = `
       <div class="executor-item-header">
         <div class="executor-name">${escapeHtml(executor.name)}</div>
-        <button class="executor-remove" onclick="removeExecutor(${index})">✕ Удалить</button>
+        <button class="executor-remove" onclick="removeExecutor(${index})" title="Удалить исполнителя">✕ Удалить</button>
       </div>
       <div class="executor-hours">${monthsHTML}</div>`;
     container.appendChild(item);

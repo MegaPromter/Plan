@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=10">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=12">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -569,7 +569,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=15"></script>
+<script src="{% static 'js/plan.js' %}?v=17"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),
