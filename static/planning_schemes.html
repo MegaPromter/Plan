@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Схема планирования и балансировки загрузки предприятия</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #1a1a1a; }
+
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
+h1 { text-align: center; font-size: 22px; margin-bottom: 6px; }
+.subtitle { text-align: center; font-size: 13px; color: #666; margin-bottom: 32px; }
+
+/* ===== Общая сетка ===== */
+.schema { position: relative; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto auto; gap: 0; }
+
+/* ===== Фазы (левая колонка) ===== */
+.phase { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;
+  padding: 16px 12px; border-radius: 12px 0 0 12px; }
+.phase-contract { background: #dbeafe; color: #1e40af; border-right: 4px solid #3b82f6; }
+.phase-exec { background: #dcfce7; color: #166534; border-right: 4px solid #22c55e; }
+
+/* ===== Контент фаз ===== */
+.phase-content { padding: 24px 20px; background: #fff; position: relative; }
+.phase-content:first-of-type { border-radius: 0 12px 0 0; }
+.phase-content:last-of-type { border-radius: 0 0 12px 0; }
+
+.phase-divider { grid-column: 1 / -1; height: 3px; background: linear-gradient(90deg, #e5e7eb 0%, #d1d5db 50%, #e5e7eb 100%); }
+
+/* ===== Блоки ===== */
+.block { border-radius: 10px; padding: 14px 18px; position: relative; }
+.block h3 { font-size: 14px; margin-bottom: 4px; }
+.block p { font-size: 12px; line-height: 1.5; opacity: .8; }
+.block .tag { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+.b-input { background: #f8fafc; border: 2px solid #cbd5e1; }
+.b-input h3 { color: #475569; }
+
+.b-portfolio { background: #eff6ff; border: 2px solid #93c5fd; }
+.b-portfolio h3 { color: #1e40af; }
+.b-portfolio .tag { background: #dbeafe; color: #1e40af; }
+
+.b-balance { background: #fef2f2; border: 2px dashed #f87171; }
+.b-balance h3 { color: #dc2626; }
+.b-balance .tag { background: #fee2e2; color: #dc2626; }
+
+.b-gg { background: #f0fdf4; border: 2px solid #86efac; }
+.b-gg h3 { color: #166534; }
+.b-gg .tag { background: #dcfce7; color: #166534; }
+
+.b-cross { background: #fff7ed; border: 2px solid #fdba74; }
+.b-cross h3 { color: #9a3412; }
+.b-cross .tag { background: #ffedd5; color: #9a3412; }
+
+.b-cross-approved { background: #fff7ed; border: 3px solid #ea580c; }
+.b-cross-approved h3 { color: #9a3412; }
+
+.b-plan { background: #faf5ff; border: 2px solid #d8b4fe; }
+.b-plan h3 { color: #6b21a8; }
+.b-plan .tag { background: #f3e8ff; color: #6b21a8; }
+
+.b-pp { background: #f0fdfa; border: 2px solid #5eead4; }
+.b-pp h3 { color: #115e59; }
+.b-pp .tag { background: #ccfbf1; color: #115e59; }
+
+/* ===== Макет фазы «Заключение» ===== */
+.contract-grid {
+  display: grid;
+  grid-template-columns: 180px 40px 200px 40px 200px 40px 200px;
+  grid-template-rows: auto;
+  align-items: center;
+  gap: 12px 0;
+}
+
+/* ===== Макет фазы «Исполнение» ===== */
+.exec-layout { display: flex; flex-direction: column; gap: 20px; }
+
+.exec-projects { display: flex; flex-direction: column; gap: 28px; }
+
+.project-row { display: grid; grid-template-columns: 160px 40px 160px 40px 180px 40px 180px; align-items: center; gap: 8px 0; }
+
+.aggregate-section { display: grid; grid-template-columns: 1fr 40px 260px 40px 1fr; align-items: center; gap: 8px 0; margin-top: 8px; }
+
+/* ===== Стрелки ===== */
+.arr { text-align: center; font-size: 24px; color: #9ca3af; font-weight: 300; }
+.arr-red { color: #ef4444; }
+.arr-down { font-size: 22px; color: #9ca3af; text-align: center; padding: 4px 0; }
+.arr-down-red { font-size: 22px; color: #ef4444; text-align: center; padding: 4px 0; }
+
+/* ===== Обратные связи (SVG) ===== */
+.feedback-svg { position: absolute; pointer-events: none; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+
+/* ===== Подписи к стрелкам ===== */
+.arrow-label { font-size: 11px; color: #9ca3af; text-align: center; margin-top: -6px; font-style: italic; }
+.arrow-label-red { font-size: 11px; color: #ef4444; text-align: center; margin-top: -6px; font-style: italic; }
+
+/* ===== Пояснения (правый блок) ===== */
+.notes { margin-top: 28px; background: #fff; border-radius: 12px; padding: 24px; }
+.notes h2 { font-size: 16px; margin-bottom: 12px; }
+.notes ol { padding-left: 20px; }
+.notes li { font-size: 13px; line-height: 1.8; color: #374151; }
+.notes li strong { color: #1a1a1a; }
+.notes li em { color: #dc2626; font-style: normal; font-weight: 600; }
+
+/* ===== Легенда ===== */
+.legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 24px; background: #fff; border-radius: 12px; padding: 16px 24px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #555; }
+.legend-dot { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px) {
+  .contract-grid, .project-row, .aggregate-section { font-size: 12px; }
+  .block { padding: 10px 14px; }
+  .block h3 { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Схема планирования и балансировки общей загрузки предприятия</h1>
+<p class="subtitle">Процесс от запроса заказчика до задания сотруднику</p>
+
+<!-- ========================================================== -->
+<!-- ФАЗА 1: ЗАКЛЮЧЕНИЕ КОНТРАКТА                              -->
+<!-- ========================================================== -->
+<div class="schema">
+
+  <div class="phase phase-contract">Заключение контракта</div>
+  <div class="phase-content" style="border-radius: 0 12px 0 0;">
+
+    <div class="contract-grid">
+      <!-- Входные данные -->
+      <div class="block b-input">
+        <h3>Запросы заказчиков</h3>
+        <p>Объёмы работ<br>Сроки проектов</p>
+      </div>
+      <div class="arr">→</div>
+
+      <!-- Портфель -->
+      <div class="block b-portfolio">
+        <h3>Портфель проектов</h3>
+        <p>Перечень всех проектов с объёмами, сроками и приоритетами</p>
+        <span class="tag">Вход: все проекты</span>
+      </div>
+      <div class="arr">→</div>
+
+      <!-- Балансировка предприятия -->
+      <div class="block b-balance">
+        <h3>Б1: Балансировка предприятия</h3>
+        <p>Общая потребность всех проектов vs. располагаемая мощность</p>
+        <span class="tag">Цикл ↺</span>
+      </div>
+      <div class="arr">→</div>
+
+      <!-- Результат -->
+      <div class="block b-gg" style="border-style: dashed;">
+        <h3>Результат</h3>
+        <p>Внутренние сроки проектов. Выделенная загрузка по каждому проекту</p>
+        <span class="tag">По каждому проекту</span>
+      </div>
+    </div>
+
+    <div class="arrow-label" style="margin-top:10px;">Если предприятие перегружено — сдвигаем сроки, меняем приоритеты, откладываем проекты</div>
+
+  </div>
+
+  <!-- Разделитель фаз -->
+  <div class="phase-divider"></div>
+
+  <!-- ========================================================== -->
+  <!-- ФАЗА 2: ИСПОЛНЕНИЕ КОНТРАКТА                              -->
+  <!-- ========================================================== -->
+
+  <div class="phase phase-exec">Исполнение контракта</div>
+  <div class="phase-content" style="border-radius: 0 0 12px 0;">
+
+    <div class="exec-layout">
+
+      <!-- --- Проекты (повторяются для каждого) --- -->
+      <div class="exec-projects">
+
+        <!-- Проект 1 (текущий) -->
+        <div>
+          <div style="font-size:12px; color:#888; font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;">Проект 1 (текущий)</div>
+          <div class="project-row">
+            <div class="block b-gg">
+              <h3>Генеральный график</h3>
+              <p>Действующий. Пункты, вехи, объёмы</p>
+            </div>
+            <div class="arr">→</div>
+            <div class="block b-cross" style="border-style:dashed;">
+              <h3>Проект сквозного</h3>
+              <p>Этапы по отделам, подробные сроки</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-balance" style="min-width:160px;">
+              <h3>Загрузка по проекту 1</h3>
+              <p>Подробная: по отделам × месяцам</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-cross-approved">
+              <h3>Сквозной утв.</h3>
+              <p>Сбалансирован и выпущен</p>
+              <span class="tag" style="background:#ffedd5;color:#9a3412;">Утверждён</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Проект 2 (текущий) -->
+        <div>
+          <div style="font-size:12px; color:#888; font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;">Проект 2 (текущий)</div>
+          <div class="project-row">
+            <div class="block b-gg">
+              <h3>Генеральный график</h3>
+              <p>Действующий. Пункты, вехи, объёмы</p>
+            </div>
+            <div class="arr">→</div>
+            <div class="block b-cross" style="border-style:dashed;">
+              <h3>Проект сквозного</h3>
+              <p>Этапы по отделам, подробные сроки</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-balance" style="min-width:160px;">
+              <h3>Загрузка по проекту 2</h3>
+              <p>Подробная: по отделам × месяцам</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-cross-approved">
+              <h3>Сквозной утв.</h3>
+              <p>Сбалансирован и выпущен</p>
+              <span class="tag" style="background:#ffedd5;color:#9a3412;">Утверждён</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Проект N (перспективный) -->
+        <div>
+          <div style="font-size:12px; color:#888; font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;">Проект N (перспективный)</div>
+          <div class="project-row">
+            <div class="block b-gg" style="border-style:dashed;">
+              <h3>Проект ГГ</h3>
+              <p>Черновик. Располагаемая загрузка по проекту</p>
+            </div>
+            <div class="arr">→</div>
+            <div class="block b-cross" style="border-style:dashed;">
+              <h3>Проект сквозного</h3>
+              <p>Этапы по отделам, подробные сроки</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-balance" style="min-width:160px;">
+              <h3>Загрузка по проекту N</h3>
+              <p>Подробная: по отделам × месяцам</p>
+            </div>
+            <div class="arr arr-red">→</div>
+            <div class="block b-cross-approved" style="border-style:dashed; border-width:2px;">
+              <h3>Проект сквозного</h3>
+              <p>На утверждении</p>
+              <span class="tag" style="background:#ffedd5;color:#9a3412;">Черновик</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Стрелка вниз от всех сквозных -->
+      <div style="text-align:center; position:relative;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+          <div style="flex:1; height:2px; background: linear-gradient(90deg, transparent, #d8b4fe);"></div>
+          <div class="block b-balance" style="display:inline-block; padding:10px 20px;">
+            <h3>Б2: Балансировка загрузки подразделений</h3>
+            <p>Суммарная загрузка каждого отдела по всем проектам vs. мощность отдела. Итеративная корректировка сквозных графиков</p>
+            <span class="tag">Цикл ↺ пока отделы не сбалансированы</span>
+          </div>
+          <div style="flex:1; height:2px; background: linear-gradient(90deg, #d8b4fe, transparent);"></div>
+        </div>
+      </div>
+
+      <!-- Агрегация: все сквозные → план предприятия → ПП -->
+      <div class="aggregate-section">
+
+        <!-- Все сквозные -->
+        <div style="text-align:center;">
+          <div class="block b-cross-approved" style="display:inline-block;">
+            <h3>Все сквозные графики</h3>
+            <p>Утверждённые + выпущенные</p>
+          </div>
+        </div>
+
+        <div class="arr">→</div>
+
+        <!-- План работ предприятия -->
+        <div class="block b-plan">
+          <h3>План работ предприятия</h3>
+          <p>Годовая программа: все отделы × все проекты × все месяцы. Является средством контроля.</p>
+          <span class="tag">Агрегация всех сквозных</span>
+        </div>
+
+        <div class="arr">→</div>
+
+        <!-- ПП подразделений -->
+        <div style="text-align: center;">
+          <div style="display:inline-flex; flex-direction:column; gap:8px;">
+            <div class="block b-pp" style="padding:8px 14px;">
+              <h3 style="font-size:13px;">ПП НТЦ по проекту 1</h3>
+            </div>
+            <div class="block b-pp" style="padding:8px 14px;">
+              <h3 style="font-size:13px;">ПП НТЦ по проекту 2</h3>
+            </div>
+            <div class="block b-pp" style="padding:8px 14px; border-style:dashed;">
+              <h3 style="font-size:13px;">ПП НТЦ по проекту N</h3>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="arr">→</div>
+            <div class="block b-pp" style="display:inline-block; padding:8px 14px; margin-top:4px;">
+              <h3 style="font-size:13px;">Планы подразделений</h3>
+              <p>Задания сотрудникам</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Обратная связь: план предприятия → корректировка сквозных -->
+      <div style="text-align:center;">
+        <div class="block b-balance" style="display:inline-block; padding:8px 16px;">
+          <h3 style="font-size:13px;">Б3: Обратная связь</h3>
+          <p>При наличии дисбаланса в плане предприятия → корректировка сквозных графиков и повторная балансировка (Б2)</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Пояснения -->
+<div class="notes">
+  <h2>Последовательность процессов</h2>
+  <ol>
+    <li><strong>Портфель проектов</strong> — перечень всех проектов со сроками и объёмами работ с учётом запросов заказчиков.</li>
+    <li><strong>Балансировка предприятия (Б1)</strong> — <em>определяется общая потребная загрузка</em> на весь период. Загрузка предприятия — объём работ за период с учётом мощности. Если потребность &gt; мощности — корректируем портфель.</li>
+    <li><strong>Генеральный график</strong> — по каждому проекту разрабатывается ГГ, задаются внутренние параметры (сроки). Для текущих — действующий ГГ, для перспективных — проект ГГ.</li>
+    <li><strong>Проект сквозного плана-графика</strong> — детализация ГГ с участием подразделений-исполнителей, исходя из располагаемой мощности. <em>Проводится балансировка загрузки подразделений (Б2).</em></li>
+    <li><strong>Утверждение сквозного</strong> — из отбалансированного проекта формируются проекты производственных планов. Сквозной план-график <em>выпускается</em>. Повторная балансировка загрузки подразделений.</li>
+    <li><strong>План работ предприятия</strong> — формируется из всех выпущенных сквозных. Является средством контроля. <em>При дисбалансе (Б3)</em> — корректировка сквозных графиков.</li>
+    <li><strong>Планы подразделений</strong> — на основании плана работ предприятия формируются ПП для каждого подразделения.</li>
+  </ol>
+</div>
+
+<!-- Легенда -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#f8fafc; border:2px solid #cbd5e1;"></div> Внешние входы</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#eff6ff; border:2px solid #93c5fd;"></div> Портфель</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0fdf4; border:2px solid #86efac;"></div> Генеральный график</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fff7ed; border:2px solid #fdba74;"></div> Сквозной график</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fff7ed; border:3px solid #ea580c;"></div> Сквозной утверждённый</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fef2f2; border:2px dashed #f87171;"></div> Балансировка (цикл)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#faf5ff; border:2px solid #d8b4fe;"></div> План работ предприятия</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0fdfa; border:2px solid #5eead4;"></div> ПП подразделений</div>
+  <div class="legend-item"><div class="legend-dot" style="border:2px dashed #999; background:transparent;"></div> Черновик / проект</div>
+</div>
+
+</div>
+</body>
+</html>

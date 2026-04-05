@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Сквозной график — варианты оформления v2</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-light: rgba(37,99,235,0.08);
+    --border: #e2e8f0;
+    --border2: #cbd5e1;
+    --text: #1e293b;
+    --muted: #64748b;
+    --surface: #fafbfc;
+    --surface2: #f1f5f9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: var(--text); padding: 24px 40px; }
+  h1 { font-size: 20px; margin-bottom: 28px; }
+  h2 { font-size: 15px; margin: 36px 0 6px; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  h2 span.tag { font-size: 11px; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .desc { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+
+  /* shared */
+  table { border-collapse: collapse; margin-bottom: 28px; }
+  .badge { display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 4px;border-radius:8px;font-size:10px;font-weight:600;background:var(--accent-light);color:var(--accent);margin-left:4px; }
+  .chev { font-size:9px;color:var(--muted);margin-right:4px;cursor:pointer; }
+  .act { color:var(--muted);font-size:12px;cursor:pointer;border:none;background:none;padding:2px 4px; }
+  .act:hover { color:var(--accent); }
+
+  /* ════════════════ 1. Excel group ════════════════ */
+  .v1 { width:100%; }
+  .v1 th { padding:8px 10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:2px solid var(--border2); text-align:center; letter-spacing:0.04em; }
+  .v1 th:first-child { text-align:left; }
+  .v1 td { padding:7px 10px; border-bottom:1px solid var(--border); text-align:center; font-size:13px; }
+  .v1 .grp td { background:var(--surface2); font-weight:700; font-size:14px; text-align:left; border-bottom:2px solid var(--border2); padding:10px; }
+  .v1 .stg td { font-weight:600; }
+  .v1 .stg td:first-child { text-align:left; padding-left:24px; }
+  .v1 .wrk td { color:var(--muted); }
+  .v1 .wrk td:first-child { text-align:left; padding-left:44px; }
+  .v1 tbody tr:hover td { background:var(--accent-light); }
+
+  /* ════════════════ 2. Indented tree ════════════════ */
+  .v2 { width:100%; }
+  .v2 th { padding:8px 10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:2px solid var(--border2); text-align:center; }
+  .v2 th:nth-child(1) { text-align:left; width:50%; }
+  .v2 td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:center; font-size:13px; }
+  .v2 .lv0 td { font-weight:700; font-size:15px; }
+  .v2 .lv0 td:first-child { padding-left:8px; text-align:left; }
+  .v2 .lv1 td { font-weight:600; font-size:13px; }
+  .v2 .lv1 td:first-child { padding-left:28px; text-align:left; }
+  .v2 .lv2 td { font-weight:400; color:var(--muted); font-size:13px; }
+  .v2 .lv2 td:first-child { padding-left:52px; text-align:left; }
+  .v2 tbody tr:hover td { background:var(--accent-light); }
+
+  /* ════════════════ 3. MS Project style ════════════════ */
+  .v3 { width:100%; font-size:13px; }
+  .v3 th { padding:6px 8px; font-size:11px; font-weight:600; color:var(--muted); background:#e8ecf0; border-bottom:1px solid #c0c8d0; border-right:1px solid #d0d7de; text-align:center; }
+  .v3 th:first-child { text-align:left; border-left:1px solid #d0d7de; }
+  .v3 td { padding:4px 8px; border-bottom:1px solid #e8ecf0; border-right:1px solid #eef1f4; text-align:center; }
+  .v3 td:first-child { border-left:1px solid #eef1f4; }
+  .v3 .lv0 { background:#edf2f7; }
+  .v3 .lv0 td:first-child { font-weight:700; padding-left:6px; text-align:left; }
+  .v3 .lv1 td:first-child { padding-left:22px; font-weight:600; text-align:left; }
+  .v3 .lv2 td:first-child { padding-left:40px; color:var(--muted); text-align:left; }
+  .v3 .lv0 td:first-child::before { content:''; display:inline-block; width:3px; height:14px; background:var(--accent); border-radius:2px; margin-right:6px; vertical-align:middle; }
+  .v3 .lv1 td:first-child::before { content:''; display:inline-block; width:3px; height:14px; background:#93c5fd; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  .v3 tbody tr:hover { background:#dbeafe; }
+
+  /* ════════════════ 4. Stripe + icons ════════════════ */
+  .v4 { width:100%; }
+  .v4 th { padding:8px 10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:2px solid var(--border2); text-align:center; }
+  .v4 th:first-child { text-align:left; }
+  .v4 td { padding:8px 10px; border-bottom:1px solid var(--border); text-align:center; font-size:14px; }
+  .v4 .lv0 td { background:linear-gradient(90deg, var(--accent) 3px, var(--surface2) 3px); font-weight:700; font-size:15px; }
+  .v4 .lv0 td:first-child { text-align:left; padding-left:12px; }
+  .v4 .lv1 td { background:linear-gradient(90deg, #93c5fd 3px, transparent 3px); font-weight:600; }
+  .v4 .lv1 td:first-child { text-align:left; padding-left:28px; }
+  .v4 .lv2 td { color:var(--muted); }
+  .v4 .lv2 td:first-child { text-align:left; padding-left:44px; }
+  .v4 .lv0 td:first-child .ico { color:var(--accent); margin-right:6px; }
+  .v4 .lv1 td:first-child .ico { color:#93c5fd; margin-right:6px; }
+  .v4 .lv2 td:first-child .ico { color:#cbd5e1; margin-right:4px; font-size:8px; }
+  .v4 tbody tr:hover td { background:var(--accent-light) !important; }
+
+  /* ════════════════ 5. Compact card rows ════════════════ */
+  .v5-list { display:flex; flex-direction:column; gap:2px; margin-bottom:28px; }
+  .v5-item { border-radius:6px; padding:10px 14px; display:grid; grid-template-columns:1fr 100px 100px 70px 80px 50px; gap:8px; align-items:center; font-size:14px; }
+  .v5-item > span { text-align:center; }
+  .v5-item > span:first-child { text-align:left; }
+  .v5-lv0 { background:var(--surface2); font-weight:700; font-size:15px; cursor:pointer; }
+  .v5-lv0:hover { background:#e2e8f0; }
+  .v5-lv1 { background:#fff; font-weight:600; margin-left:16px; border:1px solid var(--border); }
+  .v5-lv1:hover { border-color:var(--accent); }
+  .v5-lv2 { background:#fff; color:var(--muted); margin-left:36px; font-size:13px; border-left:2px solid #e2e8f0; }
+  .v5-head { display:grid; grid-template-columns:1fr 100px 100px 70px 80px 50px; gap:8px; padding:6px 14px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); letter-spacing:0.04em; }
+  .v5-head > span { text-align:center; }
+  .v5-head > span:first-child { text-align:left; }
+
+  /* ════════════════ 6. Sticky header + zebra ════════════════ */
+  .v6-wrap { max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; margin-bottom:28px; }
+  .v6 { width:100%; }
+  .v6 th { position:sticky; top:0; z-index:2; padding:8px 10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); background:#fff; border-bottom:2px solid var(--border2); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.04); }
+  .v6 th:first-child { text-align:left; }
+  .v6 td { padding:7px 10px; border-bottom:1px solid var(--border); text-align:center; font-size:13px; }
+  .v6 .lv0 td { font-weight:700; font-size:14px; background:var(--surface2); }
+  .v6 .lv0 td:first-child { text-align:left; padding-left:8px; }
+  .v6 .lv1 td { font-weight:600; background:#fff; }
+  .v6 .lv1 td:first-child { text-align:left; padding-left:24px; }
+  .v6 .lv2 td { color:var(--muted); background:#fafcff; }
+  .v6 .lv2 td:first-child { text-align:left; padding-left:44px; }
+  .v6 tbody tr:hover td { background:#dbeafe !important; }
+
+  /* ════════════════ 7. Notion-style blocks ════════════════ */
+  .v7 { margin-bottom:28px; }
+  .v7-item { margin-bottom:10px; }
+  .v7-header { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--surface2); border-radius:6px; font-weight:700; font-size:15px; cursor:pointer; }
+  .v7-header:hover { background:#e2e8f0; }
+  .v7-header .num { color:var(--muted); font-size:13px; font-weight:400; }
+  .v7-header .dates { margin-left:auto; font-size:12px; font-weight:400; color:var(--muted); }
+  .v7-stages { padding-left:20px; border-left:2px solid var(--border); margin:4px 0 4px 18px; }
+  .v7-stage { padding:6px 10px; display:grid; grid-template-columns:1fr 90px 90px 60px 70px 40px; gap:6px; align-items:center; font-weight:600; font-size:13px; border-bottom:1px solid var(--border); }
+  .v7-stage:last-child { border-bottom:none; }
+  .v7-stage:hover { background:var(--accent-light); }
+  .v7-stage span { text-align:center; }
+  .v7-stage span:first-child { text-align:left; }
+  .v7-works { padding-left:20px; border-left:2px solid #e8ecf0; margin:2px 0 2px 16px; }
+  .v7-work { padding:4px 10px; display:grid; grid-template-columns:1fr 90px 90px 60px 70px 40px; gap:6px; align-items:center; font-size:12px; color:var(--muted); }
+  .v7-work span { text-align:center; }
+  .v7-work span:first-child { text-align:left; }
+</style>
+</head>
+<body>
+
+<h1>Сквозной график — варианты оформления</h1>
+
+<!-- DATA -->
+
+<!-- ═══════════ 1. Excel group ═══════════ -->
+<h2><span class="tag">1</span> Excel-группировка</h2>
+<p class="desc">Пункты ГГ как строки-разделители (colspan). Ниже — этапы и работы.</p>
+<table class="v1">
+  <thead><tr><th style="width:45%;">Название</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:80px;">Отдел</th><th style="width:50px;"></th></tr></thead>
+  <tbody>
+    <tr class="grp"><td colspan="6">4. Разработка рабочей конструкторской документации <span class="badge">3</span></td></tr>
+    <tr class="stg"><td>4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="wrk"><td>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td></td></tr>
+    <tr class="wrk"><td>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td></td></tr>
+    <tr class="stg"><td>4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="grp"><td colspan="6">5. Разработка РКД на экспериментальные изделия</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════ 2. Indented tree ═══════════ -->
+<h2><span class="tag">2</span> Дерево с отступами</h2>
+<p class="desc">Одна таблица, иерархия через отступы и размер шрифта. Минимализм.</p>
+<table class="v2">
+  <thead><tr><th>Название</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:80px;">Отдел</th><th style="width:50px;"></th></tr></thead>
+  <tbody>
+    <tr class="lv0"><td>4. Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td></td></tr>
+    <tr class="lv1"><td><span class="chev">&#9660;</span>4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv2"><td>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td></td></tr>
+    <tr class="lv2"><td>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td></td></tr>
+    <tr class="lv1"><td><span class="chev">&#9654;</span>4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv0"><td>5. Разработка РКД на экспериментальные изделия</td><td>2025-07-01</td><td>2026-10-01</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════ 3. MS Project ═══════════ -->
+<h2><span class="tag">3</span> MS Project / Gantt grid</h2>
+<p class="desc">Компактные строки, цветные маркеры уровня слева, тонкие разделители.</p>
+<table class="v3">
+  <thead><tr><th style="width:45%;">Название</th><th style="width:90px;">Начало</th><th style="width:90px;">Окончание</th><th style="width:60px;">Труд.</th><th style="width:70px;">Отдел</th><th style="width:40px;"></th></tr></thead>
+  <tbody>
+    <tr class="lv0"><td>4. Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td></td></tr>
+    <tr class="lv1"><td>4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv2"><td>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td></td></tr>
+    <tr class="lv2"><td>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td></td></tr>
+    <tr class="lv1"><td>4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv0"><td>5. Разработка РКД на экспериментальные изделия</td><td>2025-07-01</td><td>2026-10-01</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════ 4. Stripe + icons ═══════════ -->
+<h2><span class="tag">4</span> Полосы + иконки</h2>
+<p class="desc">Цветная полоса слева (3px) по уровню. Иконки-маркеры для типа элемента.</p>
+<table class="v4">
+  <thead><tr><th style="width:45%;">Название</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:80px;">Отдел</th><th style="width:50px;"></th></tr></thead>
+  <tbody>
+    <tr class="lv0"><td><span class="ico">&#9632;</span>4. Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td></td></tr>
+    <tr class="lv1"><td><span class="ico">&#9654;</span>4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv2"><td><span class="ico">&#9679;</span>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td></td></tr>
+    <tr class="lv2"><td><span class="ico">&#9679;</span>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td></td></tr>
+    <tr class="lv1"><td><span class="ico">&#9654;</span>4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv0"><td><span class="ico">&#9632;</span>5. Разработка РКД на экспериментальные изделия</td><td>2025-07-01</td><td>2026-10-01</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════ 5. Compact card rows ═══════════ -->
+<h2><span class="tag">5</span> Карточные строки (без table)</h2>
+<p class="desc">CSS Grid вместо таблицы. Уровни отличаются отступом и стилем карточки.</p>
+<div class="v5-head"><span>Название</span><span>Начало</span><span>Окончание</span><span>Труд.</span><span>Отдел</span><span></span></div>
+<div class="v5-list">
+  <div class="v5-item v5-lv0"><span>4. Разработка рабочей конструкторской документации</span><span>2025-03-01</span><span>2026-12-30</span><span></span><span></span><span></span></div>
+  <div class="v5-item v5-lv1"><span>4.1 Разработка РКД на корпуса <span class="badge">2</span></span><span>2026-01-01</span><span>2026-08-31</span><span></span><span></span><span><button class="act">&#9998;</button></span></div>
+  <div class="v5-item v5-lv2"><span>Спецификация, Сборочный чертёж</span><span>2026-01-15</span><span>2026-04-30</span><span>120</span><span>КО-1</span><span></span></div>
+  <div class="v5-item v5-lv2"><span>Деталировка корпусных элементов</span><span>2026-03-01</span><span>2026-07-15</span><span>200</span><span>КО-1</span><span></span></div>
+  <div class="v5-item v5-lv1"><span>4.2 Разработка схем ПГС</span><span>2026-01-01</span><span>2026-09-30</span><span></span><span></span><span><button class="act">&#9998;</button></span></div>
+  <div class="v5-item v5-lv0"><span>5. Разработка РКД на экспериментальные изделия</span><span>2025-07-01</span><span>2026-10-01</span><span></span><span></span><span></span></div>
+</div>
+
+<!-- ═══════════ 6. Sticky + scroll ═══════════ -->
+<h2><span class="tag">6</span> Sticky header + скролл</h2>
+<p class="desc">Фиксированная шапка, таблица в контейнере с вертикальным скроллом. Зебра по уровням.</p>
+<div class="v6-wrap">
+<table class="v6">
+  <thead><tr><th style="width:45%;">Название</th><th style="width:100px;">Начало</th><th style="width:100px;">Окончание</th><th style="width:70px;">Труд.</th><th style="width:80px;">Отдел</th><th style="width:50px;"></th></tr></thead>
+  <tbody>
+    <tr class="lv0"><td>1. Техническое предложение (Аванпроект)</td><td>2024-02-01</td><td>2024-10-03</td><td></td><td></td><td></td></tr>
+    <tr class="lv0"><td>2. Эскизный проект</td><td>2024-08-01</td><td>2025-01-31</td><td></td><td></td><td></td></tr>
+    <tr class="lv0"><td>4. Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td></td></tr>
+    <tr class="lv1"><td>4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv2"><td>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td></td></tr>
+    <tr class="lv2"><td>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td></td></tr>
+    <tr class="lv1"><td>4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv1"><td>4.3 Разработка схем БКС <span class="badge">2</span></td><td>2026-01-01</td><td>2026-12-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv1"><td>4.4 Разработка РКД на установку приборов</td><td>2026-05-01</td><td>2027-03-31</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv1"><td>4.5 Разработка общей РКД</td><td>2026-01-01</td><td>2027-06-30</td><td></td><td></td><td><button class="act">&#9998;</button></td></tr>
+    <tr class="lv0"><td>5. Разработка РКД на экспериментальные изделия</td><td>2025-07-01</td><td>2026-10-01</td><td></td><td></td><td></td></tr>
+    <tr class="lv0"><td>6. Проведение КДИ, автономных и комплексных испытаний</td><td>2026-02-01</td><td>2027-07-01</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ═══════════ 7. Notion blocks ═══════════ -->
+<h2><span class="tag">7</span> Notion-стиль (вложенные блоки)</h2>
+<p class="desc">Пункт = блок с заголовком. Этапы и работы вложены с вертикальными линиями связи.</p>
+<div class="v7">
+  <div class="v7-item">
+    <div class="v7-header">
+      <span class="chev">&#9660;</span>
+      <span class="num">4.</span>
+      Разработка рабочей конструкторской документации
+      <span class="badge" style="margin-left:4px;">3</span>
+      <span class="dates">2025-03-01 — 2026-12-30</span>
+    </div>
+    <div class="v7-stages">
+      <div class="v7-stage"><span><span class="chev">&#9660;</span>4.1 Разработка РКД на корпуса <span class="badge">2</span></span><span>2026-01-01</span><span>2026-08-31</span><span></span><span></span><span><button class="act">&#9998;</button></span></div>
+      <div class="v7-works">
+        <div class="v7-work"><span>Спецификация, Сборочный чертёж</span><span>2026-01-15</span><span>2026-04-30</span><span>120</span><span>КО-1</span><span></span></div>
+        <div class="v7-work"><span>Деталировка корпусных элементов</span><span>2026-03-01</span><span>2026-07-15</span><span>200</span><span>КО-1</span><span></span></div>
+      </div>
+      <div class="v7-stage"><span><span class="chev">&#9654;</span>4.2 Разработка схем ПГС</span><span>2026-01-01</span><span>2026-09-30</span><span></span><span></span><span><button class="act">&#9998;</button></span></div>
+      <div class="v7-stage"><span><span class="chev">&#9654;</span>4.3 Разработка схем БКС <span class="badge">2</span></span><span>2026-01-01</span><span>2026-12-30</span><span></span><span></span><span><button class="act">&#9998;</button></span></div>
+    </div>
+  </div>
+  <div class="v7-item">
+    <div class="v7-header">
+      <span class="chev">&#9654;</span>
+      <span class="num">5.</span>
+      Разработка РКД на экспериментальные изделия
+      <span class="dates">2025-07-01 — 2026-10-01</span>
+    </div>
+  </div>
+  <div class="v7-item">
+    <div class="v7-header">
+      <span class="chev">&#9654;</span>
+      <span class="num">6.</span>
+      Проведение КДИ, автономных и комплексных испытаний
+      <span class="dates">2026-02-01 — 2027-07-01</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

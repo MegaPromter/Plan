@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Варианты оформления сквозного графика</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-light: rgba(37,99,235,0.08);
+    --border: #e2e8f0;
+    --border2: #cbd5e1;
+    --text: #1e293b;
+    --muted: #64748b;
+    --surface: #fafbfc;
+    --surface2: #f1f5f9;
+    --success: #16a34a;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: var(--text); padding: 20px 40px; }
+  h1 { font-size: 20px; margin-bottom: 30px; color: var(--text); }
+  h2 { font-size: 16px; margin: 40px 0 12px; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  h2:first-of-type { margin-top: 20px; }
+  .desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 30px; table-layout: fixed; }
+  th { background: var(--surface2); border-bottom: 2px solid var(--border2); padding: 10px 8px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+  td { padding: 8px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: center; vertical-align: middle; }
+  .col-num { width: 50px; }
+  .col-name { text-align: left; }
+  .col-date { width: 110px; }
+  .col-labor { width: 80px; }
+  .col-dept { width: 100px; }
+  .col-act { width: 60px; }
+  .btn-icon { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; font-size: 13px; }
+  .btn-icon:hover { color: var(--accent); }
+  .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 16px; padding: 0 4px; border-radius: 8px; font-size: 10px; font-weight: 600; background: var(--accent-light); color: var(--accent); margin-left: 4px; }
+  .chevron { font-size: 9px; color: var(--muted); margin-right: 4px; }
+
+  /* ══════ Вариант A: Tree-style ══════ */
+  .va .item td { font-weight: 700; font-size: 15px; background: var(--surface2); }
+  .va .item td.col-name { padding-left: 8px; }
+  .va .stage td { font-weight: 600; font-size: 13px; }
+  .va .stage td.col-name { padding-left: 32px; }
+  .va .work td { font-weight: 400; font-size: 13px; color: var(--muted); }
+  .va .work td.col-name { padding-left: 56px; }
+  .va .tree-icon { margin-right: 6px; font-size: 12px; }
+  .va .tree-icon.item-icon { color: var(--accent); }
+  .va .tree-icon.stage-icon { color: var(--muted); }
+  .va .tree-icon.work-icon { color: #94a3b8; font-size: 8px; }
+
+  /* ══════ Вариант B: Color bars ══════ */
+  .vb .item td { font-weight: 700; font-size: 15px; background: var(--surface2); }
+  .vb .item td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+  .vb .stage td { font-weight: 600; }
+  .vb .stage td:first-child { box-shadow: inset 3px 0 0 #93c5fd; }
+  .vb .stage td.col-name { padding-left: 24px; }
+  .vb .work td { font-weight: 400; color: var(--muted); }
+  .vb .work td.col-name { padding-left: 40px; }
+
+  /* ══════ Вариант C: Group headers ══════ */
+  .vc .group-header td { font-weight: 700; font-size: 15px; background: var(--surface2); border-bottom: 2px solid var(--border2); padding: 12px 8px; }
+  .vc .stage td { font-weight: 600; }
+  .vc .stage td.col-name { padding-left: 16px; }
+  .vc .work td { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .vc .work td.col-name { padding-left: 32px; }
+  .vc .group-spacer td { height: 8px; background: var(--surface); border: none; padding: 0; }
+
+  /* ══════ Вариант D: Cards ══════ */
+  .vd-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .vd-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--surface2); font-weight: 700; font-size: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .vd-card-header .num { color: var(--muted); margin-right: 10px; font-size: 13px; }
+  .vd-card-header .dates { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .vd-card table { margin: 0; table-layout: fixed; }
+  .vd-card th { font-size: 11px; padding: 6px 8px; }
+  .vd-card .stage td { font-weight: 600; }
+  .vd-card .stage td.col-name { padding-left: 8px; }
+  .vd-card .work td { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .vd-card .work td.col-name { padding-left: 28px; }
+
+  /* ══════ Вариант E: Merged num+name ══════ */
+  .ve .col-merged { text-align: left; }
+  .ve .item td { font-weight: 700; font-size: 15px; background: var(--surface2); }
+  .ve .item td.col-merged { padding-left: 8px; }
+  .ve .item td.col-merged .num { color: var(--muted); margin-right: 8px; font-weight: 400; font-size: 13px; }
+  .ve .stage td { font-weight: 600; }
+  .ve .stage td.col-merged { padding-left: 28px; }
+  .ve .stage td.col-merged .num { color: var(--muted); margin-right: 6px; font-weight: 400; font-size: 12px; }
+  .ve .work td { font-weight: 400; font-size: 13px; color: var(--muted); }
+  .ve .work td.col-merged { padding-left: 52px; }
+</style>
+</head>
+<body>
+
+<h1>Варианты оформления таблицы сквозного графика</h1>
+
+<!-- ═══════════════════ A ═══════════════════ -->
+<h2>A. Древовидный (tree-style)</h2>
+<p class="desc">Иконки + отступы в колонке "Название". Номер отдельной колонкой.</p>
+<table class="va">
+  <thead><tr>
+    <th class="col-num">№</th><th class="col-name">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+  </tr></thead>
+  <tbody>
+    <tr class="item"><td>4</td><td class="col-name"><span class="tree-icon item-icon">&#9660;</span>Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td><button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="stage"><td>4.1</td><td class="col-name"><span class="tree-icon stage-icon">&#9660;</span>Разработка РКД на корпуса</td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name"><span class="tree-icon work-icon">&#9679;</span>Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name"><span class="tree-icon work-icon">&#9679;</span>Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="stage"><td>4.2</td><td class="col-name"><span class="tree-icon stage-icon">&#9654;</span>Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ B ═══════════════════ -->
+<h2>B. Цветовые полосы</h2>
+<p class="desc">Левая цветная полоса показывает уровень. Чем глубже — тем светлее.</p>
+<table class="vb">
+  <thead><tr>
+    <th class="col-num">№</th><th class="col-name">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+  </tr></thead>
+  <tbody>
+    <tr class="item"><td>4</td><td class="col-name">Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td><button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="stage"><td>4.1</td><td class="col-name">Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name">Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name">Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="stage"><td>4.2</td><td class="col-name">Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ C ═══════════════════ -->
+<h2>C. Группировка с разделителями</h2>
+<p class="desc">Пункты ГГ как заголовки групп на всю ширину. Между группами — отступ.</p>
+<table class="vc">
+  <thead><tr>
+    <th class="col-num">№</th><th class="col-name">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+  </tr></thead>
+  <tbody>
+    <tr class="group-header"><td>4</td><td class="col-name">Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td><button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="stage"><td>4.1</td><td class="col-name">Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name">Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="work"><td></td><td class="col-name">Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="stage"><td>4.2</td><td class="col-name">Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="group-spacer"><td colspan="7"></td></tr>
+    <tr class="group-header"><td>5</td><td class="col-name">Разработка РКД на экспериментальные изделия</td><td>2025-07-01</td><td>2026-10-01</td><td></td><td></td><td><button class="btn-icon">&#128279;</button></td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ D ═══════════════════ -->
+<h2>D. Accordion-карточки</h2>
+<p class="desc">Каждый пункт ГГ — отдельная карточка. Этапы и работы внутри.</p>
+<div class="vd-card">
+  <div class="vd-card-header">
+    <div><span class="num">4.</span> Разработка рабочей конструкторской документации</div>
+    <div class="dates">2025-03-01 &mdash; 2026-12-30</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th class="col-name">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+    </tr></thead>
+    <tbody>
+      <tr class="stage"><td class="col-name">4.1 Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+      <tr class="work"><td class="col-name">Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+      <tr class="work"><td class="col-name">Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+      <tr class="stage"><td class="col-name">4.2 Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="vd-card">
+  <div class="vd-card-header">
+    <div><span class="num">5.</span> Разработка РКД на экспериментальные изделия</div>
+    <div class="dates">2025-07-01 &mdash; 2026-10-01</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th class="col-name">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+    </tr></thead>
+    <tbody>
+      <tr style="color:var(--muted); text-align:center;"><td colspan="6">Нет этапов</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════ E ═══════════════════ -->
+<h2>E. Объединённая колонка №+Название</h2>
+<p class="desc">Номер и название в одной колонке. Экономия места, чистый вид.</p>
+<table class="ve">
+  <thead><tr>
+    <th class="col-merged" style="text-align:left;">Название</th><th class="col-date">Начало</th><th class="col-date">Окончание</th><th class="col-labor">Труд.</th><th class="col-dept">Отдел</th><th class="col-act"></th>
+  </tr></thead>
+  <tbody>
+    <tr class="item"><td class="col-merged"><span class="num">4.</span>Разработка рабочей конструкторской документации</td><td>2025-03-01</td><td>2026-12-30</td><td></td><td></td><td><button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="stage"><td class="col-merged"><span class="num">4.1</span>Разработка РКД на корпуса <span class="badge">2</span></td><td>2026-01-01</td><td>2026-08-31</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+    <tr class="work"><td class="col-merged">Спецификация, Сборочный чертёж</td><td>2026-01-15</td><td>2026-04-30</td><td>120</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="work"><td class="col-merged">Деталировка корпусных элементов</td><td>2026-03-01</td><td>2026-07-15</td><td>200</td><td>КО-1</td><td><button class="btn-icon" style="color:#dc2626;">&#128281;</button></td></tr>
+    <tr class="stage"><td class="col-merged"><span class="num">4.2</span>Разработка схем ПГС</td><td>2026-01-01</td><td>2026-09-30</td><td></td><td></td><td><button class="btn-icon">&#9998;</button> <button class="btn-icon">&#128279;</button></td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

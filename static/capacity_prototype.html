@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Загрузка / Мощность — прототип</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-light: rgba(37,99,235,0.08);
+    --border: #e2e8f0;
+    --border2: #cbd5e1;
+    --text: #1e293b;
+    --muted: #64748b;
+    --surface: #fafbfc;
+    --surface2: #f1f5f9;
+    --success: #16a34a;
+    --success-light: #86efac;
+    --warning: #ca8a04;
+    --warning-light: #fde047;
+    --danger: #dc2626;
+    --danger-light: #fca5a5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: var(--text); padding: 30px 40px; }
+
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+  /* Toolbar */
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+  .toolbar select, .toolbar input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: #fff; }
+
+  /* ── Сводные карточки (KPI) ─────────────────────── */
+  .kpi-row { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .kpi-value { font-size: 28px; font-weight: 700; }
+  .kpi-sub { font-size: 13px; color: var(--muted); }
+  .kpi-value--normal { color: var(--success); }
+  .kpi-value--high { color: var(--warning); }
+  .kpi-value--overload { color: var(--danger); }
+  .kpi-value--low { color: var(--muted); }
+
+  /* ── Карточки центров ───────────────────────────── */
+  .center-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .center-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .center-card.collapsed .center-body { display: none; }
+  .center-card.collapsed .center-chevron { transform: rotate(-90deg); }
+
+  .center-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: var(--surface2);
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .center-header:hover { background: color-mix(in srgb, var(--surface2) 80%, var(--accent-light)); }
+
+  .center-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .center-chevron {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.2s;
+  }
+  .center-dept-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    background: var(--accent-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .center-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 14px;
+  }
+  .center-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .summary-label { color: var(--muted); font-weight: 500; }
+  .summary-value { font-weight: 600; }
+
+  /* Прогресс-бар в summary */
+  .summary-bar {
+    width: 120px;
+    height: 10px;
+    background: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .summary-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.3s;
+  }
+  .summary-bar-fill--low { background: #9ca3af; }
+  .summary-bar-fill--normal { background: var(--success-light); }
+  .summary-bar-fill--high { background: var(--warning-light); }
+  .summary-bar-fill--overload { background: var(--danger-light); }
+
+  .summary-pct { font-weight: 700; min-width: 50px; text-align: right; }
+  .summary-pct--low { color: var(--muted); }
+  .summary-pct--normal { color: var(--success); }
+  .summary-pct--high { color: var(--warning); }
+  .summary-pct--overload { color: var(--danger); }
+
+  .center-body { padding: 0; }
+
+  /* Таблица отделов */
+  .dept-table {
+    border-collapse: collapse;
+    font-size: 15px;
+    width: auto;
+  }
+  .dept-table thead th {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .dept-table thead th:first-child { text-align: left; }
+  .dept-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    vertical-align: middle;
+  }
+  .dept-table td:first-child { text-align: left; font-weight: 500; }
+  .dept-table tbody tr { cursor: pointer; transition: background 0.1s; }
+  .dept-table tbody tr:hover { background: var(--accent-light); }
+
+  /* Бар загрузки в таблице */
+  .load-cell { display: flex; align-items: center; gap: 10px; }
+  .load-bar {
+    width: 100px;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .load-bar-fill { height: 100%; border-radius: 4px; }
+  .load-bar-fill--low { background: #9ca3af; }
+  .load-bar-fill--normal { background: var(--success-light); }
+  .load-bar-fill--high { background: var(--warning-light); }
+  .load-bar-fill--overload { background: var(--danger-light); }
+  .load-pct { font-weight: 700; min-width: 50px; text-align: right; font-size: 14px; }
+  .load-pct--low { color: var(--muted); }
+  .load-pct--normal { color: var(--success); }
+  .load-pct--high { color: var(--warning); }
+  .load-pct--overload { color: var(--danger); }
+
+  .level-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .level-badge--low { background: rgba(156,163,175,0.15); color: #6b7280; }
+  .level-badge--normal { background: rgba(34,197,94,0.12); color: var(--success); }
+  .level-badge--high { background: rgba(202,138,4,0.12); color: var(--warning); }
+  .level-badge--overload { background: rgba(220,38,38,0.12); color: var(--danger); }
+
+  /* ── Помесячная детализация (drill-down) ────────── */
+  .drill-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+  .drill-panel {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    width: 90%;
+    max-width: 1100px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+  .drill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .drill-title { font-size: 18px; font-weight: 700; }
+  .drill-close {
+    background: none; border: none;
+    font-size: 20px; color: var(--muted);
+    cursor: pointer; padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .drill-close:hover { background: var(--surface2); color: var(--text); }
+
+  .drill-kpi { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .drill-kpi .kpi-card { min-width: 140px; padding: 12px 16px; }
+  .drill-kpi .kpi-value { font-size: 22px; }
+
+  .month-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  .month-table thead th {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 2px solid var(--border2);
+    text-align: center;
+  }
+  .month-table thead th:first-child { text-align: left; }
+  .month-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  .month-table td:first-child { text-align: left; font-weight: 500; }
+  .month-table .month-over { background: rgba(220,38,38,0.06); }
+  .month-table .month-ok { background: rgba(34,197,94,0.04); }
+
+  /* Мини-бар для месяцев */
+  .mini-bar { display: flex; align-items: center; gap: 6px; justify-content: center; }
+  .mini-bar-bg {
+    width: 60px; height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .mini-bar-fill { height: 100%; border-radius: 3px; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Загрузка / Мощность</h1>
+<p class="subtitle">Сводка по НТЦ-центрам и отделам. Кликните на отдел для помесячной детализации.</p>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <label>Год: <select id="year"><option>2026</option><option>2025</option></select></label>
+  <label>Режим: <select><option>Фактическая</option><option>Штатная</option></select></label>
+  <label>Проект: <select><option value="">Все проекты</option><option>ДОС</option></select></label>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <span class="kpi-label">Всего сотрудников</span>
+    <span class="kpi-value">183</span>
+    <span class="kpi-sub">в 10 отделах</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Располагаемая мощность</span>
+    <span class="kpi-value">360 876 ч</span>
+    <span class="kpi-sub">на 2026 год</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Потребная трудоёмкость</span>
+    <span class="kpi-value">236 810 ч</span>
+    <span class="kpi-sub">по всем проектам</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Средняя загрузка</span>
+    <span class="kpi-value kpi-value--normal">65.6%</span>
+    <span class="kpi-sub">Норма</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Перегруженные отделы</span>
+    <span class="kpi-value kpi-value--overload">2</span>
+    <span class="kpi-sub">из 10</span>
+  </div>
+</div>
+
+<!-- Центр 1 -->
+<div class="center-card" onclick="this.classList.toggle('collapsed')">
+  <div class="center-header">
+    <div class="center-title">
+      <span class="center-chevron">&#9660;</span>
+      НТЦ-2Ц
+      <span class="center-dept-count">10 отделов</span>
+    </div>
+    <div class="center-summary">
+      <span class="center-summary-item"><span class="summary-label">Числ.:</span> <span class="summary-value">183</span></span>
+      <span class="center-summary-item"><span class="summary-label">Мощн.:</span> <span class="summary-value">360 876 ч</span></span>
+      <span class="center-summary-item"><span class="summary-label">Потр.:</span> <span class="summary-value">236 810 ч</span></span>
+      <span class="center-summary-item">
+        <div class="summary-bar"><div class="summary-bar-fill summary-bar-fill--normal" style="width:65.6%"></div></div>
+        <span class="summary-pct summary-pct--normal">65.6%</span>
+      </span>
+      <span class="level-badge level-badge--normal">Норма</span>
+    </div>
+  </div>
+  <div class="center-body" onclick="event.stopPropagation()">
+    <table class="dept-table">
+      <thead><tr>
+        <th style="min-width:180px;">Отдел</th>
+        <th style="width:100px;">Числ.</th>
+        <th style="width:160px;">Мощность, ч</th>
+        <th style="width:160px;">Потребн., ч</th>
+        <th style="width:220px;">Загрузка</th>
+        <th style="width:130px;">Уровень</th>
+      </tr></thead>
+      <tbody>
+        <tr onclick="showDrill('021')">
+          <td>021 — Конструкторский</td><td>25</td><td>49 300</td><td>52 140</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--overload" style="width:100%"></div></div><span class="load-pct load-pct--overload">105.8%</span></div></td>
+          <td><span class="level-badge level-badge--overload">Перегрузка</span></td>
+        </tr>
+        <tr onclick="showDrill('022')">
+          <td>022 — Электрический</td><td>18</td><td>35 496</td><td>28 200</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--normal" style="width:79.4%"></div></div><span class="load-pct load-pct--normal">79.4%</span></div></td>
+          <td><span class="level-badge level-badge--normal">Норма</span></td>
+        </tr>
+        <tr onclick="showDrill('024')">
+          <td>024 — Гидравлический</td><td>15</td><td>29 580</td><td>31 050</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--overload" style="width:100%"></div></div><span class="load-pct load-pct--overload">104.9%</span></div></td>
+          <td><span class="level-badge level-badge--overload">Перегрузка</span></td>
+        </tr>
+        <tr>
+          <td>027 — Прочнисты</td><td>20</td><td>39 440</td><td>22 500</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--low" style="width:57.1%"></div></div><span class="load-pct load-pct--low">57.1%</span></div></td>
+          <td><span class="level-badge level-badge--low">Недозагрузка</span></td>
+        </tr>
+        <tr>
+          <td>028 — Технологический</td><td>22</td><td>43 384</td><td>35 000</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--high" style="width:80.7%"></div></div><span class="load-pct load-pct--high">80.7%</span></div></td>
+          <td><span class="level-badge level-badge--high">Повышенная</span></td>
+        </tr>
+        <tr>
+          <td>030 — Системный</td><td>12</td><td>23 664</td><td>15 200</td>
+          <td><div class="load-cell"><div class="load-bar"><div class="load-bar-fill load-bar-fill--normal" style="width:64.2%"></div></div><span class="load-pct load-pct--normal">64.2%</span></div></td>
+          <td><span class="level-badge level-badge--normal">Норма</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Drill-down panel (помесячная) -->
+<div class="drill-overlay hidden" id="drillOverlay" onclick="hideDrill()">
+  <div class="drill-panel" onclick="event.stopPropagation()">
+    <div class="drill-header">
+      <div class="drill-title" id="drillTitle">021 — Конструкторский отдел</div>
+      <button class="drill-close" onclick="hideDrill()">&times;</button>
+    </div>
+
+    <div class="drill-kpi">
+      <div class="kpi-card">
+        <span class="kpi-label">Численность</span>
+        <span class="kpi-value">25</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Мощность (год)</span>
+        <span class="kpi-value">49 300 ч</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Потребность (год)</span>
+        <span class="kpi-value">52 140 ч</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Загрузка</span>
+        <span class="kpi-value kpi-value--overload">105.8%</span>
+        <span class="kpi-sub">Перегрузка</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Дефицит</span>
+        <span class="kpi-value kpi-value--overload">−2 840 ч</span>
+        <span class="kpi-sub">≈ 1.4 чел.</span>
+      </div>
+    </div>
+
+    <table class="month-table">
+      <thead><tr>
+        <th>Месяц</th>
+        <th>Мощность, ч</th>
+        <th>Потребн., ч</th>
+        <th>Загрузка</th>
+        <th>Баланс</th>
+      </tr></thead>
+      <tbody>
+        <tr class="month-ok"><td>Январь</td><td>3 600</td><td>2 800</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--normal" style="width:77.8%"></div></div> <span class="load-pct load-pct--normal" style="font-size:13px;">77.8%</span></div></td>
+          <td style="color:var(--success);">+800</td>
+        </tr>
+        <tr class="month-ok"><td>Февраль</td><td>4 000</td><td>3 200</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:80%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">80.0%</span></div></td>
+          <td style="color:var(--success);">+800</td>
+        </tr>
+        <tr class="month-ok"><td>Март</td><td>4 200</td><td>3 900</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:92.9%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">92.9%</span></div></td>
+          <td style="color:var(--success);">+300</td>
+        </tr>
+        <tr class="month-over"><td>Апрель</td><td>4 200</td><td>5 100</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--overload" style="width:100%"></div></div> <span class="load-pct load-pct--overload" style="font-size:13px;">121.4%</span></div></td>
+          <td style="color:var(--danger);font-weight:600;">−900</td>
+        </tr>
+        <tr class="month-over"><td>Май</td><td>3 800</td><td>5 400</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--overload" style="width:100%"></div></div> <span class="load-pct load-pct--overload" style="font-size:13px;">142.1%</span></div></td>
+          <td style="color:var(--danger);font-weight:600;">−1 600</td>
+        </tr>
+        <tr class="month-over"><td>Июнь</td><td>4 200</td><td>5 300</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--overload" style="width:100%"></div></div> <span class="load-pct load-pct--overload" style="font-size:13px;">126.2%</span></div></td>
+          <td style="color:var(--danger);font-weight:600;">−1 100</td>
+        </tr>
+        <tr class="month-ok"><td>Июль</td><td>4 400</td><td>4 200</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:95.5%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">95.5%</span></div></td>
+          <td style="color:var(--success);">+200</td>
+        </tr>
+        <tr class="month-ok"><td>Август</td><td>3 400</td><td>3 000</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:88.2%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">88.2%</span></div></td>
+          <td style="color:var(--success);">+400</td>
+        </tr>
+        <tr class="month-ok"><td>Сентябрь</td><td>4 200</td><td>4 100</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:97.6%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">97.6%</span></div></td>
+          <td style="color:var(--success);">+100</td>
+        </tr>
+        <tr class="month-over"><td>Октябрь</td><td>4 400</td><td>5 540</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--overload" style="width:100%"></div></div> <span class="load-pct load-pct--overload" style="font-size:13px;">125.9%</span></div></td>
+          <td style="color:var(--danger);font-weight:600;">−1 140</td>
+        </tr>
+        <tr class="month-ok"><td>Ноябрь</td><td>4 200</td><td>3 800</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--high" style="width:90.5%"></div></div> <span class="load-pct load-pct--high" style="font-size:13px;">90.5%</span></div></td>
+          <td style="color:var(--success);">+400</td>
+        </tr>
+        <tr class="month-ok"><td>Декабрь</td><td>4 700</td><td>5 800</td>
+          <td><div class="mini-bar"><div class="mini-bar-bg"><div class="mini-bar-fill load-bar-fill--overload" style="width:100%"></div></div> <span class="load-pct load-pct--overload" style="font-size:13px;">123.4%</span></div></td>
+          <td style="color:var(--danger);font-weight:600;">−1 100</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function showDrill(code) {
+  document.getElementById('drillOverlay').classList.remove('hidden');
+  document.getElementById('drillTitle').textContent = code + ' — детализация по месяцам';
+}
+function hideDrill() {
+  document.getElementById('drillOverlay').classList.add('hidden');
+}
+</script>
+
+</body>
+</html>
