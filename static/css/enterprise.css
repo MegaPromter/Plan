@@ -5,7 +5,7 @@
   font-size: 13px;
   color: var(--accent);
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--accent-light, rgba(37,99,235,0.08));
   border: 1px solid var(--accent);
   transition: background 0.15s;
@@ -96,7 +96,7 @@
   align-items: center;
   padding: 10px 14px;
   background: var(--surface2);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 16px;
   font-size: 13px;
   color: var(--muted);
@@ -118,7 +118,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -136,7 +136,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 12px;
   font-weight: 500;
 }
@@ -149,13 +149,13 @@
 .loading-bar {
   height: 8px;
   background: var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   min-width: 80px;
 }
 .loading-bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   transition: width 0.3s ease;
 }
 .loading-bar-fill--low      { background: var(--muted); }
@@ -189,7 +189,7 @@
 .cap-chip {
   padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   color: var(--text);
   font-size: 13px;
@@ -217,7 +217,7 @@
   min-width: 150px;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 14px 18px;
   display: flex;
   flex-direction: column;
@@ -246,7 +246,7 @@
 /* ── Карточки загрузки (НТЦ-центры → отделы) ──────────────── */
 .cap-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 12px;
   overflow: hidden;
   transition: box-shadow 0.15s;
@@ -363,7 +363,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 500;
 }
@@ -375,7 +375,7 @@
 .edit-owner-select {
   padding: 3px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;
@@ -394,7 +394,7 @@
 .ent-help {
   margin-bottom: 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface2);
   font-size: 13px;
 }
@@ -452,7 +452,7 @@
   gap: 8px;
   padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font-size: 14px;
@@ -597,7 +597,7 @@
   display: inline-block;
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -640,7 +640,7 @@
   min-width: 20px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   font-size: 11px;
   font-weight: 600;
   background: var(--accent-light, rgba(59,130,246,0.1));
@@ -653,7 +653,7 @@
   max-height: 600px;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .cross-table {
   width: 100%;
@@ -724,7 +724,7 @@
 .scenario-status {
   display: inline-block;
   padding: 2px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -773,7 +773,7 @@
 /* ── Контейнер Ганта ─────────────────────────────────────────── */
 #ggGanttContainer {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 #ggGanttContainer .gantt_task_line.gantt_project {

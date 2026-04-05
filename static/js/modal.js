@@ -114,7 +114,7 @@ function openModal(options = {}) {
         setTimeout(() => {
             backdrop.remove();
             // Восстанавливаем прокрутку если все модалки закрыты
-            if (!document.querySelector('.modal-backdrop')) {
+            if (!document.querySelector('.modal-backdrop, .modal-overlay.open')) {
                 document.body.style.overflow = '';
             }
             // A11y: возвращаем фокус на элемент-инициатор
@@ -176,7 +176,7 @@ function closeModal(idOrEl) {
     el.style.animation = 'modalFadeOut 0.15s ease-in forwards';
     setTimeout(() => {
         el.remove();
-        if (!document.querySelector('.modal-backdrop')) {
+        if (!document.querySelector('.modal-backdrop, .modal-overlay.open')) {
             document.body.style.overflow = '';
         }
     }, 150);

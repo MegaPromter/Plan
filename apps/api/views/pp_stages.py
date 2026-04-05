@@ -8,6 +8,7 @@ DELETE /api/projects/<pk>/stages/<stage_id>/   — удаление этапа
 """
 import logging
 
+from django.db.models import Exists, OuterRef, Prefetch
 from django.http import JsonResponse
 from django.views import View
 
@@ -16,7 +17,7 @@ from apps.api.mixins import (
     WriterRequiredJsonMixin,
     parse_json_body,
 )
-from apps.works.models import PPStage, Project
+from apps.works.models import PPStage, Project, Work, WorkReport, TaskExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,66 @@ def _serialize_stage(s):
     }
 
 
+def _sum_plan_hours(ph):
+    """Сумма всех значений из JSONField plan_hours."""
+    if not ph:
+        return 0.0
+    total = 0.0
+    for v in ph.values():
+        try:
+            total += float(v)
+        except (ValueError, TypeError):
+            pass
+    return total
+
+
+def _calc_labor_for_stages(stages):
+    """Считает запланированную и потраченную трудоёмкость по этапам.
+
+    Запланированная = сумма Work.labor для работ ПП (show_in_pp=True) этого этапа.
+    Потраченная = для работ этого этапа, у которых есть отчёт (WorkReport),
+                  сумма plan_hours основного исполнителя + plan_hours TaskExecutor.
+    """
+    stage_ids = [s.id for s in stages]
+    if not stage_ids:
+        return {}
+
+    has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
+    works = (
+        Work.objects
+        .filter(pp_stage_id__in=stage_ids, show_in_pp=True)
+        .annotate(_has_reports=has_reports)
+        .prefetch_related(
+            Prefetch('task_executors', queryset=TaskExecutor.objects.all(),
+                     to_attr='_prefetched_executors')
+        )
+        .only('id', 'pp_stage_id', 'labor', 'plan_hours')
+    )
+
+    result = {sid: {'planned': 0.0, 'spent': 0.0} for sid in stage_ids}
+
+    for w in works:
+        sid = w.pp_stage_id
+        # Запланированная = labor из ПП
+        if w.labor is not None:
+            result[sid]['planned'] += float(w.labor)
+
+        # Потраченная = plan_hours работ с отчётами
+        if getattr(w, '_has_reports', False):
+            # Часы основного исполнителя
+            result[sid]['spent'] += _sum_plan_hours(w.plan_hours)
+            # Часы дополнительных исполнителей
+            for te in getattr(w, '_prefetched_executors', []):
+                result[sid]['spent'] += _sum_plan_hours(te.plan_hours)
+
+    # Округляем
+    for sid in result:
+        result[sid]['planned'] = round(result[sid]['planned'], 2)
+        result[sid]['spent'] = round(result[sid]['spent'], 2)
+
+    return result
+
+
 class PPStageListView(LoginRequiredJsonMixin, View):
     """GET — список этапов проекта УП."""
 
@@ -41,8 +102,16 @@ class PPStageListView(LoginRequiredJsonMixin, View):
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
                 return JsonResponse({'error': 'Проект не найден'}, status=404)
-            stages = proj.stages.order_by('order', 'id')
-            return JsonResponse([_serialize_stage(s) for s in stages], safe=False)
+            stages = list(proj.stages.order_by('order', 'id'))
+            labor_map = _calc_labor_for_stages(stages)
+            result = []
+            for s in stages:
+                d = _serialize_stage(s)
+                labor = labor_map.get(s.id, {})
+                d['planned_labor'] = labor.get('planned', 0)
+                d['spent_labor'] = labor.get('spent', 0)
+                result.append(d)
+            return JsonResponse(result, safe=False)
         except Exception as e:
             logger.error('PPStageListView.get: %s', e, exc_info=True)
             return JsonResponse({'error': 'Ошибка сервера'}, status=500)

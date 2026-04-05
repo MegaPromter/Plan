@@ -31,22 +31,31 @@ const USER_CENTER = _ppCfg.userCenter;
 // canModifyRow() — замыкание из utils.js
 const _canModify = makeCanModify(_ppCfg);
 
-/* ── Хелпер: замена select с поддержкой кастомного dropdown ───────── */
-/* Если select обёрнут в .cd-wrap — уничтожаем обёртку, заменяем HTML,
-   затем инициализируем кастомный dropdown на новом select. */
+/* Уничтожает обёртку dropdown → заменяет select HTML → переинициализирует dropdown */
 function _ppReplaceSelect(oldSel, newHtml) {
-  const wrap = oldSel._cdWrap || oldSel.closest('.cd-wrap');
   const parentTd = oldSel.closest('td');
-  if (wrap) {
-    wrap.outerHTML = newHtml;
-  } else {
-    oldSel.outerHTML = newHtml;
+  if (typeof closeOpenDropdown === 'function') closeOpenDropdown();
+  if (oldSel._cdWrap && typeof destroyCustomDropdown === 'function') {
+    destroyCustomDropdown(oldSel);
   }
-  // Новый select уже в DOM — инициализируем кастомный dropdown
+  oldSel.outerHTML = newHtml;
   if (parentTd && typeof initCustomDropdowns === 'function') {
     initCustomDropdowns(parentTd);
   }
 }
+
+// Delegated focus/blur for active row highlight
+document.addEventListener('focusin', function(e) {
+  if (e.target.closest && e.target.closest('.data-table td')) setActiveRow(e.target);
+});
+document.addEventListener('focusout', function(e) {
+  if (e.target.closest && e.target.closest('.data-table td')) {
+    setTimeout(function() {
+      var active = document.activeElement;
+      if (!active || !active.closest || !active.closest('.data-table td')) clearActiveRow();
+    }, 50);
+  }
+});
 
 /* ── Skeleton-загрузка — в utils.js ───────────────────────────────── */
 // skeletonRows() — в utils.js
@@ -834,10 +843,13 @@ function _ppAttachDelegatedListeners(tbody) {
     }
     const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
     if (!ok) return;
+    const delTr = btn.closest('tr');
     const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
     if (!resp._error) {
       rows = rows.filter(r => String(r.id) !== String(id));
-      renderPPTable();
+      animateRowExit(delTr, function() {
+        renderPPTable();
+      });
       showToast('Строка удалена', 'success');
     }
   });
@@ -900,9 +912,14 @@ function renderPPTable() {
     }
   }
 
+  // Пустое состояние: вообще нет работ
+  if (rows.length === 0) {
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-industry', title:'Нет работ', desc:'Добавьте первую работу в производственный план', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить работу</button>' : '', colspan:20});
+    return;
+  }
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-inbox', title:'Нет записей', desc:'Попробуйте изменить фильтры или добавьте новую строку', action:'<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>', colspan:20});
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>' : '', colspan:20});
     return;
   }
 
@@ -1196,16 +1213,19 @@ async function handleCellChange(e) {
   // Ошибка конфликта (например, попытка изменить заблокированное поле from_pp)
   if (resp._conflict) {
     cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
+    flashCell(td, 'error');
     return;
   }
   // Другая ошибка сервера
   if (resp._error) {
     cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
+    flashCell(td, 'error');
     return;
   }
 
   // Успех: зелёная подсветка на 700мс
   cellOutline(td, 'rgba(34,197,94,0.5)', 700);
+  flashCell(td);
 
   // Обновляем данные в локальном массиве
   const rowObj = rows.find(r => String(r.id) === String(id));
@@ -1262,9 +1282,11 @@ async function handleCellChange(e) {
       });
       if (!r2._error && !r2._conflict) {
         cellOutline(laborTd, 'rgba(34,197,94,0.5)', 700);
+        flashCell(laborTd);
         if (rowObj) rowObj.labor = laborVal;
       } else {
         cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
+        flashCell(laborTd, 'error');
       }
     } catch (e) { console.error('Ошибка пересчёта трудоёмкости:', e); }
   }
@@ -1363,6 +1385,7 @@ function openAddRowModal() {
 
   tr.innerHTML = html;
   tbody.prepend(tr);
+  animateRowEnter(tr);
 
   // Инициализируем кастомные dropdown-ы для новой строки
   if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tr);

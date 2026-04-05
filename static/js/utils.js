@@ -126,28 +126,26 @@ function _ensureToastContainer() {
 
 function showToast(message, type = 'info', duration = 4000) {
     const container = _ensureToastContainer();
+
+    const icons = { success: '\u2713', error: '\u2715', warning: '\u26A0', info: '\u2139' };
+
     const toast = document.createElement('div');
-
-    const colors = {
-        info:    { bg: 'rgba(59,130,246,0.22)', border: 'rgba(59,130,246,0.6)', text: '#bfdbfe' },
-        success: { bg: 'rgba(34,197,94,0.22)',  border: 'rgba(34,197,94,0.6)',  text: '#a7f3d0' },
-        warning: { bg: 'rgba(245,158,11,0.92)', border: 'rgba(245,158,11,1)', text: '#ffffff' },
-        error:   { bg: 'rgba(220,38,38,0.95)',   border: 'rgba(255,100,100,1)', text: '#ffffff' },
-    };
-    const c = colors[type] || colors.info;
-
-    toast.style.cssText = `
-        background: ${c.bg}; border: 1.5px solid ${c.border}; color: ${c.text};
-        padding: 14px 22px; border-radius: 10px; font-size: 15px; font-weight: 500;
-        backdrop-filter: blur(14px); pointer-events: auto;
-        animation: toastIn 0.3s ease-out;
-        max-width: 480px; min-width: 240px; word-wrap: break-word;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-    `;
+    toast.className = `toast toast-${type}`;
     toast.setAttribute('role', 'status');
-    toast.setAttribute('aria-live', 'polite');
-    toast.setAttribute('aria-atomic', 'true');
-    toast.textContent = message;
+
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.textContent = icons[type] || icons.info;
+
+    const msg = document.createElement('span');
+    msg.className = 'toast-msg';
+    msg.textContent = message;
+
+    const progress = document.createElement('div');
+    progress.className = 'toast-progress';
+    progress.style.animationDuration = duration + 'ms';
+
+    toast.append(icon, msg, progress);
     container.appendChild(toast);
 
     let remaining = duration;
@@ -155,31 +153,25 @@ function showToast(message, type = 'info', duration = 4000) {
     let timerId = setTimeout(dismissToast, remaining);
 
     function dismissToast() {
-        toast.style.animation = 'toastOut 0.3s ease-in forwards';
+        toast.classList.add('removing');
         setTimeout(() => toast.remove(), 300);
     }
 
     toast.addEventListener('mouseenter', () => {
         clearTimeout(timerId);
         remaining -= (Date.now() - startTime);
+        progress.style.animationPlayState = 'paused';
     });
     toast.addEventListener('mouseleave', () => {
         startTime = Date.now();
         timerId = setTimeout(dismissToast, remaining);
+        progress.style.animationPlayState = 'running';
+    });
+    toast.addEventListener('click', () => {
+        clearTimeout(timerId);
+        dismissToast();
     });
 }
-
-// CSS-анимации для тостов
-(function() {
-    if (document.getElementById('toast-animations')) return;
-    const style = document.createElement('style');
-    style.id = 'toast-animations';
-    style.textContent = `
-        @keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
-    `;
-    document.head.appendChild(style);
-})();
 
 
 /* ── Кнопка-загрузка ────────────────────────────────────────────────────── */
@@ -748,6 +740,20 @@ function loadBadgeCls(pct) {
     if (pct <= 85) return 'ok';
     if (pct <= 100) return 'warn';
     return 'over';
+}
+
+/* ── Подсветка активной строки при редактировании ────────────────────── */
+
+/** Подсветка активной строки при редактировании */
+function setActiveRow(el) {
+    if (!el) return;
+    var tr = el.closest('tr');
+    if (!tr) return;
+    document.querySelectorAll('.row-active').forEach(function(r) { r.classList.remove('row-active'); });
+    tr.classList.add('row-active');
+}
+function clearActiveRow() {
+    document.querySelectorAll('.row-active').forEach(function(r) { r.classList.remove('row-active'); });
 }
 
 /* ── Права доступа (общие) ───────────────────────────────────────────── */
@@ -1649,6 +1655,41 @@ function resetBreadcrumbs(pageLabel) {
         {label: 'Главная', url: '/'},
         {label: pageLabel}
     ]);
+}
+
+/* ── Анимации строк и ячеек ─────────────────────────────────────────── */
+
+/** Кратковременная подсветка ячейки при успешном сохранении */
+function flashCell(el, type) {
+  if (!el) return;
+  var cls = type === 'error' ? 'cell-flash-error' : 'cell-flash-ok';
+  el.classList.remove('cell-flash-ok', 'cell-flash-error');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add(cls);
+  el.addEventListener('animationend', function handler() {
+    el.classList.remove(cls);
+    el.removeEventListener('animationend', handler);
+  });
+}
+
+/** Анимация появления новой строки */
+function animateRowEnter(tr) {
+  if (!tr) return;
+  tr.classList.add('row-enter');
+  tr.addEventListener('animationend', function handler() {
+    tr.classList.remove('row-enter');
+    tr.removeEventListener('animationend', handler);
+  });
+}
+
+/** Анимация удаления строки с callback */
+function animateRowExit(tr, callback) {
+  if (!tr) { if (callback) callback(); return; }
+  tr.classList.add('row-exit');
+  tr.addEventListener('animationend', function handler() {
+    tr.removeEventListener('animationend', handler);
+    if (callback) callback();
+  });
 }
 
 (function() {

@@ -47,7 +47,21 @@
   --purple:        #a855f7;
   --gray:          #6b7280;
 
+  /* RGB-триплеты (для rgba(var(--xxx-rgb), alpha)) */
+  --accent-rgb:  37, 99, 235;
+  --danger-rgb:  220, 38, 38;
+  --success-rgb: 22, 163, 74;
+  --warning-rgb: 217, 119, 6;
+  --info-rgb:    59, 130, 246;
+  --purple-rgb:  168, 85, 247;
+  --text-rgb:    30, 41, 59;
+
   /* Геометрия */
+  --radius-xs:  4px;
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  20px;
   --radius: 12px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -104,6 +118,9 @@
   --nav-border: #1a1e2a;
   --topbar-bg:  #141722;
 
+  --accent-rgb: 59, 130, 246;
+  --text-rgb:   226, 232, 240;
+
   /* Акцент — чуть ярче на тёмном фоне */
   --accent:       #3b82f6;
   --accent2:      #2563eb;
@@ -149,6 +166,9 @@
   --nav-active-color: #ffffff;
   --nav-hover-bg: rgba(255,255,255,0.08);
   --topbar-bg:  #344763;
+
+  --accent-rgb: 59, 124, 245;
+  --text-rgb:   45, 58, 78;
 
   /* Акцент — чуть мягче, приятнее */
   --accent:       #3b7cf5;

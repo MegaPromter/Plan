@@ -11,7 +11,7 @@
     <!-- Обзор -->
     <div class="nav-section">
       <a href="{% url 'accounts:dashboard' %}" class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}">
-        <i class="fas fa-th-large" aria-hidden="true"></i>
+        <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
         <span>Стартовая страница</span>
       </a>
     </div>
@@ -51,7 +51,7 @@
     <!-- Журнал извещений -->
     <div class="nav-section">
       <a href="{% url 'works:notice_list' %}" class="nav-item nav-section-btn{% if active_nav == 'notices' %} active{% endif %}">
-        <i class="fas fa-envelope" aria-hidden="true"></i>
+        <i class="fas fa-file-alt" aria-hidden="true"></i>
         <span>Журнал извещений</span>
       </a>
     </div>
@@ -68,13 +68,13 @@
     <div class="nav-section">
       <div class="nav-dropdown">
         <button class="nav-item nav-section-btn nav-dropdown-toggle{% if active_nav == 'work_calendar' %} active{% endif %}" data-toggle="nav-dropdown" aria-label="Справочники" aria-expanded="false" aria-controls="nav-dd-ref">
-          <i class="fas fa-book" aria-hidden="true"></i>
+          <i class="fas fa-cogs" aria-hidden="true"></i>
           <span>Справочники</span>
           <i class="fas fa-chevron-down nav-chevron" aria-hidden="true"></i>
         </button>
         <div class="nav-dropdown-menu" id="nav-dd-ref">
           <a href="{% url 'works:work_calendar' %}" class="nav-item nav-subitem{% if active_nav == 'work_calendar' %} active{% endif %}">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
             <span>Производственный календарь</span>
           </a>
           <a href="{% url 'accounts:stub' 'norms' %}" class="nav-item nav-subitem">
@@ -96,15 +96,15 @@
         </button>
         <div class="nav-dropdown-menu" id="nav-dd-emp">
           <a href="{% url 'employees:list' %}" class="nav-item nav-subitem{% if active_nav == 'employees' %} active{% endif %}">
-            <i class="fas fa-list" aria-hidden="true"></i>
+            <i class="fas fa-users" aria-hidden="true"></i>
             <span>Список сотрудников</span>
           </a>
           <a href="{% url 'employees:vacation_plan' %}" class="nav-item nav-subitem{% if active_nav == 'vacation_plan' %} active{% endif %}">
-            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+            <i class="fas fa-umbrella-beach" aria-hidden="true"></i>
             <span>План отпусков</span>
           </a>
           <a href="{% url 'works:business_trips' %}" class="nav-item nav-subitem{% if active_nav == 'business_trips' %} active{% endif %}">
-            <i class="fas fa-plane" aria-hidden="true"></i>
+            <i class="fas fa-plane-departure" aria-hidden="true"></i>
             <span>План командировок</span>
           </a>
         </div>

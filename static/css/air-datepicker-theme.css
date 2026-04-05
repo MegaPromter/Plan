@@ -1,65 +1,78 @@
-/* ── Air Datepicker: кастомная тема ManageSystems ─────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   Air Datepicker: кастомная тема ManageSystems
+   Использует CSS-переменные из variables.css.
+   Тёмная тема адаптируется автоматически.
+   ══════════════════════════════════════════════════════════════════════ */
 
-/* Контейнер */
+/* ── Контейнер ────────────────────────────────────────────────────── */
 .air-datepicker {
-  --adp-font-family: inherit;
+  --adp-font-family: var(--font, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
   --adp-font-size: 13px;
   --adp-width: 260px;
   --adp-z-index: 10000;
   --adp-padding: 4px;
 
-  /* Цвета из нашей дизайн-системы */
-  --adp-background-color: var(--surface, #fff);
-  --adp-color: var(--text, #1e293b);
-  --adp-color-secondary: var(--muted, #64748b);
+  /* Цвета из дизайн-системы */
+  --adp-background-color: var(--surface);
+  --adp-color: var(--text);
+  --adp-color-secondary: var(--muted);
 
-  --adp-accent-color: var(--accent, #3b82f6);
-  --adp-color-current-date: var(--accent, #3b82f6);
+  --adp-accent-color: var(--accent);
+  --adp-color-current-date: var(--accent);
 
-  --adp-cell-background-color-hover: var(--accent-light, rgba(59,130,246,0.08));
-  --adp-cell-background-color-selected: var(--accent, #3b82f6);
-  --adp-cell-background-color-selected-hover: var(--accent-hover, #2563eb);
-  --adp-cell-background-color-in-range: rgba(59,130,246,0.1);
-  --adp-cell-background-color-in-range-hover: rgba(59,130,246,0.16);
-  --adp-cell-border-color-in-range: var(--accent, #3b82f6);
+  --adp-cell-background-color-hover: rgba(var(--accent-rgb), 0.1);
+  --adp-cell-background-color-selected: var(--accent);
+  --adp-cell-background-color-selected-hover: var(--accent2);
+  --adp-cell-background-color-in-range: rgba(var(--accent-rgb), 0.1);
+  --adp-cell-background-color-in-range-hover: rgba(var(--accent-rgb), 0.16);
+  --adp-cell-border-color-in-range: var(--accent);
 
-  --adp-btn-color: var(--accent, #3b82f6);
-  --adp-btn-color-hover: var(--accent-hover, #2563eb);
-  --adp-btn-background-color-hover: var(--accent-light, rgba(59,130,246,0.08));
-  --adp-btn-background-color-active: var(--accent-light, rgba(59,130,246,0.12));
+  --adp-btn-color: var(--text2);
+  --adp-btn-color-hover: var(--text);
+  --adp-btn-background-color-hover: var(--surface2);
+  --adp-btn-background-color-active: rgba(var(--accent-rgb), 0.12);
 
-  --adp-nav-color-secondary: var(--muted, #64748b);
-  --adp-nav-arrow-color: var(--muted, #64748b);
+  --adp-nav-color-secondary: var(--text2);
+  --adp-nav-arrow-color: var(--text2);
   --adp-nav-action-size: 32px;
 
   --adp-pointer-size: 0;
 
-  --adp-day-name-color: var(--muted, #94a3b8);
-  --adp-day-name-color-hover: var(--accent, #3b82f6);
+  --adp-day-name-color: var(--text2);
+  --adp-day-name-color-hover: var(--accent);
 
-  --adp-cell-border-radius: 8px;
-  --adp-border-radius: 12px;
-  --adp-border-color: var(--border, #e2e8f0);
+  --adp-cell-border-radius: var(--radius-sm);
+  --adp-border-radius: var(--radius-md);
+  --adp-border-color: var(--border);
 
-  border: 1px solid var(--adp-border-color) !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  font-family: var(--font) !important;
   animation: adpSlideIn 0.15s ease;
 }
 
 @keyframes adpSlideIn {
   from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Навигация (месяц/год) */
+/* ── Навигация (месяц / год) ──────────────────────────────────────── */
 .air-datepicker-nav {
-  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-bottom: 1px solid var(--border);
   padding: 8px 4px;
 }
 
 .air-datepicker-nav--title {
+  color: var(--text) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
+}
+
+.air-datepicker-nav--title:hover {
+  background: var(--surface2) !important;
+  border-radius: var(--radius-sm);
 }
 
 .air-datepicker-nav--action svg {
@@ -67,50 +80,87 @@
   height: 20px;
 }
 
-.air-datepicker-nav--action:hover {
-  background: var(--accent-light, rgba(59,130,246,0.08));
-  border-radius: 8px;
+.air-datepicker-nav--action path {
+  stroke: var(--text2);
 }
 
-/* Дни недели */
+.air-datepicker-nav--action:hover {
+  background: var(--surface2) !important;
+  border-radius: var(--radius-sm);
+}
+
+.air-datepicker-nav--action:hover path {
+  stroke: var(--accent);
+}
+
+/* ── Дни недели ───────────────────────────────────────────────────── */
 .air-datepicker-body--day-name {
+  color: var(--text2) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-/* Ячейки дней */
+/* ── Ячейки дней ──────────────────────────────────────────────────── */
 .air-datepicker-cell {
   font-weight: 500;
+  border-radius: var(--radius-sm);
   transition: all 0.1s ease;
+}
+
+.air-datepicker-cell:hover {
+  background: rgba(var(--accent-rgb), 0.1) !important;
 }
 
 /* Сегодня */
 .air-datepicker-cell.-current- {
+  border: 1px solid var(--accent) !important;
   font-weight: 700;
 }
 
 /* Выбранный */
 .air-datepicker-cell.-selected- {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-radius: var(--radius-sm) !important;
   font-weight: 700;
+}
+
+.air-datepicker-cell.-selected-.-current- {
+  border-color: var(--accent) !important;
+}
+
+/* Дни другого месяца */
+.air-datepicker-cell.-other-month- {
+  opacity: 0.35;
 }
 
 /* Ячейки месяцев и годов */
 .air-datepicker-cell.-month-,
 .air-datepicker-cell.-year- {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
-/* Кнопки внизу (Очистить / Сегодня) */
+/* ── Кнопки (Сегодня / Очистить) ─────────────────────────────────── */
 .air-datepicker-buttons {
-  border-top: 1px solid var(--border, #e2e8f0);
+  border-top: 1px solid var(--border);
   padding: 6px 8px;
 }
 
 .air-datepicker-button {
   font-size: 13px !important;
   font-weight: 500 !important;
-  border-radius: 6px !important;
+  border-radius: var(--radius-sm) !important;
   padding: 4px 10px !important;
+  color: var(--text2) !important;
+  border: 1px solid var(--border) !important;
+  background: transparent !important;
+  transition: all 0.15s ease;
+}
+
+.air-datepicker-button:hover {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border-color: var(--border2) !important;
 }

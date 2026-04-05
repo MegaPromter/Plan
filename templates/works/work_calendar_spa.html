@@ -189,26 +189,11 @@
 .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
 .empty-state i { font-size:48px; margin-bottom:16px; display:block; }
 
-/* ── Модальное окно ──────────────────────────────────────────────────────── */
-.modal-overlay {
-  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.45);
-  backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center;
-}
-.modal-overlay.open { display:flex; }
+/* ── Модальное окно (стили из components.css, здесь только переопределения) ── */
 .modal-box {
-  background:var(--surface); border-radius:var(--radius); box-shadow:0 8px 32px rgba(0,0,0,0.25);
+  background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg);
   width:100%; padding:0; max-height:90vh; overflow:auto;
 }
-.modal-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:16px 20px; border-bottom:1px solid var(--border);
-}
-.modal-title { font-size:16px; font-weight:600; margin:0; }
-.modal-close {
-  background:none; border:none; color:var(--muted); cursor:pointer;
-  font-size:18px; padding:4px;
-}
-.modal-close:hover { color:var(--text); }
 .modal-body { padding:20px; }
 .modal-form-group { margin-bottom:14px; }
 .modal-form-group label { display:block; font-size:13px; font-weight:500; color:var(--muted); margin-bottom:4px; }

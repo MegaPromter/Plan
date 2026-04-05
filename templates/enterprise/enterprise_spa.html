@@ -12,6 +12,15 @@
 <span class="breadcrumb-current" id="breadcrumbTitle">Управление предприятием</span>
 {% endblock %}
 
+{% block topbar_actions %}
+<div class="ent-tab-actions" id="tabActions"></div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=19">
+{% endblock %}
+
+
 {% block content %}
 {% csrf_token %}
 

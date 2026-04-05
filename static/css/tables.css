@@ -5,10 +5,23 @@
 /* ── Обёртка таблицы ─────────────────────────────────────────────── */
 .data-table-wrap {
   overflow: auto;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-md, 0 1px 6px rgba(0,0,0,0.07));
   border: 1px solid var(--border2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
 }
+
+/* Скроллбар таблицы — заметнее при hover */
+.data-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+.data-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.data-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: var(--radius-xs);
+  transition: background 0.2s;
+}
+.data-table-wrap:hover::-webkit-scrollbar-thumb { background: var(--muted); }
+.data-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text2); }
 
 /* ── Общая таблица ───────────────────────────────────────────────── */
 .data-table {
@@ -51,9 +64,17 @@
 /* Чередование строк */
 .data-table tbody tr:nth-child(even) { background: var(--row-even); }
 .data-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
-.data-table tbody tr { transition: background 0.12s; position:relative; }
-.data-table tbody tr:hover { background: var(--row-hover) !important; }
-.data-table tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent, #2563eb); }
+.data-table tbody tr { transition: background 0.12s, box-shadow 0.12s; position:relative; }
+.data-table tbody tr:hover {
+  background: var(--row-hover) !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* ── Активная строка (при редактировании) ─────────────────────── */
+.data-table tbody tr.row-active {
+  background: rgba(var(--accent-rgb), 0.06) !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 
 /* Первая колонка — номер строки */
 .data-table td:first-child {
@@ -140,6 +161,40 @@ select.cell-edit option {
   50% { outline-color: rgba(239,68,68,0.4); }
 }
 
+/* ── Flash-подсветка при сохранении ──────────────────────────────── */
+@keyframes cellFlashOk {
+  0%   { background-color: rgba(var(--success-rgb), 0.25); }
+  100% { background-color: transparent; }
+}
+@keyframes cellFlashError {
+  0%, 30% { background-color: rgba(var(--danger-rgb), 0.20); }
+  100%    { background-color: transparent; }
+}
+.cell-flash-ok    { animation: cellFlashOk 0.8s ease-out; }
+.cell-flash-error { animation: cellFlashError 1s ease-out; }
+
+/* ── Анимация появления строки ───────────────────────────────────── */
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.row-enter { animation: rowSlideIn 0.3s ease-out; }
+
+/* ── Анимация удаления строки ────────────────────────────────────── */
+@keyframes rowFadeOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(30px); }
+}
+.row-exit {
+  animation: rowFadeOut 0.3s ease-in forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-flash-ok, .cell-flash-error,
+  .row-enter, .row-exit { animation: none !important; }
+}
+
 /* ── Кастомный dropdown (замена нативного select) ───────────────── */
 /* Обёртка: встраивается в ячейку вместо <select> */
 .cd-wrap {
@@ -158,7 +213,7 @@ select.cell-edit option {
   padding: 4px 24px 4px 6px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -196,7 +251,7 @@ select.cell-edit option {
 .cd-wrap.open .cd-trigger {
   background: var(--accent-glow);
   box-shadow: 0 0 0 2px var(--accent);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* Выпадающий список */
@@ -210,7 +265,7 @@ select.cell-edit option {
   overflow-x: hidden;
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: 4px;
   overscroll-behavior: contain;
@@ -224,7 +279,7 @@ select.cell-edit option {
   margin: 4px;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 13px;
   color: var(--text);
@@ -243,7 +298,7 @@ select.cell-edit option {
   display: flex;
   align-items: center;
   padding: 7px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 13px;
   color: var(--text);
@@ -302,6 +357,76 @@ select.cell-edit option {
   .cd-menu { animation: none !important; }
 }
 
+/* ── Table Action Buttons ────────────────────────────────────────── */
+/* Общее правило: все кнопки действий в ячейках таблиц получают
+   увеличенную зону клика (32×32), flex-центрирование, скруглённые углы,
+   плавный hover и тултип через нативный title.                      */
+.data-table td .btn-icon,   .pp-table td .btn-icon,
+.data-table td .btn-action, .pp-table td .btn-action,
+.data-table td .ji-btn,     .pp-table td .ji-btn,
+.data-table td .r-save,     .pp-table td .r-save,
+.data-table td .r-del,      .pp-table td .r-del,
+.data-table td .btn-delete, .pp-table td .btn-delete,
+.data-table td button[title], .pp-table td button[title] {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  position: relative;
+}
+/* Hover — акцентная подсветка */
+.data-table td .btn-icon:hover,   .pp-table td .btn-icon:hover,
+.data-table td .btn-action:hover, .pp-table td .btn-action:hover,
+.data-table td .ji-btn:hover,     .pp-table td .ji-btn:hover,
+.data-table td .r-save:hover,     .pp-table td .r-save:hover,
+.data-table td button[title]:hover, .pp-table td button[title]:hover {
+  background: rgba(var(--accent-rgb, 37,99,235), 0.10);
+  color: var(--accent);
+  transform: scale(1.08);
+}
+/* Delete / danger button hover — красный */
+.data-table td .btn-icon.btn-danger:hover, .pp-table td .btn-icon.btn-danger:hover,
+.data-table td .btn-delete:hover,          .pp-table td .btn-delete:hover,
+.data-table td .r-del:hover,               .pp-table td .r-del:hover,
+.data-table td .ji-btn-del:hover,          .pp-table td .ji-btn-del:hover,
+.data-table td button[title*="Удалить"]:hover, .pp-table td button[title*="Удалить"]:hover,
+.data-table td button[title*="удалить"]:hover, .pp-table td button[title*="удалить"]:hover {
+  background: rgba(var(--danger-rgb, 220,38,38), 0.12);
+  color: var(--danger, #ef4444);
+  transform: scale(1.08);
+}
+/* Кнопка погашения (ЖИ) — жёлтый hover */
+.data-table td .ji-btn-close:hover,
+.pp-table td .ji-btn-close:hover {
+  background: rgba(234,179,8, 0.12);
+  color: #92400e;
+  transform: scale(1.08);
+}
+/* Кнопка сохранения — зелёный hover */
+.data-table td .r-save:hover,
+.pp-table td .r-save:hover {
+  background: rgba(var(--success-rgb, 34,197,94), 0.15);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+/* PP карточки — кнопки на лендинге проектов */
+.pp-card-btn {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.pp-card-btn:hover {
+  transform: scale(1.08);
+}
+
 /* ── Resize-ручки колонок ────────────────────────────────────────── */
 th .resize-handle {
   position: absolute;
@@ -320,7 +445,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   background: transparent;
   color: var(--danger);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 4px 8px;
   cursor: pointer;
   font-size: 14px;
@@ -357,7 +482,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     var(--border) 63%);
   background-size: 1200px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   display: inline-block;
 }
 
@@ -365,7 +490,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .sk-text-sm  { height: 14px; width: 55%; }
 .sk-text-md  { height: 14px; width: 75%; }
 .sk-text-num { height: 14px; width: 36px; margin-left: auto; }
-.sk-badge    { height: 22px; width: 76px; border-radius: 12px; }
+.sk-badge    { height: 22px; width: 76px; border-radius: var(--radius-lg); }
 .sk-id       { height: 14px; width: 20px; }
 
 /* Волна — задержка для каждой строки */
@@ -429,7 +554,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   padding: 10px 16px;
   background: var(--accent-light);
   border: 1px solid color-mix(in srgb, var(--accent), transparent 70%);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 12px;
   font-size: 14px;
   color: var(--accent2);
@@ -439,7 +564,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .bulk-bar .bulk-count { font-weight: 600; }
 .bulk-bar .bulk-btn {
   padding: 5px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
   background: var(--surface);
   color: var(--accent);
@@ -488,7 +613,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     display:block;
     background:var(--surface);
     border:1px solid var(--border);
-    border-radius:10px;
+    border-radius:var(--radius-md);
     margin-bottom:12px;
     padding:12px;
     box-shadow:var(--shadow-sm);
@@ -523,7 +648,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
     display:block;
     background:var(--surface);
     border:1px solid var(--border);
-    border-radius:10px;
+    border-radius:var(--radius-md);
     margin-bottom:12px;
     padding:12px;
     box-shadow:var(--shadow-sm);

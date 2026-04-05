@@ -6,7 +6,7 @@
 .pp-stats-dropdown {
   display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
   min-width:320px; background:var(--surface); border:1px solid var(--border);
-  border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.15); padding:14px 16px;
+  border-radius:var(--radius-md); box-shadow:0 6px 24px rgba(0,0,0,0.15); padding:14px 16px;
   font-size:13px; color:var(--text);
 }
 .pp-stats-dropdown.open { display:block; }
@@ -25,7 +25,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-top: 3px solid; border-image: var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 20px;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -63,7 +63,7 @@
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--muted);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -78,7 +78,7 @@
 .pp-table-wrap {
   overflow: auto;
   max-height: calc(100vh - 140px);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 1px 6px rgba(0,0,0,0.07);
   border: 1px solid var(--border2);
   position: relative;
@@ -144,14 +144,14 @@
 .pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
 .pp-cal-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
 .pp-cal-block { display:flex; align-items:center; gap:6px; }
-.pp-cal-nav { width:32px; height:32px; border-radius:5px; border:1px solid var(--border);
+.pp-cal-nav { width:32px; height:32px; border-radius:var(--radius-xs); border:1px solid var(--border);
   background:transparent; color:var(--text2); cursor:pointer;
   display:flex; align-items:center; justify-content:center; font-size:15px; transition:all 0.15s; }
 .pp-cal-nav:hover { border-color:var(--accent); color:var(--accent); }
 .pp-cal-display { min-width:60px; text-align:center; font-size:14px; font-weight:600;
-  background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:3px 10px; color:var(--text); }
+  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px 10px; color:var(--text); }
 .pp-cal-months { display:flex; gap:4px; flex-wrap:wrap; }
-.pp-cal-month { padding:6px 12px; border-radius:5px; font-size:13px; cursor:pointer; min-height:32px;
+.pp-cal-month { padding:6px 12px; border-radius:var(--radius-xs); font-size:13px; cursor:pointer; min-height:32px;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s; }
 .pp-cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .pp-cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -160,7 +160,7 @@
 
 /* ── Чипы отделов ──────────────────────────────────────────────────── */
 .pp-dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-.pp-dept-chip { padding:6px 12px; border-radius:5px; font-size:13px; cursor:pointer; min-height:32px;
+.pp-dept-chip { padding:6px 12px; border-radius:var(--radius-xs); font-size:13px; cursor:pointer; min-height:32px;
   border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap; }
 .pp-dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .pp-dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -218,7 +218,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   padding:12px 18px;
   background:linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
   border:none;
-  border-radius:10px;
+  border-radius:var(--radius-md);
   margin-bottom:12px;
   font-size:14px;
   font-weight:500;
@@ -244,7 +244,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .sandbox-banner .btn.btn-danger  { background:rgba(239,68,68,0.7); border-color:rgba(239,68,68,0.9); }
 .sandbox-badge {
   display:inline-flex; align-items:center;
-  padding:3px 10px; border-radius:10px;
+  padding:3px 10px; border-radius:var(--radius-md);
   font-size:11px; font-weight:700;
   text-transform:uppercase;
   letter-spacing:0.03em;
@@ -286,7 +286,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .sandbox-active .pp-table-wrap {
   outline:3px solid #8b5cf6;
   outline-offset:2px;
-  border-radius:10px;
+  border-radius:var(--radius-md);
   box-shadow:0 0 20px rgba(139,92,246,0.2);
   animation:sandboxGlow 3s ease-in-out infinite;
   position:relative;
@@ -321,7 +321,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   display:none;
   position:sticky; left:0; top:0; z-index:14;
   background:#7c3aed; color:#fff;
-  padding:4px 14px; border-radius:0 0 10px 0;
+  padding:4px 14px; border-radius:0 0 var(--radius-md) 0;
   font-size:11px; font-weight:700; letter-spacing:.05em;
   text-transform:uppercase;
   box-shadow:2px 2px 8px rgba(124,58,237,0.3);
@@ -387,7 +387,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 /* ── Бейдж действия на строке ─────────────────────────────────────── */
 .sandbox-action-badge {
   display:inline-flex; align-items:center; gap:3px;
-  padding:2px 8px; border-radius:8px;
+  padding:2px 8px; border-radius:var(--radius-md);
   font-size:10px; font-weight:700;
   text-transform:uppercase;
   margin-left:4px;
@@ -402,7 +402,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   display:flex; align-items:center; gap:10px;
   padding:10px 12px;
   border:1px solid var(--border);
-  border-radius:8px;
+  border-radius:var(--radius-md);
   margin-bottom:6px;
   cursor:pointer;
   transition:background 0.15s;
@@ -412,7 +412,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .cs-list-item .cs-meta { font-size:11px; color:var(--muted); }
 .cs-list-item .cs-count {
   display:inline-flex; align-items:center; justify-content:center;
-  min-width:22px; height:22px; border-radius:11px;
+  min-width:22px; height:22px; border-radius:var(--radius-lg);
   background:rgba(139,92,246,0.12); color:#8b5cf6;
   font-size:11px; font-weight:600;
 }
@@ -420,7 +420,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 /* ── Diff-таблица ─────────────────────────────────────────────────── */
 .diff-section {
   border:1px solid var(--border);
-  border-radius:8px;
+  border-radius:var(--radius-md);
   margin-bottom:12px;
   overflow:hidden;
 }
@@ -440,16 +440,16 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .diff-field-row:last-child { border-bottom:none; }
 .diff-field-name { width:160px; color:var(--muted); font-weight:500; }
 .diff-field-old {
-  flex:1; padding:3px 8px; border-radius:4px;
+  flex:1; padding:3px 8px; border-radius:var(--radius-xs);
   background:rgba(239,68,68,0.08); color:var(--danger);
   text-decoration:line-through;
 }
 .diff-field-new {
-  flex:1; padding:3px 8px; border-radius:4px; margin-left:8px;
+  flex:1; padding:3px 8px; border-radius:var(--radius-xs); margin-left:8px;
   background:rgba(34,197,94,0.08); color:var(--success);
 }
 .diff-field-conflict {
-  flex:none; padding:2px 6px; border-radius:4px;
+  flex:none; padding:2px 6px; border-radius:var(--radius-xs);
   background:rgba(239,68,68,0.15); color:var(--danger);
   font-size:11px; font-weight:600;
   margin-left:6px;
@@ -458,7 +458,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   display:flex; gap:16px;
   padding:12px 16px;
   background:var(--surface);
-  border-radius:8px;
+  border-radius:var(--radius-md);
   margin-bottom:12px;
   font-size:13px;
 }

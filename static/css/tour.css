@@ -6,7 +6,7 @@
 .tour-spotlight {
   position: fixed;
   border: 3px solid #60a5fa;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 0 24px rgba(96, 165, 250, 0.5);
   z-index: 99991;
   pointer-events: none;
@@ -37,7 +37,7 @@
   z-index: 99995;
   background: #1e293b;
   border: 2px solid var(--accent, #2563eb);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   max-width: 440px;
   min-width: 300px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -63,7 +63,7 @@
   width: 36px;
   height: 36px;
   background: rgba(37, 99, 235, 0.2);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,7 +127,7 @@
 /* ── Кнопки тура ────────────────────────────────────────────────── */
 .tour-btn {
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -166,7 +166,7 @@
   background: rgba(37, 99, 235, 0.12);
   color: #60a5fa;
   border: 1px solid rgba(37, 99, 235, 0.3);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -195,7 +195,7 @@
 .tour-info-card {
   background: #1e293b;
   border: 2px solid var(--accent, #2563eb);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   max-width: 520px;
   width: 90%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -213,7 +213,7 @@
   height: 64px;
   margin: 28px auto 16px;
   background: rgba(37, 99, 235, 0.15);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,7 +266,7 @@
 .tour-modal-card {
   background: #1e293b;
   border: 2px solid var(--accent, #2563eb);
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   max-width: 440px;
   width: 90%;
   padding: 36px 32px 28px;
@@ -312,7 +312,7 @@
   position: relative;
   z-index: 2;
   border: 2px solid rgba(96, 165, 250, 0.7) !important;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 @keyframes tourSidebarPulse {
@@ -368,7 +368,7 @@
 .tour-welcome-card {
   background: #1e293b;
   border: 2px solid var(--accent, #2563eb);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   max-width: 480px;
   width: 90%;
   padding: 0;
@@ -419,7 +419,7 @@
   gap: 8px;
   padding: 14px 10px;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   text-align: center;
 }
 
@@ -454,7 +454,7 @@
   z-index: 90;
   background: #1e293b;
   border: 1px solid rgba(96, 165, 250, 0.3);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 16px;
   min-width: 240px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -471,7 +471,7 @@
 
 .tour-progress-widget.minimized {
   transform: translateY(calc(100% - 44px));
-  border-radius: 14px 14px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .tour-progress-widget-header {
@@ -507,7 +507,7 @@
   color: #64748b;
   cursor: pointer;
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   transition: color 0.15s ease, background 0.15s ease;
   line-height: 1;
@@ -557,7 +557,7 @@
   background: rgba(37, 99, 235, 0.12);
   color: #60a5fa;
   border: 1px solid rgba(37, 99, 235, 0.25);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

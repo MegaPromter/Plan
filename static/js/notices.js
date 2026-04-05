@@ -137,7 +137,11 @@ function renderTable() {
 
   const tbody = document.getElementById('jiBody');
   if (!_jiFiltered.length) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-envelope-open', title:'Нет извещений', desc:'Попробуйте изменить фильтры или добавьте новое извещение', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Новое извещение</button>' : '', colspan:13});
+    if (jiData.length === 0) {
+      tbody.innerHTML = emptyStateHtml({icon:'fas fa-file-alt', title:'Нет извещений', desc:'Журнал извещений пока пуст', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Новое извещение</button>' : '', colspan:13});
+    } else {
+      tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus"></i> Новое извещение</button>' : '', colspan:13});
+    }
     document.getElementById('jiFooter').textContent = 'Записей: 0';
     return;
   }
