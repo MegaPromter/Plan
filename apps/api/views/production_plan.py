@@ -257,8 +257,15 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 value = d.get(field)
                 if value is None or value == '':
                     continue
-                detail_view._update_field(work, field, value, save=False)
+                detail_view._update_field(work, field, value, save=False,
+                                          skip_date_check=True)
                 changed = True
+            # Проверка дат после установки всех полей
+            if work.date_start and work.date_end and work.date_start > work.date_end:
+                work.delete()
+                return JsonResponse(
+                    {'error': 'Дата начала не может быть позже даты окончания'},
+                    status=400)
             if changed:
                 work.save()
 
@@ -393,7 +400,10 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                                    'Перезагрузите данные.',
                     }, status=409)
 
-            self._update_field(work, field, value)
+            try:
+                self._update_field(work, field, value)
+            except ValueError as exc:
+                return JsonResponse({'error': str(exc)}, status=400)
             log_action(request, AuditLog.ACTION_PP_UPDATE,
                        object_id=work.pk,
                        object_repr=work.work_name or str(work.pk),
@@ -401,14 +411,21 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
 
         return JsonResponse({'ok': True})
 
-    def _update_field(self, work, field, value, save=True):
+    def _update_field(self, work, field, value, save=True,
+                      skip_date_check=False):
         """Обновляет одно поле в Work."""
         if field == 'work_name':
             work.work_name = value or ''
         elif field == 'date_start':
-            work.date_start = _safe_date(value)
+            parsed = _safe_date(value)
+            if not skip_date_check and parsed and work.date_end and parsed > work.date_end:
+                raise ValueError('Дата начала не может быть позже даты окончания')
+            work.date_start = parsed
         elif field == 'date_end':
-            work.date_end = _safe_date(value)
+            parsed = _safe_date(value)
+            if not skip_date_check and parsed and work.date_start and parsed < work.date_start:
+                raise ValueError('Дата окончания не может быть раньше даты начала')
+            work.date_end = parsed
         elif field == 'executor':
             # Строгий поиск по ФИО — назначаем только при точном совпадении
             if value:

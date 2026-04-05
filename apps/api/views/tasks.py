@@ -402,7 +402,11 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
                 d['task_type'] = tt_val
 
             _set_work_fk_fields(work, d, request)
-            _set_date_fields(work, d)
+            try:
+                _set_date_fields(work, d)
+            except ValueError as exc:
+                work.delete()
+                return JsonResponse({'error': str(exc)}, status=400)
             work.save()
 
             if executors_list:
@@ -552,7 +556,10 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     d['task_type'] = tt_val
 
                 _set_work_fk_fields(work, d, request)
-                _set_date_fields(work, d)
+                try:
+                    _set_date_fields(work, d)
+                except ValueError as exc:
+                    return JsonResponse({'error': str(exc)}, status=400)
 
                 if 'stage' in d and not is_from_pp:
                     work.stage_num = d['stage']
@@ -791,6 +798,9 @@ def _set_date_fields(work, d):
                     setattr(work, attr, dt_date.fromisoformat(str(val)))
                 except (ValueError, TypeError):
                     setattr(work, attr, None)
+    # Валидация: date_start не может быть позже date_end
+    if work.date_start and work.date_end and work.date_start > work.date_end:
+        raise ValueError('Дата начала не может быть позже даты окончания')
 
 
 # Локальный алиас для обратной совместимости (реализация в utils.py)
