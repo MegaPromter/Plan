@@ -630,6 +630,7 @@ async function refreshPlanningErrors() {
 }
 
 async function openPlanningErrors() {
+  document.getElementById("peViz").innerHTML = '';
   document.getElementById("peBody").innerHTML =
     '<div style="padding:30px;text-align:center;color:var(--muted)">⏳ Анализ данных...</div>';
   document.getElementById("peModal").classList.add("open");
@@ -644,6 +645,8 @@ async function openPlanningErrors() {
   document.getElementById("peLastCheck").textContent =
     "Проверено: " + new Date().toLocaleTimeString("ru-RU");
 
+  const viz = document.getElementById("peViz");
+  viz.innerHTML = "";
   const body = document.getElementById("peBody");
   body.innerHTML = "";
 
@@ -680,7 +683,7 @@ async function openPlanningErrors() {
       <div class="vc-bar-row"><span class="vc-bar-label">Недозагруженные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(underloaded.length, 10)}" style="width:${barPct(underloaded.length)}%">${underloaded.length}</div></div></div>
       <div class="vc-bar-row"><span class="vc-bar-label">Конфликт отпусков</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(vacConflicts.length, 5)}" style="width:${barPct(vacConflicts.length)}%">${vacConflicts.length}</div></div></div>
     </div>`;
-  body.appendChild(vcTop);
+  viz.appendChild(vcTop);
 
   // ── Прогноз (ближайшие 7 дней) ──────────────────────────────────────────
   if (soonExpiring.length > 0) {
@@ -690,7 +693,7 @@ async function openPlanningErrors() {
     fc.innerHTML = `<span class="forecast-icon">⏰</span>
       <span class="forecast-text">В ближайшие <strong>7 дней</strong> истекает срок у <strong>${soonExpiring.length} работ</strong>${escapePe(noExecMsg)}</span>
       <span class="forecast-badge">+${soonExpiring.length}</span>`;
-    body.appendChild(fc);
+    viz.appendChild(fc);
   }
 
   // ── Разбивка по отделам ──────────────────────────────────────────────────
@@ -716,7 +719,7 @@ async function openPlanningErrors() {
         <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--danger)"></span> Просрочено</span>
         <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#f59e0b"></span> Ошибки дат</span>
       </div>`;
-    body.appendChild(deptDiv);
+    viz.appendChild(deptDiv);
   }
 
   // ── Таймлайн дедлайнов по дням ───────────────────────────────────────────
@@ -760,7 +763,7 @@ async function openPlanningErrors() {
       <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--muted);opacity:0.3"></span> Выходной</span>
       ${isCurrentMonth ? '<span class="timeline-leg-item" style="color:var(--accent);font-weight:600">▼ Сегодня</span>' : ''}
     </div>`;
-  body.appendChild(tlDiv);
+  viz.appendChild(tlDiv);
 
   // ── Аккордеон секций ─────────────────────────────────────────────────────
   const sections = [
