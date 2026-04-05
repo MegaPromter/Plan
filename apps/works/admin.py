@@ -65,7 +65,7 @@ class WorkAdmin(admin.ModelAdmin):
         ('Поля ПП', {
             'fields': (
                 'pp_project', 'row_code', 'work_order', 'stage_num',
-                'milestone_num', 'sheets_a4', 'norm', 'coeff',
+                'sheets_a4', 'norm', 'coeff',
                 'total_2d', 'total_3d', 'labor',
             ),
             'classes': ('collapse',),

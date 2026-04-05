@@ -105,7 +105,6 @@ def _snapshot_work(work):
         'row_code': (work.pp_stage.row_code if work.pp_stage_id else work.row_code) or '',
         'work_order': (work.pp_stage.work_order if work.pp_stage_id else work.work_order) or '',
         'stage_num': work.stage_num or '',
-        'milestone_num': work.milestone_num or '',
         'work_num': work.work_num or '',
         'work_designation': work.work_designation or '',
         'task_type': work.task_type or '',
@@ -539,7 +538,7 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
         """Устанавливает поля Work из dict field_changes."""
         text_fields = {
             'work_name', 'row_code', 'work_order', 'stage_num',
-            'milestone_num', 'work_num', 'work_designation', 'task_type',
+            'work_num', 'work_designation', 'task_type',
         }
         decimal_fields = {'sheets_a4', 'norm', 'coeff', 'total_2d', 'total_3d', 'labor'}
         date_fields = {'date_start', 'date_end'}

@@ -321,7 +321,7 @@ function _findCellByField(row, field) {
 
     // Фолбэк по индексу столбца
     var ppCols = [
-        'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
+        'row_code', 'work_order', 'stage_num', 'work_num',
         'work_designation', 'work_name',
         'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
         'center', 'dept', 'sector_head', 'executor', 'task_type'
@@ -341,7 +341,7 @@ function _findCellByField(row, field) {
 function _fieldLabel(field) {
     var labels = {
         row_code: 'Код', work_order: 'Наряд-заказ', stage_num: 'Этап',
-        milestone_num: 'Веха', work_num: '№ работы', work_designation: 'Обозначение',
+        work_num: '№ работы', work_designation: 'Обозначение',
         work_name: 'Наименование', date_end: 'Срок', sheets_a4: 'Ф. А4',
         norm: 'Норматив', coeff: 'Коэфф', labor: 'Трудоёмкость',
         center: 'НТЦ', dept: 'Подразделение', sector_head: 'Нач. сектора',
@@ -379,7 +379,7 @@ function _renderSandboxCreateRows(createItems) {
     // Названия полей для читаемого отображения
     var fieldLabels = {
         row_code: 'Код строки', work_order: 'Наряд-заказ', stage_num: '№ этапа',
-        milestone_num: '№ вехи', work_num: '№ работы', work_designation: 'Обозначение',
+        work_num: '№ работы', work_designation: 'Обозначение',
         work_name: 'Наименование', date_end: 'Срок', sheets_a4: 'Ф. А4',
         norm: 'Норматив', coeff: 'Коэфф', labor: 'Плановая',
         center: 'НТЦ', dept: 'Подразделение', sector_head: 'Отдел / Нач. сектора',
@@ -388,7 +388,7 @@ function _renderSandboxCreateRows(createItems) {
 
     // PP_COLUMNS порядок (из production_plan.js)
     var ppCols = [
-        'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
+        'row_code', 'work_order', 'stage_num', 'work_num',
         'work_designation', 'work_name',
         'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
         'center', 'dept', 'sector_head', 'executor', 'task_type'

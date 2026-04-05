@@ -81,7 +81,6 @@ def _serialize_pp(work, today=None):
         'row_code': (work.pp_stage.row_code if work.pp_stage else work.row_code) or '',
         'work_order': (work.pp_stage.work_order if work.pp_stage else work.work_order) or '',
         'stage_num': work.stage_num or '',
-        'milestone_num': work.milestone_num or '',
         'work_num': work.work_num or '',
         'work_designation': work.work_designation or '',
         'sheets_a4': float(work.sheets_a4) if work.sheets_a4 is not None else '',
@@ -490,7 +489,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 work.pp_stage = None
                 work.stage_num = ''
         else:
-            # row_code, work_order, stage_num, milestone_num, work_num, work_designation
+            # row_code, work_order, stage_num, work_num, work_designation
             setattr(work, field, value or '')
         if save:
             work.save()

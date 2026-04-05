@@ -247,7 +247,6 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                         work_designation=f'АБВГ.{random.randint(100000, 999999)}.{random.randint(1, 99):03d}',
                         row_code=f'РС-{idx + 1:03d}',
                         stage_num=f'Этап {random.randint(1, 5)}',
-                        milestone_num=f'Веха {random.randint(1, 10)}',
                         sheets_a4=sheets,
                         norm=norm_val,
                         coeff=coeff_val,
