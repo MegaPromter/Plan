@@ -2286,7 +2286,7 @@ function openInlineNewRow() {
   const colDefs = [
     {id:'inr-project',       type:'select', dirKey:'project', ci:1},
     {id:'_rc_', type:'static', ci:2}, // Код строки — read-only placeholder
-    {id:'_wo_', type:'static_text', ci:3, text:'—'}, // Наряд-заказ — read-only из ЕТБД
+    {id:'_wo_', type:'static_text', ci:3, text:'(авто)'}, // Наряд-заказ — read-only, авто
     {id:'inr-stage',         type:'select', dirKey:'stage',   parentId:'inr-project', parentDirKey:'project', ci:4},
     {id:'inr-work_number',   type:'text',   placeholder:'№ работы', ci:5},
     {id:'inr-justification', type:'text',   placeholder:'Обоснование', ci:6},
@@ -2370,7 +2370,7 @@ function openInlineNewRow() {
           const rcCell = tr.querySelector('td[data-col-idx="2"]');
           const woCell = tr.querySelector('td[data-col-idx="3"]');
           if (rcCell) { rcCell.childNodes[0].textContent = '(авто)'; }
-          if (woCell) { woCell.textContent = '—'; }
+          if (woCell) { woCell.textContent = '(авто)'; }
         });
       }
       // При смене этапа — обновляем код строки и наряд-заказ из ЕТБД
@@ -2380,7 +2380,7 @@ function openInlineNewRow() {
           const rcCell = tr.querySelector('td[data-col-idx="2"]');
           const woCell = tr.querySelector('td[data-col-idx="3"]');
           if (rcCell) { rcCell.childNodes[0].textContent = stgItem ? (stgItem.row_code || '(авто)') : '(авто)'; }
-          if (woCell) { woCell.textContent = stgItem ? (stgItem.work_order || '—') : '—'; }
+          if (woCell) { woCell.textContent = stgItem ? (stgItem.work_order || '(авто)') : '(авто)'; }
         });
       }
       td.appendChild(sel);
