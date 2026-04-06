@@ -105,6 +105,8 @@ class ProjectListView(LoginRequiredJsonMixin, View):
                 .annotate(
                     # pp_count: количество связанных PPProject (производственных планов)
                     pp_count=Count('pp_plans', distinct=True),
+                    # stages_count: количество этапов (PPStage)
+                    stages_count=Count('stages', distinct=True),
                 )
                 .order_by('name_short', 'name_full')  # Сортировка: по краткому, затем полному имени
             )
@@ -116,6 +118,8 @@ class ProjectListView(LoginRequiredJsonMixin, View):
                     'products': [_serialize_product(p) for p in proj.products.all()],
                     # Количество связанных ПП-планов (из аннотации)
                     'pp_count': proj.pp_count,
+                    # Количество этапов проекта
+                    'stages_count': proj.stages_count,
                 }
                 result.append(_serialize_project(proj, extra))
             # Возвращаем JSON-список

@@ -189,6 +189,7 @@ function renderProjects() {
         <div class="project-card-meta">
           <span><i class="fas fa-industry" style="margin-right:4px;"></i>${p.pp_count || 0} производственных планов</span>
           ${p.products ? `<span><i class="fas fa-cube" style="margin-right:4px;"></i>${p.products.length} изделий</span>` : ''}
+          <span><i class="fas fa-layer-group" style="margin-right:4px;"></i>${p.stages_count || 0} этапов</span>
         </div>
         ${actionBtns}
       </div>`;
