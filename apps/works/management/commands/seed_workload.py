@@ -22,6 +22,8 @@ from apps.works.models import PPProject, Work, WorkCalendar
 
 # Месяцы для распределения задач
 MONTHS = [
+    (2026, 2),   # февраль
+    (2026, 3),   # март
     (2026, 4),   # апрель
     (2026, 5),   # май
     (2026, 6),   # июнь
