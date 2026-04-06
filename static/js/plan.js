@@ -1514,13 +1514,13 @@ function renderTable() {
 
   // Пустое состояние: вообще нет задач
   if (tasks.length === 0) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-tasks', title:'Нет задач', desc:'Создайте первую задачу для начала работы', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Создать задачу</button>' : '', colspan:15});
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-tasks', title:'Нет задач', desc:'Создайте первую задачу для начала работы', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Создать задачу</button>' : '', colspan:17});
     updatePlanSummary();
     return;
   }
   // Пустое состояние: нет строк после фильтрации
   if (_spFiltered.length === 0 && (hasFilters || _spStatusFilter !== 'all')) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action:'<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Новая задача</button>', colspan:15});
+    tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action:'<button class="btn btn-primary btn-sm" onclick="openNewTaskModal(\'task\')"><i class="fas fa-plus"></i> Новая задача</button>', colspan:17});
     updatePlanSummary();
     return;
   }

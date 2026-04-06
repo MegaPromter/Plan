@@ -76,7 +76,7 @@
 
 /* ── Таблица задач ────────────────────────────────────────────────────── */
 .table-wrap { margin-top:calc(var(--header-h) + var(--toolbar-h)); margin-left:var(--sidebar-width);
-  overflow-x:auto; overflow-y:auto; padding-bottom:52px;
+  overflow-x:auto; overflow-y:auto; padding-bottom:52px; background:var(--bg);
   height:calc(100vh - var(--header-h) - var(--toolbar-h)); transition:margin-left 0.3s ease; }
 .main-content.sidebar-collapsed .table-wrap { margin-left:0; }
 table { border-collapse:separate; border-spacing:0; min-width:2400px; width:100%; font-size:15px; }
