@@ -1,31 +1,423 @@
 {% extends "base.html" %}
-{% load static employee_tags vite %}
+{% load static employee_tags %}
+<!-- SPA производственного плана: лендинг с карточками ПП-проектов и таблица строк с инлайн-редактированием -->
 
 {% block title %}Производственный план — ПРИЗМА{% endblock %}
 
+<!-- Активный пункт меню «Производственный план» в сайдбаре -->
 {% block nav_pp %}active{% endblock %}
 
 {% block breadcrumb %}
 <span class="breadcrumb-sep" aria-hidden="true">/</span>
+<!-- Динамический заголовок хлебной крошки: меняется при открытии конкретного плана -->
 <span class="breadcrumb-current" id="breadcrumbTitle">Производственный план</span>
 {% endblock %}
 
 {% block topbar_actions %}
-<!-- Якорь для Vue Teleport: кнопки действий ПП переносятся сюда -->
-<div id="pp-topbar-actions"></div>
+<!-- Кнопки верхней панели для режима лендинга (список планов) -->
+<div id="landingActions">
+  <!-- Кнопка создания плана доступна только администраторам -->
+  {% if request.user|is_admin_role %}
+  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
+    <i class="fas fa-plus" aria-hidden="true"></i> Создать новый производственный план
+  </button>
+  {% endif %}
+</div>
+<!-- Кнопки верхней панели для режима просмотра плана (скрыты по умолчанию) -->
+<div id="projectActions" style="display:none;">
+  <!-- Кнопка возврата на лендинг -->
+  <a href="#" class="btn btn-outline btn-sm" onclick="goToLanding(); return false;">
+    <i class="fas fa-arrow-left" aria-hidden="true"></i> Все планы
+  </a>
+  <!-- Синхронизация данных ПП → модуль план/отчёт (для всех) -->
+  <button class="btn btn-secondary btn-sm" onclick="syncToTasks()">
+    <i class="fas fa-sync-alt" aria-hidden="true"></i> Синхронизировать с СП
+  </button>
+  {% if request.user|is_writer %}
+  <!-- Добавить новую строку непосредственно в таблицу -->
+  <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
+    <i class="fas fa-plus" aria-hidden="true"></i> Добавить строку
+  </button>
+  <button class="btn btn-outline btn-sm" id="ppBulkModeBtn" onclick="ppToggleBulkMode()" title="Массовое выделение">
+    <i class="far fa-check-square" aria-hidden="true"></i> Масс. выд.
+  </button>
+  {% endif %}
+  <!-- Песочница -->
+  {% if request.user|is_writer %}
+  <button class="btn btn-outline btn-sm" id="sandboxToggleBtn" onclick="toggleSandboxMode()">
+    <i class="fas fa-flask" aria-hidden="true"></i> <span id="sandboxToggleLabel">Песочница</span>
+  </button>
+  {% endif %}
+  <span id="exportBtnContainer"></span>
+  <!-- Кнопка статистики с дропдауном -->
+  <span class="pp-stats-wrap" style="position:relative;display:inline-block;">
+    <button class="btn btn-outline btn-sm" id="ppStatsBtn" onclick="togglePPStats()">
+      <i class="fas fa-chart-pie" aria-hidden="true"></i> Статистика
+    </button>
+    <div class="pp-stats-dropdown" id="ppStatsDropdown"></div>
+  </span>
+  <!-- Кнопка сброса фильтров со счётчиком строк -->
+  <button id="filtersActiveBadge" onclick="clearAllColFilters()"
+          style="display:none;" class="btn btn-outline btn-sm">
+    <i class="fas fa-times" aria-hidden="true"></i> Сбросить фильтры
+    <span id="ppRowsCounter" style="margin-left:6px;opacity:0.7;font-size:12px;"></span>
+  </button>
+  <!-- Счётчик строк без активных фильтров -->
+  <span id="ppRowsCounterPlain" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
+  <!-- Пресеты фильтров -->
+  <span id="ppFilterPresetsWrap"></span>
+</div>
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=10">
+<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=7">
 {% endblock %}
 
 {% block content %}
+<!-- CSRF-токен Django: используется js-функцией getCsrfToken() для PUT/POST/DELETE запросов -->
 {% csrf_token %}
 
-<!-- Vue 3 приложение монтируется сюда -->
-<div id="vue-pp-app"></div>
+<!-- Индикатор песочницы: фиолетовая бегущая полоса вверху экрана -->
+<div class="sandbox-topbar-indicator" id="sandboxTopbarIndicator"></div>
 
-<!-- Конфигурация для Vue (читается из JS) -->
+<!-- Режим лендинга: список карточек ПП-проектов -->
+<div id="landingView">
+  <div class="page-header">
+    <h1>Производственный план</h1>
+  </div>
+  <!-- Сетка карточек, заполняется функцией renderProjects() -->
+  <div id="projectsGrid" class="pp-projects-grid">
+    <!-- заполняется JavaScript -->
+  </div>
+</div>
+
+<!-- Режим просмотра плана: таблица строк ПП (скрыта по умолчанию) -->
+<div id="projectView" style="display:none;">
+  <!-- ── Песочница: баннер-панель (внутри projectView, чтобы быть видимым) ── -->
+  <div id="sandboxPanel" style="display:none;">
+    <div class="sandbox-banner" id="sandboxBanner">
+      <i class="fas fa-flask" aria-hidden="true"></i>
+      <span style="font-weight:600;">ПЕСОЧНИЦА</span>
+      <span style="margin:0 4px;">—</span>
+      <span id="sandboxBannerTitle">Песочница</span>
+      <span class="sandbox-badge" id="sandboxStatusBadge"></span>
+      <div style="flex:1;"></div>
+      <button class="btn btn-sm btn-outline" onclick="openChangesetList()" title="Все наборы">
+        <i class="fas fa-list" aria-hidden="true"></i> Наборы
+      </button>
+      <button class="btn btn-sm btn-primary" id="sandboxSubmitBtn" onclick="submitChangeset()" style="display:none;">
+        <i class="fas fa-paper-plane" aria-hidden="true"></i> На согласование
+      </button>
+      <button class="btn btn-sm btn-success" id="sandboxApproveBtn" onclick="approveChangeset()" style="display:none;">
+        <i class="fas fa-check" aria-hidden="true"></i> Утвердить
+      </button>
+      <button class="btn btn-sm btn-danger" id="sandboxRejectBtn" onclick="openRejectDialog()" style="display:none;">
+        <i class="fas fa-times" aria-hidden="true"></i> Отклонить
+      </button>
+      <button class="btn btn-sm btn-outline" id="sandboxDiffBtn" onclick="showChangesetDiff()" style="display:none;">
+        <i class="fas fa-code-branch" aria-hidden="true"></i> Изменения
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="exitSandbox()">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Выйти
+      </button>
+    </div>
+  </div>
+
+  <!-- Панель периода (год + месяцы) -->
+  <div class="pp-period-bar" id="ppPeriodBar" style="display:none;">
+    <span class="pp-cal-label">Период:</span>
+    <div class="pp-cal-block">
+      <button class="pp-cal-nav" onclick="ppChangeYear(-1)">‹</button>
+      <div class="pp-cal-display" id="ppYearDisplay">2026</div>
+      <button class="pp-cal-nav" onclick="ppChangeYear(1)">›</button>
+    </div>
+    <div class="pp-cal-months">
+      <span class="pp-cal-month" data-m="1" onclick="ppSelectMonth(1)">Янв</span><span class="pp-cal-month" data-m="2" onclick="ppSelectMonth(2)">Фев</span>
+      <span class="pp-cal-month" data-m="3" onclick="ppSelectMonth(3)">Мар</span><span class="pp-cal-month" data-m="4" onclick="ppSelectMonth(4)">Апр</span>
+      <span class="pp-cal-month" data-m="5" onclick="ppSelectMonth(5)">Май</span><span class="pp-cal-month" data-m="6" onclick="ppSelectMonth(6)">Июн</span>
+      <span class="pp-cal-month" data-m="7" onclick="ppSelectMonth(7)">Июл</span><span class="pp-cal-month" data-m="8" onclick="ppSelectMonth(8)">Авг</span>
+      <span class="pp-cal-month" data-m="9" onclick="ppSelectMonth(9)">Сен</span><span class="pp-cal-month" data-m="10" onclick="ppSelectMonth(10)">Окт</span>
+      <span class="pp-cal-month" data-m="11" onclick="ppSelectMonth(11)">Ноя</span><span class="pp-cal-month" data-m="12" onclick="ppSelectMonth(12)">Дек</span>
+    </div>
+    <span class="pp-cal-clear" onclick="ppClearPeriod()">Показать все</span>
+  </div>
+
+  <!-- Чипы отделов (аналог плана задач) -->
+  <div class="pp-dept-bar" id="ppDeptBar" style="display:none;">
+    <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Отдел:</span>
+    <div id="ppDeptChips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- Переключатель вида + статус-панель + density в одной строке -->
+  <div class="pp-view-tabs" id="ppViewTabs">
+    <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')">📋 Таблица</button>
+    <button class="pp-view-tab" data-view="gantt" onclick="ppSwitchView('gantt')">📊 Диаграмма Ганта</button>
+    <!-- Статус-панель -->
+    <div class="status-pills" id="ppStatusPanel" style="display:none;">
+      <button class="sp sp-all active" onclick="ppFilterByStatus('all')">
+        Все <span class="num" id="ppCountAll">0</span>
+      </button>
+      <button class="sp sp-done" onclick="ppFilterByStatus('done')">
+        ✓ <span class="num" id="ppCountDone">0</span>
+      </button>
+      <button class="sp sp-overdue" onclick="ppFilterByStatus('overdue')">
+        ⚠ <span class="num" id="ppCountOverdue">0</span>
+      </button>
+      <button class="sp sp-inwork" onclick="ppFilterByStatus('inwork')">
+        ⟳ <span class="num" id="ppCountInWork">0</span>
+      </button>
+    </div>
+    <span class="gantt-scale-group" id="ppGanttScaleGroup" style="display:none;">
+      <button class="gantt-scale-btn" data-scale="day" onclick="ppSetGanttScale('day')">Дни</button>
+      <button class="gantt-scale-btn" data-scale="week" onclick="ppSetGanttScale('week')">Недели</button>
+      <button class="gantt-scale-btn active" data-scale="month" onclick="ppSetGanttScale('month')">Месяцы</button>
+      <button class="gantt-scale-btn" data-scale="year" onclick="ppSetGanttScale('year')">Годы</button>
+    </span>
+    <div class="density-toggle" id="ppViewModeToggle" data-tip="Режим отображения столбцов" style="margin-left:auto;">
+      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i></button>
+      <button data-view="normal" data-tip="Обычно (15 колонок)"><i class="fas fa-bars"></i></button>
+      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i></button>
+    </div>
+  </div>
+
+  <div class="pp-table-wrap" id="ppTableView">
+    <!-- Таблица производственного плана с инлайн-редактированием -->
+    <table class="pp-table" id="ppTable">
+      <thead>
+        <!-- Первая строка заголовков (основные столбцы) -->
+        <tr>
+          <th style="width:40px;" rowspan="2" data-col-idx="0">№</th>
+          <th style="width:100px;" rowspan="2" data-sort="row_code" data-col-idx="1">Код строки</th>
+          <th style="width:110px;" rowspan="2" data-sort="work_order" data-col-idx="2">Наряд-заказ</th>
+          <th style="width:90px;" rowspan="2" data-sort="stage_num" data-col-idx="3">№ этапа</th>
+          <th style="width:100px;" rowspan="2" data-sort="milestone_num" data-col-idx="4">№ вехи</th>
+          <th style="width:90px;" rowspan="2" data-sort="work_num" data-col-idx="5">№ работы</th>
+          <th colspan="2" style="text-align:center;">Группа</th>
+          <th colspan="2" style="text-align:center;">Сроки</th>
+          <th style="width:500px;" colspan="4" data-col-group="labor">Расчёт трудозатрат</th>
+          <th style="width:100px;" rowspan="2" data-sort="ntc_center" data-col-idx="14">Подразделение</th>
+          <th style="width:60px;" rowspan="2" data-sort="department" data-col-idx="15">Отдел</th>
+          <th style="width:130px;" rowspan="2" data-sort="sector" data-col-idx="16">Сектор /<br>Нач. сектора</th>
+          <th style="width:140px;" rowspan="2" data-sort="executor" data-col-idx="17">Разработчик</th>
+          <th style="width:120px;" rowspan="2" data-sort="task_type" data-col-idx="18">Тип задачи</th>
+          <th style="width:70px;" rowspan="2" data-col-idx="19">Действия</th>
+        </tr>
+        <!-- Вторая строка заголовков: детализация -->
+        <tr>
+          <th style="width:300px;" data-sort="work_designation" data-col-idx="6">Обозначение</th>
+          <th style="width:350px;" data-sort="work_name" data-col-idx="7">Наименование</th>
+          <th style="width:110px;" data-sort="date_start" data-col-idx="8">Начало</th>
+          <th style="width:110px;" data-sort="date_end" data-col-idx="9">Окончание</th>
+          <th style="width:100px;" data-col-idx="10">Ф, А4</th>
+          <th style="width:100px;" data-col-idx="11">Норматив</th>
+          <th style="width:100px;" data-col-idx="12">Коэфф</th>
+          <th style="width:130px;" data-col-idx="13">Плановая<br>трудоёмкость</th>
+        </tr>
+        <!-- Строка мультифильтров по каждому столбцу -->
+        <tr class="filter-row" id="filterRow">
+          <!-- Номер строки — без фильтра -->
+          <th data-col-idx="0"></th>
+          <!-- Мультифильтр по коду строки -->
+          <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="row_code" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по наряд-заказу -->
+          <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру этапа -->
+          <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="stage_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру вехи -->
+          <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="milestone_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по номеру работы -->
+          <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="work_num" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по обозначению -->
+          <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="work_designation" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по наименованию работы -->
+          <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по дате начала -->
+          <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по дате окончания -->
+          <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Столбцы расчёта — без фильтров (листы, норматив, коэфф, трудоёмкость) -->
+          <th data-col-idx="10"></th><th data-col-idx="11"></th><th data-col-idx="12"></th><th data-col-idx="13"></th>
+          <!-- Мультифильтр по подразделению (НТЦ) -->
+          <th data-col-idx="14"><div class="mf-wrap"><button class="mf-trigger" data-col="center" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по отделу -->
+          <th data-col-idx="15"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по начальнику сектора -->
+          <th data-col-idx="16"><div class="mf-wrap"><button class="mf-trigger" data-col="sector_head" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по исполнителю -->
+          <th data-col-idx="17"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Мультифильтр по типу задачи -->
+          <th data-col-idx="18"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">&#x25BC;</button></div></th>
+          <!-- Столбец удаления — без фильтра -->
+          <th data-col-idx="19"></th>
+        </tr>
+      </thead>
+      <!-- Тело таблицы: заполняется функцией renderPPTable() -->
+      <tbody id="ppTableBody"></tbody>
+    </table>
+  </div>
+  <!-- Контейнер диаграммы Ганта ПП -->
+  <div id="ppGanttContainer"></div>
+</div>
+
+<!-- ── Модал зависимостей ПП ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="ppDepsModal">
+<div class="modal">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title" id="ppDepsModalTitle">Зависимости задачи</div>
+      <div id="ppDepsModalDates" style="font-size:17px;font-weight:600;color:var(--text2);margin-top:4px;"></div>
+    </div>
+    <button class="modal-close" onclick="closePPDepsModal()">✕</button>
+  </div>
+  <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+    <div class="deps-section-title">⬅ Предшественники <span id="ppDepsPredCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
+    <div id="ppDepsPredBody"></div>
+    <div class="deps-add-form" id="ppDepsAddForm" style="display:none;">
+      <div style="flex:1;min-width:200px;">
+        <label>Задача-предшественник</label>
+        <div class="search-dropdown" id="ppDepsAddPredDropdown" style="margin-top:4px;">
+          <input type="text" class="search-dropdown-input" id="ppDepsAddPredInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
+          <span class="search-dropdown-arrow">▼</span>
+          <div class="search-dropdown-list" id="ppDepsAddPredList"></div>
+          <input type="hidden" id="ppDepsAddPredSelect" value="">
+        </div>
+      </div>
+      <div>
+        <label>Тип связи</label>
+        <select id="ppDepsAddType" style="margin-top:4px;">
+          <option value="FS">FS — Окончание–Начало</option>
+          <option value="SS">SS — Начало–Начало</option>
+          <option value="FF">FF — Окончание–Окончание</option>
+          <option value="SF">SF — Начало–Окончание</option>
+        </select>
+      </div>
+      <div>
+        <label>Лаг (дней)</label>
+        <input type="number" id="ppDepsAddLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="ppAddPredecessor()" style="margin-top:18px;">Добавить</button>
+    </div>
+    <div class="deps-section-title" style="margin-top:24px;">➡ Последователи <span id="ppDepsSuccCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
+    <div id="ppDepsSuccBody"></div>
+    <div class="deps-add-form" id="ppDepsAddSuccForm" style="display:none;">
+      <div style="flex:1;min-width:200px;">
+        <label>Задача-последователь</label>
+        <div class="search-dropdown" id="ppDepsAddSuccDropdown" style="margin-top:4px;">
+          <input type="text" class="search-dropdown-input" id="ppDepsAddSuccInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
+          <span class="search-dropdown-arrow">▼</span>
+          <div class="search-dropdown-list" id="ppDepsAddSuccList"></div>
+          <input type="hidden" id="ppDepsAddSuccSelect" value="">
+        </div>
+      </div>
+      <div>
+        <label>Тип связи</label>
+        <select id="ppDepsAddSuccType" style="margin-top:4px;">
+          <option value="FS">FS — Окончание–Начало</option>
+          <option value="SS">SS — Начало–Начало</option>
+          <option value="FF">FF — Окончание–Окончание</option>
+          <option value="SF">SF — Начало–Окончание</option>
+        </select>
+      </div>
+      <div>
+        <label>Лаг (дней)</label>
+        <input type="number" id="ppDepsAddSuccLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="ppAddSuccessor()" style="margin-top:18px;">Добавить</button>
+    </div>
+    <div class="deps-align-bar" id="ppDepsAlignBar" style="display:none;">
+      <span style="font-size:20px;">⚠️</span>
+      <span style="flex:1;font-size:14px;color:var(--text2);" id="ppDepsAlignText"></span>
+      <button class="btn btn-primary btn-sm" id="ppDepsAlignPredBtn" onclick="ppAlignDates(false)" style="display:none;">Выровнять по предшественникам</button>
+      <button class="btn btn-primary btn-sm" id="ppDepsAlignSuccBtn" onclick="ppAlignDates(true)" style="display:none;">Выровнять последователей</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ── Модал: список наборов изменений ──────────────────────────── -->
+<div class="modal-overlay" id="changesetListModal">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title">Наборы изменений</div>
+      <button class="modal-close" onclick="closeModal('changesetListModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-primary btn-sm" onclick="openCreateChangesetModal()">
+          <i class="fas fa-plus" aria-hidden="true"></i> Новый набор
+        </button>
+      </div>
+      <div id="changesetListBody">Загрузка...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал: создание набора ────────────────────────────────────── -->
+<div class="modal-overlay" id="createChangesetModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">Новый набор изменений</div>
+      <button class="modal-close" onclick="closeModal('createChangesetModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Название</label>
+      <input type="text" class="form-input" id="csTitle" placeholder="Например: Корректировки за Март 2026">
+      <label class="form-label" style="margin-top:12px;">Описание (необязательно)</label>
+      <textarea class="form-input" id="csDescription" rows="3" placeholder="Что планируется изменить..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('createChangesetModal')">Отмена</button>
+      <button class="btn btn-primary btn-sm" onclick="createChangeset()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал: просмотр diff ──────────────────────────────────────── -->
+<div class="modal-overlay" id="changesetDiffModal">
+  <div class="modal" style="max-width:900px;max-height:80vh;">
+    <div class="modal-header">
+      <div class="modal-title">Просмотр изменений</div>
+      <button class="modal-close" onclick="closeModal('changesetDiffModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="changesetDiffBody" style="overflow-y:auto;max-height:60vh;">
+      Загрузка...
+    </div>
+    <div class="modal-footer" id="changesetDiffFooter"></div>
+  </div>
+</div>
+
+<!-- ── Модал: причина отклонения ─────────────────────────────────── -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">Отклонить набор изменений</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Причина отклонения</label>
+      <textarea class="form-input" id="rejectComment" rows="3" placeholder="Укажите причину..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('rejectModal')">Отмена</button>
+      <button class="btn btn-danger btn-sm" onclick="rejectChangeset()">Отклонить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Floating Bulk Actions Bar (ПП) ════════════════════════════════════ -->
+<div class="bulk-bar" id="ppBulkBar">
+  <span class="bulk-bar-count"><span id="ppBulkCount">0</span> выбрано</span>
+  <button class="btn btn-danger-outline btn-sm" onclick="ppBulkDelete()"><i class="fas fa-trash" aria-hidden="true"></i> Удалить</button>
+  <button class="btn btn-outline btn-sm" onclick="ppBulkExport()"><i class="fas fa-download" aria-hidden="true"></i> Экспорт</button>
+  <button class="bulk-bar-close" onclick="ppBulkDeselectAll()" title="Снять выбор"><i class="fas fa-times"></i></button>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Инлайн-редактирование ячеек (не используется напрямую, но подключён для совместимости) -->
+<script src="{% static 'js/filters.js' %}?v=1"></script>
+<script src="{% static 'js/inline_edit.js' %}"></script>
 <script id="pp-config" type="application/json">{
   "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
@@ -37,7 +429,147 @@
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
+<script src="{% static 'js/shared-toolbar.js' %}?v=3"></script>
+<script src="{% static 'js/gantt_common.js' %}?v=2"></script>
+<script src="{% static 'js/production_plan.js' %}?v=22"></script>
+<script src="{% static 'js/sandbox.js' %}?v=8"></script>
+<script src="{% static 'js/drag-sort.js' %}?v=1"></script>
+<script>
+// Калибровка sticky top для multi-row thead (rowspan-совместимо)
+// Вызывается после openProject, когда таблица видима
+(function(){
+  function fixStickyOffsets() {
+    var tbl = document.querySelector('.pp-table');
+    if (!tbl) return;
+    var theadRows = tbl.querySelectorAll('thead tr');
+    if (theadRows.length < 2) return;
 
-<!-- Vue 3 (Vite) -->
-{% vite_asset 'production_plan' %}
+    // Ряд 0: top=0 (ячейки с rowspan=2 высотой ~88px)
+    // Ряд 1: подзаголовки, top = высота ряда0 минус высота ряда1
+    //   (ячейки без rowspan из ряда 1 начинаются после "одного логического ряда")
+    // Ряд 2 (filter-row): top = высота ячейки с rowspan=2 из ряда 0
+
+    // Находим высоту rowspan=2 ячейки (полная высота шапки до фильтров)
+    var rowspan2H = 0;
+    var row0ths = theadRows[0].querySelectorAll('th');
+    for (var i = 0; i < row0ths.length; i++) {
+      if ((parseInt(row0ths[i].getAttribute('rowspan')) || 1) >= 2) {
+        rowspan2H = row0ths[i].getBoundingClientRect().height;
+        break;
+      }
+    }
+    if (rowspan2H < 1) return; // таблица скрыта
+
+    // Высота подзаголовочного ряда (без rowspan)
+    var row1th = theadRows[1] ? theadRows[1].querySelector('th') : null;
+    var row1H = row1th ? row1th.getBoundingClientRect().height : 0;
+
+    // top для ряда 1 = rowspan2H - row1H (подзаголовки начинаются после первого "логического" ряда)
+    var row1Top = rowspan2H - row1H;
+
+    // Устанавливаем top
+    // Ряд 0: top=0 (уже в CSS)
+    if (theadRows[1]) {
+      var ths1 = theadRows[1].querySelectorAll('th');
+      for (var j = 0; j < ths1.length; j++) ths1[j].style.top = row1Top + 'px';
+    }
+    // Filter-row: top = rowspan2H
+    if (theadRows[2]) {
+      var ths2 = theadRows[2].querySelectorAll('th');
+      for (var k = 0; k < ths2.length; k++) ths2[k].style.top = rowspan2H + 'px';
+    }
+  }
+
+  var _origOpen = window.openProject;
+  if (!_origOpen) return;
+  window.openProject = async function() {
+    await _origOpen.apply(this, arguments);
+    requestAnimationFrame(function(){ requestAnimationFrame(fixStickyOffsets); });
+  };
+})();
+
+// Страничные горячие клавиши: N — добавить строку в ПП
+if (typeof registerShortcut === 'function') {
+  registerShortcut('n', 'Добавить строку', function() {
+    // Только когда открыт конкретный план (projectView виден)
+    var pv = document.getElementById('projectView');
+    if (pv && pv.style.display !== 'none' && typeof openAddRowModal === 'function') {
+      openAddRowModal();
+    }
+  });
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initFilterPresets('production_plan', 'ppFilterPresetsWrap',
+    function() {
+      var state = {};
+      if (typeof mfSelections !== 'undefined') {
+        var mf = {};
+        for (var k in mfSelections) {
+          if (mfSelections[k] && mfSelections[k].size > 0) mf[k] = Array.from(mfSelections[k]);
+        }
+        state.mfSelections = mf;
+      }
+      if (typeof colFilters !== 'undefined') {
+        var cf = {};
+        for (var k in colFilters) {
+          if (colFilters[k] instanceof Set) cf[k] = Array.from(colFilters[k]);
+          else cf[k] = colFilters[k];
+        }
+        state.colFilters = cf;
+      }
+      if (typeof ppSelectedYear !== 'undefined') state.ppSelectedYear = ppSelectedYear;
+      if (typeof ppSelectedMonth !== 'undefined') state.ppSelectedMonth = ppSelectedMonth;
+      if (typeof ppSelectedDept !== 'undefined') state.ppSelectedDept = ppSelectedDept;
+      if (typeof _ppStatusFilter !== 'undefined') state.ppStatusFilter = _ppStatusFilter;
+      return state;
+    },
+    function(state) {
+      if (typeof clearAllColFilters === 'function') clearAllColFilters();
+      if (state.mfSelections && typeof mfSelections !== 'undefined') {
+        for (var k in state.mfSelections) {
+          mfSelections[k] = new Set(state.mfSelections[k]);
+          colFilters['mf_' + k] = new Set(state.mfSelections[k]);
+        }
+        document.querySelectorAll('.mf-trigger').forEach(function(btn) {
+          var col = btn.dataset.col;
+          var sel = mfSelections[col];
+          if (sel && sel.size > 0) {
+            btn.textContent = sel.size + ' \u0432\u044b\u0431\u0440.';
+            btn.classList.add('active');
+          }
+        });
+      }
+      if (state.colFilters) {
+        for (var k in state.colFilters) {
+          if (Array.isArray(state.colFilters[k])) colFilters[k] = new Set(state.colFilters[k]);
+          else colFilters[k] = state.colFilters[k];
+        }
+      }
+      if (state.ppSelectedYear !== undefined) {
+        ppSelectedYear = state.ppSelectedYear;
+        var yd = document.getElementById('ppYearDisplay');
+        if (yd) yd.textContent = ppSelectedYear;
+      }
+      if (state.ppSelectedMonth !== undefined) {
+        ppSelectedMonth = state.ppSelectedMonth;
+        document.querySelectorAll('.pp-cal-month').forEach(function(el) {
+          el.classList.toggle('active', parseInt(el.dataset.m) === ppSelectedMonth);
+        });
+      }
+      if (state.ppSelectedDept !== undefined && typeof selectPPDept === 'function') {
+        selectPPDept(state.ppSelectedDept);
+      }
+      if (state.ppStatusFilter && state.ppStatusFilter !== 'all') {
+        _ppStatusFilter = state.ppStatusFilter;
+      }
+      var hasFilters = Object.keys(colFilters).length > 0;
+      var badge = document.getElementById('filtersActiveBadge');
+      if (badge) badge.style.display = hasFilters ? '' : 'none';
+      if (typeof renderPPTable === 'function') renderPPTable();
+    }
+  );
+});
+</script>
 {% endblock %}

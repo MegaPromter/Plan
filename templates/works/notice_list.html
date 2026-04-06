@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% load static employee_tags vite %}
+{% load static employee_tags %}
 {% block title %}Журнал извещений — ПРИЗМА{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/notices.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/notices.css' %}?v=1">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -15,7 +15,7 @@
 
 {% block topbar_actions %}
 {% if request.user|is_writer %}
-  <button class="btn btn-primary btn-sm" id="topAddBtn"><i class="fas fa-plus" aria-hidden="true"></i> Добавить</button>
+  <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fas fa-plus" aria-hidden="true"></i> Добавить</button>
 {% endif %}
 <span id="exportBtnContainer"></span>
 {% endblock %}
@@ -23,6 +23,7 @@
 {% block content %}
 <div class="page-header" style="margin-bottom:12px;display:flex;align-items:center;gap:16px;">
   <h1>Журнал извещений</h1>
+  <!-- Переключатель плотности таблицы -->
   <div class="density-toggle" id="densityToggle" title="Плотность таблицы">
     <button data-density="compact" title="Компактно"><i class="fas fa-compress-alt"></i></button>
     <button data-density="comfortable" title="Обычно"><i class="fas fa-bars"></i></button>
@@ -30,10 +31,194 @@
   </div>
 </div>
 
-<!-- Vue 3 приложение монтируется сюда -->
-<div id="vue-notices-app"></div>
+<div class="ji-wrap">
+  <table class="ji-table" id="jiTable">
+    <colgroup>
+      <col style="width:30px;">  <!-- № -->
+      <col style="width:62px;">  <!-- ИИ/ПИ -->
+      <col style="width:78px;">  <!-- Номер изв. -->
+      <col style="width:110px;"> <!-- Наименование (под Группой) -->
+      <col style="width:110px;"> <!-- Обозначение (под Группой) -->
+      <col style="width:82px;">  <!-- Дата выпуска -->
+      <col style="width:82px;">  <!-- Срок действия -->
+      <col style="width:40px;">  <!-- Отдел -->
+      <col style="width:56px;">  <!-- Сектор -->
+      <col style="width:100px;"> <!-- Разработчик -->
+      <col style="width:90px;">  <!-- Описание -->
+      <col style="width:80px;">  <!-- Статус -->
+      <col style="width:110px;"> <!-- Действия -->
+    </colgroup>
+    <thead>
+      <tr>
+        <th rowspan="2">&#8470;</th>
+        <th rowspan="2" data-sort="ii_pi">ИИ/ПИ</th>
+        <th rowspan="2" data-sort="notice_number">Номер изв.</th>
+        <th colspan="2" style="text-align:center;">Группа</th>
+        <th rowspan="2" data-sort="date_issued">Дата выпуска</th>
+        <th rowspan="2" data-sort="date_expires">Срок действия</th>
+        <th rowspan="2" data-sort="dept">Отдел</th>
+        <th rowspan="2" data-sort="sector">Сектор</th>
+        <th rowspan="2" data-sort="developer">Разработчик</th>
+        <th rowspan="2" data-sort="description">Описание</th>
+        <th rowspan="2" data-sort="status">Статус</th>
+        <th rowspan="2" class="col-actions"></th>
+      </tr>
+      <tr>
+        <th data-sort="subject">Наименование</th>
+        <th data-sort="doc_designation">Обозначение</th>
+      </tr>
+      <tr class="filter-row">
+        <th></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="ii_pi" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="notice_number" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="subject" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="doc_designation" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_issued" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="date_expires" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th><div class="mf-wrap"><button class="mf-trigger" data-col="status" onclick="jiToggleMf(this)">&#9660;</button></div></th>
+        <th class="col-actions"></th>
+      </tr>
+    </thead>
+    <tbody id="jiBody">
+      <!-- Skeleton-загрузка (заменяется JS при получении данных) -->
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+      <tr><td colspan="13"><div class="skeleton skeleton-row" style="height:36px;margin:6px 0;"></div></td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="ji-footer" id="jiFooter"></div>
 
-<!-- Конфигурация для Vue (читается из JS) -->
+<!-- ── Модал добавления/редактирования (ручной ввод) ── -->
+<div id="jiModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 id="jiModalTitle">Добавить извещение</h2>
+      <button class="modal-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <label class="form-label">ИИ/ПИ</label>
+        <select id="mf_ii_pi" class="form-input">
+          <option value="">--</option>
+          <option value="ИИ">ИИ</option>
+          <option value="ПИ">ПИ</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Номер изв.</label>
+        <input id="mf_notice_number" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Дата выпуска</label>
+        <input id="mf_date_issued" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Срок действия</label>
+        <input id="mf_date_expires" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Отдел</label>
+        <input id="mf_dept" class="form-input" type="text" placeholder="код отдела">
+      </div>
+      <div>
+        <label class="form-label">Сектор</label>
+        <input id="mf_sector" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Разработчик</label>
+        <input id="mf_executor" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Статус</label>
+        <select id="mf_status" class="form-input">
+          <option value="active">Действует</option>
+          <option value="expired">Просрочено</option>
+          <option value="closed_no">Погашено без внесения</option>
+          <option value="closed_yes">Погашено с внесением</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Наименование</label>
+        <input id="mf_subject" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Обозначение</label>
+        <input id="mf_doc_designation" class="form-input" type="text">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Описание</label>
+        <textarea id="mf_description" class="form-input" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал редактирования описания ── -->
+<div id="jiDescModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <h2>Редактировать описание</h2>
+      <button class="modal-close" onclick="closeDescModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Описание</label>
+      <textarea id="desc_text" class="form-input" rows="5"></textarea>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeDescModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveDescModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Модал погашения ── -->
+<div id="jiCloseModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <h2>Погашение извещения</h2>
+      <button class="modal-close" onclick="closeCloseModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Тип погашения</label>
+        <select id="cl_status" class="form-input">
+          <option value="closed_yes">Погашено с внесением</option>
+          <option value="closed_no">Погашено без внесения</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">&#8470; документа погашения *</label>
+        <input id="cl_notice_number" class="form-input" type="text" required>
+      </div>
+      <div>
+        <label class="form-label">Дата документа *</label>
+        <input id="cl_date_issued" class="form-input" type="date" required>
+      </div>
+      <div>
+        <label class="form-label">Исполнитель *</label>
+        <select id="cl_executor" class="form-input" required>
+          <option value="">— выберите —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeCloseModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCloseModal()">Погасить</button>
+    </div>
+  </div>
+</div>
+
 <script id="page-config" type="application/json">{
   "isWriter": {% if request.user|is_writer %}true{% else %}false{% endif %},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
@@ -42,25 +227,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-
-<!-- Плотность таблицы и экспорт — пока из utils.js -->
-<script src="{% static 'js/utils.js' %}?v=20"></script>
-<script>
-  // Инициализация плотности
-  if (typeof initDensityToggle === 'function') {
-    var _cfg = JSON.parse(document.getElementById('page-config').textContent);
-    initDensityToggle('.ji-wrap', (_cfg.colSettings && _cfg.colSettings.density) || 'comfortable');
-  }
-  // Кнопка «Добавить» в topbar → пробрасываем клик во Vue
-  var _topBtn = document.getElementById('topAddBtn');
-  if (_topBtn) {
-    _topBtn.addEventListener('click', function() {
-      // Vue-приложение слушает CustomEvent 'notice-add'
-      document.getElementById('vue-notices-app').dispatchEvent(new CustomEvent('notice-add'));
-    });
-  }
-</script>
-
-<!-- Vue 3 (Vite) -->
-{% vite_asset 'notices' %}
+<script src="{% static 'js/notices.js' %}?v=8"></script>
 {% endblock %}
