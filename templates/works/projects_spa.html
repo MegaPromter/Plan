@@ -448,7 +448,7 @@ async function openStagesModal(projectId) {
       </div>` : ''}`;
 
     document.getElementById('stDetailEdit')?.addEventListener('click', () => {
-      openEditStageModal(projectId, s, () => loadStages());
+      showEditStageForm(s);
     });
     document.getElementById('stDetailDel')?.addEventListener('click', async () => {
       if (!confirm('Удалить этап «' + s.name + '»?')) return;
@@ -519,6 +519,64 @@ async function openStagesModal(projectId) {
     });
   }
 
+  function showEditStageForm(s) {
+    _activeId = s.id;
+    renderList(document.getElementById('stSearch')?.value);
+    const panel = document.getElementById('stagesRight');
+    if (!panel) return;
+    panel.innerHTML = `
+      <div style="flex:1;display:flex;flex-direction:column;padding:20px;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:18px;"><i class="fas fa-pen" style="color:var(--accent);margin-right:6px;"></i>Редактировать этап</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
+            <label>Наименование</label>
+            <input id="stEditName" value="${escapeHtml(s.name)}" placeholder="Наименование этапа">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>№ этапа</label>
+            <input id="stEditNum" value="${escapeHtml(s.stage_number)}" placeholder="Например: 3.1">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>Наряд-заказ</label>
+            <input id="stEditOrder" value="${escapeHtml(s.work_order)}" placeholder="Например: НЗ-789">
+          </div>
+          <div class="modal-form-group" style="margin-bottom:0;">
+            <label>Код строки</label>
+            <input id="stEditCode" value="${escapeHtml(s.row_code)}" placeholder="Например: КС-432">
+          </div>
+        </div>
+        <div style="margin-top:auto;display:flex;gap:8px;justify-content:flex-end;padding-top:16px;">
+          <button class="btn btn-outline" id="stEditCancel">Отмена</button>
+          <button class="btn btn-primary" id="stEditSave"><i class="fas fa-check" style="margin-right:4px;"></i>Сохранить</button>
+        </div>
+      </div>`;
+    document.getElementById('stEditName')?.focus();
+    document.getElementById('stEditCancel')?.addEventListener('click', () => {
+      renderDetail(s);
+    });
+    document.getElementById('stEditSave')?.addEventListener('click', async () => {
+      const name = document.getElementById('stEditName').value.trim();
+      if (!name) { showToast('Введите наименование', 'warning'); return; }
+      const body = {
+        name,
+        stage_number: document.getElementById('stEditNum').value.trim(),
+        work_order: document.getElementById('stEditOrder').value.trim(),
+        row_code: document.getElementById('stEditCode').value.trim(),
+      };
+      const r = await fetchJson(`/api/projects/${projectId}/stages/${s.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+      if (r && !r._error) {
+        _activeId = s.id;
+        await loadStages();
+        showToast('Этап обновлён');
+      } else {
+        showToast(r?.error || 'Ошибка сохранения', 'error');
+      }
+    });
+  }
+
   async function loadStages() {
     const data = await fetchJson(`/api/projects/${projectId}/stages/`);
     if (!data || data._error) { _stages = []; }
@@ -537,57 +595,7 @@ async function openStagesModal(projectId) {
   loadStages();
 }
 
-/* ── Модал редактирования этапа ──────────────────────────────────────────── */
-function openEditStageModal(projectId, stage, onSave) {
-  const modal = openModal({
-    title: '<i class="fas fa-pen" style="color:var(--accent);margin-right:8px;"></i>Редактировать этап',
-    width: '520px',
-    body: `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;">
-        <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
-          <label>Наименование</label>
-          <input id="stEditName" value="${escapeHtml(stage.name)}">
-        </div>
-        <div class="modal-form-group" style="margin-bottom:0;">
-          <label>№ этапа</label>
-          <input id="stEditNum" value="${escapeHtml(stage.stage_number)}">
-        </div>
-        <div class="modal-form-group" style="margin-bottom:0;">
-          <label>Наряд-заказ</label>
-          <input id="stEditOrder" value="${escapeHtml(stage.work_order)}">
-        </div>
-        <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
-          <label>Код строки</label>
-          <input id="stEditCode" value="${escapeHtml(stage.row_code)}">
-        </div>
-      </div>`,
-    footer: `
-      <button class="btn btn-outline modal-cancel">Отмена</button>
-      <button class="btn btn-primary" id="stEditSaveBtn"><i class="fas fa-check" style="margin-right:6px;"></i>Сохранить</button>`,
-  });
-
-  document.getElementById('stEditSaveBtn').addEventListener('click', async () => {
-    const name = document.getElementById('stEditName').value.trim();
-    if (!name) { showToast('Введите наименование', 'warning'); return; }
-    const body = {
-      name,
-      stage_number: document.getElementById('stEditNum').value.trim(),
-      work_order: document.getElementById('stEditOrder').value.trim(),
-      row_code: document.getElementById('stEditCode').value.trim(),
-    };
-    const r = await fetchJson(`/api/projects/${projectId}/stages/${stage.id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-    if (r && !r._error) {
-      modal.close();
-      if (onSave) onSave();
-      showToast('Этап обновлён');
-    } else {
-      showToast(r?.error || 'Ошибка сохранения', 'error');
-    }
-  });
-}
+/* openEditStageModal удалён — редактирование теперь инлайн в правой панели (showEditStageForm) */
 
 /* ── Модал создания нового проекта ──────────────────────────────────────── */
 function openCreateProjectModal() {
