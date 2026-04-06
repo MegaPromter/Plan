@@ -21,8 +21,8 @@
 .sidebar.collapsed .sidebar-header .logo-text,
 .sidebar.collapsed .sidebar-header span[style] { display:none !important; }
 .sidebar.collapsed .ms-brand-text { display:none; }
-/* Прячем чип-логотип целиком в collapsed — он не влезает в 60px */
-.sidebar.collapsed .ms-logo .ms-chip { display:none; }
+/* Прячем SVG-призму в collapsed — не влезает в 60px */
+.sidebar.collapsed .ms-logo .prism-svg { display:none; }
 .sidebar.collapsed .ms-logo {
   justify-content:center;
   width:60px;
@@ -30,7 +30,7 @@
 }
 /* Показываем компактную замену: буква «MS» */
 .sidebar.collapsed .ms-logo::before {
-  content:'MS';
+  content:'П';
   display:flex; align-items:center; justify-content:center;
   width:36px; height:36px;
   background:var(--accent-gradient, var(--accent));
@@ -219,35 +219,10 @@
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99; }
 
 /* ══════════════════════════════════════════════════════════════════════
-   Логотип ManageSystems.ru — Микрочип
+   Логотип ПРИЗМА — 3D-призма (SVG)
    ══════════════════════════════════════════════════════════════════════ */
 .ms-logo { display:flex; align-items:center; gap:12px; }
 .ms-logo-lg { flex-direction:column; gap:16px; }
-.ms-chip { position:relative; display:inline-block; }
-.ms-chip-body {
-  display:grid; grid-template-columns:repeat(3,1fr); gap:3px;
-  padding:6px; background:rgba(127,119,221,0.08); border-radius:var(--radius-sm);
-  border:1.5px solid rgba(127,119,221,0.25); position:relative; z-index:1;
-}
-.ms-cell {
-  display:flex; align-items:center; justify-content:center;
-  border-radius:3px; font-family:Consolas,'Courier New',monospace;
-  font-weight:700; color:rgba(255,255,255,0.85);
-}
-.ms-cell.lg-p { background:#7f77dd; } .ms-cell.lg-g { background:#5dcaa5; } .ms-cell.lg-o { background:#ef9f27; }
-.ms-cell.o7 { opacity:.7; } .ms-cell.o95 { opacity:.95; } .ms-cell.o6 { opacity:.6; }
-.ms-cell.o5 { opacity:.5; } .ms-cell.o75 { opacity:.75; }
-
-/* Ножки чипа */
-.ms-pins-t, .ms-pins-b { display:flex; justify-content:space-around; }
-.ms-pins-l, .ms-pins-r { position:absolute; display:flex; flex-direction:column; justify-content:space-around; top:0; }
-.ms-pins-l { left:-8px; } .ms-pins-r { right:-8px; }
-.ms-pins-t span, .ms-pins-b span { width:2px; border-radius:1px; opacity:.5; background:#7f77dd; }
-.ms-pins-l span, .ms-pins-r span { height:2px; border-radius:1px; opacity:.5; background:#7f77dd; }
-.ms-pins-l span:nth-child(2), .ms-pins-r span:nth-child(2) { background:#5dcaa5; }
-.ms-pins-l span:nth-child(3), .ms-pins-r span:nth-child(3) { background:#ef9f27; }
-.ms-pins-t span:nth-child(2), .ms-pins-b span:nth-child(2) { background:#5dcaa5; }
-.ms-pins-t span:nth-child(3), .ms-pins-b span:nth-child(3) { background:#ef9f27; }
 
 /* Текст бренда */
 .ms-brand-text { line-height:1.2; }
@@ -256,31 +231,16 @@
 .ms-brand-sub { font-size:7px; color:#666; letter-spacing:3px; margin-top:2px; }
 
 /* Размер: маленький (сайдбар) */
-.ms-logo-sm .ms-chip-body { gap:2px; padding:4px; }
-.ms-logo-sm .ms-cell { width:18px; height:18px; font-size:7px; border-radius:2px; }
-.ms-logo-sm .ms-pins-l, .ms-logo-sm .ms-pins-r { height:62px; padding:8px 0; }
-.ms-logo-sm .ms-pins-l span, .ms-logo-sm .ms-pins-r span { width:8px; height:2px; }
 .ms-logo-sm .ms-brand-title { font-size:11px; letter-spacing:1.5px; }
+.ms-logo-sm .ms-prizm-name { font-size:24px; letter-spacing:5px; font-weight:700; }
 .ms-logo-sm .ms-brand-sub { display:none; }
 
 /* Размер: средний */
-.ms-logo-md .ms-chip-body { gap:3px; padding:6px; }
-.ms-logo-md .ms-cell { width:24px; height:24px; font-size:8px; }
-.ms-logo-md .ms-pins-t, .ms-logo-md .ms-pins-b { width:84px; padding:0 14px; }
-.ms-logo-md .ms-pins-t span, .ms-logo-md .ms-pins-b span { height:8px; }
-.ms-logo-md .ms-pins-l, .ms-logo-md .ms-pins-r { height:84px; padding:14px 0; }
-.ms-logo-md .ms-pins-l span, .ms-logo-md .ms-pins-r span { width:8px; }
 .ms-logo-md .ms-brand-title { font-size:16px; }
 .ms-logo-md .ms-brand-sub { font-size:7px; }
 
 /* Размер: большой (страница логина) */
-.ms-logo-lg .ms-chip-body { gap:6px; padding:12px; }
-.ms-logo-lg .ms-cell { width:52px; height:52px; font-size:15px; border-radius:var(--radius-sm); }
-.ms-logo-lg .ms-pins-t, .ms-logo-lg .ms-pins-b { width:180px; padding:0 28px; }
-.ms-logo-lg .ms-pins-t span, .ms-logo-lg .ms-pins-b span { height:14px; width:3px; }
-.ms-logo-lg .ms-pins-l, .ms-logo-lg .ms-pins-r { height:180px; padding:28px 0; }
-.ms-logo-lg .ms-pins-l span, .ms-logo-lg .ms-pins-r span { width:14px; height:3px; }
-.ms-logo-lg .ms-chip-body { border-width:2px; }
 .ms-logo-lg .ms-brand-title { font-size:30px; letter-spacing:4px; }
-.ms-logo-lg .ms-brand-sub { font-size:10px; letter-spacing:5px; margin-top:6px; }
+.ms-logo-lg .ms-prizm-name-lg { font-size:42px; letter-spacing:8px; font-weight:800; }
+.ms-logo-lg .ms-brand-sub { font-size:12px; letter-spacing:4px; margin-top:8px; opacity:0.6; }
 .ms-logo-lg .ms-brand-text { text-align:center; }

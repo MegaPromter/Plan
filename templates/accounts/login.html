@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Иконка вкладки -->
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<title>Вход — Система управления</title>
+<title>Вход — ПРИЗМА</title>
 <!-- Шрифт Inter из Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -58,9 +58,9 @@ body{
 .login-chip-corner { position:absolute; top:20px; right:20px; z-index:10; }
 .login-brand-header { position:fixed; top:24px; left:420px; right:0; text-align:center; z-index:5; }
 @media(max-width:860px){ .login-brand-header { left:0; } }
-.login-brand-header .ms-brand-title { font-size:48px; font-weight:700; letter-spacing:6px; color:var(--text); }
-.login-brand-header .ms-ru { color:#5dcaa5; font-weight:800; }
-.login-brand-header .ms-brand-sub { font-size:13px; color:var(--muted); letter-spacing:6px; margin-top:8px; }
+.login-brand-header .prizm-title { font-size:52px; font-weight:800; letter-spacing:10px; color:var(--text); }
+.login-brand-header .prizm-accent { color:var(--accent); }
+.login-brand-header .prizm-sub { font-size:12px; color:var(--muted); letter-spacing:3px; margin-top:10px; font-weight:500; }
 /* Карточка с формой входа */
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
 /* Группа полей формы */
@@ -177,8 +177,8 @@ input.valid,select.valid{
 
 <!-- Текст бренда вверху страницы -->
 <div class="login-brand-header">
-  <div class="ms-brand-title">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
-  <div class="ms-brand-sub">SMART INFRASTRUCTURE</div>
+  <div class="prizm-title"><span class="prizm-accent">П</span>РИЗМА</div>
+  <div class="prizm-sub">ПЛАНИРОВАНИЕ РЕСУРСОВ И ЗАДАЧ, МОНИТОРИНГ И АНАЛИЗ</div>
 </div>
 
 <!-- Внешняя обёртка: левая декоративная панель + правая форма -->
@@ -186,7 +186,7 @@ input.valid,select.valid{
 <!-- ── Левая декоративная панель (десктоп) ─────────────────────────────── -->
 <aside class="login-aside">
   {% include "includes/_logo_chip.html" with size="large" show_text="true" %}
-  <p style="margin-top:24px;">Планирование производственных задач, управление проектами и отпусками в едином интерфейсе.</p>
+  <p style="margin-top:24px;">Планирование ресурсов и задач, мониторинг и анализ производственной деятельности в едином интерфейсе.</p>
 </aside>
 
 <!-- ── Правая часть: форма входа ──────────────────────────────────────── -->

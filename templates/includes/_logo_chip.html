@@ -1,55 +1,93 @@
-{# Логотип ManageSystems.ru — микрочип с билдами #}
+{# Логотип ПРИЗМА — 3D-призма (перевёрнутая, остриём вниз) #}
 {# Параметры: size (small/medium/large), show_text (true/false) #}
 {% if size == "large" %}
 <div class="ms-logo ms-logo-lg">
-  <div class="ms-chip">
-    <div class="ms-pins-t"><span></span><span></span><span></span></div>
-    <div class="ms-pins-l"><span></span><span></span><span></span></div>
-    <div class="ms-chip-body">
-      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
-      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
-      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
-    </div>
-    <div class="ms-pins-r"><span></span><span></span><span></span></div>
-    <div class="ms-pins-b"><span></span><span></span><span></span></div>
-  </div>
+  <svg class="prism-svg prism-lg" width="140" height="155" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="plg1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="plg2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="plg3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="plgsh"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.15"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <ellipse cx="80" cy="170" rx="20" ry="4" fill="url(#plgsh)"/>
+    <line x1="25" y1="25" x2="135" y2="25" stroke="#5dcaa5" stroke-width="1" opacity="0.45"/>
+    <line x1="45" y1="40" x2="115" y2="40" stroke="#5dcaa5" stroke-width="0.6" opacity="0.12"/>
+    <line x1="25" y1="25" x2="45" y2="40" stroke="#7f77dd" stroke-width="0.6" opacity="0.15"/>
+    <line x1="135" y1="25" x2="115" y2="40" stroke="#3b82f6" stroke-width="0.6" opacity="0.15"/>
+    <line x1="25" y1="25" x2="80" y2="158" stroke="#5dcaa5" stroke-width="1" opacity="0.5"/>
+    <line x1="135" y1="25" x2="80" y2="158" stroke="#3b82f6" stroke-width="1" opacity="0.45"/>
+    <line x1="45" y1="40" x2="80" y2="158" stroke="#5dcaa5" stroke-width="0.5" opacity="0.1"/>
+    <line x1="115" y1="40" x2="80" y2="158" stroke="#3b82f6" stroke-width="0.5" opacity="0.08"/>
+    <circle cx="25" cy="25" r="8" fill="url(#plg1)"/><circle cx="25" cy="25" r="1.5" fill="#5dcaa5" opacity="0.55"/>
+    <circle cx="135" cy="25" r="8" fill="url(#plg2)"/><circle cx="135" cy="25" r="1.5" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="80" cy="158" r="10" fill="url(#plg3)"/><circle cx="80" cy="158" r="2.5" fill="#7f77dd" opacity="0.6"/>
+    <circle cx="45" cy="40" r="1" fill="#5dcaa5" opacity="0.15"/>
+    <circle cx="115" cy="40" r="1" fill="#3b82f6" opacity="0.12"/>
+    <text x="42" y="82" font-family="JetBrains Mono,monospace" font-size="7" font-weight="400" fill="rgba(93,202,165,0.18)" transform="rotate(67,42,82)">&lt;/&gt;</text>
+    <text x="48" y="120" font-family="JetBrains Mono,monospace" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)" transform="rotate(67,48,120)">fn</text>
+    <text x="112" y="82" font-family="JetBrains Mono,monospace" font-size="7" font-weight="400" fill="rgba(59,130,246,0.16)" transform="rotate(-67,112,82)">=&gt;</text>
+    <text x="106" y="120" font-family="JetBrains Mono,monospace" font-size="6" font-weight="400" fill="rgba(59,130,246,0.1)" transform="rotate(-67,106,120)">{}</text>
+    <text x="68" y="35" font-family="JetBrains Mono,monospace" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)">#  @  ;</text>
+  </svg>
   {% if show_text != "false" %}
   <div class="ms-brand-text">
-    <div class="ms-brand-title">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
-    <div class="ms-brand-sub">SMART INFRASTRUCTURE</div>
+    <div class="ms-brand-title ms-prizm-name-lg">ПРИЗМА</div>
+    <div class="ms-brand-sub">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
   </div>
   {% endif %}
 </div>
 {% elif size == "small" %}
 <div class="ms-logo ms-logo-sm">
-  <div class="ms-chip">
-    <div class="ms-pins-l"><span></span><span></span><span></span></div>
-    <div class="ms-chip-body">
-      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
-      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
-      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
-    </div>
-    <div class="ms-pins-r"><span></span><span></span><span></span></div>
-  </div>
+  <svg class="prism-svg prism-sm" width="48" height="52" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="psg1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="psg2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="psg3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <line x1="25" y1="25" x2="135" y2="25" stroke="#5dcaa5" stroke-width="2" opacity="0.45"/>
+    <line x1="45" y1="40" x2="115" y2="40" stroke="#5dcaa5" stroke-width="1.2" opacity="0.12"/>
+    <line x1="25" y1="25" x2="45" y2="40" stroke="#7f77dd" stroke-width="1.2" opacity="0.15"/>
+    <line x1="135" y1="25" x2="115" y2="40" stroke="#3b82f6" stroke-width="1.2" opacity="0.15"/>
+    <line x1="25" y1="25" x2="80" y2="158" stroke="#5dcaa5" stroke-width="2" opacity="0.5"/>
+    <line x1="135" y1="25" x2="80" y2="158" stroke="#3b82f6" stroke-width="2" opacity="0.45"/>
+    <line x1="45" y1="40" x2="80" y2="158" stroke="#5dcaa5" stroke-width="1" opacity="0.1"/>
+    <line x1="115" y1="40" x2="80" y2="158" stroke="#3b82f6" stroke-width="1" opacity="0.08"/>
+    <circle cx="25" cy="25" r="10" fill="url(#psg1)"/><circle cx="25" cy="25" r="3" fill="#5dcaa5" opacity="0.55"/>
+    <circle cx="135" cy="25" r="10" fill="url(#psg2)"/><circle cx="135" cy="25" r="3" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="80" cy="158" r="12" fill="url(#psg3)"/><circle cx="80" cy="158" r="4" fill="#7f77dd" opacity="0.6"/>
+  </svg>
   {% if show_text != "false" %}
   <div class="ms-brand-text">
-    <div class="ms-brand-title">MANAGE<br>SYSTEMS<span class="ms-ru">.ru</span></div>
+    <div class="ms-brand-title ms-prizm-name">ПРИЗМА</div>
   </div>
   {% endif %}
 </div>
 {% else %}
 <div class="ms-logo ms-logo-md">
-  <div class="ms-chip">
-    <div class="ms-pins-t"><span></span><span></span><span></span></div>
-    <div class="ms-pins-l"><span></span><span></span><span></span></div>
-    <div class="ms-chip-body">
-      <div class="ms-cell lg-p">2.0</div><div class="ms-cell lg-g">API</div><div class="ms-cell lg-o">DB</div>
-      <div class="ms-cell lg-p o7">AI</div><div class="ms-cell lg-g o95">MS</div><div class="ms-cell lg-p o6">UI</div>
-      <div class="ms-cell lg-o o5">v3</div><div class="ms-cell lg-p o75">PG</div><div class="ms-cell lg-g">OK</div>
-    </div>
-    <div class="ms-pins-r"><span></span><span></span><span></span></div>
-    <div class="ms-pins-b"><span></span><span></span><span></span></div>
-  </div>
+  <svg class="prism-svg prism-md" width="68" height="75" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="pmg1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="pmg2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="pmg3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="pmgsh"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.12"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <ellipse cx="80" cy="170" rx="20" ry="4" fill="url(#pmgsh)"/>
+    <line x1="25" y1="25" x2="135" y2="25" stroke="#5dcaa5" stroke-width="1.5" opacity="0.45"/>
+    <line x1="45" y1="40" x2="115" y2="40" stroke="#5dcaa5" stroke-width="0.8" opacity="0.12"/>
+    <line x1="25" y1="25" x2="45" y2="40" stroke="#7f77dd" stroke-width="0.8" opacity="0.15"/>
+    <line x1="135" y1="25" x2="115" y2="40" stroke="#3b82f6" stroke-width="0.8" opacity="0.15"/>
+    <line x1="25" y1="25" x2="80" y2="158" stroke="#5dcaa5" stroke-width="1.5" opacity="0.5"/>
+    <line x1="135" y1="25" x2="80" y2="158" stroke="#3b82f6" stroke-width="1.5" opacity="0.45"/>
+    <line x1="45" y1="40" x2="80" y2="158" stroke="#5dcaa5" stroke-width="0.7" opacity="0.1"/>
+    <line x1="115" y1="40" x2="80" y2="158" stroke="#3b82f6" stroke-width="0.7" opacity="0.08"/>
+    <circle cx="25" cy="25" r="9" fill="url(#pmg1)"/><circle cx="25" cy="25" r="2" fill="#5dcaa5" opacity="0.55"/>
+    <circle cx="135" cy="25" r="9" fill="url(#pmg2)"/><circle cx="135" cy="25" r="2" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="80" cy="158" r="10" fill="url(#pmg3)"/><circle cx="80" cy="158" r="3" fill="#7f77dd" opacity="0.6"/>
+    <circle cx="45" cy="40" r="1.5" fill="#5dcaa5" opacity="0.15"/>
+    <circle cx="115" cy="40" r="1.5" fill="#3b82f6" opacity="0.12"/>
+    <text x="42" y="82" font-family="JetBrains Mono,monospace" font-size="8" font-weight="400" fill="rgba(93,202,165,0.15)" transform="rotate(67,42,82)">&lt;/&gt;</text>
+    <text x="112" y="82" font-family="JetBrains Mono,monospace" font-size="8" font-weight="400" fill="rgba(59,130,246,0.13)" transform="rotate(-67,112,82)">=&gt;</text>
+  </svg>
   {% if show_text != "false" %}
   <div class="ms-brand-text">
     <div class="ms-brand-title">MANAGE SYSTEMS<span class="ms-ru">.ru</span></div>
