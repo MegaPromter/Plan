@@ -1022,7 +1022,7 @@ function _ppAppendBatch(count) {
 
     // Последний столбец: кнопки действий
     const pc = row.predecessors_count || 0;
-    html += '<td data-col-idx="19" data-label="Действия" style="text-align:center;white-space:nowrap;">';
+    html += '<td data-col-idx="18" data-label="Действия" style="text-align:center;white-space:nowrap;">';
     html += `<span class="dep-badge action-dep${pc === 0 ? ' zero' : ''}" style="cursor:pointer;margin-right:4px;" onclick="openPPDepsModal(${row.id})" title="Зависимости">🔗</span>`;
     if (rowEditable) {
       html += `<button class="btn-delete" data-id="${row.id}" title="Удалить"><i class="fas fa-times"></i></button>`;
@@ -1396,7 +1396,7 @@ function openAddRowModal() {
   }
 
   // Последний столбец: кнопки «Сохранить» (✓) и «Отмена» (✕) — в колонке «Действия»
-  html += `<td data-col-idx="19" data-label="Действия" style="text-align:center;white-space:nowrap;">
+  html += `<td data-col-idx="18" data-label="Действия" style="text-align:center;white-space:nowrap;">
     <button id="ppNewRowSave" title="Сохранить строку" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
     <button id="ppNewRowCancel" title="Отмена" style="background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:13px;">✕</button>
   </td>`;
