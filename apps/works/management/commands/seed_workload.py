@@ -42,7 +42,7 @@ WORK_NAMES = [
     'Проектирование защитного кожуха', 'Разработка сборочного чертежа', 'Расчёт ресурса изделия',
 ]
 
-SEED_TAG = 'SEED_WORKLOAD'  # тег для идентификации seed-задач
+_SEED_TAG = 'SEED_WORKLOAD'  # тег в work_designation для идентификации seed-задач
 
 
 class Command(BaseCommand):
@@ -82,7 +82,7 @@ class Command(BaseCommand):
         self.stdout.write(f'В норме: {[d.code for d in normal_depts]}')
 
         # Удаляем старые seed-задачи
-        deleted, _ = Work.objects.filter(description=SEED_TAG).delete()
+        deleted, _ = Work.objects.filter(work_designation=_SEED_TAG).delete()
         if deleted:
             self.stdout.write(f'Удалено старых seed-задач: {deleted}')
 
@@ -125,7 +125,7 @@ class Command(BaseCommand):
 
                 work = Work(
                     work_name=random.choice(WORK_NAMES),
-                    description=SEED_TAG,
+                    work_designation=_SEED_TAG,
                     pp_project=pp_proj,
                     project=pp_proj.up_project,
                     show_in_plan=True,
