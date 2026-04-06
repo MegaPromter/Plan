@@ -173,8 +173,25 @@ class Command(BaseCommand):
                 target = total_norm * pct
                 make_works(emp, target, pp_proj)
 
+        # Генерируем work_num для каждой работы (без select_for_update — seed-only)
+        # Считываем текущие счётчики проектов
+        project_ids = {w.project_id for w in works_to_create if w.project_id}
+        from apps.works.models import Project as P
+        seq_map = dict(P.objects.filter(id__in=project_ids).values_list('id', 'work_num_seq'))
+        prefix_map = dict(P.objects.filter(id__in=project_ids).values_list('id', 'name_short'))
+
+        for w in works_to_create:
+            pid = w.project_id
+            prefix = (prefix_map.get(pid) or '').strip()
+            if prefix and pid:
+                seq_map[pid] = seq_map.get(pid, 0) + 1
+                w.work_num = f'{prefix}.{seq_map[pid]}'
+
         with transaction.atomic():
             Work.objects.bulk_create(works_to_create, batch_size=500)
+            # Обновляем счётчики проектов до финальных значений
+            for pid, seq in seq_map.items():
+                P.objects.filter(id=pid).update(work_num_seq=seq)
 
         self.stdout.write(self.style.SUCCESS(
             f'Создано {len(works_to_create)} задач для {len(dept_employees)} отделов'
