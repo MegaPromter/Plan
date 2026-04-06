@@ -110,6 +110,11 @@ class ProjectListView(LoginRequiredJsonMixin, View):
                 )
                 .order_by('name_short', 'name_full')  # Сортировка: по краткому, затем полному имени
             )
+            # Скрытые проекты видны только администраторам
+            emp = getattr(request.user, 'employee', None)
+            is_admin = emp and emp.role == 'admin'
+            if not is_admin:
+                qs = qs.filter(is_hidden=False)
             result = []
             for proj in qs:
                 # Дополнительные данные для каждого проекта

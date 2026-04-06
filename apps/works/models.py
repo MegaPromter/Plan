@@ -175,6 +175,11 @@ class Project(models.Model):
         verbose_name='Главный конструктор',
     )
 
+    is_hidden = models.BooleanField(
+        'Скрытый проект', default=False,
+        help_text='Виден только администраторам',
+    )
+
     work_num_seq = models.PositiveIntegerField(
         'Счётчик номеров работ', default=0,
         help_text='Атомарный счётчик для generate_work_num()',

@@ -74,8 +74,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         proj, created = Project.objects.get_or_create(
             name_short='Софт',
-            defaults={'name_full': 'Разработка программного обеспечения', 'code': 'SOFT'},
+            defaults={'name_full': 'Разработка программного обеспечения', 'code': 'SOFT', 'is_hidden': True},
         )
+        if not created and not proj.is_hidden:
+            proj.is_hidden = True
+            proj.save(update_fields=['is_hidden'])
         action = 'создан' if created else 'уже существует'
         self.stdout.write(f'Проект «Софт» (id={proj.id}) — {action}')
 
