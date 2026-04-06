@@ -1,11 +1,7 @@
 {% extends "base.html" %}
-{% load static employee_tags vite %}
+{% load static employee_tags %}
 
 {% block title %}Управление предприятием — ПРИЗМА{% endblock %}
-
-{% block styles %}
-<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=19">
-{% endblock %}
 
 {% block breadcrumb %}
 <span class="breadcrumb-sep" aria-hidden="true">/</span>
@@ -16,22 +12,647 @@
 <div class="ent-tab-actions" id="tabActions"></div>
 {% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/enterprise.css' %}?v=18">
+{% endblock %}
+
 {% block content %}
 {% csrf_token %}
 
-<!-- Vue 3 приложение монтируется сюда -->
-<div id="vue-enterprise-app"></div>
+{# ── Табы ────────────────────────────────────────────────────────────── #}
+<div class="ent-tabs" role="tablist">
+  <button class="ent-tab active" id="tab-portfolio" data-tab="portfolio" role="tab" aria-selected="true" aria-controls="panel-portfolio">
+    <i class="fas fa-briefcase"></i> Портфель проектов
+  </button>
+  <button class="ent-tab" id="tab-gg" data-tab="gg" role="tab" aria-selected="false" aria-controls="panel-gg">
+    <i class="fas fa-stream"></i> Генеральный график
+  </button>
+  <button class="ent-tab" id="tab-cross" data-tab="cross" role="tab" aria-selected="false" aria-controls="panel-cross">
+    <i class="fas fa-project-diagram"></i> Сквозной график
+  </button>
+  <button class="ent-tab" id="tab-capacity" data-tab="capacity" role="tab" aria-selected="false" aria-controls="panel-capacity">
+    <i class="fas fa-tachometer-alt"></i> Загрузка / Мощность
+  </button>
+  <button class="ent-tab" id="tab-scenarios" data-tab="scenarios" role="tab" aria-selected="false" aria-controls="panel-scenarios">
+    <i class="fas fa-flask"></i> Сценарии «что-если»
+  </button>
+</div>
 
-<!-- Конфигурация для Vue (читается из JS) -->
-<script id="page-config" type="application/json">{
-  "role": "{{ role }}",
-  "isWriter": {% if is_writer %}true{% else %}false{% endif %},
-  "isAdmin": {% if role == 'admin' %}true{% else %}false{% endif %},
-  "employees": {{ employees_json|safe }},
-  "years": {{ years|safe }},
-  "currentYear": {{ current_year }}
-}</script>
+{# ── Портфель проектов ──────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-portfolio" role="tabpanel" aria-labelledby="tab-portfolio">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <span id="pfFiltersBadge" class="filters-active-badge" style="display:none;cursor:pointer;" onclick="pfClearAll()" title="Сбросить все фильтры">✕ Фильтры</span>
+    </div>
+    {% if role == 'admin' %}
+    <div class="ent-toolbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openCreateProject()"><i class="fas fa-plus"></i> Создать проект</button>
+    </div>
+    {% endif %}
+  </div>
 
-<!-- Vue 3 (Vite) -->
-{% vite_asset 'enterprise' %}
+  <details class="ent-help" id="portfolioHelp">
+    <summary class="ent-help-toggle"><i class="fas fa-info-circle"></i> Справка по параметрам проекта</summary>
+    <div class="ent-help-body">
+      <div class="ent-help-section">
+        <div class="ent-help-title">Статус — текущее состояние проекта в жизненном цикле</div>
+        <div class="ent-help-grid">
+          <span class="status-badge status-badge--prospective">Перспективный</span><span>Проект на рассмотрении, решение о запуске не принято</span>
+          <span class="status-badge status-badge--approved">Утверждён</span><span>Решение принято, ресурсы выделяются</span>
+          <span class="status-badge status-badge--active">Активный</span><span>Работы ведутся по плану</span>
+          <span class="status-badge status-badge--suspended">Приостановлен</span><span>Работы временно остановлены, проект возобновится</span>
+          <span class="status-badge status-badge--deferred">Отложен</span><span>Запуск перенесён на неопределённый срок</span>
+          <span class="status-badge status-badge--closed">Закрыт</span><span>Работы завершены, результат сдан</span>
+          <span class="status-badge status-badge--cancelled">Отменён</span><span>Проект прекращён без результата</span>
+        </div>
+      </div>
+      <div class="ent-help-section">
+        <div class="ent-help-title">Приоритет — очерёдность выделения ресурсов</div>
+        <div class="ent-help-grid">
+          <span class="priority-badge priority-badge--critical">Критический</span><span>Срочный, ресурсы в первую очередь</span>
+          <span class="priority-badge priority-badge--high">Высокий</span><span>Важный, ресурсы во вторую очередь</span>
+          <span class="priority-badge priority-badge--medium">Средний</span><span>Плановый, стандартное распределение</span>
+          <span class="priority-badge priority-badge--low">Низкий</span><span>Может ждать, ресурсы по остаточному принципу</span>
+        </div>
+        <div class="ent-help-note">Номер приоритета (1, 2, 3...) определяет порядок внутри категории. 1 = самый важный. Проекты сортируются сначала по номеру, затем по наименованию.</div>
+      </div>
+    </div>
+  </details>
+
+  <div class="table-responsive">
+    <table class="data-table" id="portfolioTable">
+      <thead>
+        <tr>
+          <th>№</th>
+          <th data-sort="name">Проект</th>
+          <th data-sort="code">Шифр</th>
+          <th data-sort="status">Статус</th>
+          <th data-sort="priority">Приоритет</th>
+          <th data-sort="chief">Главный конструктор</th>
+          <th data-sort="pp_count">Работы ПП</th>
+          <th data-sort="sp_count">Работы СП</th>
+          <th data-sort="labor_total">Трудоёмкость, ч</th>
+          <th></th>
+        </tr>
+        <tr class="filter-row">
+          <th></th>
+          <th><button class="mf-trigger" data-col="name" onclick="pfToggleMf(this)">▼</button></th>
+          <th><button class="mf-trigger" data-col="code" onclick="pfToggleMf(this)">▼</button></th>
+          <th><button class="mf-trigger" data-col="status" onclick="pfToggleMf(this)">▼</button></th>
+          <th><button class="mf-trigger" data-col="priority_category" onclick="pfToggleMf(this)">▼</button></th>
+          <th><button class="mf-trigger" data-col="chief" onclick="pfToggleMf(this)">▼</button></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="portfolioBody"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="portfolioEmpty" style="display:none;">
+    <i class="fas fa-folder-open"></i>
+    <p>Нет проектов</p>
+    {% if role == 'admin' %}
+    <button class="btn btn-primary btn-sm" onclick="openCreateProject()" style="margin-top:8px;"><i class="fas fa-plus"></i> Создать первый проект</button>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Генеральный график ─────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-gg" role="tabpanel" aria-labelledby="tab-gg" style="display:none;">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <button class="project-picker-btn" id="ggProjectBtn" onclick="openProjectPicker('gg')">
+        <i class="fas fa-folder-open"></i>
+        <span class="picker-label">Выберите проект...</span>
+      </button>
+      <input type="hidden" id="ggProjectSelect" value="">
+    </div>
+    <div class="ent-toolbar-right" id="ggActions"></div>
+  </div>
+
+  <div id="ggContent">
+    <div class="empty-state" id="ggEmpty">
+      <i class="fas fa-stream"></i>
+      <p>Выберите проект для просмотра генерального графика</p>
+    </div>
+    <div id="ggScheduleView" style="display:none;">
+      {# ── Переключатель Таблица / Гант ─────────────────────── #}
+      <div class="gg-view-toggle">
+        <button class="btn btn-sm btn-outline active" id="ggViewTable" onclick="switchGGView('table')"><i class="fas fa-table"></i> Таблица</button>
+        <button class="btn btn-sm btn-outline" id="ggViewGantt" onclick="switchGGView('gantt')"><i class="fas fa-chart-bar"></i> Гант</button>
+        <div class="gg-gantt-scales" id="ggGanttScales" style="display:none;">
+          <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('day')">День</button>
+          <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('week')">Неделя</button>
+          <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('month')">Месяц</button>
+          <button class="btn btn-xs btn-ghost" onclick="setGGGanttScale('year')">Год</button>
+        </div>
+      </div>
+      {# ── Табличный вид ────────────────────────────────────── #}
+      <div id="ggTableView">
+        <div class="ent-section">
+          <h3 class="ent-section-title" id="ggTitle">Пункты</h3>
+          <table class="data-table" id="ggStagesTable">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Название пункта</th>
+                <th>Начало</th>
+                <th>Окончание</th>
+                <th>Трудоёмкость</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ggStagesBody"></tbody>
+          </table>
+        </div>
+        <div class="ent-section">
+          <h3 class="ent-section-title">Вехи</h3>
+          <table class="data-table" id="ggMilestonesTable">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Дата</th>
+                <th>Пункт</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ggMilestonesBody"></tbody>
+          </table>
+        </div>
+      </div>
+      {# ── Гант-вид ─────────────────────────────────────────── #}
+      <div id="ggGanttContainer" style="display:none; width:100%; height:500px;"></div>
+    </div>
+  </div>
+</div>
+
+{# ── Сквозной график ────────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-cross" role="tabpanel" aria-labelledby="tab-cross" style="display:none;">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <button class="project-picker-btn" id="crossProjectBtn" onclick="openProjectPicker('cross')">
+        <i class="fas fa-folder-open"></i>
+        <span class="picker-label">Выберите проект...</span>
+      </button>
+      <input type="hidden" id="crossProjectSelect" value="">
+    </div>
+    <div class="ent-toolbar-right" id="crossActions"></div>
+  </div>
+
+  <div id="crossContent">
+    <div class="empty-state" id="crossEmpty">
+      <i class="fas fa-project-diagram"></i>
+      <p>Выберите проект для просмотра сквозного графика</p>
+    </div>
+    <div id="crossScheduleView" style="display:none;">
+      <h2 class="ent-section-title" id="crossTitle" style="font-size:17px; margin-bottom:12px;"></h2>
+      <div class="ent-meta-bar" id="crossMeta"></div>
+      <div class="ent-section" id="crossStagesSection">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 class="ent-section-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">Пункты и этапы</h3>
+          <div class="cross-expand-btns">
+            <button class="btn btn-ghost btn-sm" onclick="crossExpandAll()" title="Развернуть все"><i class="fas fa-expand-alt"></i> Развернуть</button>
+            <button class="btn btn-ghost btn-sm" onclick="crossCollapseAll()" title="Свернуть все"><i class="fas fa-compress-alt"></i> Свернуть</button>
+          </div>
+        </div>
+        <div class="cross-table-wrap" id="crossTableWrap">
+          <table class="cross-table" id="crossTable">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th style="width:110px;">Начало</th>
+                <th style="width:110px;">Окончание</th>
+                <th style="width:80px;">Труд.</th>
+                <th style="width:100px;">Отдел</th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="crossTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ent-section">
+        <h3 class="ent-section-title">Вехи</h3>
+        <table class="data-table" id="crossMilestonesTable">
+          <thead>
+            <tr>
+              <th>Название</th>
+              <th>Дата</th>
+              <th>Пункт</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="crossMilestonesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Загрузка / Мощность ────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-capacity" role="tabpanel" aria-labelledby="tab-capacity" style="display:none;">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <select id="capacityYear" class="form-select form-select-sm">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <select id="capacityMode" class="form-select form-select-sm">
+        <option value="actual">Фактическая численность</option>
+        <option value="staff">Штатная численность</option>
+      </select>
+      <button class="project-picker-btn" id="capacityProjectBtn" onclick="openProjectPicker('capacity')">
+        <i class="fas fa-folder-open"></i>
+        <span class="picker-label">Все проекты</span>
+      </button>
+      <input type="hidden" id="capacityProject" value="">
+    </div>
+  </div>
+
+  <div class="cap-chips" id="capCenterChips"></div>
+  <div class="cap-kpi-row" id="capKpiRow"></div>
+  <div id="capacityCardsContainer"></div>
+</div>
+
+{# ── Сценарии «что-если» ────────────────────────────────────────────── #}
+<div class="ent-panel" id="panel-scenarios" role="tabpanel" aria-labelledby="tab-scenarios" style="display:none;">
+  <div class="ent-toolbar">
+    <div class="ent-toolbar-left">
+      <select id="scenarioFilterStatus" class="form-select form-select-sm" onchange="loadScenarios()">
+        <option value="">Все статусы</option>
+        <option value="draft">Черновик</option>
+        <option value="active">Активный</option>
+        <option value="archived">Архив</option>
+      </select>
+      <button class="project-picker-btn" id="scenarioProjectBtn" onclick="openProjectPicker('scenarios')">
+        <i class="fas fa-folder-open"></i>
+        <span class="picker-label">Все проекты</span>
+      </button>
+      <input type="hidden" id="scenarioProject" value="">
+    </div>
+    <div class="ent-toolbar-right" id="scenarioActions">
+      {% if is_writer %}
+      <button class="btn btn-primary btn-sm" onclick="openScenarioCreate()">
+        <i class="fas fa-plus"></i> Новый сценарий
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Список сценариев #}
+  <div id="scenarioListView">
+    <table class="cross-table" id="scenarioTable">
+      <thead>
+        <tr>
+          <th style="width:35%;">Название</th>
+          <th style="width:20%;">Проект</th>
+          <th style="width:100px;">Статус</th>
+          <th style="width:15%;">Автор</th>
+          <th style="width:120px;">Обновлён</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody id="scenarioTableBody">
+        <tr><td colspan="6" class="text-center text-muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  {# Детальный вид сценария #}
+  <div id="scenarioDetailView" style="display:none;">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+      <button class="btn btn-ghost btn-sm" onclick="closeScenarioDetail()">
+        <i class="fas fa-arrow-left"></i> Назад
+      </button>
+      <h3 class="ent-section-title" id="scenarioDetailTitle" style="margin:0; border:none; padding:0;"></h3>
+      <span id="scenarioDetailStatus"></span>
+    </div>
+    <div class="ent-meta-bar" id="scenarioDetailMeta"></div>
+    <div class="ent-section">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h4 class="ent-section-title" style="margin:0; border:none; padding:0;">Записи сценария</h4>
+        {% if is_writer %}
+        <button class="btn btn-primary btn-sm" id="scenarioAddEntryBtn" onclick="openScenarioEntryCreate()">
+          <i class="fas fa-plus"></i> Добавить запись
+        </button>
+        {% endif %}
+      </div>
+      <table class="cross-table" id="scenarioEntriesTable">
+        <thead>
+          <tr>
+            <th>Работа / Описание</th>
+            <th style="width:100px;">Отдел</th>
+            <th style="width:100px;">Труд., ч</th>
+            <th style="width:110px;">Начало</th>
+            <th style="width:110px;">Окончание</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="scenarioEntriesBody">
+          <tr><td colspan="6" class="text-center text-muted">Нет записей</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка создания/редактирования сценария ────────────────────────── #}
+<div class="modal-overlay" id="scenarioModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="scenarioModalTitle">Новый сценарий</h3>
+      <button class="modal-close" onclick="closeModal('scenarioModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="scenarioEditId">
+      <div class="form-group">
+        <label>Название <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="scenarioName" class="form-input" placeholder="Название сценария">
+      </div>
+      <div class="form-group">
+        <label>Проект</label>
+        <select id="scenarioProjectSelect" class="form-select">
+          <option value="">— без проекта —</option>
+        </select>
+      </div>
+      <div class="form-group" id="scenarioStatusGroup" style="display:none;">
+        <label>Статус</label>
+        <select id="scenarioStatus" class="form-select">
+          <option value="draft">Черновик</option>
+          <option value="active">Активный</option>
+          <option value="archived">Архив</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('scenarioModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveScenario()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка добавления записи в сценарий ────────────────────────────── #}
+<div class="modal-overlay" id="scenarioEntryModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Новая запись</h3>
+      <button class="modal-close" onclick="closeModal('scenarioEntryModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Описание / название работы <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="entryWorkName" class="form-input" placeholder="Что моделируем">
+      </div>
+      <div class="form-group">
+        <label>Отдел</label>
+        <input type="text" id="entryDept" class="form-input" placeholder="Код отдела">
+      </div>
+      <div class="form-group">
+        <label>Трудоёмкость, ч</label>
+        <input type="number" id="entryLabor" class="form-input" min="0" step="0.01" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Дата начала</label>
+        <input type="date" id="entryDateStart" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Дата окончания</label>
+        <input type="date" id="entryDateEnd" class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('scenarioEntryModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveScenarioEntry()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка создания/редактирования этапа ГГ ────────────────────────── #}
+<div class="modal-overlay" id="ggStageModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="ggStageModalTitle">Пункт</h3>
+      <button class="modal-close" onclick="closeModal('ggStageModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ggStageId">
+      <div class="form-group">
+        <label>Название <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="ggStageName" class="form-input" placeholder="Название пункта">
+      </div>
+      <div class="form-group">
+        <label>Дата начала</label>
+        <input type="date" id="ggStageDateStart" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Дата окончания</label>
+        <input type="date" id="ggStageDateEnd" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Трудоёмкость, ч</label>
+        <input type="number" id="ggStageLabor" class="form-input" min="0" step="0.01" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label>Порядок</label>
+        <input type="number" id="ggStageOrder" class="form-input" min="0" placeholder="Авто">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('ggStageModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveGGStage()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка выбора проекта (общая для ГГ, Сквозного, Загрузки) ──────── #}
+<div class="modal-overlay" id="projectPickerModal">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Выбор проекта</h3>
+      <button class="modal-close" onclick="closeProjectPicker()">&times;</button>
+    </div>
+    <div class="picker-search">
+      <input type="text" id="pickerSearch" class="form-input" placeholder="Поиск по названию, коду или статусу..." autocomplete="off">
+    </div>
+    <div class="modal-body" style="padding:0; overflow-y:auto; max-height:55vh;">
+      <table class="picker-table" id="pickerTable">
+        <thead>
+          <tr>
+            <th data-sort="num" style="width:45px" onclick="pickerSort('num')">№ <span class="sort-arrow" id="ps-num"></span></th>
+            <th data-sort="name" onclick="pickerSort('name')">Название <span class="sort-arrow" id="ps-name"></span></th>
+            <th data-sort="code" style="width:120px" onclick="pickerSort('code')">Код <span class="sort-arrow" id="ps-code"></span></th>
+            <th data-sort="status" style="width:130px" onclick="pickerSort('status')">Статус <span class="sort-arrow" id="ps-status"></span></th>
+            <th data-sort="priority" style="width:120px" onclick="pickerSort('priority')">Приоритет <span class="sort-arrow" id="ps-priority"></span></th>
+          </tr>
+        </thead>
+        <tbody id="pickerBody"></tbody>
+      </table>
+      <div class="empty-state" id="pickerEmpty" style="display:none;">
+        <p>Ничего не найдено</p>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <span class="picker-count" id="pickerCount"></span>
+      <button class="btn btn-secondary" onclick="closeProjectPicker()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка создания проекта ─────────────────────────────────────────── #}
+<div class="modal-overlay" id="projectCreateModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Новый проект</h3>
+      <button class="modal-close" onclick="closeModal('projectCreateModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Полное наименование <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="createProjectNameFull" class="form-input" placeholder="Наименование проекта">
+      </div>
+      <div class="form-group">
+        <label>Краткое наименование</label>
+        <input type="text" id="createProjectNameShort" class="form-input" placeholder="Сокращение">
+      </div>
+      <div class="form-group">
+        <label>Шифр / код</label>
+        <input type="text" id="createProjectCode" class="form-input" placeholder="Код проекта">
+      </div>
+      <div class="form-group">
+        <label>Главный конструктор</label>
+        <select id="createProjectChief" class="form-select">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <select id="createProjectStatus" class="form-select">
+          <option value="prospective">Перспективный</option>
+          <option value="approved">Утверждён</option>
+          <option value="active" selected>Активный</option>
+          <option value="suspended">Приостановлен</option>
+          <option value="deferred">Отложен</option>
+          <option value="closed">Закрыт</option>
+          <option value="cancelled">Отменён</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Категория приоритета</label>
+        <select id="createProjectPriority" class="form-select">
+          <option value="">—</option>
+          <option value="critical">Критический</option>
+          <option value="high">Высокий</option>
+          <option value="medium">Средний</option>
+          <option value="low">Низкий</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Номер приоритета</label>
+        <input type="number" id="createProjectPriorityNum" class="form-input" min="1" placeholder="—">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('projectCreateModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveNewProject()">Создать</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка создания/редактирования этапа сквозного ─────────────────── #}
+<div class="modal-overlay" id="crossStageModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="crossStageModalTitle">Новый этап</h3>
+      <button class="modal-close" onclick="closeModal('crossStageModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="crossStageId">
+      <div class="form-group">
+        <label>Пункт ГГ <span style="color:var(--danger)">*</span></label>
+        <select id="crossStageGGItem" class="form-select">
+          <option value="">— Выберите пункт —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Название этапа <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="crossStageName" class="form-input" placeholder="Название этапа">
+      </div>
+      <div class="form-group">
+        <label>Дата начала</label>
+        <input type="date" id="crossStageDateStart" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Дата окончания</label>
+        <input type="date" id="crossStageDateEnd" class="form-input">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('crossStageModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCrossStage()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+{# ── Модалка редактирования проекта ──────────────────────────────────── #}
+<div class="modal-overlay" id="projectEditModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Редактирование проекта</h3>
+      <button class="modal-close" onclick="closeModal('projectEditModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editProjectId">
+      <div class="form-group">
+        <label>Главный конструктор</label>
+        <select id="editProjectChief" class="form-select">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <select id="editProjectStatus" class="form-select">
+          <option value="prospective">Перспективный</option>
+          <option value="approved">Утверждён</option>
+          <option value="active">Активный</option>
+          <option value="suspended">Приостановлен</option>
+          <option value="deferred">Отложен</option>
+          <option value="closed">Закрыт</option>
+          <option value="cancelled">Отменён</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Категория приоритета</label>
+        <select id="editProjectPriority" class="form-select">
+          <option value="">—</option>
+          <option value="critical">Критический</option>
+          <option value="high">Высокий</option>
+          <option value="medium">Средний</option>
+          <option value="low">Низкий</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Номер приоритета</label>
+        <input type="number" id="editProjectPriorityNum" class="form-input" min="1" placeholder="—">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('projectEditModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveProjectEnterprise()">Сохранить</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const ROLE = '{{ role }}';
+  const IS_WRITER = {{ is_writer|yesno:"true,false" }};
+  const EMPLOYEES = {{ employees_json|safe }};
+</script>
+<script src="{% static 'lib/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/gantt_common.js' %}?v=2"></script>
+<script src="{% static 'js/enterprise.js' %}?v=16"></script>
 {% endblock %}
