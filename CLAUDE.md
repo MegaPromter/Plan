@@ -57,7 +57,35 @@
 - black, flake8, isort
 
 ## Деплой
+- **Деплоить сюда: https://managesystems.ru/**
+- Деплой ТОЛЬКО по явной команде пользователя («деплой», «пуш»)
+- `git push` ≠ деплой на прод. Пуш на GitHub — это только пуш кода в репозиторий
 - Dockerfile: python:3.11-slim, gunicorn, collectstatic
-- Procfile: `web: bash start.sh`
-- `start.sh` запускает seed_data + gunicorn
+- entrypoint.sh: migrate + seed_calendar перед запуском gunicorn
 - Redis для сессий при `CACHE_BACKEND=redis`
+
+## Сервер (prod)
+- **IP:** 72.56.13.101, SSH: `root@72.56.13.101`
+- **OS:** Debian 13 (trixie), Python 3.13
+- **Путь:** `/opt/planapp/`, venv: `/opt/planapp/venv/`
+- **nginx** → unix socket `/opt/planapp/gunicorn.sock` → gunicorn (2 воркера)
+- **SSL:** Let's Encrypt (certbot)
+- **PostgreSQL:** локальная, `planapp_db` (user: planapp)
+- **Процедура деплоя:** `git push` → SSH → `cd /opt/planapp && git pull && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && kill -HUP $(pgrep -f 'gunicorn.*planapp.*sock' -o)`
+
+## Frontend-стек
+- Новые страницы: Django templates + HTMX + Alpine.js
+- Существующие SPA: vanilla JS (не мигрировать на Vue)
+- При доработке простых SPA (notice_list, projects_spa, work_calendar_spa): переводить на HTMX + Alpine.js
+
+## Обязательные правила
+- Делай коммит после каждого серьёзного изменения
+- Деплой только по команде пользователя
+- Не использовать `preview_screenshot` — вызывает зависания. Для верификации: `preview_snapshot`, `preview_inspect`, `preview_console_logs`
+- Верификация — молча проверять, не описывать результаты
+- Общение только на русском
+- Тесты перед каждым коммитом: `python -m pytest tests/ -x -q`
+- Общие стили только в `components.css`, без дублирования между модулями
+- Справочники деплоятся через management command (get_or_create), НЕ fixtures
+- Пользователь учится программированию — кратко пояснять концепции по ходу работы
+- Браузер: только Brave (не использовать Chrome MCP tools)
