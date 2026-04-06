@@ -164,6 +164,9 @@
 tr.row-pinned {
   animation: pinnedPulse 1.6s ease-in-out 3;
 }
+tr.row-pinned > td {
+  animation: colHighlight 1.2s ease-out forwards;
+}
 tr.row-pinned td:first-child {
   position: relative;
 }
