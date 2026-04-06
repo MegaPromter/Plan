@@ -43,8 +43,8 @@ def _serialize_project(proj, row_count=None):
         'name': proj.name or '',               # название проекта ПП
         'directory_id': proj.directory_id,     # FK на запись в справочнике (legacy)
         'up_project_id': proj.up_project_id,   # FK на УП-проект (Project)
-        # Короткое или полное название связанного УП-проекта (если есть)
-        'up_project_name': (proj.up_project.name_short or proj.up_project.name_full)
+        # Полное название связанного УП-проекта (если есть)
+        'up_project_name': (proj.up_project.name_full or proj.up_project.name_short)
                            if proj.up_project else '',
         'up_product_id': proj.up_product_id,   # FK на изделие УП-проекта
         # Название изделия (если есть связь)

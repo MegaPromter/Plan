@@ -77,9 +77,9 @@ function buildPPName(upProj, prod) {
     const prodLabel = prod.name + (prod.code ? ' ' + prod.code : '');
     return prefix + 'по изделию ' + prodLabel;
   }
-  // Если выбран проект УП — добавляем его краткое название
+  // Если выбран проект УП — добавляем его полное название
   if (upProj) {
-    const projLabel = upProj.name_short || upProj.name_full;
+    const projLabel = upProj.name_full || upProj.name_short;
     return prefix + 'по проекту ' + projLabel;
   }
   // Без привязки — только префикс
@@ -359,7 +359,7 @@ async function openCreateProjectModal() {
 
   // Опции для привязки к проекту УП
   const upOptions = upProjects.length
-    ? upProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name_short || p.name_full)}</option>`).join('')
+    ? upProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name_full || p.name_short)}</option>`).join('')
     : '';
 
   // Опции для открытия существующего ПП-плана из списка
@@ -502,7 +502,7 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
   await loadUpProjects();
   // Строим список опций с предвыбором текущего УП-проекта
   const upOptions = upProjects.map(p =>
-    `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`
+    `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_full || p.name_short)}</option>`
   ).join('');
 
   // Получаем изделия текущего проекта УП для предзаполнения
