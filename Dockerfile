@@ -8,6 +8,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN SECRET_KEY=build-only-dummy DEBUG=True python manage.py collectstatic --noinput
 
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Non-root user for security
 RUN adduser --disabled-password --no-create-home appuser
 USER appuser
@@ -16,6 +19,7 @@ HEALTHCHECK --interval=30s --timeout=5s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')" || exit 1
 
 EXPOSE 8000
+ENTRYPOINT ["sh", "entrypoint.sh"]
 CMD ["gunicorn", "config.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "3", \

@@ -320,20 +320,154 @@ async function openProjectMetrics(id) {
   }
 }
 
-/* ── Модал управления этапами проекта ──────────────────────────────────── */
+/* ── Модал управления этапами проекта (двухпанельный layout) ──────────── */
 async function openStagesModal(projectId) {
   const modal = openModal({
     title: '<i class="fas fa-layer-group" style="color:var(--accent);margin-right:8px;"></i>Этапы проекта',
-    width: '960px',
+    width: '1060px',
+    bodyStyle: 'padding:0;',
     body: `
-      <div id="stagesTableWrap" style="margin-bottom:16px;"></div>
-      ${IS_WRITER ? `
-      <div style="background:var(--bg);border-radius:10px;padding:16px 20px;border:1px dashed var(--border);">
-        <div style="font-size:12px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">
-          <i class="fas fa-plus-circle" style="margin-right:4px;color:var(--accent);"></i> Новый этап
+      <div id="stagesSplit" style="display:flex;height:min(70vh,600px);min-height:340px;">
+        <!-- Левая панель: список -->
+        <div style="width:380px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+            <input id="stSearch" placeholder="Поиск..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:12px;background:var(--surface2);outline:none;">
+            ${IS_WRITER ? '<button id="stAddBtn" style="width:32px;height:32px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Добавить этап">+</button>' : ''}
+          </div>
+          <div id="stagesList" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="stagesFooter" style="padding:8px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-bottom:14px;">
-          <div class="modal-form-group" style="margin-bottom:0;">
+        <!-- Правая панель: детали -->
+        <div id="stagesRight" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);gap:10px;">
+            <i class="fas fa-arrow-left" style="font-size:32px;opacity:.25;"></i>
+            <div style="font-size:13px;">Выберите этап из списка</div>
+          </div>
+        </div>
+      </div>`,
+    footer: `<button class="btn btn-outline modal-cancel">Закрыть</button>`,
+  });
+
+  let _stages = [];
+  let _activeId = null;
+
+  function pctClass(pct) { return pct >= 100 ? 'done' : pct > 0 ? 'partial' : 'none'; }
+  function pctColor(cls) { return cls === 'done' ? '#16a34a' : cls === 'partial' ? '#d97706' : 'var(--muted)'; }
+  function pctBg(cls) { return cls === 'done' ? '#dcfce7' : cls === 'partial' ? '#fef3c7' : 'var(--surface2)'; }
+  function barCls(pct) { return pct > 100 ? '--danger' : pct >= 80 ? '--success' : pct >= 40 ? '--warning' : '--accent'; }
+
+  function renderList(filter) {
+    const list = document.getElementById('stagesList');
+    const footer = document.getElementById('stagesFooter');
+    if (!list) return;
+    const q = (filter || '').toLowerCase();
+    const filtered = _stages.filter(s => !q || s.name.toLowerCase().includes(q) || (s.stage_number || '').includes(q));
+    let totalPlan = 0;
+    _stages.forEach(s => { totalPlan += s.planned_labor || 0; });
+
+    list.innerHTML = filtered.length ? filtered.map(s => {
+      const pct = s.planned_labor > 0 ? Math.round((s.spent_labor || 0) / s.planned_labor * 100) : 0;
+      const cls = pctClass(pct);
+      return `<div class="st-item${s.id === _activeId ? ' active' : ''}" data-id="${s.id}" style="padding:9px 14px;cursor:pointer;border-left:3px solid ${s.id === _activeId ? 'var(--accent)' : 'transparent'};transition:all .15s;display:flex;align-items:center;gap:10px;${s.id === _activeId ? 'background:var(--accent-glow);' : ''}">
+        <span style="background:var(--accent);color:#fff;border-radius:var(--radius-sm);padding:2px 8px;font-size:11px;font-weight:700;min-width:36px;text-align:center;flex-shrink:0;">${escapeHtml(s.stage_number || '—')}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">${escapeHtml(s.work_order || '')}${s.work_order && s.row_code ? ' · ' : ''}${escapeHtml(s.row_code || '')}</div>
+        </div>
+        <span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;flex-shrink:0;background:${pctBg(cls)};color:${pctColor(cls)};">${pct}%</span>
+      </div>`;
+    }).join('') : `<div style="text-align:center;padding:32px 0;color:var(--muted);"><i class="fas fa-inbox" style="font-size:24px;opacity:.3;display:block;margin-bottom:6px;"></i><div style="font-size:12px;">Этапов не найдено</div></div>`;
+
+    if (footer) footer.innerHTML = `<span>${_stages.length} этапов</span><span>${Math.round(totalPlan).toLocaleString('ru')} ч план</span>`;
+
+    list.querySelectorAll('.st-item').forEach(el => {
+      el.addEventListener('mouseenter', () => { if (el.dataset.id != _activeId) el.style.background = 'var(--surface2)'; });
+      el.addEventListener('mouseleave', () => { if (el.dataset.id != _activeId) el.style.background = ''; });
+      el.addEventListener('click', () => {
+        _activeId = parseInt(el.dataset.id);
+        renderList(document.getElementById('stSearch')?.value);
+        renderDetail(_stages.find(s => s.id === _activeId));
+      });
+    });
+  }
+
+  function renderDetail(s) {
+    const panel = document.getElementById('stagesRight');
+    if (!panel || !s) return;
+    const pct = s.planned_labor > 0 ? Math.round((s.spent_labor || 0) / s.planned_labor * 100) : 0;
+    const barW = Math.min(pct, 100);
+    const barColor = `var(${barCls(pct)})`;
+    const works = s.works || [];
+
+    const worksHtml = works.length ? works.map(w => `
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;">
+        <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${w.has_report ? 'var(--success)' : 'var(--border)'};"></span>
+        <span style="flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(w.name)}</span>
+        <span style="color:var(--muted);min-width:50px;text-align:right;">${w.labor || '—'} ч</span>
+      </div>`).join('') : '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">Работ нет</div>';
+
+    panel.innerHTML = `
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">${escapeHtml(s.name)}</div>
+        <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
+          <span><strong>Этап ${escapeHtml(s.stage_number || '—')}</strong></span>
+          <span><i class="fas fa-file-alt" style="margin-right:3px;"></i>${escapeHtml(s.work_order || '—')}</span>
+          <span><i class="fas fa-barcode" style="margin-right:3px;"></i><code style="font-size:12px;">${escapeHtml(s.row_code || '—')}</code></span>
+          <span>${works.length} работ</span>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div style="background:var(--bg);border-radius:var(--radius-md);padding:12px 14px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:4px;">Запланировано</div>
+            <div style="font-size:18px;font-weight:700;">${s.planned_labor || 0} <span style="font-size:12px;font-weight:400;color:var(--muted);">ч</span></div>
+          </div>
+          <div style="background:var(--bg);border-radius:var(--radius-md);padding:12px 14px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:4px;">Потрачено</div>
+            <div style="font-size:18px;font-weight:700;${pct > 100 ? 'color:var(--danger);' : ''}">${s.spent_labor || 0} <span style="font-size:12px;font-weight:400;color:var(--muted);">ч</span></div>
+          </div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:8px;">Прогресс</div>
+          <div style="background:var(--surface2);border-radius:8px;height:20px;overflow:hidden;margin-bottom:6px;">
+            <div style="height:100%;border-radius:8px;width:${barW}%;background:${barColor};transition:width .4s;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;color:#fff;">${barW > 15 ? pct + '%' : ''}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+            <span>Выполнено ${pct}%</span>
+            <span>Осталось ${Math.max(0, (s.planned_labor || 0) - (s.spent_labor || 0))} ч</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:8px;">Работы этапа (${works.length})</div>
+          <div style="display:flex;flex-direction:column;gap:5px;">${worksHtml}</div>
+        </div>
+      </div>
+      ${IS_WRITER ? `<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;">
+        <button class="btn btn-outline" id="stDetailDel" style="color:var(--danger);border-color:#fecaca;margin-right:auto;"><i class="fas fa-trash" style="margin-right:4px;"></i>Удалить</button>
+        <button class="btn btn-primary" id="stDetailEdit"><i class="fas fa-pen" style="margin-right:4px;"></i>Редактировать</button>
+      </div>` : ''}`;
+
+    document.getElementById('stDetailEdit')?.addEventListener('click', () => {
+      openEditStageModal(projectId, s, () => loadStages());
+    });
+    document.getElementById('stDetailDel')?.addEventListener('click', async () => {
+      if (!confirm('Удалить этап «' + s.name + '»?')) return;
+      const r = await fetchJson(`/api/projects/${projectId}/stages/${s.id}/`, {method:'DELETE'});
+      if (r && !r._error) { _activeId = null; loadStages(); showToast('Этап удалён'); }
+      else showToast('Ошибка удаления', 'error');
+    });
+  }
+
+  function showNewStageForm() {
+    _activeId = null;
+    renderList(document.getElementById('stSearch')?.value);
+    const panel = document.getElementById('stagesRight');
+    if (!panel) return;
+    panel.innerHTML = `
+      <div style="flex:1;display:flex;flex-direction:column;padding:20px;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:18px;"><i class="fas fa-plus-circle" style="color:var(--accent);margin-right:6px;"></i>Новый этап</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="modal-form-group" style="margin-bottom:0;grid-column:1/-1;">
             <label>Наименование</label>
             <input id="stNewName" placeholder="Наименование этапа">
           </div>
@@ -350,87 +484,19 @@ async function openStagesModal(projectId) {
             <input id="stNewCode" placeholder="Например: КС-432">
           </div>
         </div>
-        <button class="btn btn-primary" id="stAddBtn" style="width:100%;border-radius:8px;">
-          <i class="fas fa-plus" style="margin-right:6px;"></i> Добавить этап
-        </button>
-      </div>` : ''}`,
-    footer: `<button class="btn btn-outline modal-cancel">Закрыть</button>`,
-  });
-
-  async function loadStages() {
-    const data = await fetchJson(`/api/projects/${projectId}/stages/`);
-    const wrap = document.getElementById('stagesTableWrap');
-    if (!wrap) return;
-    if (!data || data._error || !data.length) {
-      wrap.innerHTML = `
-        <div style="text-align:center;padding:32px 0;color:var(--muted);">
-          <i class="fas fa-inbox" style="font-size:32px;margin-bottom:8px;display:block;opacity:.4;"></i>
-          <div style="font-size:13px;">Этапов пока нет</div>
-        </div>`;
-      return;
-    }
-    wrap.innerHTML = `
-      <table style="width:100%;font-size:13px;border-collapse:collapse;">
-        <thead>
-          <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
-            <th rowspan="2" style="width:28%;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);vertical-align:bottom;">Наименование</th>
-            <th rowspan="2" style="width:10%;padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);vertical-align:bottom;">№ этапа</th>
-            <th rowspan="2" style="width:14%;padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);vertical-align:bottom;">Наряд-заказ</th>
-            <th rowspan="2" style="width:12%;padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);vertical-align:bottom;">Код строки</th>
-            <th colspan="2" style="padding:8px 8px 4px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-left:1px solid var(--border);">Трудоёмкость</th>
-            ${IS_WRITER ? '<th rowspan="2" style="width:12%;padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);vertical-align:bottom;"></th>' : ''}
-          </tr>
-          <tr style="background:var(--bg);border-bottom:2px solid var(--border);">
-            <th style="width:10%;padding:4px 8px 10px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-left:1px solid var(--border);">План</th>
-            <th style="width:10%;padding:4px 8px 10px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Факт</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map((s, i) => `
-            <tr data-stage-id="${s.id}" style="border-bottom:1px solid var(--border);transition:background .15s;${i % 2 ? 'background:var(--bg);' : ''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${i % 2 ? 'var(--bg)' : ''}'">
-              <td style="padding:10px 12px;font-weight:500;">${escapeHtml(s.name)}</td>
-              <td style="padding:10px 8px;text-align:center;">
-                <span style="background:var(--accent);color:#fff;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:600;">${escapeHtml(s.stage_number)}</span>
-              </td>
-              <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(s.work_order)}</td>
-              <td style="padding:10px 8px;">
-                <code style="background:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(s.row_code)}</code>
-              </td>
-              <td style="padding:10px 8px;text-align:center;border-left:1px solid var(--border);font-size:12px;color:var(--muted);">${s.planned_labor || '—'}</td>
-              <td style="padding:10px 8px;text-align:center;font-size:12px;${s.spent_labor > s.planned_labor && s.planned_labor > 0 ? 'color:var(--danger);font-weight:600;' : 'color:var(--muted);'}">${s.spent_labor || '—'}</td>
-              ${IS_WRITER ? `<td style="padding:10px 8px;text-align:center;">
-                <button class="btn-icon st-edit" title="Редактировать" style="margin-right:4px;"><i class="fas fa-pen" style="font-size:12px;"></i></button>
-                <button class="btn-icon st-del" title="Удалить" style="color:var(--danger);"><i class="fas fa-trash" style="font-size:12px;"></i></button>
-              </td>` : ''}
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-
-    wrap.querySelectorAll('.st-del').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const tr = btn.closest('tr');
-        const sid = tr.getAttribute('data-stage-id');
-        if (!confirm('Удалить этап?')) return;
-        const r = await fetchJson(`/api/projects/${projectId}/stages/${sid}/`, {method:'DELETE'});
-        if (r && !r._error) { loadStages(); showToast('Этап удалён'); }
-        else showToast('Ошибка удаления', 'error');
-      });
+        <div style="margin-top:auto;display:flex;gap:8px;justify-content:flex-end;padding-top:16px;">
+          <button class="btn btn-outline" id="stNewCancel">Отмена</button>
+          <button class="btn btn-primary" id="stNewSave"><i class="fas fa-plus" style="margin-right:4px;"></i>Создать</button>
+        </div>
+      </div>`;
+    document.getElementById('stNewName')?.focus();
+    document.getElementById('stNewCancel')?.addEventListener('click', () => {
+      _activeId = null;
+      renderDetail(null);
+      const panel = document.getElementById('stagesRight');
+      if (panel) panel.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);gap:10px;"><i class="fas fa-arrow-left" style="font-size:32px;opacity:.25;"></i><div style="font-size:13px;">Выберите этап из списка</div></div>';
     });
-
-    wrap.querySelectorAll('.st-edit').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tr = btn.closest('tr');
-        const sid = tr.getAttribute('data-stage-id');
-        const s = data.find(x => String(x.id) === sid);
-        if (!s) return;
-        openEditStageModal(projectId, s, () => loadStages());
-      });
-    });
-  }
-
-  const addBtn = document.getElementById('stAddBtn');
-  if (addBtn) {
-    addBtn.addEventListener('click', async () => {
+    document.getElementById('stNewSave')?.addEventListener('click', async () => {
       const name = document.getElementById('stNewName').value.trim();
       if (!name) { showToast('Введите наименование', 'warning'); return; }
       const body = {
@@ -444,17 +510,29 @@ async function openStagesModal(projectId) {
         body: JSON.stringify(body),
       });
       if (r && !r._error && r.id) {
-        document.getElementById('stNewName').value = '';
-        document.getElementById('stNewNum').value = '';
-        document.getElementById('stNewOrder').value = '';
-        document.getElementById('stNewCode').value = '';
-        loadStages();
+        _activeId = r.id;
+        await loadStages();
         showToast('Этап добавлен');
       } else {
         showToast(r?.error || 'Ошибка создания', 'error');
       }
     });
   }
+
+  async function loadStages() {
+    const data = await fetchJson(`/api/projects/${projectId}/stages/`);
+    if (!data || data._error) { _stages = []; }
+    else { _stages = data; }
+    const q = document.getElementById('stSearch')?.value || '';
+    renderList(q);
+    if (_activeId) {
+      const s = _stages.find(x => x.id === _activeId);
+      if (s) renderDetail(s);
+    }
+  }
+
+  document.getElementById('stSearch')?.addEventListener('input', e => renderList(e.target.value));
+  document.getElementById('stAddBtn')?.addEventListener('click', showNewStageForm);
 
   loadStages();
 }

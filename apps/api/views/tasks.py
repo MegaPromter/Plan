@@ -27,6 +27,7 @@ from apps.api.mixins import (
     parse_json_body,
 )
 from apps.api.utils import (
+    generate_work_num,
     get_visibility_filter,
     mcc_finish_data,
     parse_json_hours,
@@ -108,6 +109,8 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
         'executor': (work.executor.full_name if work.executor else '') or '',
         'date_start': work.date_start.isoformat() if work.date_start else '',
         'date_end': work.date_end.isoformat() if work.date_end else '',
+        'pp_date_start': work.pp_date_start.isoformat() if work.pp_date_start else '',
+        'pp_date_end': work.pp_date_end.isoformat() if work.pp_date_end else '',
         # Приоритет: date_end (ПП) → deadline (СП)
         'deadline': (work.date_end or work.deadline).isoformat() if (work.date_end or work.deadline) else '',
         'plan_hours': work.plan_hours or {},
@@ -386,7 +389,7 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             work = Work(
                 show_in_plan=True,
                 work_name=d.get('work_name', ''),
-                work_num=d.get('work_number', ''),
+                work_num='',  # авто-генерация ниже
                 work_designation=d.get('description', ''),
                 plan_hours=ph,
                 stage_num=d.get('stage', ''),
@@ -407,6 +410,11 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             except ValueError as exc:
                 work.delete()
                 return JsonResponse({'error': str(exc)}, status=400)
+
+            # Автогенерация номера работы
+            if not work.work_num and work.project:
+                work.work_num = generate_work_num(work.project)
+
             work.save()
 
             if executors_list:
@@ -506,7 +514,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             _PP_LOCKED_FIELDS = frozenset((
                 'work_name', 'work_number', 'description',
                 'task_type', 'dept', 'sector', 'project',
-                'stage', 'justification', 'deadline',
+                'stage', 'justification',
             ))
             if is_from_pp and not d.get('_mcc_finish'):
                 # Определяем какие заблокированные поля клиент пытался изменить
@@ -545,7 +553,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     ph = work.plan_hours
                 if not is_from_pp:
                     work.work_name = d.get('work_name', work.work_name) or ''
-                    work.work_num = d.get('work_number', work.work_num) or ''
+                    # work_num — read-only, авто-генерация при создании
                     work.work_designation = d.get('description', work.work_designation) or ''
                 work.plan_hours = ph
 

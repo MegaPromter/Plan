@@ -151,6 +151,41 @@
 /* ── Подсветка появившихся столбцов при смене режима отображения ─── */
 /* Управляется полностью из JS (inline styles + setInterval fade) */
 
+/* ── Закреплённая новая строка (pin сверху до перезагрузки) ─────── */
+@keyframes pinnedPulse {
+  0%   { background: rgba(37,99,235,0.22); }
+  50%  { background: rgba(37,99,235,0.10); }
+  100% { background: rgba(37,99,235,0.22); }
+}
+@keyframes pinnedFadeOut {
+  from { background: rgba(37,99,235,0.18); }
+  to   { background: transparent; }
+}
+tr.row-pinned {
+  animation: pinnedPulse 1.6s ease-in-out 3;
+}
+tr.row-pinned td:first-child {
+  position: relative;
+}
+tr.row-pinned td:first-child::after {
+  content: "NEW";
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 0 3px;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+tr.row-pinned.pin-fade {
+  animation: pinnedFadeOut 0.6s ease-out forwards;
+}
+
 /* ── Slideout-панель ─────────────────────────────────────────────── */
 .slideout-overlay {
   position: fixed;

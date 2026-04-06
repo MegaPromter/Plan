@@ -175,6 +175,11 @@ class Project(models.Model):
         verbose_name='Главный конструктор',
     )
 
+    work_num_seq = models.PositiveIntegerField(
+        'Счётчик номеров работ', default=0,
+        help_text='Атомарный счётчик для generate_work_num()',
+    )
+
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлён', auto_now=True)
 
@@ -265,6 +270,9 @@ class Work(models.Model):
     date_start = models.DateField('Начало работы', null=True, blank=True)
     date_end   = models.DateField('Конец работы',  null=True, blank=True)
     deadline   = models.DateField('Контрольный срок', null=True, blank=True)
+    # Сроки согласно ПП (неизменяемые копии дат из ПП при синхронизации)
+    pp_date_start = models.DateField('Начало (ПП)', null=True, blank=True)
+    pp_date_end   = models.DateField('Окончание (ПП)', null=True, blank=True)
 
     # ── Плановые часы по месяцам {«YYYY-MM»: hours} ───────────────────────
     plan_hours = models.JSONField(

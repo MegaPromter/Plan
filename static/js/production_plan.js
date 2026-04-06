@@ -99,7 +99,7 @@ let dirs = {};
 
 // Список полей колонок ПП-таблицы (в порядке отображения)
 const PP_COLUMNS = [
-  'row_code', 'work_order', 'stage_num', 'milestone_num', 'work_num',
+  'row_code', 'work_order', 'stage_num', 'work_num',
   'work_designation', 'work_name',
   'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
   'center', 'dept', 'sector_head', 'executor', 'task_type'
@@ -108,7 +108,7 @@ const PP_COLUMNS = [
 // Метки колонок для мобильного card-layout (data-label)
 const PP_COL_LABELS = {
   row_code:'Код строки', work_order:'Наряд-заказ', stage_num:'№ этапа',
-  milestone_num:'№ вехи', work_num:'№ работы', work_designation:'Обозначение',
+  work_num:'№ работы', work_designation:'Обозначение',
   work_name:'Наименование', date_start:'Начало', date_end:'Окончание', sheets_a4:'Ф, А4',
   norm:'Норматив', coeff:'Коэфф', labor:'Трудоёмкость',
   center:'Подразделение', dept:'Отдел', sector_head:'Сектор',
@@ -117,10 +117,10 @@ const PP_COL_LABELS = {
 
 // Маппинг колонки → индекс для data-col-idx (режимы отображения)
 const PP_COL_IDX = {
-  row_code:1, work_order:2, stage_num:3, milestone_num:4, work_num:5,
-  work_designation:6, work_name:7, date_start:8, date_end:9,
-  sheets_a4:10, norm:11, coeff:12, labor:13,
-  center:14, dept:15, sector_head:16, executor:17, task_type:18
+  row_code:1, work_order:2, stage_num:3, work_num:4,
+  work_designation:5, work_name:6, date_start:7, date_end:8,
+  sheets_a4:9, norm:10, coeff:11, labor:12,
+  center:13, dept:14, sector_head:15, executor:16, task_type:17
 };
 
 // Этапы ПП текущего проекта (загружается при openProject)
@@ -251,6 +251,7 @@ async function loadProjects() {
 
 // Загружает строки производственного плана для конкретного проекта
 async function loadPPRows(projectId) {
+  _ppPinnedRowId = null;  // новые данные — сброс пина
   const data = await fetchJson('/api/production_plan/?project_id=' + projectId);
   if (!data._error) {
     rows = Array.isArray(data) ? data : (data.results || []);
@@ -897,6 +898,15 @@ function renderPPTable() {
     });
   }
 
+  // Закреплённая строка — всегда первая (pin сверху)
+  if (_ppPinnedRowId) {
+    const pinIdx = _ppFiltered.findIndex(r => r.id === _ppPinnedRowId);
+    if (pinIdx > 0) {
+      const [pinned] = _ppFiltered.splice(pinIdx, 1);
+      _ppFiltered.unshift(pinned);
+    }
+  }
+
   // Обновляем счётчик строк
   const hasFiltersActive = Object.keys(colFilters).length > 0;
   const counter = document.getElementById('ppRowsCounter');
@@ -950,6 +960,14 @@ function _ppAppendBatch(count) {
     if (_st === 'done') tr.classList.add('row-done');
     else if (_st === 'overdue') tr.classList.add('row-overdue');
     else tr.classList.add('row-inwork');
+    // Закреплённая новая строка — пульсация 4.8с, затем fade-out
+    if (row.id === _ppPinnedRowId) {
+      tr.classList.add('row-pinned');
+      setTimeout(function() {
+        tr.classList.add('pin-fade');
+        setTimeout(function() { tr.classList.remove('row-pinned', 'pin-fade'); _ppPinnedRowId = null; }, 600);
+      }, 4800);
+    }
     // Первый столбец — порядковый номер (1-based)
     let html = `<td data-col-idx="0">${idx + 1}</td>`;
 
@@ -967,8 +985,8 @@ function _ppAppendBatch(count) {
       const isTextCol = ['work_name', 'work_designation'].includes(col);
       const isDateCol = col === 'date_start' || col === 'date_end';
 
-      if (!IS_WRITER || !rowEditable || col === 'row_code' || col === 'work_order') {
-        // Режим только для чтения: row_code и work_order — из ЕТБД (PPStage), read-only
+      if (!IS_WRITER || !rowEditable || col === 'row_code' || col === 'work_order' || col === 'work_num') {
+        // Режим только для чтения: row_code, work_order, work_num — авто-генерация, read-only
         if (col === 'sector_head' && val) {
           const sh = (dirs.sector_head || []).find(h => h.value === val);
           const headName = sh ? (sh.head_name || '') : '';
@@ -1335,7 +1353,7 @@ function openAddRowModal() {
 
   // Объект новой строки с дефолтными значениями из профиля пользователя
   const newRow = { id: '_new_', row_code: '', work_order: '', stage_num: '',
-    milestone_num: '', work_num: '', work_designation: '', work_name: '',
+    work_num: '', work_designation: '', work_name: '',
     date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '',
     center: _defaultCenter, dept: USER_DEPT || '', sector_head: _defaultSectorHead,
     executor: '', task_type: (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : 'Выпуск нового документа' };
@@ -1361,8 +1379,8 @@ function openAddRowModal() {
     const isTextCol   = ['work_name', 'work_designation'].includes(col);
     const isDateCol   = col === 'date_start' || col === 'date_end';
 
-    if (col === 'row_code' || col === 'work_order') {
-      // row_code и work_order — из ЕТБД (PPStage), read-only
+    if (col === 'row_code' || col === 'work_order' || col === 'work_num') {
+      // row_code, work_order, work_num — авто-генерация, read-only
       html += `<td data-col-idx="${ci}" data-label="${lbl}" style="font-size:11px;color:var(--muted);padding:4px 6px;">авто</td>`;
     } else if (isPPStageCol) {
       html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml('pp_stage', newRow)}</td>`;
@@ -1512,14 +1530,11 @@ function openAddRowModal() {
       } else {
         await loadPPRows(currentProjectId);
       }
+      _ppPinnedRowId = resp.id || (resp.work && resp.work.id) || null;
       renderPPTable();
       initPPPeriodBar();
       initPPDeptChips();
       showToast('Строка добавлена', 'success');
-      // Прокрутить к новой строке по id
-      const newId = resp.id;
-      const newTr = document.querySelector(`#ppTableBody tr[data-id="${newId}"]`);
-      if (newTr) newTr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
       showToast(resp.error || 'Ошибка сохранения строки', 'error');
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
@@ -1711,6 +1726,7 @@ async function syncToTasks() {
 
 /* ── Сортировка столбцов ─────────────────────────────────────────────── */
 var _ppSortState = { col: null, dir: 'asc' };
+var _ppPinnedRowId = null;  // id новой строки, закреплённой сверху
 
 function _ppInitSort() {
     var thead = document.querySelector('#ppTable thead');
@@ -2253,7 +2269,6 @@ window.addEventListener('popstate', async () => {
       { key: 'row_code',         header: 'Код строки',     width: 80,  forceText: true },
       { key: 'work_order',       header: 'Наряд-заказ',    width: 90,  forceText: true },
       { key: 'stage_num',        header: '№ этапа',        width: 60,  forceText: true },
-      { key: 'milestone_num',    header: '№ вехи',         width: 60,  forceText: true },
       { key: 'work_num',         header: '№ работы',       width: 60,  forceText: true },
       { key: 'work_designation', header: 'Обозначение',    width: 140 },
       { key: 'work_name',        header: 'Наименование',   width: 240 },

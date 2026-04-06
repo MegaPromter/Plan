@@ -469,12 +469,11 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
    Режимы отображения столбцов (compact / normal / full)
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Normal: скрываем код строки, наряд-заказ, № этапа, № вехи, № работы */
+/* Normal: скрываем код строки, наряд-заказ, № этапа, № работы */
 .pp-view-normal [data-col-idx="1"],
 .pp-view-normal [data-col-idx="2"],
 .pp-view-normal [data-col-idx="3"],
-.pp-view-normal [data-col-idx="4"],
-.pp-view-normal [data-col-idx="5"] {
+.pp-view-normal [data-col-idx="4"] {
   display: none !important;
 }
 
@@ -483,7 +482,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .pp-view-compact [data-col-idx="2"],
 .pp-view-compact [data-col-idx="3"],
 .pp-view-compact [data-col-idx="4"],
-.pp-view-compact [data-col-idx="5"],
+.pp-view-compact [data-col-idx="9"],
 .pp-view-compact [data-col-idx="10"],
 .pp-view-compact [data-col-idx="11"],
 .pp-view-compact [data-col-idx="12"],

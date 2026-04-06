@@ -378,6 +378,10 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 // ── TASKS ─────────────────────────────────────────────────────────────────
 async function loadTasks() {
+  // Сброс закреплённой строки (пин живёт один цикл загрузки)
+  if (_spPinKeep) { _spPinKeep = false; }
+  else { _spPinnedRowId = null; }
+
   const search = document.getElementById("searchInput").value.trim();
   let url;
   if (showAll) {
@@ -1361,6 +1365,8 @@ function initFilterMode() {
 
 // ── COLUMN SORT ───────────────────────────────────────────────────────────
 var _spSortState = { col: null, dir: 'asc' };
+var _spPinnedRowId = null;  // id новой строки, закреплённой сверху
+var _spPinKeep = false;     // true = пропустить сброс пина при ближайшем loadTasks
 
 function _spInitSort() {
     var thead = document.querySelector('#mainTable thead');
@@ -1488,6 +1494,15 @@ function renderTable() {
     });
   }
 
+  // Закреплённая строка — всегда первая (pin сверху)
+  if (_spPinnedRowId) {
+    const pinIdx = _spFiltered.findIndex(t => t.id === _spPinnedRowId);
+    if (pinIdx > 0) {
+      const [pinned] = _spFiltered.splice(pinIdx, 1);
+      _spFiltered.unshift(pinned);
+    }
+  }
+
   // Обновляем панель статусов (считает по задачам с учётом фильтров, но без статус-фильтра)
   spUpdateStatusPanel();
 
@@ -1612,6 +1627,14 @@ function makeRow(t, num) {
   // Флаг: задача перенесена из Производственного плана
   const isFromPP = !!t.from_pp;
   if (isFromPP) tr.classList.add('pp-locked');
+  // Закреплённая новая строка — пульсация 4.8с, затем fade-out
+  if (t.id === _spPinnedRowId) {
+    tr.classList.add('row-pinned');
+    setTimeout(function() {
+      tr.classList.add('pin-fade');
+      setTimeout(function() { tr.classList.remove('row-pinned', 'pin-fade'); _spPinnedRowId = null; }, 600);
+    }, 4800);
+  }
 
   // ── Колонка «№» с бейджем 🔒 ПП для перенесённых задач ──
   const numTd = document.createElement("td");
@@ -1663,18 +1686,18 @@ function makeRow(t, num) {
   const cols = [
     {field:"project",      type:"select", dirKey:"project", readOnly:true, label:"Проект"},
     {field:"stage",        type:"select", dirKey:"stage",   parentField:"project", parentDirKey:"project", readOnly:true, label:"№ Этапа"},
-    {field:"work_number",  type:"text",   label:"№ работы"},
+    {field:"work_number",  type:"text",   readOnly:true, label:"№ работы"},
     {field:"justification",type:"text",   label:"Обоснование"},
     {field:"description",  type:"text",   label:"Обозначение"},
     {field:"work_name",    type:"text",   label:"Наименование"},
     {field:"dept",         type:"select", dirKey:"dept", label:"Отдел"},
     {field:"sector",       type:"select", dirKey:"sector",   parentField:"dept",    parentDirKey:"dept", extraField:"sector_head", label:"Сектор"},
     {field:"executor",     type:"select", dirKey:"executor", label:"Разработчик"},
-    {field:"date_start",   type:"date",   readOnly:true, label:"Начало (ПП)"},
-    {field:"date_end",     type:"date",   readOnly:true, label:"Окончание (ПП)"},
+    {field:"date_start",   type:"date",   label:"Начало"},
+    {field:"date_end",     type:"date",   label:"Окончание"},
   ];
   // Сокращённые ключи колонок — для привязки ширин через th-элементы
-  const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","ppds","ppde"];
+  const colKeys = ["project","stage","wnum","just","desc","wname","dept","sector","exec","spds","spde"];
 
   // Маппинг индекса в cols → data-col-idx (cols[0]=project→1, cols[1]=stage→4, ...)
   const SP_COL_IDX_MAP = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -1872,7 +1895,14 @@ function makeRow(t, num) {
         tr.appendChild(td);
         return; // forEach continue
       }
-      // ── Text/date поля (work_number, justification, description, etc.) ──
+      // ── Read-only text (work_number — авто-генерация) ──
+      if (col.readOnly && col.type === "text") {
+        td.style.cssText = "padding:6px 8px;vertical-align:middle;";
+        td.textContent = t[col.field] || '';
+        tr.appendChild(td);
+        return;
+      }
+      // ── Text/date поля (justification, description, etc.) ──
       // text → textarea, date → input[type=date]
       const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
       inp.className = "cell-edit" + (col.type === "date" ? " date" : "");
@@ -1887,7 +1917,7 @@ function makeRow(t, num) {
         span.className = "date-display";
         span.dataset.field = col.field;
         span.textContent = fmtDate(t[col.field]);
-        // Для ПП-записей разрешено редактировать только date_start и date_end
+        // Для ПП-записей разрешено редактировать date_start, date_end
         const ppAllowedInline = new Set(["date_start", "date_end"]);
         if (!isFromPP || ppAllowedInline.has(col.field)) {
           // Клик по тексту даты → показать date-picker
@@ -1956,13 +1986,26 @@ function makeRow(t, num) {
     if (idx === 0) { tr.appendChild(rcTd); tr.appendChild(woTd); }
   });
 
+  // ── Колонки «Сроки согласно ПП» — read-only текст из pp_date_* ──
+  const _fmtD = v => v ? v.split('-').reverse().join('.') : '';
+  const ppDsTd = document.createElement("td");
+  ppDsTd.dataset.colIdx = "14"; ppDsTd.dataset.label = "Начало (ПП)";
+  ppDsTd.style.cssText = "padding:6px 8px;vertical-align:middle;text-align:center;";
+  ppDsTd.textContent = _fmtD(t.pp_date_start);
+  tr.appendChild(ppDsTd);
+  const ppDeTd = document.createElement("td");
+  ppDeTd.dataset.colIdx = "15"; ppDeTd.dataset.label = "Окончание (ПП)";
+  ppDeTd.style.cssText = "padding:6px 8px;vertical-align:middle;text-align:center;";
+  ppDeTd.textContent = _fmtD(t.pp_date_end);
+  tr.appendChild(ppDeTd);
+
   // ── Колонка «Действия» — кнопки в зависимости от роли ──
   // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
   // User:   📄 отчёт, 🔗 зависимости (только просмотр)
   const actTd = document.createElement("td");
   actTd.className = "actions-cell";
   actTd.dataset.label = "Действия";
-  actTd.dataset.colIdx = "14";
+  actTd.dataset.colIdx = "16";
   actTd.style.display = "table-cell";
   // Кнопка «Редактировать» — открывает полный модал редактирования задачи
   // Для ПП-записей: частичное редактирование (иконка 🔒 ✏️)
@@ -2021,11 +2064,15 @@ function fillSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
       ghost.value = selectedVal; ghost.textContent = selectedVal; ghost.selected = true;
       sel.appendChild(ghost);
     }
-  } else if (dirKey === 'stage' && parentVal && parentDirKey === 'project') {
-    // Этапы: фильтруем по project_id выбранного проекта (ЕТБД)
-    const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
-    if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
-    else items = [];
+  } else if (dirKey === 'stage' && parentDirKey === 'project') {
+    // Этапы: без выбранного проекта — пустой список
+    if (!parentVal) {
+      items = [];
+    } else {
+      const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
+      if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
+      else items = [];
+    }
     // Фантомная опция для текущего значения из другого проекта
     if (selectedVal && !items.find(i => i.value === selectedVal)) {
       const o = document.createElement("option");
@@ -2288,7 +2335,7 @@ function openInlineNewRow() {
     {id:'_rc_', type:'static', ci:2}, // Код строки — read-only placeholder
     {id:'_wo_', type:'static_text', ci:3, text:'(авто)'}, // Наряд-заказ — read-only, авто
     {id:'inr-stage',         type:'select', dirKey:'stage',   parentId:'inr-project', parentDirKey:'project', ci:4},
-    {id:'inr-work_number',   type:'text',   placeholder:'№ работы', ci:5},
+    {id:'_wn_', type:'static_text', ci:5, text:'(авто)'}, // № работы — read-only, авто
     {id:'inr-justification', type:'text',   placeholder:'Обоснование', ci:6},
     {id:'inr-description',   type:'text',   placeholder:'Обозначение', ci:7},
     {id:'inr-work_name',     type:'text',   placeholder:'Наименование', ci:8},
@@ -2407,22 +2454,35 @@ function openInlineNewRow() {
   execTd.appendChild(execSel);
   tr.appendChild(execTd);
 
-  // Дата начала
-  // Сроки согласно ПП — read-only (заполняются из ПП после создания)
+  // Сроки выполнения — date_start, date_end (редактируемые)
+  const spDsTd = document.createElement('td');
+  spDsTd.dataset.colIdx = '12';
+  const spDsInp = document.createElement('input');
+  spDsInp.type = 'date'; spDsInp.id = 'inr-date_start'; spDsInp.className = 'cell-edit date';
+  spDsTd.appendChild(spDsInp);
+  tr.appendChild(spDsTd);
+  const spDeTd = document.createElement('td');
+  spDeTd.dataset.colIdx = '13';
+  const spDeInp = document.createElement('input');
+  spDeInp.type = 'date'; spDeInp.id = 'inr-date_end'; spDeInp.className = 'cell-edit date';
+  spDeTd.appendChild(spDeInp);
+  tr.appendChild(spDeTd);
+
+  // Сроки согласно ПП — read-only (пусто при создании)
   const ppDsTd = document.createElement('td');
-  ppDsTd.dataset.colIdx = '12';
+  ppDsTd.dataset.colIdx = '14';
   ppDsTd.style.cssText = 'font-size:11px;color:var(--muted);padding:4px 6px;text-align:center;';
   ppDsTd.textContent = '—';
   tr.appendChild(ppDsTd);
   const ppDeTd = document.createElement('td');
-  ppDeTd.dataset.colIdx = '13';
+  ppDeTd.dataset.colIdx = '15';
   ppDeTd.style.cssText = 'font-size:11px;color:var(--muted);padding:4px 6px;text-align:center;';
   ppDeTd.textContent = '—';
   tr.appendChild(ppDeTd);
 
   // Кнопки ✓ / ✕
   const actTd = document.createElement('td');
-  actTd.dataset.colIdx = '14';
+  actTd.dataset.colIdx = '16';
   actTd.style.cssText = 'white-space:nowrap;padding:6px 8px;vertical-align:middle;';
   actTd.innerHTML = `
     <button id="taskNewRowSave" title="Сохранить" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;margin-right:2px;">✓</button>
@@ -2457,10 +2517,11 @@ function openInlineNewRow() {
       project:       _v('inr-project'),
       stage:         _v('inr-stage'),
       work_name:     _v('inr-work_name'),
-      work_number:   _v('inr-work_number'),
       justification: _v('inr-justification'),
       description:   _v('inr-description'),
       executor:      executor || '',
+      date_start:    _v('inr-date_start') || null,
+      date_end:      _v('inr-date_end') || null,
       plan_hours:    {},
       executors_list: executor ? [{name: executor, hours: {}}] : [],
     };
@@ -2470,6 +2531,9 @@ function openInlineNewRow() {
         method: 'POST', headers: apiHeaders(), body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      const resp = await res.json();
+      _spPinnedRowId = resp.id || null;
+      _spPinKeep = true;
       _addingTaskRow = false;
       tr.remove();
       await loadTasks();
@@ -2540,7 +2604,7 @@ function openNewTaskModal(taskType, prefill) {
   populateFormSelect(document.getElementById("nt-project"),  "project",  prefill?.project  || null, null, null);
   populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, prefill?.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
-  ["work_name","work_number","justification","date_start","date_end","deadline","actions"]
+  ["work_name","justification","date_start","date_end","deadline","actions"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = prefill?.[f] || ""; });
 
   document.getElementById("nt-plan-months-wrap").innerHTML = "";
@@ -2576,7 +2640,7 @@ function openEditTaskModal(t) {
   populateFormSelect(document.getElementById("nt-project"),  "project",  t.project  || null, null, null);
   populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, t.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
-  ["work_name","work_number","justification","date_start","date_end","deadline"]
+  ["work_name","justification","date_start","date_end","deadline"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = t[f] || ""; });
 
   document.getElementById("nt-actions-wrap").style.display = "none";
@@ -2608,7 +2672,7 @@ function openEditTaskModal(t) {
 // Блокирует ПП-поля в модале (isPP=true: запись из Производственного плана)
 function _applyPPLock(isPP) {
   document.getElementById("pp-edit-hint")?.remove();
-  const ppAllowed = new Set(["nt-date_start", "nt-date_end", "nt-plan_hours_single", "nt-executor-select"]);
+  const ppAllowed = new Set(["nt-date_start", "nt-date_end", "nt-deadline", "nt-plan_hours_single", "nt-executor-select"]);
   const formEls = document.querySelectorAll(
     "#newTaskModal .form-input, #newTaskModal .form-select, #newTaskModal .form-textarea"
   );
@@ -2758,11 +2822,15 @@ function populateFormSelect(sel, dirKey, selectedVal, parentVal, parentDirKey) {
     } else if (parentVal && parentDirKey === 'dept') {
       items = allItems.filter(e => e.dept === parentVal);
     }
-  } else if (dirKey === 'stage' && parentVal && parentDirKey === 'project') {
-    // Этапы: фильтруем по project_id выбранного проекта (ЕТБД)
-    const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
-    if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
-    else items = [];
+  } else if (dirKey === 'stage' && parentDirKey === 'project') {
+    // Этапы: без выбранного проекта — пустой список
+    if (!parentVal) {
+      items = [];
+    } else {
+      const projItem = (dirs['_ids_project']||[]).find(i => i.value === parentVal);
+      if (projItem) items = allItems.filter(i => i.project_id === projItem.id);
+      else items = [];
+    }
     if (selectedVal && !items.find(i => i.value === selectedVal)) {
       const ghost = document.createElement("option");
       ghost.value = selectedVal; ghost.textContent = selectedVal; ghost.selected = true;
@@ -2877,7 +2945,6 @@ async function submitNewTask() {
     stage:         document.getElementById("nt-stage").value || null,
     executor:      null,
     work_name:     workNameVal || null,
-    work_number:   document.getElementById("nt-work_number").value || null,
     justification: document.getElementById("nt-justification").value || null,
     description:   null,
     date_start:    ds, date_end: de,
@@ -2909,6 +2976,9 @@ async function submitNewTask() {
       try { const e = await res.json(); msg = e.error || e.detail || Object.values(e).flat().join('; ') || msg; } catch(_){}
       notify(msg, "err"); return;
     }
+    const resp = await res.json();
+    _spPinnedRowId = resp.id || null;
+    _spPinKeep = true;
     closeNewTaskModal();
     // Сбрасываем фильтры чтобы новая задача была видна (без лишнего renderTable)
     colFilters = {};
@@ -2921,11 +2991,6 @@ async function submitNewTask() {
     if (_spDeptFilter) _spDeptFilter.refresh();
     await loadTasks();
     notify("✓ Задача создана", "ok");
-    // Прокрутка к первой строке (новая задача — вверху, API сортирует по -id)
-    const wrap = document.getElementById('tableView');
-    if (wrap) wrap.scrollTop = 0;
-    const firstRow = document.querySelector('#taskBody tr');
-    if (firstRow) firstRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 

@@ -75,8 +75,9 @@ ROLE_LABELS = {
 # Только эти поля можно обновлять через PUT ?field=... в ПП
 # NB: row_code и work_order НЕ входят — read-only, читаются из PPStage (ЕТБД)
 PRODUCTION_ALLOWED_FIELDS = {
-    'stage_num', 'milestone_num',
-    'work_num', 'work_designation', 'work_name',
+    'stage_num',
+    'work_designation', 'work_name',
+    # work_num — read-only, авто-генерация при создании
     'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
     'total_2d', 'total_3d', 'labor', 'center', 'dept',
     'sector_head', 'executor', 'task_type', 'cross_stage', 'pp_stage',
@@ -140,6 +141,25 @@ def safe_int(val):
         return int(val)
     except (ValueError, TypeError):
         return None
+
+
+# ── Генерация номера работы ────────────────────────────────────────────────────
+
+def generate_work_num(project):
+    """Атомарно генерирует номер работы: {name_short}.{N}.
+
+    project — экземпляр Project (будет заблокирован select_for_update).
+    Счётчик work_num_seq только растёт, удалённые номера не переиспользуются.
+    Возвращает строку вида 'Дельта.42' или '' если у проекта нет name_short.
+    """
+    from apps.works.models import Project
+    prefix = (project.name_short or '').strip()
+    if not prefix:
+        return ''
+    proj = Project.objects.select_for_update().get(pk=project.pk)
+    proj.work_num_seq += 1
+    proj.save(update_fields=['work_num_seq'])
+    return f'{prefix}.{proj.work_num_seq}'
 
 
 # ── Поиск Employee по ФИО ──────────────────────────────────────────────────────

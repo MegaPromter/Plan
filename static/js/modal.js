@@ -15,6 +15,7 @@ function openModal(options = {}) {
         id = 'modal-' + Date.now(),
         footer = '',
         bodyElement = null,
+        bodyStyle = '',
     } = options;
 
     // Backdrop
@@ -42,6 +43,7 @@ function openModal(options = {}) {
     // Body
     const bodyDiv = document.createElement('div');
     bodyDiv.className = 'modal-body';
+    if (bodyStyle) bodyDiv.style.cssText = bodyStyle;
     if (bodyElement) {
         bodyDiv.appendChild(bodyElement);
     } else {

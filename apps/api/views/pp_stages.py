@@ -52,6 +52,8 @@ def _calc_labor_for_stages(stages):
     Запланированная = сумма Work.labor для работ ПП (show_in_pp=True) этого этапа.
     Потраченная = для работ этого этапа, у которых есть отчёт (WorkReport),
                   сумма plan_hours основного исполнителя + plan_hours TaskExecutor.
+
+    Также возвращает список работ каждого этапа для отображения в детальной панели.
     """
     stage_ids = [s.id for s in stages]
     if not stage_ids:
@@ -66,24 +68,34 @@ def _calc_labor_for_stages(stages):
             Prefetch('task_executors', queryset=TaskExecutor.objects.all(),
                      to_attr='_prefetched_executors')
         )
-        .only('id', 'pp_stage_id', 'labor', 'plan_hours')
+        .only('id', 'pp_stage_id', 'labor', 'plan_hours', 'work_name')
     )
 
-    result = {sid: {'planned': 0.0, 'spent': 0.0} for sid in stage_ids}
+    result = {sid: {'planned': 0.0, 'spent': 0.0, 'works': []} for sid in stage_ids}
 
     for w in works:
         sid = w.pp_stage_id
         # Запланированная = labor из ПП
+        labor_val = float(w.labor) if w.labor is not None else 0.0
         if w.labor is not None:
-            result[sid]['planned'] += float(w.labor)
+            result[sid]['planned'] += labor_val
 
         # Потраченная = plan_hours работ с отчётами
-        if getattr(w, '_has_reports', False):
+        has_rep = getattr(w, '_has_reports', False)
+        if has_rep:
             # Часы основного исполнителя
             result[sid]['spent'] += _sum_plan_hours(w.plan_hours)
             # Часы дополнительных исполнителей
             for te in getattr(w, '_prefetched_executors', []):
                 result[sid]['spent'] += _sum_plan_hours(te.plan_hours)
+
+        # Работа для списка
+        result[sid]['works'].append({
+            'id': w.id,
+            'name': w.work_name or '(без названия)',
+            'labor': round(labor_val, 2),
+            'has_report': has_rep,
+        })
 
     # Округляем
     for sid in result:
@@ -110,6 +122,7 @@ class PPStageListView(LoginRequiredJsonMixin, View):
                 labor = labor_map.get(s.id, {})
                 d['planned_labor'] = labor.get('planned', 0)
                 d['spent_labor'] = labor.get('spent', 0)
+                d['works'] = labor.get('works', [])
                 result.append(d)
             return JsonResponse(result, safe=False)
         except Exception as e:

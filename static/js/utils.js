@@ -850,13 +850,13 @@ function initViewModeToggle(toggleSelector, wrapSelector, savedMode, options) {
 
 // Скрытые индексы столбцов для каждого режима (по умолчанию — ПП)
 var _VM_HIDDEN = {
-    compact: [1,2,3,4,5,10,11,12,13,14],
-    normal:  [1,2,3,4,5],
+    compact: [1,2,3,4,9,10,11,12,13],
+    normal:  [1,2,3,4],
     full:    []
 };
 // СП: свои наборы скрытых столбцов
 var _VM_HIDDEN_SP = {
-    compact: [2,3,4,5,6,12,13],
+    compact: [2,3,4,5,6,14,15],
     normal:  [2,3,4],
     full:    []
 };

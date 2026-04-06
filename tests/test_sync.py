@@ -168,7 +168,6 @@ class TestPPFieldLocking:
                 'stage': '999',
                 'task_type': 'Корректировка',
                 'justification': 'Попытка изменить',
-                'deadline': '2099-12-31',
             }),
             content_type='application/json',
         )
@@ -182,8 +181,6 @@ class TestPPFieldLocking:
         assert synced_work.work_designation == original_designation
         assert synced_work.stage_num == original_stage
         assert synced_work.task_type == original_task_type
-        # deadline тоже заблокирован
-        assert synced_work.deadline is None  # был None, остался None
 
     def test_allowed_fields_editable(self, admin_user, synced_work):
         """Разрешённые поля (executor, date_start, date_end, plan_hours) меняются."""
@@ -196,6 +193,7 @@ class TestPPFieldLocking:
                 'executor': 'Новый Исполнитель',
                 'date_start': '2026-01-15',
                 'date_end': '2026-07-31',
+                'deadline': '2026-06-30',
                 'plan_hours': {'2026-01': 40, '2026-02': 80},
             }),
             content_type='application/json',
@@ -207,6 +205,7 @@ class TestPPFieldLocking:
         assert synced_work.executor is None  # 'Новый Исполнитель' не существует в Employee
         assert synced_work.date_start == date(2026, 1, 15)
         assert synced_work.date_end == date(2026, 7, 31)
+        assert synced_work.deadline == date(2026, 6, 30)
         assert synced_work.plan_hours == {'2026-01': 40, '2026-02': 80}
 
     def test_pure_sp_all_fields_editable(self, admin_user, pure_sp_work):

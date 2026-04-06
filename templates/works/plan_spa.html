@@ -129,14 +129,17 @@
   <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
   <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
   <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th colspan="2" style="text-align:center;" data-col-group="sp-dates"><div class="th-inner" style="justify-content:center;">Сроки выполнения</div></th>
   <th colspan="2" style="text-align:center;" data-col-group="pp-dates"><div class="th-inner" style="justify-content:center;">Сроки согласно ПП</div></th>
-  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="14"><div class="th-inner">Действия</div></th>
+  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="16"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
   <th id="th-desc" data-sort="description" data-col-idx="7"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
   <th id="th-wname" data-sort="work_name" data-col-idx="8"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
-  <th id="th-ppds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<div class="col-resize" data-col="ppds"></div></div></th>
-  <th id="th-ppde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<div class="col-resize" data-col="ppde"></div></div></th>
+  <th id="th-spds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<div class="col-resize" data-col="spds"></div></div></th>
+  <th id="th-spde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<div class="col-resize" data-col="spde"></div></div></th>
+  <th id="th-ppds" data-sort="date_start" data-col-idx="14"><div class="th-inner">Начало<div class="col-resize" data-col="ppds"></div></div></th>
+  <th id="th-ppde" data-sort="date_end" data-col-idx="15"><div class="th-inner">Окончание<div class="col-resize" data-col="ppde"></div></div></th>
 </tr>
 <tr class="filter-row" id="filterRow">
   <th class="th-num" data-col-idx="0"></th>
@@ -153,7 +156,9 @@
   <th data-col-idx="11"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
   <th data-col-idx="12"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
   <th data-col-idx="13"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="14"></th>
+  <th data-col-idx="14"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="15"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
+  <th data-col-idx="16"></th>
 </tr>
 </thead>
 <tbody id="taskBody"></tbody>
@@ -220,7 +225,7 @@
       </div>
       <div class="form-field">
         <label class="form-label">№ работы</label>
-        <input class="form-input" id="nt-work_number" type="text" placeholder="Номер работы">
+        <span class="form-input" style="color:var(--muted);cursor:default;">(авто)</span>
       </div>
       <div class="form-field">
         <label class="form-label">Срок выполнения</label>
@@ -570,7 +575,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=18"></script>
+<script src="{% static 'js/plan.js' %}?v=23"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

@@ -24,6 +24,7 @@ from apps.api.mixins import (
 )
 from apps.api.utils import (
     PRODUCTION_ALLOWED_FIELDS,
+    generate_work_num,
     resolve_employee,
     safe_date,
     safe_decimal,
@@ -265,6 +266,15 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
                 return JsonResponse(
                     {'error': 'Дата начала не может быть позже даты окончания'},
                     status=400)
+
+            # Автогенерация номера работы (если проект УП привязан)
+            if not work.work_num:
+                up_project = (work.pp_project.up_project
+                              if work.pp_project else None)
+                if up_project:
+                    work.work_num = generate_work_num(up_project)
+                    changed = True
+
             if changed:
                 work.save()
 
@@ -420,11 +430,13 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             if not skip_date_check and parsed and work.date_end and parsed > work.date_end:
                 raise ValueError('Дата начала не может быть позже даты окончания')
             work.date_start = parsed
+            work.pp_date_start = parsed
         elif field == 'date_end':
             parsed = _safe_date(value)
             if not skip_date_check and parsed and work.date_start and parsed < work.date_start:
                 raise ValueError('Дата окончания не может быть раньше даты начала')
             work.date_end = parsed
+            work.pp_date_end = parsed
         elif field == 'executor':
             # Строгий поиск по ФИО — назначаем только при точном совпадении
             if value:
@@ -551,8 +563,13 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
         if ids and isinstance(ids, list):
             qs = qs.filter(pk__in=ids)
 
-        # Включаем show_in_plan одним запросом
-        synced = qs.update(show_in_plan=True)
+        # Включаем show_in_plan + копируем даты ПП
+        from django.db.models import F
+        synced = qs.update(
+            show_in_plan=True,
+            pp_date_start=F('date_start'),
+            pp_date_end=F('date_end'),
+        )
 
         log_action(request, AuditLog.ACTION_PP_SYNC,
                    details={'synced': synced})
