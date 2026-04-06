@@ -198,7 +198,7 @@ class FeedbackSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 
 class EnterpriseSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Управление предприятием»."""
-    template_name = 'enterprise/enterprise_spa.html'
+    template_name = 'enterprise/enterprise_stub.html'
 
     def get_context_data(self, **kwargs):
         import json as _json
