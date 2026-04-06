@@ -136,8 +136,8 @@ class Command(BaseCommand):
                     pp_date_end=d_end,
                     labor=hours,
                     executor=emp,
-                    dept=emp.department.code if emp.department else '',
-                    sector_head=emp.sector.code if emp.sector else '',
+                    department=emp.department,
+                    sector=emp.sector,
                 )
                 works_to_create.append(work)
 
