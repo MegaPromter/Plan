@@ -685,7 +685,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         role = emp.role
 
         available_years = sorted(
-            WorkCalendar.objects.values_list("year", flat=True).distinct()
+            set(WorkCalendar.objects.values_list("year", flat=True))
         )
         if not available_years:
             available_years = [today.year]
