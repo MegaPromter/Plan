@@ -1,13 +1,29 @@
 """
 API Dashboard — личный план сотрудника / сводка для руководителя.
 
-GET /api/dashboard/?year=2026&month=3
+Оптимизировано: KPI через SQL-агрегации, задачи грузятся лениво.
+
+GET /api/dashboard/?year=2026&month=3          — лёгкий: KPI + team structure
+GET /api/dashboard/scope/?year=2026&month=3&type=tasks  — задачи/долги/done_late
+GET /api/dashboard/employee/<id>/?year=2026&month=3     — задачи сотрудника
 """
+
 import calendar as cal_mod
 from collections import defaultdict
 from datetime import date
 
-from django.db.models import Exists, OuterRef, Prefetch, Q, Subquery
+from django.db.models import (
+    BooleanField,
+    Case,
+    Count,
+    Exists,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    Value,
+    When,
+)
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
@@ -17,52 +33,23 @@ from apps.api.utils import get_visibility_filter
 from apps.employees.models import Employee
 from apps.works.models import TaskExecutor, Work, WorkCalendar, WorkReport
 
-from .analytics_plan import _float, _get_absences, _get_calendar_norms
-
+from .analytics_plan import _get_absences, _get_calendar_norms
 
 # ---------------------------------------------------------------------------
-#  Общий базовый queryset для dashboard (переиспользуется в обоих endpoint'ах)
+#  Утилиты
 # ---------------------------------------------------------------------------
 
-_WORK_FIELDS = (
-    'id', 'work_name', 'work_num', 'work_designation',
-    'date_start', 'date_end', 'plan_hours',
-    'executor_id', 'department_id', 'sector_id',
-    'project_id', 'pp_project_id',
-)
-_RELATED_ONLY = (
-    'department__id', 'department__code', 'department__name',
-    'sector__id', 'sector__code', 'sector__name',
-    'executor__id', 'executor__last_name',
-    'executor__first_name', 'executor__patronymic',
-    'project__id', 'project__name_short', 'project__name_full',
-    'pp_project__id', 'pp_project__name',
-    'pp_project__up_project_id',
-    'pp_project__up_project__id',
-    'pp_project__up_project__name_short',
-    'pp_project__up_project__name_full',
-)
+
+def _int_param(request, name, default):
+    try:
+        return int(request.GET.get(name, default))
+    except (ValueError, TypeError):
+        return default
 
 
-def _dashboard_base_qs(user, year):
-    """Базовый queryset задач за год с аннотациями для dashboard."""
-    vis_q = get_visibility_filter(user)
-    has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
-    first_report_date = Subquery(
-        WorkReport.objects.filter(work=OuterRef('pk'))
-        .order_by('created_at')
-        .values('created_at')[:1]
-    )
-
-    base = (
-        Work.objects.filter(vis_q, show_in_plan=True)
-        .annotate(_done=has_reports, _report_date=first_report_date)
-        .select_related('department', 'sector', 'executor',
-                        'project', 'pp_project', 'pp_project__up_project')
-        .only(*_WORK_FIELDS, *_RELATED_ONLY)
-    )
-
-    year_q = (
+def _year_filter(year):
+    """Q-фильтр: задачи, попадающие в год."""
+    return (
         Q(date_start__year__lte=year, date_end__year__gte=year)
         | Q(date_start__year=year)
         | Q(date_end__year=year)
@@ -70,110 +57,633 @@ def _dashboard_base_qs(user, year):
         | Q(date_start__isnull=True, date_end__year=year)
         | Q(date_start__year=year, date_end__isnull=True)
     )
-    base = base.filter(year_q)
 
-    te_qs = TaskExecutor.objects.select_related('executor')
-    base = base.prefetch_related(
-        Prefetch('task_executors', queryset=te_qs, to_attr='_prefetched_executors')
+
+def _month_overlap(year, month):
+    """Q-фильтр: задачи, пересекающиеся с заданным месяцем."""
+    m_start = date(year, month, 1)
+    m_end = date(year, month, cal_mod.monthrange(year, month)[1])
+    return Q(date_end__gte=m_start, date_start__lte=m_end)
+
+
+def _team_ids_for_role(emp):
+    """Возвращает queryset ID сотрудников, видимых руководителю."""
+    if emp.role in ("admin", "ntc_head", "ntc_deputy"):
+        return Employee.objects.filter(is_active=True).values_list("pk", flat=True)
+    elif emp.role in ("dept_head", "dept_deputy"):
+        return Employee.objects.filter(
+            is_active=True, department=emp.department
+        ).values_list("pk", flat=True)
+    elif emp.role == "sector_head":
+        return Employee.objects.filter(is_active=True, sector=emp.sector).values_list(
+            "pk", flat=True
+        )
+    return Employee.objects.none().values_list("pk", flat=True)
+
+
+def _base_plan_qs(user, year):
+    """Лёгкий базовый queryset (без select_related/prefetch)."""
+    vis_q = get_visibility_filter(user)
+    return Work.objects.filter(vis_q, show_in_plan=True).filter(_year_filter(year))
+
+
+def _annotated_qs(qs):
+    """Добавляет аннотации _done и _report_date."""
+    has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+    first_report_date = Subquery(
+        WorkReport.objects.filter(work=OuterRef("pk"))
+        .order_by("created_at")
+        .values("created_at")[:1]
+    )
+    return qs.annotate(_done=has_reports, _report_date=first_report_date)
+
+
+def _full_qs(user, year):
+    """Полный queryset с select_related для сериализации задач."""
+    qs = _annotated_qs(_base_plan_qs(user, year))
+    te_qs = TaskExecutor.objects.select_related("executor")
+    return qs.select_related(
+        "department",
+        "sector",
+        "executor",
+        "project",
+        "pp_project",
+        "pp_project__up_project",
+    ).prefetch_related(
+        Prefetch("task_executors", queryset=te_qs, to_attr="_prefetched_executors")
     )
 
-    return base
+
+def _executor_in_team(w, team_ids_set):
+    """Проверяет, есть ли хоть один исполнитель задачи в team_ids_set."""
+    if w.executor_id and w.executor_id in team_ids_set:
+        return True
+    for te in getattr(w, "_prefetched_executors", []):
+        if te.executor_id in team_ids_set:
+            return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+#  SQL-агрегации для KPI (без загрузки объектов в память)
+# ---------------------------------------------------------------------------
+
+
+def _compute_kpi_sql(user, year, month, team_ids_set, month_norm):
+    """Считает KPI через SQL COUNT/агрегации. Возвращает dict."""
+    today = timezone.now().date()
+    m_start = date(year, month, 1)
+    m_end = date(year, month, cal_mod.monthrange(year, month)[1])
+
+    base = _base_plan_qs(user, year)
+
+    # Фильтр: задачи, где исполнитель в команде
+    team_q = Q(executor_id__in=team_ids_set) | Q(
+        task_executors__executor_id__in=team_ids_set
+    )
+
+    team_base = base.filter(team_q).distinct()
+
+    # Аннотируем статусы
+    has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+    first_report = Subquery(
+        WorkReport.objects.filter(work=OuterRef("pk"))
+        .order_by("created_at")
+        .values("created_at")[:1]
+    )
+
+    annotated = team_base.annotate(
+        _done=has_reports,
+        _report_date=first_report,
+        _is_overdue=Case(
+            When(
+                _done=False,
+                date_end__lt=today,
+                date_end__isnull=False,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        _in_month=Case(
+            When(
+                date_end__gte=m_start,
+                date_start__lte=m_end,
+                then=Value(True),
+            ),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+    )
+
+    # Один SQL-запрос для всех counts
+    counts = annotated.aggregate(
+        done_in_month=Count("pk", filter=Q(_done=True, _in_month=True)),
+        inwork_in_month=Count(
+            "pk", filter=Q(_done=False, _is_overdue=False, _in_month=True)
+        ),
+        total_debts=Count("pk", filter=Q(_is_overdue=True)),
+        total_done=Count("pk", filter=Q(_done=True)),
+    )
+
+    # done_on_time: сравнение _report_date с date_end —
+    # сложно через Django ORM 3.2, считаем через отдельный запрос
+    done_with_dates = annotated.filter(_done=True, date_end__isnull=False).values_list(
+        "date_end", "_report_date"
+    )
+
+    total_done_count = 0
+    done_on_time_count = 0
+    done_late_count = 0
+    overdue_days_sum = 0
+    overdue_days_cnt = 0
+
+    for d_end, r_date in done_with_dates:
+        total_done_count += 1
+        if r_date:
+            rd = r_date.date() if hasattr(r_date, "date") else r_date
+            if rd <= d_end:
+                done_on_time_count += 1
+            else:
+                done_late_count += 1
+        else:
+            done_on_time_count += 1
+
+    # avg_overdue — среднее количество дней просрочки для долгов
+    overdue_dates = annotated.filter(_is_overdue=True).values_list(
+        "date_end", flat=True
+    )
+    for d_end in overdue_dates:
+        if d_end:
+            overdue_days_sum += (today - d_end).days
+            overdue_days_cnt += 1
+
+    on_time_pct = (
+        round(done_on_time_count / total_done_count * 100, 1)
+        if total_done_count > 0
+        else -1
+    )
+    avg_overdue = (
+        round(overdue_days_sum / overdue_days_cnt, 1) if overdue_days_cnt > 0 else 0
+    )
+
+    return {
+        "done_count": counts["done_in_month"] or 0,
+        "inwork_count": counts["inwork_in_month"] or 0,
+        "total_debts": counts["total_debts"] or 0,
+        "overdue_count": 0,
+        "done_late_count": done_late_count,
+        "on_time_pct": on_time_pct,
+        "avg_overdue_days": avg_overdue,
+        "total_done": total_done_count,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Подсчёт plan_hours через values_list (лёгкий — только JSON-поле)
+# ---------------------------------------------------------------------------
+
+
+def _compute_hours(user, year, month, team_ids_set, month_norm):
+    """Считает плановые часы через values_list (без загрузки полных объектов).
+
+    Возвращает (scope_planned, scope_load, emp_hours, emp_monthly).
+    emp_hours = {eid: hours_this_month}
+    emp_monthly = {eid: {month_int: hours}}
+    """
+    month_key = f"{year}-{month:02d}"
+    base = _base_plan_qs(user, year)
+
+    # Часы основных исполнителей
+    emp_hours = defaultdict(float)
+    emp_monthly = defaultdict(lambda: defaultdict(float))
+
+    # 1) Work.plan_hours + executor_id — основной исполнитель
+    main_data = base.filter(executor_id__in=team_ids_set).values_list(
+        "executor_id", "plan_hours"
+    )
+    for eid, ph in main_data:
+        if not ph:
+            continue
+        for k, v in ph.items():
+            try:
+                y_str, m_str = k.split("-")
+                if int(y_str) == year:
+                    hrs = float(v) if v else 0
+                    emp_monthly[eid][int(m_str)] += hrs
+                    if k == month_key:
+                        emp_hours[eid] += hrs
+            except (ValueError, TypeError):
+                pass
+
+    # 2) TaskExecutor.plan_hours — дополнительные исполнители
+    te_data = TaskExecutor.objects.filter(
+        work__in=base,
+        executor_id__in=team_ids_set,
+    ).values_list("executor_id", "plan_hours")
+    for eid, ph in te_data:
+        if not ph:
+            continue
+        for k, v in ph.items():
+            try:
+                y_str, m_str = k.split("-")
+                if int(y_str) == year:
+                    hrs = float(v) if v else 0
+                    emp_monthly[eid][int(m_str)] += hrs
+                    if k == month_key:
+                        emp_hours[eid] += hrs
+            except (ValueError, TypeError):
+                pass
+
+    scope_planned = round(sum(emp_hours.values()), 1)
+    team_count = len(team_ids_set)
+    scope_norm = round(month_norm * team_count, 1) if month_norm else 0
+    scope_load = round(scope_planned / scope_norm * 100, 1) if scope_norm > 0 else 0
+
+    return scope_planned, scope_load, scope_norm, emp_hours, emp_monthly
+
+
+# ---------------------------------------------------------------------------
+#  Team structure (employee metrics через SQL annotate)
+# ---------------------------------------------------------------------------
+
+
+def _build_team_structure(emp, team_ids_set, emp_hours, month_norm):
+    """Строит иерархию отдел → сектор → сотрудники (только метрики, без задач)."""
+    _emp_only = (
+        "id",
+        "last_name",
+        "first_name",
+        "patronymic",
+        "department_id",
+        "sector_id",
+        "department__id",
+        "department__code",
+        "department__name",
+        "sector__id",
+        "sector__code",
+        "sector__name",
+    )
+
+    if emp.role in ("admin", "ntc_head", "ntc_deputy"):
+        qs = Employee.objects.filter(is_active=True)
+    elif emp.role in ("dept_head", "dept_deputy"):
+        qs = Employee.objects.filter(is_active=True, department=emp.department)
+    elif emp.role == "sector_head":
+        qs = Employee.objects.filter(is_active=True, sector=emp.sector)
+    else:
+        return None
+
+    team_employees = list(
+        qs.select_related("department", "sector").only(*_emp_only).exclude(pk=emp.pk)
+    )
+
+    if not team_employees:
+        return None
+
+    # Считаем overdue_count/done_count/inwork_count для каждого сотрудника
+    # через emp_debts_count (из KPI SQL) — но нам нужны per-employee counts.
+    # Вместо загрузки всех задач, возьмём counts через SQL.
+    today = timezone.now().date()
+
+    # Per-employee overdue counts через SQL
+    emp_overdue_counts = dict(
+        Work.objects.filter(
+            show_in_plan=True,
+            date_end__lt=today,
+            date_end__isnull=False,
+        )
+        .exclude(pk__in=WorkReport.objects.values("work_id"))
+        .filter(Q(executor_id__in=team_ids_set))
+        .values("executor_id")
+        .annotate(cnt=Count("pk"))
+        .values_list("executor_id", "cnt")
+    )
+
+    # Также для TaskExecutor
+    te_overdue = dict(
+        TaskExecutor.objects.filter(
+            executor_id__in=team_ids_set,
+            work__show_in_plan=True,
+            work__date_end__lt=today,
+            work__date_end__isnull=False,
+        )
+        .exclude(work__pk__in=WorkReport.objects.values("work_id"))
+        .values("executor_id")
+        .annotate(cnt=Count("work_id", distinct=True))
+        .values_list("executor_id", "cnt")
+    )
+
+    dept_sectors = defaultdict(lambda: defaultdict(list))
+    total_load_sum = 0
+    total_overdue = 0
+    total_count = 0
+
+    for e in team_employees:
+        planned = round(emp_hours.get(e.pk, 0), 1)
+        load = round(planned / month_norm * 100, 1) if month_norm > 0 else 0
+        ov = emp_overdue_counts.get(e.pk, 0) + te_overdue.get(e.pk, 0)
+
+        emp_item = {
+            "id": e.pk,
+            "name": e.short_name,
+            "planned": planned,
+            "load_pct": load,
+            "done_count": 0,  # Считается на клиенте при раскрытии
+            "overdue_count": ov,
+            "inwork_count": 0,  # Считается на клиенте при раскрытии
+        }
+        total_load_sum += load
+        total_overdue += ov
+        total_count += 1
+
+        dept_code = e.department.code if e.department else "—"
+        dept_name = e.department.name if e.department else ""
+        sector_key = (e.sector.name or e.sector.code) if e.sector else ""
+        dept_sectors[(dept_code, dept_name)][sector_key].append(emp_item)
+
+    DEPT_ORDER = [
+        "021",
+        "022",
+        "024",
+        "027",
+        "028",
+        "029",
+        "301",
+        "082",
+        "084",
+        "086",
+    ]
+
+    def _dept_sort_key(item):
+        code = item[0][0]
+        try:
+            return DEPT_ORDER.index(code)
+        except ValueError:
+            return len(DEPT_ORDER)
+
+    departments = []
+    for (dept_code, dept_name), sectors_dict in sorted(
+        dept_sectors.items(), key=_dept_sort_key
+    ):
+        dept_load_sum = 0
+        dept_overdue = 0
+        dept_count = 0
+
+        sector_list = []
+        for sector_name, emps in sorted(sectors_dict.items(), key=lambda x: x[0]):
+            emps.sort(key=lambda x: (-x["overdue_count"], -x["load_pct"]))
+            s_load_sum = sum(e["load_pct"] for e in emps)
+            s_overdue = sum(e["overdue_count"] for e in emps)
+            s_count = len(emps)
+
+            sector_list.append(
+                {
+                    "name": sector_name or "(без сектора)",
+                    "count": s_count,
+                    "planned": round(sum(e["planned"] for e in emps), 1),
+                    "avg_load_pct": round(s_load_sum / s_count, 1) if s_count else 0,
+                    "overdue_count": s_overdue,
+                    "employees": emps,
+                }
+            )
+            dept_load_sum += s_load_sum
+            dept_overdue += s_overdue
+            dept_count += s_count
+
+        departments.append(
+            {
+                "code": dept_code,
+                "name": dept_name,
+                "count": dept_count,
+                "planned": round(sum(s["planned"] for s in sector_list), 1),
+                "avg_load_pct": (
+                    round(dept_load_sum / dept_count, 1) if dept_count else 0
+                ),
+                "overdue_count": dept_overdue,
+                "sectors": sector_list,
+            }
+        )
+
+    avg_load = round(total_load_sum / total_count, 1) if total_count else 0
+
+    return {
+        "total_employees": total_count,
+        "avg_load_pct": avg_load,
+        "total_overdue": total_overdue,
+        "departments": departments,
+    }
+
+
+# ---------------------------------------------------------------------------
+#  Сериализация задачи
+# ---------------------------------------------------------------------------
+
+
+def _serialize_task(w, ph, status, today, year):
+    executor_name = ""
+    if w.executor:
+        executor_name = w.executor.short_name
+    project_name = (
+        w.project.name
+        if w.project
+        else (
+            w.pp_project.up_project.name
+            if w.pp_project and w.pp_project.up_project
+            else (w.pp_project.name if w.pp_project else "")
+        )
+    )
+    item = {
+        "id": w.id,
+        "work_name": w.work_name or w.work_num or "",
+        "work_designation": w.work_designation or "",
+        "project_name": project_name,
+        "project_sort": project_name.lower() if project_name else "",
+        "executor_name": executor_name,
+        "date_start": w.date_start.isoformat() if w.date_start else "",
+        "date_end": w.date_end.isoformat() if w.date_end else "",
+        "status": status,
+    }
+    if status == "overdue" and w.date_end:
+        item["days_overdue"] = (today - w.date_end).days
+    elif status == "inwork" and w.date_end:
+        item["days_left"] = (w.date_end - today).days
+    if status == "done":
+        rd = getattr(w, "_report_date", None)
+        if rd and w.date_end:
+            rd_date = rd.date() if hasattr(rd, "date") else rd
+            if rd_date > w.date_end:
+                item["days_late"] = (rd_date - w.date_end).days
+    return item
 
 
 # ---------------------------------------------------------------------------
 #  GET /api/dashboard/employee/<id>/?year=2026&month=3
 # ---------------------------------------------------------------------------
 
+
 class DashboardEmployeeView(LoginRequiredJsonMixin, View):
     """Задачи и долги конкретного сотрудника (ленивая загрузка по клику)."""
 
     def get(self, request, pk):
         today = timezone.now().date()
-        year = self._int_param(request, 'year', today.year)
-        month = self._int_param(request, 'month', today.month)
+        year = _int_param(request, "year", today.year)
+        month = _int_param(request, "month", today.month)
 
-        emp = getattr(request.user, 'employee', None)
+        emp = getattr(request.user, "employee", None)
         if not emp or not emp.is_writer:
-            return JsonResponse({'error': 'Нет доступа'}, status=403)
+            return JsonResponse({"error": "Нет доступа"}, status=403)
 
-        norms = _get_calendar_norms([year])
-        month_norm = norms.get(year, {}).get(month, 0)
-
-        base = _dashboard_base_qs(request.user, year)
-        all_works = list(base)
-
-        month_key = f'{year}-{month:02d}'
+        # Загружаем только задачи ЭТОГО сотрудника (не все 9000)
+        month_key = f"{year}-{month:02d}"
         m_start = date(year, month, 1)
         m_end = date(year, month, cal_mod.monthrange(year, month)[1])
+
+        emp_q = Q(executor_id=pk) | Q(task_executors__executor_id=pk)
+        qs = _full_qs(request.user, year).filter(emp_q).distinct()
 
         tasks = []
         debts = []
 
-        for w in all_works:
-            # Проверяем, является ли pk исполнителем этой задачи
-            is_executor = w.executor_id == pk
-            if not is_executor:
-                is_executor = any(
-                    te.executor_id == pk
-                    for te in getattr(w, '_prefetched_executors', [])
-                )
-            if not is_executor:
-                continue
-
+        for w in qs:
             # plan_hours для этого сотрудника
             ph = {}
             if w.executor_id == pk:
                 ph = w.plan_hours or {}
             else:
-                for te in getattr(w, '_prefetched_executors', []):
+                for te in getattr(w, "_prefetched_executors", []):
                     if te.executor_id == pk:
                         ph = te.plan_hours or {}
                         break
 
-            is_done = getattr(w, '_done', False)
+            is_done = getattr(w, "_done", False)
             is_overdue = not is_done and w.date_end and w.date_end < today
-            status = 'done' if is_done else ('overdue' if is_overdue else 'inwork')
+            status = "done" if is_done else ("overdue" if is_overdue else "inwork")
 
             hrs = float(ph.get(month_key, 0) or 0)
             in_month = hrs > 0
             if not in_month and w.date_start and w.date_end:
                 in_month = w.date_end >= m_start and w.date_start <= m_end
 
-            task_item = DashboardAPIView._serialize_task_static(
-                w, ph, status, today, year)
+            task_item = _serialize_task(w, ph, status, today, year)
 
-            if status == 'overdue':
+            if status == "overdue":
                 debts.append(task_item)
             elif in_month:
                 tasks.append(task_item)
 
-        return JsonResponse({'tasks': tasks, 'debts': debts})
-
-    @staticmethod
-    def _int_param(request, name, default):
-        try:
-            return int(request.GET.get(name, default))
-        except (ValueError, TypeError):
-            return default
+        return JsonResponse({"tasks": tasks, "debts": debts})
 
 
-class DashboardAPIView(LoginRequiredJsonMixin, View):
-    """GET /api/dashboard/?year=2026&month=3"""
+# ---------------------------------------------------------------------------
+#  GET /api/dashboard/scope/?year=2026&month=3&type=tasks|debts|done_late
+# ---------------------------------------------------------------------------
+
+
+class DashboardScopeView(LoginRequiredJsonMixin, View):
+    """Ленивая загрузка scope_tasks / scope_debts / scope_done_late."""
 
     def get(self, request):
         today = timezone.now().date()
-        year = self._int_param(request, 'year', today.year)
-        month = self._int_param(request, 'month', today.month)
+        year = _int_param(request, "year", today.year)
+        month = _int_param(request, "month", today.month)
+        scope_type = request.GET.get("type", "tasks")
+        limit = _int_param(request, "limit", 200)
+        offset = _int_param(request, "offset", 0)
 
-        emp = getattr(request.user, 'employee', None)
+        emp = getattr(request.user, "employee", None)
+        if not emp or not emp.is_writer:
+            return JsonResponse({"error": "Нет доступа"}, status=403)
+
+        team_ids_set = set(_team_ids_for_role(emp))
+        if not team_ids_set:
+            return JsonResponse({"items": [], "total": 0})
+
+        team_q = Q(executor_id__in=team_ids_set) | Q(
+            task_executors__executor_id__in=team_ids_set
+        )
+        qs = _full_qs(request.user, year).filter(team_q).distinct()
+
+        if scope_type == "debts":
+            # Просроченные невыполненные
+            qs = qs.exclude(pk__in=WorkReport.objects.values("work_id")).filter(
+                date_end__lt=today, date_end__isnull=False
+            )
+            qs = qs.order_by("date_end")
+        elif scope_type == "done_late":
+            # Выполненные с просрочкой — нужно post-filter
+            qs = (
+                _annotated_qs(
+                    _base_plan_qs(request.user, year).filter(team_q).distinct()
+                )
+                .filter(_done=True, date_end__isnull=False)
+                .select_related(
+                    "department",
+                    "sector",
+                    "executor",
+                    "project",
+                    "pp_project",
+                    "pp_project__up_project",
+                )
+            )
+            te_qs = TaskExecutor.objects.select_related("executor")
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "task_executors", queryset=te_qs, to_attr="_prefetched_executors"
+                )
+            )
+            # Фильтруем в Python (report_date > date_end)
+            items = []
+            for w in qs:
+                rd = getattr(w, "_report_date", None)
+                if rd:
+                    rd_date = rd.date() if hasattr(rd, "date") else rd
+                    if rd_date > w.date_end:
+                        ph = w.plan_hours or {}
+                        items.append(_serialize_task(w, ph, "done", today, year))
+            total = len(items)
+            items = items[offset : offset + limit]
+            return JsonResponse({"items": items, "total": total})
+        else:
+            # tasks — задачи текущего месяца (не просроченные, не done_late)
+            qs = qs.filter(_month_overlap(year, month))
+            qs = qs.order_by("date_end")
+
+        total = qs.count()
+        page = list(qs[offset : offset + limit])
+
+        items = []
+        for w in page:
+            is_done = getattr(w, "_done", False)
+            is_overdue = not is_done and w.date_end and w.date_end < today
+            status = "done" if is_done else ("overdue" if is_overdue else "inwork")
+            ph = w.plan_hours or {}
+            items.append(_serialize_task(w, ph, status, today, year))
+
+        return JsonResponse({"items": items, "total": total})
+
+
+# ---------------------------------------------------------------------------
+#  GET /api/dashboard/?year=2026&month=3  — ЛЁГКИЙ endpoint
+# ---------------------------------------------------------------------------
+
+
+class DashboardAPIView(LoginRequiredJsonMixin, View):
+    """Лёгкий dashboard: KPI через SQL, team structure, без массивов задач."""
+
+    def get(self, request):
+        today = timezone.now().date()
+        year = _int_param(request, "year", today.year)
+        month = _int_param(request, "month", today.month)
+
+        emp = getattr(request.user, "employee", None)
         if not emp:
-            return JsonResponse({'error': 'Сотрудник не найден'}, status=404)
+            return JsonResponse({"error": "Сотрудник не найден"}, status=404)
 
         role = emp.role
 
-        # Доступные годы (из WorkCalendar) — distinct на уровне БД
         available_years = sorted(
-            WorkCalendar.objects.values_list('year', flat=True).distinct()
+            WorkCalendar.objects.values_list("year", flat=True).distinct()
         )
         if not available_years:
             available_years = [today.year]
@@ -181,527 +691,222 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         norms = _get_calendar_norms([year])
         month_norm = norms.get(year, {}).get(month, 0)
 
-        base = _dashboard_base_qs(request.user, year)
-        all_works = list(base)
-
-        # ── Отсутствия ──
         absences = _get_absences(emp.pk, [year])
 
         result = {
-            'year': year,
-            'month': month,
-            'available_years': available_years,
-            'employee': {
-                'id': emp.pk,
-                'name': emp.short_name,
-                'dept': emp.department.code if emp.department else '',
-                'sector': (emp.sector.name or emp.sector.code) if emp.sector else '',
+            "year": year,
+            "month": month,
+            "available_years": available_years,
+            "employee": {
+                "id": emp.pk,
+                "name": emp.short_name,
+                "dept": emp.department.code if emp.department else "",
+                "sector": (emp.sector.name or emp.sector.code) if emp.sector else "",
             },
-            'role': role,
-            'absences': absences,
-            'team': None,
+            "role": role,
+            "absences": absences,
+            "team": None,
+            # Задачи/долги больше НЕ в основном ответе — грузятся лениво
+            "tasks": [],
+            "debts": [],
+            "done_late": [],
         }
 
         if emp.is_writer:
-            # Руководитель: KPI/задачи/долги = по scope (отдел/сектор/НТЦ)
-            team_data = self._build_team(emp, all_works, year, month, norms, today)
-            result['team'] = team_data
-            result['kpi'] = team_data['scope_kpi']
-            result['tasks'] = team_data['scope_tasks']
-            result['debts'] = team_data['scope_debts']
-            result['done_late'] = team_data['scope_done_late']
-            result['months'] = team_data['scope_months']
+            team_ids_set = set(_team_ids_for_role(emp))
+
+            # KPI через SQL (не загружает объекты)
+            kpi = _compute_kpi_sql(request.user, year, month, team_ids_set, month_norm)
+
+            # Часы через values_list (лёгкий запрос)
+            scope_planned, scope_load, scope_norm, emp_hours, emp_monthly = (
+                _compute_hours(request.user, year, month, team_ids_set, month_norm)
+            )
+            kpi["load_pct"] = scope_load
+            kpi["planned_hours"] = scope_planned
+            kpi["norm_hours"] = scope_norm
+
+            result["kpi"] = kpi
+
+            # Months overview
+            result["months"] = self._build_months_overview(
+                team_ids_set, emp_monthly, year, norms
+            )
+
+            # Team structure (без задач)
+            result["team"] = _build_team_structure(
+                emp, team_ids_set, emp_hours, month_norm
+            )
         else:
-            # Обычный сотрудник: личные данные
-            personal = self._build_personal(emp.pk, all_works, year, month, month_norm, today)
-            result['kpi'] = personal['kpi']
-            result['tasks'] = personal['tasks']
-            result['debts'] = personal['debts']
-            result['done_late'] = personal['done_late']
-            result['months'] = self._build_months_overview(emp.pk, all_works, year, norms)
+            # Обычный сотрудник — личные KPI
+            personal = self._build_personal_kpi(
+                emp.pk, request.user, year, month, month_norm, today
+            )
+            result["kpi"] = personal["kpi"]
+            result["months"] = personal["months"]
 
         response = JsonResponse(result)
-        response['Cache-Control'] = 'private, max-age=10'
+        response["Cache-Control"] = "private, max-age=10"
         return response
 
-    # ── Личный план ──────────────────────────────────────────────────────
+    def _build_personal_kpi(self, emp_id, user, year, month, month_norm, today):
+        """Личный KPI для обычного сотрудника через лёгкие запросы."""
+        month_key = f"{year}-{month:02d}"
 
-    def _build_personal(self, emp_id, works, year, month, month_norm, today):
-        """Считает KPI, задачи, долги, done_late для сотрудника."""
-        month_key = f'{year}-{month:02d}'
+        # Часы — только для этого сотрудника
+        emp_hours = defaultdict(float)
+        emp_monthly = defaultdict(lambda: defaultdict(float))
 
-        my_works = [
-            w for w in works
-            if w.executor_id == emp_id
-            or any(te.executor_id == emp_id for te in getattr(w, '_prefetched_executors', []))
-        ]
+        base = _base_plan_qs(user, year)
 
-        tasks = []       # задачи текущего месяца
-        debts = []       # просроченные невыполненные (все)
-        done_late = []   # выполненные с просрочкой
-        month_planned = 0.0
-        done_count = 0
-        inwork_count = 0
-        done_late_count = 0
-        total_done = 0
-        done_on_time = 0
-        overdue_days_sum = 0
-        overdue_days_count = 0
-
-        for w in my_works:
-            # Получаем plan_hours для этого сотрудника
-            ph = {}
-            if w.executor_id == emp_id:
-                ph = w.plan_hours or {}
-            else:
-                for te in getattr(w, '_prefetched_executors', []):
-                    if te.executor_id == emp_id:
-                        ph = te.plan_hours or {}
-                        break
-
-            is_done = getattr(w, '_done', False)
-            is_overdue = not is_done and w.date_end and w.date_end < today
-            status = 'done' if is_done else ('overdue' if is_overdue else 'inwork')
-
-            # Определяем, относится ли задача к выбранному месяцу
-            hrs_this_month = _float(ph.get(month_key, 0))
-            in_month = hrs_this_month > 0
-            if not in_month and w.date_start and w.date_end:
-                m_start = date(year, month, 1)
-                m_end = date(year, month, cal_mod.monthrange(year, month)[1])
-                in_month = w.date_end >= m_start and w.date_start <= m_end
-
-            task_item = self._serialize_task(w, ph, status, today, year)
-
-            # Долги — все просроченные невыполненные (приоритет над месяцем)
-            if status == 'overdue':
-                debts.append(task_item)
-                if w.date_end:
-                    overdue_days_sum += (today - w.date_end).days
-                    overdue_days_count += 1
-            elif in_month:
-                month_planned += hrs_this_month
-                tasks.append(task_item)
-                if status == 'done':
-                    done_count += 1
-                else:
-                    inwork_count += 1
-
-            # Выполненные с просрочкой
-            if is_done and w.date_end:
-                total_done += 1
-                report_date = getattr(w, '_report_date', None)
-                if report_date:
-                    # _report_date — datetime, сравниваем date()
-                    rd = report_date.date() if hasattr(report_date, 'date') else report_date
-                    if rd > w.date_end:
-                        done_late.append(task_item)
-                        done_late_count += 1
-                    else:
-                        done_on_time += 1
-                else:
-                    done_on_time += 1
-
-        load_pct = round(month_planned / month_norm * 100, 1) if month_norm > 0 else 0
-        # % в срок: -1 если нет выполненных (JS не покажет карточку)
-        on_time_pct = round(done_on_time / total_done * 100, 1) if total_done > 0 else -1
-        avg_overdue = round(overdue_days_sum / overdue_days_count, 1) if overdue_days_count > 0 else 0
-
-        return {
-            'kpi': {
-                'load_pct': load_pct,
-                'planned_hours': round(month_planned, 1),
-                'norm_hours': round(month_norm, 1),
-                'done_count': done_count,
-                'overdue_count': 0,
-                'inwork_count': inwork_count,
-                'done_late_count': done_late_count,
-                'on_time_pct': on_time_pct,
-                'avg_overdue_days': avg_overdue,
-                'total_debts': len(debts),
-                'total_done': total_done,
-            },
-            'tasks': tasks,
-            'debts': debts,
-            'done_late': done_late,
-        }
-
-    # ── Помесячная загрузка ──────────────────────────────────────────────
-
-    def _build_months_overview(self, emp_id, works, year, norms):
-        """12 месяцев с загрузкой для чипов."""
-        monthly = defaultdict(float)
-        for w in works:
-            if w.executor_id != emp_id:
-                has_te = any(te.executor_id == emp_id for te in getattr(w, '_prefetched_executors', []))
-                if not has_te:
-                    continue
-            ph = {}
-            if w.executor_id == emp_id:
-                ph = w.plan_hours or {}
-            else:
-                for te in getattr(w, '_prefetched_executors', []):
-                    if te.executor_id == emp_id:
-                        ph = te.plan_hours or {}
-                        break
+        # Main executor
+        for (ph,) in base.filter(executor_id=emp_id).values_list("plan_hours"):
+            if not ph:
+                continue
             for k, v in ph.items():
                 try:
-                    y_str, m_str = k.split('-')
+                    y_str, m_str = k.split("-")
                     if int(y_str) == year:
-                        monthly[int(m_str)] += float(v) if v else 0
+                        hrs = float(v) if v else 0
+                        emp_monthly[emp_id][int(m_str)] += hrs
+                        if k == month_key:
+                            emp_hours[emp_id] += hrs
                 except (ValueError, TypeError):
                     pass
 
-        result = []
-        for m in range(1, 13):
-            planned = round(monthly.get(m, 0), 1)
-            norm = norms.get(year, {}).get(m, 0)
-            load = round(planned / norm * 100, 1) if norm > 0 else 0
-            result.append({
-                'month': m, 'planned': planned,
-                'norm': round(norm, 1), 'load_pct': load,
-            })
-        return result
+        # TaskExecutor
+        for (ph,) in TaskExecutor.objects.filter(
+            work__in=base, executor_id=emp_id
+        ).values_list("plan_hours"):
+            if not ph:
+                continue
+            for k, v in ph.items():
+                try:
+                    y_str, m_str = k.split("-")
+                    if int(y_str) == year:
+                        hrs = float(v) if v else 0
+                        emp_monthly[emp_id][int(m_str)] += hrs
+                        if k == month_key:
+                            emp_hours[emp_id] += hrs
+                except (ValueError, TypeError):
+                    pass
 
-    # ── Сводка по команде ────────────────────────────────────────────────
+        planned = round(emp_hours.get(emp_id, 0), 1)
+        load_pct = round(planned / month_norm * 100, 1) if month_norm > 0 else 0
 
-    def _build_team(self, emp, works, year, month, norms, today):
-        """Для начальника — сводка по подчинённым + scope KPI.
+        # Counts через SQL
+        emp_q = Q(executor_id=emp_id) | Q(task_executors__executor_id=emp_id)
+        my_base = base.filter(emp_q).distinct()
 
-        scope = вся видимая область руководителя:
-        - ntc_head/ntc_deputy/admin → весь НТЦ
-        - dept_head/dept_deputy → отдел
-        - sector_head → сектор
-        """
-        month_key = f'{year}-{month:02d}'
-        month_norm = norms.get(year, {}).get(month, 0)
-
-        # Определяем подчинённых (включая себя — для scope KPI)
-        # Загружаем только поля, нужные для dashboard (short_name, dept, sector)
-        _emp_only = (
-            'id', 'last_name', 'first_name', 'patronymic',
-            'department_id', 'sector_id',
-            'department__id', 'department__code', 'department__name',
-            'sector__id', 'sector__code', 'sector__name',
-        )
-        if emp.role in ('admin', 'ntc_head', 'ntc_deputy'):
-            team_employees = Employee.objects.filter(
-                is_active=True
-            ).select_related('department', 'sector').only(*_emp_only)
-        elif emp.role in ('dept_head', 'dept_deputy'):
-            team_employees = Employee.objects.filter(
-                is_active=True, department=emp.department
-            ).select_related('department', 'sector').only(*_emp_only)
-        elif emp.role == 'sector_head':
-            team_employees = Employee.objects.filter(
-                is_active=True, sector=emp.sector
-            ).select_related('department', 'sector').only(*_emp_only)
-        else:
-            return None
-
-        team_employees = list(team_employees)
-        if not team_employees:
-            return None
-
-        team_ids = {e.pk for e in team_employees}
-
-        # Собираем метрики и задачи для каждого сотрудника
-        emp_hours = defaultdict(float)            # {eid: hours_this_month}
-        emp_monthly = defaultdict(lambda: defaultdict(float))  # {eid: {month: hours}}
-        emp_tasks = defaultdict(list)
-        emp_debts = defaultdict(list)
-        emp_done_late = defaultdict(list)
+        has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+        annotated = my_base.annotate(_done=has_reports)
 
         m_start = date(year, month, 1)
         m_end = date(year, month, cal_mod.monthrange(year, month)[1])
 
-        scope_done_count = 0
-        scope_inwork_count = 0
-        scope_total_done = 0
-        scope_done_on_time = 0
-        scope_overdue_days_sum = 0
-        scope_overdue_days_count = 0
-        kpi_counted_ids = set()  # дедупликация KPI по task id
+        counts = annotated.aggregate(
+            done_in_month=Count(
+                "pk",
+                filter=Q(
+                    _done=True,
+                    date_end__gte=m_start,
+                    date_start__lte=m_end,
+                ),
+            ),
+            inwork_in_month=Count(
+                "pk",
+                filter=Q(
+                    _done=False,
+                    date_end__gte=m_start,
+                    date_start__lte=m_end,
+                )
+                & ~Q(date_end__lt=today),
+            ),
+            total_debts=Count(
+                "pk",
+                filter=Q(_done=False, date_end__lt=today, date_end__isnull=False),
+            ),
+        )
 
-        for w in works:
-            executors_on_work = set()
-            if w.executor_id and w.executor_id in team_ids:
-                executors_on_work.add(w.executor_id)
-            for te in getattr(w, '_prefetched_executors', []):
-                if te.executor_id in team_ids:
-                    executors_on_work.add(te.executor_id)
-
-            if not executors_on_work:
-                continue
-
-            is_done = getattr(w, '_done', False)
-            is_overdue = not is_done and w.date_end and w.date_end < today
-            status = 'done' if is_done else ('overdue' if is_overdue else 'inwork')
-
-            # KPI — считаем один раз на задачу, не на исполнителя
-            any_in_month = False
-
-            # Сериализуем задачу один раз (результат одинаков для всех исполнителей)
-            task_item = None  # lazy — создаём только если нужно
-
-            for eid in executors_on_work:
-                ph = {}
-                if w.executor_id == eid:
-                    ph = w.plan_hours or {}
+        # done_late — считаем
+        first_report = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
+        done_data = (
+            my_base.filter(
+                pk__in=WorkReport.objects.values("work_id"),
+                date_end__isnull=False,
+            )
+            .annotate(_report_date=first_report)
+            .values_list("date_end", "_report_date")
+        )
+        total_done = 0
+        done_on_time = 0
+        done_late_count = 0
+        for d_end, r_date in done_data:
+            total_done += 1
+            if r_date:
+                rd = r_date.date() if hasattr(r_date, "date") else r_date
+                if rd <= d_end:
+                    done_on_time += 1
                 else:
-                    for te in getattr(w, '_prefetched_executors', []):
-                        if te.executor_id == eid:
-                            ph = te.plan_hours or {}
-                            break
-                hrs = float(ph.get(month_key, 0) or 0)
-                emp_hours[eid] += hrs
+                    done_late_count += 1
+            else:
+                done_on_time += 1
 
-                # Помесячная загрузка для scope months overview
-                for k, v in ph.items():
-                    try:
-                        y_str, m_str = k.split('-')
-                        if int(y_str) == year:
-                            emp_monthly[eid][int(m_str)] += float(v) if v else 0
-                    except (ValueError, TypeError):
-                        pass
+        on_time_pct = (
+            round(done_on_time / total_done * 100, 1) if total_done > 0 else -1
+        )
 
-                in_month = hrs > 0
-                if not in_month and w.date_start and w.date_end:
-                    in_month = w.date_end >= m_start and w.date_start <= m_end
-                if in_month:
-                    any_in_month = True
-
-                # Долги — все просроченные невыполненные (приоритет над месяцем)
-                if status == 'overdue':
-                    if task_item is None:
-                        task_item = self._serialize_task(w, ph, status, today, year)
-                    emp_debts[eid].append(task_item)
-                elif in_month:
-                    if task_item is None:
-                        task_item = self._serialize_task(w, ph, status, today, year)
-                    emp_tasks[eid].append(task_item)
-
-                # Выполнено с просрочкой (per employee)
-                if is_done and w.date_end:
-                    report_date = getattr(w, '_report_date', None)
-                    if report_date:
-                        rd = report_date.date() if hasattr(report_date, 'date') else report_date
-                        if rd > w.date_end:
-                            if task_item is None:
-                                task_item = self._serialize_task(w, ph, status, today, year)
-                            emp_done_late[eid].append(task_item)
-
-            # KPI — один раз на задачу
-            if w.id not in kpi_counted_ids:
-                kpi_counted_ids.add(w.id)
-                if status == 'overdue':
-                    if w.date_end:
-                        scope_overdue_days_sum += (today - w.date_end).days
-                        scope_overdue_days_count += 1
-                elif any_in_month:
-                    if status == 'done':
-                        scope_done_count += 1
-                    else:
-                        scope_inwork_count += 1
-                if is_done and w.date_end:
-                    scope_total_done += 1
-                    report_date = getattr(w, '_report_date', None)
-                    if report_date:
-                        rd = report_date.date() if hasattr(report_date, 'date') else report_date
-                        if rd <= w.date_end:
-                            scope_done_on_time += 1
-                    else:
-                        scope_done_on_time += 1
-
-        # ── Scope KPI (агрегат по всем сотрудникам scope) ──
-        scope_planned = round(sum(emp_hours.values()), 1)
-        scope_norm = round(month_norm * len(team_ids), 1) if month_norm else 0
-        scope_load = round(scope_planned / scope_norm * 100, 1) if scope_norm > 0 else 0
-        scope_all_tasks = []
-        scope_all_debts = []
-        scope_all_done_late = []
-        for eid in team_ids:
-            scope_all_tasks.extend(emp_tasks.get(eid, []))
-            scope_all_debts.extend(emp_debts.get(eid, []))
-            scope_all_done_late.extend(emp_done_late.get(eid, []))
-
-        on_time_pct = round(scope_done_on_time / scope_total_done * 100, 1) if scope_total_done > 0 else -1
-        avg_overdue = round(scope_overdue_days_sum / scope_overdue_days_count, 1) if scope_overdue_days_count > 0 else 0
-
-        scope_kpi = {
-            'load_pct': scope_load,
-            'planned_hours': scope_planned,
-            'norm_hours': scope_norm,
-            'done_count': scope_done_count,
-            'overdue_count': 0,
-            'inwork_count': scope_inwork_count,
-            'done_late_count': len(scope_all_done_late),
-            'on_time_pct': on_time_pct,
-            'avg_overdue_days': avg_overdue,
-            'total_debts': len(scope_all_debts),
-            'total_done': scope_total_done,
-        }
-
-        # ── Scope months overview ──
-        scope_months = []
+        norms = _get_calendar_norms([year])
+        months = []
         for m in range(1, 13):
-            m_planned = round(sum(emp_monthly[eid].get(m, 0) for eid in team_ids), 1)
-            m_norm_val = norms.get(year, {}).get(m, 0) * len(team_ids)
-            m_load = round(m_planned / m_norm_val * 100, 1) if m_norm_val > 0 else 0
-            scope_months.append({
-                'month': m, 'planned': m_planned,
-                'norm': round(m_norm_val, 1), 'load_pct': m_load,
-            })
-
-        # ── Группировка: отдел → сектор → сотрудники ──
-        # Для dropdown исключаем самого руководителя
-        display_employees = [e for e in team_employees if e.pk != emp.pk]
-        dept_sectors = defaultdict(lambda: defaultdict(list))
-        total_load_sum = 0
-        total_overdue = 0
-        total_count = 0
-
-        for e in display_employees:
-            planned = round(emp_hours.get(e.pk, 0), 1)
-            load = round(planned / month_norm * 100, 1) if month_norm > 0 else 0
-            tasks_list = emp_tasks.get(e.pk, [])
-            debts_list = emp_debts.get(e.pk, [])
-            done_count = sum(1 for t in tasks_list if t['status'] == 'done')
-            inwork_count = sum(1 for t in tasks_list if t['status'] == 'inwork')
-            ov = len(debts_list)
-            emp_item = {
-                'id': e.pk,
-                'name': e.short_name,
-                'planned': planned,
-                'load_pct': load,
-                'done_count': done_count,
-                'overdue_count': ov,
-                'inwork_count': inwork_count,
-            }
-            total_load_sum += load
-            total_overdue += ov
-            total_count += 1
-
-            dept_code = e.department.code if e.department else '—'
-            dept_name = e.department.name if e.department else ''
-            sector_key = (e.sector.name or e.sector.code) if e.sector else ''
-            dept_sectors[(dept_code, dept_name)][sector_key].append(emp_item)
-
-        # Формируем иерархическую структуру
-        DEPT_ORDER = ['021', '022', '024', '027', '028', '029', '301', '082', '084', '086']
-        def _dept_sort_key(item):
-            code = item[0][0]  # (dept_code, dept_name)
-            try:
-                return DEPT_ORDER.index(code)
-            except ValueError:
-                return len(DEPT_ORDER)
-
-        departments = []
-        for (dept_code, dept_name), sectors_dict in sorted(dept_sectors.items(), key=_dept_sort_key):
-            dept_planned = 0
-            dept_load_sum = 0
-            dept_overdue = 0
-            dept_done = 0
-            dept_inwork = 0
-            dept_count = 0
-
-            sector_list = []
-            for sector_name, emps in sorted(sectors_dict.items(), key=lambda x: x[0]):
-                emps.sort(key=lambda x: (-x['overdue_count'], -x['load_pct']))
-                s_planned = sum(e['planned'] for e in emps)
-                s_load_sum = sum(e['load_pct'] for e in emps)
-                s_overdue = sum(e['overdue_count'] for e in emps)
-                s_done = sum(e['done_count'] for e in emps)
-                s_inwork = sum(e['inwork_count'] for e in emps)
-                s_count = len(emps)
-
-                sector_list.append({
-                    'name': sector_name or '(без сектора)',
-                    'count': s_count,
-                    'planned': round(s_planned, 1),
-                    'avg_load_pct': round(s_load_sum / s_count, 1) if s_count else 0,
-                    'overdue_count': s_overdue,
-                    'done_count': s_done,
-                    'inwork_count': s_inwork,
-                    'employees': emps,
-                })
-                dept_planned += s_planned
-                dept_load_sum += s_load_sum
-                dept_overdue += s_overdue
-                dept_done += s_done
-                dept_inwork += s_inwork
-                dept_count += s_count
-
-            departments.append({
-                'code': dept_code,
-                'name': dept_name,
-                'count': dept_count,
-                'planned': round(dept_planned, 1),
-                'avg_load_pct': round(dept_load_sum / dept_count, 1) if dept_count else 0,
-                'overdue_count': dept_overdue,
-                'done_count': dept_done,
-                'inwork_count': dept_inwork,
-                'sectors': sector_list,
-            })
-
-        # Порядок отделов определён DEPT_ORDER выше
-
-        avg_load = round(total_load_sum / total_count, 1) if total_count else 0
+            m_planned = round(emp_monthly[emp_id].get(m, 0), 1)
+            m_norm = norms.get(year, {}).get(m, 0)
+            m_load = round(m_planned / m_norm * 100, 1) if m_norm > 0 else 0
+            months.append(
+                {
+                    "month": m,
+                    "planned": m_planned,
+                    "norm": round(m_norm, 1),
+                    "load_pct": m_load,
+                }
+            )
 
         return {
-            'total_employees': total_count,
-            'avg_load_pct': avg_load,
-            'total_overdue': total_overdue,
-            'departments': departments,
-            # Scope-level данные для KPI-карточек руководителя
-            'scope_kpi': scope_kpi,
-            'scope_tasks': scope_all_tasks,
-            'scope_debts': scope_all_debts,
-            'scope_done_late': scope_all_done_late,
-            'scope_months': scope_months,
+            "kpi": {
+                "load_pct": load_pct,
+                "planned_hours": planned,
+                "norm_hours": round(month_norm, 1),
+                "done_count": counts["done_in_month"] or 0,
+                "overdue_count": 0,
+                "inwork_count": counts["inwork_in_month"] or 0,
+                "done_late_count": done_late_count,
+                "on_time_pct": on_time_pct,
+                "avg_overdue_days": 0,
+                "total_debts": counts["total_debts"] or 0,
+                "total_done": total_done,
+            },
+            "months": months,
         }
 
-    # ── Утилиты ──────────────────────────────────────────────────────────
-
-    def _serialize_task(self, w, ph, status, today, year):
-        return self._serialize_task_static(w, ph, status, today, year)
-
-    @staticmethod
-    def _serialize_task_static(w, ph, status, today, year):
-        executor_name = ''
-        if w.executor:
-            executor_name = w.executor.short_name
-        project_name = (
-            w.project.name if w.project else
-            (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
-             (w.pp_project.name if w.pp_project else ''))
-        )
-        item = {
-            'id': w.id,
-            'work_name': w.work_name or w.work_num or '',
-            'work_designation': w.work_designation or '',
-            'project_name': project_name,
-            'project_sort': project_name.lower() if project_name else '',
-            'executor_name': executor_name,
-            'date_start': w.date_start.isoformat() if w.date_start else '',
-            'date_end': w.date_end.isoformat() if w.date_end else '',
-            'status': status,
-        }
-        if status == 'overdue' and w.date_end:
-            item['days_overdue'] = (today - w.date_end).days
-        elif status == 'inwork' and w.date_end:
-            item['days_left'] = (w.date_end - today).days
-        if status == 'done':
-            rd = getattr(w, '_report_date', None)
-            if rd and w.date_end:
-                rd_date = rd.date() if hasattr(rd, 'date') else rd
-                if rd_date > w.date_end:
-                    item['days_late'] = (rd_date - w.date_end).days
-        return item
-
-    @staticmethod
-    def _int_param(request, name, default):
-        try:
-            return int(request.GET.get(name, default))
-        except (ValueError, TypeError):
-            return default
+    def _build_months_overview(self, team_ids_set, emp_monthly, year, norms):
+        """12 месяцев с загрузкой для чипов (scope)."""
+        result = []
+        for m in range(1, 13):
+            m_planned = round(
+                sum(emp_monthly[eid].get(m, 0) for eid in team_ids_set), 1
+            )
+            m_norm_val = norms.get(year, {}).get(m, 0) * len(team_ids_set)
+            m_load = round(m_planned / m_norm_val * 100, 1) if m_norm_val > 0 else 0
+            result.append(
+                {
+                    "month": m,
+                    "planned": m_planned,
+                    "norm": round(m_norm_val, 1),
+                    "load_pct": m_load,
+                }
+            )
+        return result

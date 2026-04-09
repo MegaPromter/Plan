@@ -1,5 +1,8 @@
 /**
  * dashboard.js — Личный план сотрудника / сводка для руководителя.
+ *
+ * Оптимизировано: основной запрос возвращает только KPI + team structure.
+ * Задачи/долги/done_late грузятся лениво (отдельные запросы).
  */
 (function() {
 'use strict';
@@ -8,10 +11,6 @@ var cfg = JSON.parse(document.getElementById('dash-config').textContent);
 var currentYear = cfg.currentYear;
 var currentMonth = cfg.currentMonth;
 var lastData = null;
-
-// MONTHS_FULL, MONTHS_SHORT — в utils.js (1-based: MONTHS_FULL[1] = "Январь")
-
-/* ── Утилиты — в utils.js (esc, loadBadgeCls, fmtPct, fmtHrs, fmtDate) ── */
 
 /* ── Skeleton-заглушки для дашборда ──────────────────────────────── */
 function _dashShowSkeletons() {
@@ -34,9 +33,18 @@ function _dashShowSkeletons() {
   }
 }
 
-/* ── API ─────────────────────────────────────────────────────────── */
+/* ── API — основной лёгкий запрос (KPI + team structure) ──────────── */
 function loadDashboard() {
   _dashShowSkeletons();
+  // Сбросить состояние свёрнутых виджетов (при смене месяца/года)
+  document.querySelectorAll('.dash-widget[data-loaded]').forEach(function(w) {
+    w.dataset.loaded = 'false';
+    w.dataset.collapsed = 'true';
+    var body = w.querySelector('.dash-widget-body');
+    if (body) { body.style.display = 'none'; body.innerHTML = ''; }
+    var chevron = w.querySelector('.dash-widget-chevron');
+    if (chevron) chevron.classList.remove('open');
+  });
   fetch('/api/dashboard/?year=' + currentYear + '&month=' + currentMonth)
   .then(function(r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -54,14 +62,135 @@ function loadDashboard() {
     renderHeroSub(data);
     renderKPI(data.kpi);
     renderTeam(data.team);
-    renderTasks(data.tasks, isLeader);
-    renderDebts(data.debts, isLeader);
-    renderDoneLate(data.done_late, isLeader);
+
+    // Задачи/долги/done_late — свёрнуты по умолчанию.
+    // Обновляем заголовки с количеством из KPI, данные грузятся при раскрытии.
+    var kpi = data.kpi;
+    _updateCollapsedHeader('tasks', 'fas fa-tasks', 'Задачи — ' + MONTHS_FULL[currentMonth], kpi.done_count + kpi.inwork_count, 'var(--accent)');
+    _updateCollapsedHeader('debts', 'fas fa-exclamation-triangle', 'Долги', kpi.total_debts, 'var(--danger)');
+    _updateCollapsedHeader('done_late', 'fas fa-clock', 'Выполнены с просрочкой', kpi.done_late_count, '#d97706');
+
+    // Скрываем виджеты если count=0
+    _toggleWidgetByCount('debts', kpi.total_debts);
+    _toggleWidgetByCount('done_late', kpi.done_late_count);
+
+    // Для обычного сотрудника тоже свёрнуто, но данные через employee endpoint
+    if (!isLeader) {
+      // Запоминаем тип загрузки для personal
+      document.querySelectorAll('.dash-widget[data-widget="tasks"],.dash-widget[data-widget="debts"],.dash-widget[data-widget="donelate"]').forEach(function(w) {
+        w.dataset.scopeType = 'personal';
+      });
+    }
   })
   .catch(function(e) {
     console.error('Dashboard error:', e);
     document.getElementById('dashKPI').innerHTML =
       emptyStateHtml({icon:'fas fa-exclamation-triangle', title:'Ошибка загрузки', desc:'Попробуйте обновить страницу'});
+  });
+}
+
+/* ── Обновление заголовков свёрнутых виджетов (количество из KPI) ──── */
+function _updateCollapsedHeader(widgetName, iconCls, label, count, iconColor) {
+  // widgetName: tasks | debts | done_late → data-widget: tasks | debts | donelate
+  var wMap = {tasks: 'tasks', debts: 'debts', done_late: 'donelate'};
+  var widget = document.querySelector('.dash-widget[data-widget="' + (wMap[widgetName] || widgetName) + '"]');
+  if (!widget) return;
+  var span = widget.querySelector('.dash-widget-header > span');
+  if (span) {
+    var chevron = '<i class="fas fa-chevron-right dash-widget-chevron"></i>';
+    span.innerHTML = chevron + '<i class="' + iconCls + '" style="color:' + iconColor + ';margin-right:6px;"></i>' +
+      label + (count > 0 ? ' <span class="an-load-badge" style="font-size:11px;">' + count + '</span>' : '');
+  }
+}
+
+function _toggleWidgetByCount(widgetName, count) {
+  var wMap = {tasks: 'tasks', debts: 'debts', done_late: 'donelate'};
+  var widget = document.querySelector('.dash-widget[data-widget="' + (wMap[widgetName] || widgetName) + '"]');
+  if (!widget) return;
+  if (count === 0) {
+    widget.style.display = 'none';
+  } else {
+    widget.style.display = '';
+  }
+}
+
+/* ── Раскрытие/сворачивание виджета (задачи/долги/done_late) ───────── */
+window.dashToggleWidget = function(headerEl) {
+  var widget = headerEl.closest('.dash-widget');
+  if (!widget) return;
+  var body = widget.querySelector('.dash-widget-body');
+  if (!body) return;
+
+  var isCollapsed = widget.dataset.collapsed === 'true';
+
+  if (isCollapsed) {
+    // Раскрываем
+    widget.dataset.collapsed = 'false';
+    body.style.display = '';
+    // Обновляем шеврон
+    var chevron = widget.querySelector('.dash-widget-chevron');
+    if (chevron) chevron.classList.add('open');
+
+    // Ленивая загрузка при первом раскрытии
+    if (widget.dataset.loaded === 'false') {
+      widget.dataset.loaded = 'loading';
+      body.innerHTML = '<div style="padding:12px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+      _fetchWidgetData(widget);
+    }
+  } else {
+    // Сворачиваем
+    widget.dataset.collapsed = 'true';
+    body.style.display = 'none';
+    var chevron = widget.querySelector('.dash-widget-chevron');
+    if (chevron) chevron.classList.remove('open');
+  }
+};
+
+function _fetchWidgetData(widget) {
+  var wName = widget.dataset.widget; // tasks | debts | donelate
+  var body = widget.querySelector('.dash-widget-body');
+  var isPersonal = widget.dataset.scopeType === 'personal';
+
+  if (isPersonal && lastData && lastData.employee) {
+    // Обычный сотрудник — через employee endpoint
+    var empId = lastData.employee.id;
+    fetch('/api/dashboard/employee/' + empId + '/?year=' + currentYear + '&month=' + currentMonth)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      widget.dataset.loaded = 'true';
+      if (wName === 'tasks') {
+        renderTasks(data.tasks || [], false);
+      } else if (wName === 'debts') {
+        renderDebts(data.debts || [], false);
+      }
+    })
+    .catch(function(e) {
+      widget.dataset.loaded = 'false';
+      body.innerHTML = '<div style="padding:12px;color:var(--danger);">Ошибка загрузки</div>';
+    });
+    return;
+  }
+
+  // Руководитель — через scope endpoint
+  var typeMap = {tasks: 'tasks', debts: 'debts', donelate: 'done_late'};
+  var scopeType = typeMap[wName] || wName;
+
+  fetch('/api/dashboard/scope/?year=' + currentYear + '&month=' + currentMonth + '&type=' + scopeType)
+  .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(function(data) {
+    widget.dataset.loaded = 'true';
+    var items = data.items || [];
+    if (wName === 'tasks') {
+      renderTasks(items, true);
+    } else if (wName === 'debts') {
+      renderDebts(items, true);
+    } else if (wName === 'donelate') {
+      renderDoneLate(items, true);
+    }
+  })
+  .catch(function(e) {
+    widget.dataset.loaded = 'false';
+    body.innerHTML = '<div style="padding:12px;color:var(--danger);">Ошибка загрузки</div>';
   });
 }
 
@@ -79,7 +208,6 @@ window.dashSetMonth = function(m) {
 /* ── Чипы месяцев + навигация по году ─────────────────────────────── */
 function renderMonthChips(years) {
   var html = '<div class="an-toolbar-panel">';
-  // Навигация по году (◀ год ▶)
   if (years && years.length > 1) {
     html += '<div class="dash-year-nav">';
     var idx = years.indexOf(currentYear);
@@ -92,7 +220,6 @@ function renderMonthChips(years) {
   } else {
     html += '<span class="dash-year-label" style="margin-right:12px;">' + currentYear + '</span>';
   }
-  // Чипы месяцев
   html += '<div class="an-chips">';
   for (var m = 1; m <= 12; m++) {
     var cls = m === currentMonth ? 'an-chip active' : 'an-chip';
@@ -146,7 +273,6 @@ function renderKPI(kpi) {
     { val: kpi.total_debts, label: 'Долги', cls: kpi.total_debts > 0 ? 'an-val-red' : 'an-val-green' },
   ];
 
-  // % в срок — только если всего выполнено >= 3 (при 1-2 метрика не информативна)
   if (kpi.on_time_pct >= 0 && (kpi.total_done || 0) >= 3) {
     cards.push({ val: fmtPct(kpi.on_time_pct), label: '% в срок', cls: kpi.on_time_pct >= 90 ? 'an-val-green' : (kpi.on_time_pct >= 70 ? 'an-val-yellow' : 'an-val-red') });
   }
@@ -165,7 +291,7 @@ function renderKPI(kpi) {
   document.getElementById('dashKPI').innerHTML = html;
 }
 
-/* ── Команда: отделы → сектора → сотрудники (с задачами) ────────── */
+/* ── Команда: отделы → сектора → сотрудники ──────────────────────── */
 function renderTeam(team) {
   var el = document.getElementById('dashTeam');
   var widget = el.closest('.dash-widget');
@@ -207,26 +333,24 @@ function renderTeam(team) {
       html += '</span>';
       html += '</div>';
 
-      // Сотрудники сектора — каждый как dropdown
       sector.employees.forEach(function(e) {
         html += _renderEmployeeDropdown(e);
       });
 
-      html += '</div>'; // dash-sector
+      html += '</div>';
     });
 
-    html += '</div>'; // dash-dept-body
-    html += '</div>'; // dash-dept
+    html += '</div>';
+    html += '</div>';
   });
 
   el.innerHTML = html;
 }
 
-/* ── Dropdown сотрудника (задачи + долги — ленивая загрузка) ────── */
+/* ── Dropdown сотрудника (задачи — ленивая загрузка) ──────────────── */
 function _renderEmployeeDropdown(e) {
   var badgeCls = loadBadgeCls(e.load_pct);
-  // Всегда кликабельный (задачи подгружаются лениво)
-  var hasContent = (e.done_count + e.inwork_count + e.overdue_count) > 0;
+  var hasContent = e.overdue_count > 0 || e.planned > 0;
 
   var html = '<div class="dash-emp">';
 
@@ -242,12 +366,11 @@ function _renderEmployeeDropdown(e) {
   html += '<span class="dash-emp-name">' + esc(e.name) + '</span>';
   html += '<span class="dash-emp-load"><span class="an-load-badge ' + badgeCls + '">' + fmtPct(e.load_pct) + '</span></span>';
   html += '<span class="dash-emp-hrs">' + fmtHrs(e.planned) + ' ч</span>';
-  html += '<span class="dash-emp-tag' + (e.done_count > 0 ? ' done' : '') + '">' + (e.done_count > 0 ? e.done_count + ' выполн.' : '') + '</span>';
-  html += '<span class="dash-emp-tag">' + (e.inwork_count > 0 ? e.inwork_count + ' в работе' : '') + '</span>';
-  html += '<span class="dash-emp-tag' + (e.overdue_count > 0 ? ' debt' : '') + '">' + (e.overdue_count > 0 ? e.overdue_count + ' долг.' : '') + '</span>';
+  if (e.overdue_count > 0) {
+    html += '<span class="dash-emp-tag debt">' + e.overdue_count + ' долг.</span>';
+  }
   html += '</div>';
 
-  // Тело — будет заполнено при первом клике (ленивая загрузка)
   if (hasContent) {
     html += '<div class="dash-emp-body" style="display:none;" data-loaded="false"></div>';
   }
@@ -323,7 +446,6 @@ function renderDoneLate(items, showExecutor) {
 
 /* ── Компактный список задач (основные секции) ─────────────────── */
 function _renderTasksTable(tasks, showExecutor) {
-  // Сортировка по проекту
   tasks = tasks.slice().sort(function(a, b) {
     var pa = (a.project_sort || a.project_name || '').toLowerCase();
     var pb = (b.project_sort || b.project_name || '').toLowerCase();
@@ -379,7 +501,6 @@ window.dashToggleEmp = function(headerEl) {
   body.style.display = isOpen ? 'none' : 'block';
   if (toggle) toggle.classList.toggle('open', !isOpen);
 
-  // Ленивая загрузка: при первом раскрытии грузим задачи с сервера
   if (!isOpen && body.dataset.loaded === 'false') {
     body.dataset.loaded = 'loading';
     var empId = headerEl.dataset.empId;
@@ -439,7 +560,6 @@ window.toggleDashCustomize = function() {
     btn.innerHTML = '<i class="fas fa-check"></i> Готово';
     btn.classList.add('btn-primary');
     btn.classList.remove('btn-outline');
-    // Show all widgets (including empty ones) so user can toggle visibility
     document.querySelectorAll('.dash-widget').forEach(function(w) {
       w.setAttribute('draggable', 'true');
     });
@@ -482,7 +602,6 @@ function applyDashLayout(layout) {
   var grid = document.getElementById('dashGrid');
   if (!grid) return;
 
-  // Sort widgets by saved order
   var widgetMap = {};
   grid.querySelectorAll('.dash-widget').forEach(function(w) {
     widgetMap[w.dataset.widget] = w;
@@ -493,7 +612,7 @@ function applyDashLayout(layout) {
   layout.forEach(function(item) {
     var widget = widgetMap[item.id];
     if (!widget) return;
-    grid.appendChild(widget); // re-appending reorders
+    grid.appendChild(widget);
     if (!item.visible) {
       widget.classList.add('widget-hidden');
       var icon = widget.querySelector('.dash-widget-toggle i');
@@ -528,13 +647,11 @@ function initWidgetDrag() {
     e.dataTransfer.dropEffect = 'move';
     var target = e.target.closest('.dash-widget');
     if (!target || target === dragWidget) return;
-    // Clear previous highlights
     grid.querySelectorAll('.drag-over-widget').forEach(function(w) {
       w.classList.remove('drag-over-widget');
     });
     target.classList.add('drag-over-widget');
 
-    // Determine insert position
     var rect = target.getBoundingClientRect();
     var midY = rect.top + rect.height / 2;
     if (e.clientY < midY) {

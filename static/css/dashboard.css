@@ -28,6 +28,13 @@
 .dash-section-title .dash-toggle.collapsed { transform:rotate(-90deg); }
 .dash-section-body.collapsed { display:none; }
 
+/* ── Шеврон виджетов (задачи/долги — сворачиваемые) ───────── */
+.dash-widget-chevron {
+  font-size:10px; color:var(--muted); transition:transform 0.2s;
+  margin-right:6px; display:inline-block;
+}
+.dash-widget-chevron.open { transform:rotate(90deg); }
+
 /* ── Переключатель года ───────────────────────────────────── */
 .dash-year-nav {
   display:inline-flex; align-items:center; gap:4px; margin-right:12px;
