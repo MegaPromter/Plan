@@ -61,6 +61,50 @@ class TestJournalList:
 
 
 @pytest.mark.django_db
+class TestJournalFacets:
+    def test_facets_requires_auth(self):
+        resp = Client().get('/api/journal/facets/')
+        assert resp.status_code == 401
+
+    def test_facets_returns_columns(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/facets/')
+        assert resp.status_code == 200
+        data = resp.json()
+        assert 'ii_pi' in data
+        assert 'dept' in data
+        assert 'status' in data
+        assert 'ИИ' in data['ii_pi']
+
+
+@pytest.mark.django_db
+class TestJournalPagination:
+    def test_limit_offset(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/?limit=10&offset=0')
+        assert resp.status_code == 200
+        assert 'X-Total-Count' in resp
+        assert 'X-Has-More' in resp
+
+    def test_sort_param(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/?sort=-date_issued')
+        assert resp.status_code == 200
+
+    def test_mf_filter(self, admin_user, notice):
+        c = Client()
+        c.force_login(admin_user)
+        resp = c.get('/api/journal/?mf_ii_pi=ИИ')
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 1
+        assert all(n['ii_pi'] == 'ИИ' for n in data)
+
+
+@pytest.mark.django_db
 class TestJournalCreate:
     def test_create_requires_writer(self, regular_user):
         c = Client()

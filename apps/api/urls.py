@@ -64,7 +64,7 @@ from .views.feedback import FeedbackAttachmentDeleteView, FeedbackDetailView, Fe
 from .views.health import HealthCheckView
 
 # Вьюхи журнала извещений
-from .views.journal import JournalCreateView, JournalDetailView, JournalListView
+from .views.journal import JournalCreateView, JournalDetailView, JournalFacetsView, JournalListView
 
 # Уведомления
 from .views.notifications import (
@@ -274,6 +274,8 @@ urlpatterns = [
     path('journal/',            JournalListView.as_view()),
     # POST /api/journal/create/ — создание записи журнала
     path('journal/create/',     JournalCreateView.as_view()),
+    # GET /api/journal/facets/ — уникальные значения для мульти-фильтров
+    path('journal/facets/',     JournalFacetsView.as_view()),
     # PUT/DELETE /api/journal/<pk>/ — обновление/удаление записи журнала
     path('journal/<int:pk>/',   JournalDetailView.as_view()),
 
