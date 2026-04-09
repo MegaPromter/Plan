@@ -385,6 +385,78 @@
   </div>
 </div>
 
+<!-- ── Модал: добавление новой работы (альтернатива inline-строке) ────── -->
+<div class="modal-overlay" id="ppNewRowModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div class="modal-title">Новая работа</div>
+      <button class="modal-close" onclick="closeModal('ppNewRowModal')">&times;</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Наименование *</label>
+        <input id="pm_work_name" class="form-input" type="text" placeholder="Наименование работы">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Обозначение</label>
+        <input id="pm_work_designation" class="form-input" type="text">
+      </div>
+      <div>
+        <label class="form-label">Этап ПП</label>
+        <select id="pm_pp_stage" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Тип задачи</label>
+        <select id="pm_task_type" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Подразделение</label>
+        <select id="pm_center" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Отдел</label>
+        <select id="pm_dept" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Сектор</label>
+        <select id="pm_sector_head" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Разработчик</label>
+        <select id="pm_executor" class="form-input"></select>
+      </div>
+      <div>
+        <label class="form-label">Дата начала</label>
+        <input id="pm_date_start" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Дата окончания</label>
+        <input id="pm_date_end" class="form-input" type="date">
+      </div>
+      <div>
+        <label class="form-label">Ф, А4</label>
+        <input id="pm_sheets_a4" class="form-input" type="number" step="any" min="0">
+      </div>
+      <div>
+        <label class="form-label">Норматив</label>
+        <input id="pm_norm" class="form-input" type="number" step="any" min="0">
+      </div>
+      <div>
+        <label class="form-label">Коэффициент</label>
+        <input id="pm_coeff" class="form-input" type="number" step="any" min="0">
+      </div>
+      <div>
+        <label class="form-label">Трудоёмкость</label>
+        <input id="pm_labor" class="form-input" type="number" step="any" min="0" placeholder="авто">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('ppNewRowModal')">Отмена</button>
+      <button class="btn btn-primary btn-sm" id="pmSaveBtn" onclick="ppModalSave()">Создать</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Floating Bulk Actions Bar (ПП) ════════════════════════════════════ -->
 <div class="bulk-bar" id="ppBulkBar">
   <span class="bulk-bar-count"><span id="ppBulkCount">0</span> выбрано</span>
@@ -412,7 +484,7 @@
 }</script>
 <script src="{% static 'js/shared-toolbar.js' %}?v=3"></script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/production_plan.js' %}?v=23"></script>
+<script src="{% static 'js/production_plan.js' %}?v=24"></script>
 <script src="{% static 'js/sandbox.js' %}?v=8"></script>
 <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>

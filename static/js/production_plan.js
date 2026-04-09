@@ -1358,11 +1358,17 @@ async function handleCellChange(e) {
 // Флаг: предотвращает двойное добавление строки
 let _addingRow = false;
 
-// Добавляет временную редактируемую строку в конец таблицы
+// Добавляет временную редактируемую строку или открывает модалку (в зависимости от настройки)
 function openAddRowModal() {
   // Нельзя добавить строку без открытого проекта
   if (!currentProjectId) {
     showToast('Откройте проект для добавления строк', 'error');
+    return;
+  }
+  // Если включена настройка pp_input_modal — открыть модалку вместо inline-строки
+  var cs = _ppCfg.colSettings || {};
+  if (cs.pp_input_modal) {
+    ppModalOpen();
     return;
   }
   if (_addingRow) {
@@ -1621,6 +1627,169 @@ function openAddRowModal() {
       }
     });
   });
+}
+
+/* ── Модальное окно для ввода новой работы ──────────────────────────── */
+
+function _pmFillSelect(id, items, selectedVal) {
+  var sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">--</option>';
+  (items || []).forEach(function(d) {
+    var v = d.value || d.id || '';
+    var lbl = d.label || d.value || d.name || '';
+    var s = String(v) === String(selectedVal) ? ' selected' : '';
+    sel.innerHTML += '<option value="' + escapeHtml(String(v)) + '"' + s + '>' + escapeHtml(lbl) + '</option>';
+  });
+}
+
+function _pmFillExecutors(deptVal, sectorVal) {
+  var allEmps = dirs.employees || [];
+  var filtered;
+  if (sectorVal) {
+    filtered = allEmps.filter(function(e) { return e.sector === sectorVal; });
+  } else if (deptVal) {
+    filtered = allEmps.filter(function(e) { return e.dept === deptVal; });
+  } else {
+    filtered = allEmps;
+  }
+  _pmFillSelect('pm_executor', filtered, '');
+}
+
+function ppModalOpen() {
+  var modal = document.getElementById('ppNewRowModal');
+  if (!modal) return;
+
+  // Дефолтные значения из профиля
+  var defDept = USER_DEPT || '';
+  var defCenter = (['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER)
+    ? USER_CENTER : '';
+  var defSector = (USER_ROLE === 'sector_head' && USER_SECTOR_NAME) ? USER_SECTOR_NAME : '';
+
+  // Заполняем select-поля
+  _pmFillSelect('pm_dept', dirs.dept || [], defDept);
+  _pmFillSelect('pm_center', dirs.center || [], defCenter);
+
+  // Секторы — фильтрация по отделу
+  var deptEntry = (dirs.dept || []).find(function(d) { return d.value === defDept; });
+  var filteredSectors = deptEntry
+    ? (dirs.sector_head || []).filter(function(h) { return h.parent_id === deptEntry.id; })
+    : (dirs.sector_head || []);
+  _pmFillSelect('pm_sector_head', filteredSectors, defSector);
+
+  // Исполнители
+  _pmFillExecutors(defDept, defSector);
+
+  // Тип задачи
+  var taskTypes = dirs.task_type || [];
+  var defType = taskTypes.length ? taskTypes[0].value : '';
+  _pmFillSelect('pm_task_type', taskTypes, defType);
+
+  // Этапы ПП
+  var stageItems = (_ppStages || []).map(function(s) { return {value: s.id, label: s.name}; });
+  _pmFillSelect('pm_pp_stage', stageItems, '');
+
+  // Очищаем текстовые и числовые поля
+  ['pm_work_name', 'pm_work_designation', 'pm_date_start', 'pm_date_end',
+   'pm_sheets_a4', 'pm_norm', 'pm_coeff', 'pm_labor'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  // Каскадные зависимости: отдел → сектор + исполнители
+  document.getElementById('pm_dept').onchange = function() {
+    var dv = this.value;
+    var de = (dirs.dept || []).find(function(d) { return d.value === dv; });
+    var fs = de ? (dirs.sector_head || []).filter(function(h) { return h.parent_id === de.id; }) : (dirs.sector_head || []);
+    _pmFillSelect('pm_sector_head', fs, '');
+    _pmFillExecutors(dv, '');
+  };
+  document.getElementById('pm_sector_head').onchange = function() {
+    _pmFillExecutors(document.getElementById('pm_dept').value, this.value);
+  };
+
+  // Авто-расчёт трудоёмкости
+  ['pm_sheets_a4', 'pm_norm', 'pm_coeff'].forEach(function(id) {
+    document.getElementById(id).oninput = function() {
+      var s = parseFloat(document.getElementById('pm_sheets_a4').value);
+      var n = parseFloat(document.getElementById('pm_norm').value);
+      var c = parseFloat(document.getElementById('pm_coeff').value);
+      var lab = document.getElementById('pm_labor');
+      lab.value = (!isNaN(s) && !isNaN(n) && !isNaN(c)) ? +(s * n * c).toFixed(2) : '';
+    };
+  });
+
+  // Активируем кнопку сохранения
+  var btn = document.getElementById('pmSaveBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+
+  modal.classList.add('open');
+  setTimeout(function() { document.getElementById('pm_work_name').focus(); }, 100);
+}
+
+async function ppModalSave() {
+  var workName = (document.getElementById('pm_work_name').value || '').trim();
+  if (!workName) {
+    showToast('Укажите наименование работы', 'warning');
+    document.getElementById('pm_work_name').focus();
+    return;
+  }
+
+  var body = { project_id: currentProjectId };
+  var fields = {
+    work_name: 'pm_work_name', work_designation: 'pm_work_designation',
+    date_start: 'pm_date_start', date_end: 'pm_date_end',
+    sheets_a4: 'pm_sheets_a4', norm: 'pm_norm', coeff: 'pm_coeff', labor: 'pm_labor',
+    dept: 'pm_dept', center: 'pm_center', sector_head: 'pm_sector_head',
+    executor: 'pm_executor', task_type: 'pm_task_type'
+  };
+  for (var k in fields) {
+    var el = document.getElementById(fields[k]);
+    if (el) body[k] = el.value;
+  }
+  // Этап ПП
+  var stageEl = document.getElementById('pm_pp_stage');
+  if (stageEl && stageEl.value) body.pp_stage = stageEl.value;
+
+  var btn = document.getElementById('pmSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+
+  // Песочница
+  if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
+    var fc = {};
+    for (var fk in fields) {
+      var fv = document.getElementById(fields[fk]);
+      if (fv && fv.value) fc[fk] = fv.value;
+    }
+    try {
+      await addSandboxItem('create', null, fc);
+      closeModal('ppNewRowModal');
+      showToast('Новая строка добавлена в песочницу', 'success');
+    } catch (err) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+    }
+    return;
+  }
+
+  try {
+    var resp = await fetchJson('/api/production_plan/create/', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!resp._error) {
+      closeModal('ppNewRowModal');
+      colFilters = {};
+      await loadPPRows();
+      showToast('Работа добавлена', 'success');
+    } else {
+      showToast(resp._error || 'Ошибка', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+    }
+  } catch (e) {
+    console.error('Ошибка сохранения:', e);
+    showToast('Ошибка сети', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+  }
 }
 
 /* ── Статистика ПП ───────────────────────────────────────────────────── */
@@ -2921,4 +3090,3 @@ async function ppBulkDelete() {
   renderPPTable();
   if (deleted > 0) notify('Удалено строк: ' + deleted, 'ok');
 }
-

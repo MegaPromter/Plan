@@ -19,12 +19,14 @@
 .ji-table th {
   background:var(--surface2); font-weight:700; font-size:11px;
   color:var(--text2); letter-spacing:.05em;
-  position:sticky; top:0; z-index:3; padding-bottom:2px;
+  position:sticky; z-index:3; padding-bottom:2px;
 }
 
-/* строка фильтров */
+/* Sticky-шапка: три ряда с фиксированной высотой */
+.ji-table thead tr:nth-child(1) th { top:0; height:26px; line-height:14px; }
+.ji-table thead tr:nth-child(2) th { top:26px; height:26px; line-height:14px; }
 .ji-table tr.filter-row th {
-  background:var(--surface2); top:31px; padding:3px 4px; z-index:3;
+  background:var(--surface2); top:52px; height:26px; padding:3px 4px; z-index:3;
 }
 
 /* строки данных */

@@ -116,6 +116,20 @@
       </div>
     </div>
 
+    <!-- Режим ввода новой работы в ПП -->
+    <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Режим ввода работы (ПП)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Добавление новой работы в модальном окне вместо строки таблицы</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="ppInputModalChk" style="width:16px;height:16px;accent-color:var(--accent);"
+          {% if employee and employee.col_settings.pp_input_modal %}checked{% endif %}
+          onchange="savePpInputModal(this.checked)">
+        <span style="font-size:13px;color:var(--text);">Модальное окно</span>
+      </label>
+    </div>
+
     <!-- Кнопка перезапуска обучения -->
     <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
@@ -169,6 +183,12 @@ async function resetColWidths() {
   btn.innerHTML = '<i class="fas fa-undo"></i> Сбросить ширины';
   // Показываем toast-уведомление с результатом
   showToast(data.error ? ('Ошибка: ' + data.error) : 'Ширины колонок сброшены', data.error ? 'error' : 'success');
+}
+
+// Сохранить настройку «Модальное окно для ввода работы в ПП»
+async function savePpInputModal(checked) {
+  const data = await apiPost('/api/col_settings/', { pp_input_modal: checked });
+  showToast(data.error ? ('Ошибка: ' + data.error) : (checked ? 'Ввод работы через модальное окно' : 'Ввод работы в строке таблицы'), data.error ? 'error' : 'success');
 }
 
 // Сохранить настройку «Показывать все отделы НТЦ»
