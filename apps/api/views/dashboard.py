@@ -9,6 +9,8 @@ GET /api/dashboard/employee/<id>/?year=2026&month=3     — задачи сот�
 """
 
 import calendar as cal_mod
+import csv
+import io
 from collections import defaultdict
 from datetime import date
 
@@ -24,7 +26,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views import View
 
@@ -737,6 +739,29 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             result["team"] = _build_team_structure(
                 emp, team_ids_set, emp_hours, month_norm
             )
+
+            # П.6: Личные KPI руководителя («Мои задачи»)
+            my_personal = self._build_personal_kpi(
+                emp.pk, request.user, year, month, month_norm, today
+            )
+            result["my_kpi"] = my_personal["kpi"]
+
+            # П.9: KPI предыдущего месяца (для сравнения)
+            prev_month = month - 1 if month > 1 else 12
+            prev_year = year if month > 1 else year - 1
+            prev_norm = norms.get(prev_year, {}).get(prev_month, 0)
+            if not prev_norm and prev_year != year:
+                prev_norms = _get_calendar_norms([prev_year])
+                prev_norm = prev_norms.get(prev_year, {}).get(prev_month, 0)
+            prev_kpi = _compute_kpi_sql(
+                request.user, prev_year, prev_month, team_ids_set, prev_norm
+            )
+            _, prev_load, prev_scope_norm, _, _ = _compute_hours(
+                request.user, prev_year, prev_month, team_ids_set, prev_norm
+            )
+            prev_kpi["load_pct"] = prev_load
+            prev_kpi["norm_hours"] = prev_scope_norm
+            result["prev_kpi"] = prev_kpi
         else:
             # Обычный сотрудник — личные KPI
             personal = self._build_personal_kpi(
@@ -910,3 +935,127 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                 }
             )
         return result
+
+
+# ---------------------------------------------------------------------------
+#  GET /api/dashboard/export/?year=2026&month=3&type=debts  — экспорт CSV
+# ---------------------------------------------------------------------------
+
+
+class DashboardExportView(LoginRequiredJsonMixin, View):
+    """Экспорт задач/долгов/done_late в CSV (для совещаний)."""
+
+    def get(self, request):
+        today = timezone.now().date()
+        year = _int_param(request, "year", today.year)
+        month = _int_param(request, "month", today.month)
+        export_type = request.GET.get("type", "debts")
+
+        emp = getattr(request.user, "employee", None)
+        if not emp or not emp.is_writer:
+            return JsonResponse({"error": "Нет доступа"}, status=403)
+
+        team_ids_set = set(_team_ids_for_role(emp))
+        if not team_ids_set:
+            return JsonResponse({"error": "Нет команды"}, status=400)
+
+        team_q = Q(executor_id__in=team_ids_set) | Q(
+            task_executors__executor_id__in=team_ids_set
+        )
+        qs = _full_qs(request.user, year).filter(team_q).distinct()
+
+        if export_type == "debts":
+            qs = (
+                qs.exclude(pk__in=WorkReport.objects.values("work_id"))
+                .filter(date_end__lt=today, date_end__isnull=False)
+                .order_by("date_end")
+            )
+            title = "Долги"
+        elif export_type == "done_late":
+            qs = (
+                _annotated_qs(
+                    _base_plan_qs(request.user, year).filter(team_q).distinct()
+                )
+                .filter(_done=True, date_end__isnull=False)
+                .select_related(
+                    "department",
+                    "sector",
+                    "executor",
+                    "project",
+                    "pp_project",
+                    "pp_project__up_project",
+                )
+            )
+            title = "Выполнены с просрочкой"
+        else:
+            qs = qs.filter(_month_overlap(year, month)).order_by("date_end")
+            title = "Задачи"
+
+        # CSV
+        buf = io.StringIO()
+        # BOM для корректного открытия в Excel
+        buf.write("\ufeff")
+        writer = csv.writer(buf, delimiter=";")
+        writer.writerow(
+            [
+                "Задача",
+                "Обозначение",
+                "Проект",
+                "Исполнитель",
+                "Дата начала",
+                "Дата окончания",
+                "Статус",
+                "Дней просрочки",
+            ]
+        )
+
+        for w in qs:
+            is_done = getattr(w, "_done", False)
+            is_overdue = not is_done and w.date_end and w.date_end < today
+            status_text = (
+                "Выполнено" if is_done else ("Просрочено" if is_overdue else "В работе")
+            )
+
+            # Для done_late — фильтр по report_date > date_end
+            if export_type == "done_late":
+                rd = getattr(w, "_report_date", None)
+                if not rd:
+                    continue
+                rd_date = rd.date() if hasattr(rd, "date") else rd
+                if rd_date <= w.date_end:
+                    continue
+                days = (rd_date - w.date_end).days
+            elif is_overdue and w.date_end:
+                days = (today - w.date_end).days
+            else:
+                days = ""
+
+            executor_name = w.executor.short_name if w.executor else ""
+            project_name = (
+                w.project.name
+                if w.project
+                else (
+                    w.pp_project.up_project.name
+                    if w.pp_project and w.pp_project.up_project
+                    else (w.pp_project.name if w.pp_project else "")
+                )
+            )
+
+            writer.writerow(
+                [
+                    w.work_name or w.work_num or "",
+                    w.work_designation or "",
+                    project_name,
+                    executor_name,
+                    w.date_start.isoformat() if w.date_start else "",
+                    w.date_end.isoformat() if w.date_end else "",
+                    status_text,
+                    days,
+                ]
+            )
+
+        response = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="{title}_{year}-{month:02d}.csv"'
+        )
+        return response

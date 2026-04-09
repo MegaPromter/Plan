@@ -247,3 +247,66 @@
 .dash-notif-text { min-width:0; }
 .dash-notif-title { font-size:13px; font-weight:600; }
 .dash-notif-msg { font-size:12px; color:var(--text2); margin-top:1px; }
+
+/* ── Chip dot (индикатор загрузки на месяцах) ─────────────────── */
+.chip-dot {
+  display:inline-block; width:6px; height:6px; border-radius:50%;
+  margin-left:4px; vertical-align:middle;
+}
+.chip-dot-ok { background:var(--success, #22c55e); }
+.chip-dot-warn { background:var(--warning, #eab308); }
+.chip-dot-over { background:var(--danger, #ef4444); }
+
+/* ── Sparklines (мини-графики в KPI) ──────────────────────────── */
+.dash-sparkline { display:block; margin-top:6px; }
+
+/* ── Delta (сравнение с предыдущим месяцем) ───────────────────── */
+.dash-delta {
+  font-size:11px; font-weight:600; margin-left:6px;
+  white-space:nowrap; display:inline-flex; align-items:center; gap:2px;
+}
+.dash-delta-good { color:var(--success, #22c55e); }
+.dash-delta-bad { color:var(--danger, #ef4444); }
+
+/* ── KPI extra (sparkline контейнер) ──────────────────────────── */
+.an-summary-extra { margin-top:4px; }
+
+/* ── Маленькие KPI-карточки («Мои задачи») ────────────────────── */
+.an-summary-card-sm {
+  padding:10px 14px; border-radius:var(--radius-md);
+  background:var(--surface2, #f8f9fa); border:1px solid var(--border);
+  display:flex; flex-direction:column; gap:2px;
+}
+.an-summary-card-sm .an-summary-label { font-size:11px; }
+.an-summary-card-sm .an-summary-val { font-size:18px; }
+
+/* ── Поиск по команде ─────────────────────────────────────────── */
+.dash-team-search-wrap { margin-bottom:12px; }
+.dash-team-search {
+  width:100%; max-width:320px; padding:7px 12px; font-size:13px;
+  border:1px solid var(--border); border-radius:var(--radius-md);
+  background:var(--surface); color:var(--text);
+  outline:none; transition:border-color 0.15s;
+}
+.dash-team-search:focus { border-color:var(--accent); }
+
+/* ── Экспорт кнопка ──────────────────────────────────────────── */
+.dash-export-btn {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; font-size:12px; font-weight:500;
+  color:var(--accent); background:transparent; border:1px solid var(--accent);
+  border-radius:var(--radius-sm); cursor:pointer; text-decoration:none;
+  transition:all 0.15s; margin-left:8px;
+}
+.dash-export-btn:hover { background:var(--accent); color:#fff; }
+
+/* ── «Показать ещё» (отделы без просрочек) ────────────────────── */
+.dash-more-depts { margin-top:8px; }
+.dash-show-all-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; font-size:13px; color:var(--muted);
+  background:transparent; border:1px dashed var(--border);
+  border-radius:var(--radius-md); cursor:pointer;
+  transition:all 0.15s;
+}
+.dash-show-all-btn:hover { border-color:var(--accent); color:var(--accent); }

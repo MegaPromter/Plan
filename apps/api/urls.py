@@ -45,7 +45,12 @@ from .views.col_settings import ColSettingsView
 
 # Вьюхи комментариев к задачам (WorkComment)
 from .views.comments import CommentDetailView, CommentListView
-from .views.dashboard import DashboardAPIView, DashboardEmployeeView, DashboardScopeView
+from .views.dashboard import (
+    DashboardAPIView,
+    DashboardEmployeeView,
+    DashboardExportView,
+    DashboardScopeView,
+)
 
 # Вьюхи делегирований ролей
 from .views.delegations import DelegationDetailView, DelegationListView
@@ -354,6 +359,8 @@ urlpatterns = [
     path("dashboard/", DashboardAPIView.as_view()),
     # GET /api/dashboard/scope/?type=tasks|debts|done_late — ленивая загрузка задач
     path("dashboard/scope/", DashboardScopeView.as_view()),
+    # GET /api/dashboard/export/?type=debts|tasks|done_late — экспорт CSV
+    path("dashboard/export/", DashboardExportView.as_view()),
     # GET /api/dashboard/employee/<pk>/ — задачи/долги сотрудника (ленивая загрузка)
     path("dashboard/employee/<int:pk>/", DashboardEmployeeView.as_view()),
     # ── Уведомления ────────────────────────────────────────────────────
