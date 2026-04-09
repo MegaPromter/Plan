@@ -222,18 +222,16 @@ function renderTeam(team) {
   el.innerHTML = html;
 }
 
-/* ── Dropdown сотрудника (задачи + долги) ────────────────────────── */
+/* ── Dropdown сотрудника (задачи + долги — ленивая загрузка) ────── */
 function _renderEmployeeDropdown(e) {
   var badgeCls = loadBadgeCls(e.load_pct);
-  var hasTasks = e.tasks && e.tasks.length > 0;
-  var hasDebts = e.debts && e.debts.length > 0;
-  var hasContent = hasTasks || hasDebts;
+  // Всегда кликабельный (задачи подгружаются лениво)
+  var hasContent = (e.done_count + e.inwork_count + e.overdue_count) > 0;
 
   var html = '<div class="dash-emp">';
 
-  // Заголовок сотрудника — компактная строка
   html += '<div class="dash-emp-header' + (hasContent ? ' clickable' : '') + '"';
-  if (hasContent) html += ' onclick="dashToggleEmp(this)"';
+  if (hasContent) html += ' onclick="dashToggleEmp(this)" data-emp-id="' + e.id + '"';
   html += '>';
   if (hasContent) {
     html += '<i class="fas fa-chevron-right dash-emp-toggle"></i>';
@@ -249,21 +247,9 @@ function _renderEmployeeDropdown(e) {
   html += '<span class="dash-emp-tag' + (e.overdue_count > 0 ? ' debt' : '') + '">' + (e.overdue_count > 0 ? e.overdue_count + ' долг.' : '') + '</span>';
   html += '</div>';
 
-  // Тело — компактный список задач и долгов
+  // Тело — будет заполнено при первом клике (ленивая загрузка)
   if (hasContent) {
-    html += '<div class="dash-emp-body" style="display:none;">';
-
-    if (hasTasks) {
-      html += '<div class="dash-emp-label"><i class="fas fa-tasks"></i> ' + MONTHS_FULL[currentMonth] + '</div>';
-      html += _renderCompactList(e.tasks);
-    }
-
-    if (hasDebts) {
-      html += '<div class="dash-emp-label debt"><i class="fas fa-exclamation-triangle"></i> Долги</div>';
-      html += _renderCompactList(e.debts);
-    }
-
-    html += '</div>';
+    html += '<div class="dash-emp-body" style="display:none;" data-loaded="false"></div>';
   }
 
   html += '</div>';
@@ -384,7 +370,7 @@ window.dashToggleDept = function(headerEl) {
   if (toggle) toggle.classList.toggle('open', !isOpen);
 };
 
-/* ── Сворачивание сотрудника ─────────────────────────────────────── */
+/* ── Сворачивание сотрудника (ленивая загрузка задач) ───────────── */
 window.dashToggleEmp = function(headerEl) {
   var body = headerEl.nextElementSibling;
   var toggle = headerEl.querySelector('.dash-emp-toggle');
@@ -392,6 +378,39 @@ window.dashToggleEmp = function(headerEl) {
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if (toggle) toggle.classList.toggle('open', !isOpen);
+
+  // Ленивая загрузка: при первом раскрытии грузим задачи с сервера
+  if (!isOpen && body.dataset.loaded === 'false') {
+    body.dataset.loaded = 'loading';
+    var empId = headerEl.dataset.empId;
+    body.innerHTML = '<div style="padding:8px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+
+    fetch('/api/dashboard/employee/' + empId + '/?year=' + currentYear + '&month=' + currentMonth)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      body.dataset.loaded = 'true';
+      var html = '';
+      if (data.tasks && data.tasks.length) {
+        html += '<div class="dash-emp-label"><i class="fas fa-tasks"></i> ' + MONTHS_FULL[currentMonth] + '</div>';
+        html += _renderCompactList(data.tasks);
+      }
+      if (data.debts && data.debts.length) {
+        html += '<div class="dash-emp-label debt"><i class="fas fa-exclamation-triangle"></i> Долги</div>';
+        html += _renderCompactList(data.debts);
+      }
+      if (!html) {
+        html = '<div style="padding:8px;color:var(--muted);">Нет задач</div>';
+      }
+      body.innerHTML = html;
+    })
+    .catch(function(e) {
+      body.dataset.loaded = 'false';
+      body.innerHTML = '<div style="padding:8px;color:var(--danger);">Ошибка загрузки</div>';
+    });
+  }
 };
 
 /* ── Обновление заголовка виджета ──────────────────────────────── */

@@ -20,6 +20,143 @@ from apps.works.models import TaskExecutor, Work, WorkCalendar, WorkReport
 from .analytics_plan import _float, _get_absences, _get_calendar_norms
 
 
+# ---------------------------------------------------------------------------
+#  Общий базовый queryset для dashboard (переиспользуется в обоих endpoint'ах)
+# ---------------------------------------------------------------------------
+
+_WORK_FIELDS = (
+    'id', 'work_name', 'work_num', 'work_designation',
+    'date_start', 'date_end', 'plan_hours',
+    'executor_id', 'department_id', 'sector_id',
+    'project_id', 'pp_project_id',
+)
+_RELATED_ONLY = (
+    'department__id', 'department__code', 'department__name',
+    'sector__id', 'sector__code', 'sector__name',
+    'executor__id', 'executor__last_name',
+    'executor__first_name', 'executor__patronymic',
+    'project__id', 'project__name_short', 'project__name_full',
+    'pp_project__id', 'pp_project__name',
+    'pp_project__up_project_id',
+    'pp_project__up_project__id',
+    'pp_project__up_project__name_short',
+    'pp_project__up_project__name_full',
+)
+
+
+def _dashboard_base_qs(user, year):
+    """Базовый queryset задач за год с аннотациями для dashboard."""
+    vis_q = get_visibility_filter(user)
+    has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
+    first_report_date = Subquery(
+        WorkReport.objects.filter(work=OuterRef('pk'))
+        .order_by('created_at')
+        .values('created_at')[:1]
+    )
+
+    base = (
+        Work.objects.filter(vis_q, show_in_plan=True)
+        .annotate(_done=has_reports, _report_date=first_report_date)
+        .select_related('department', 'sector', 'executor',
+                        'project', 'pp_project', 'pp_project__up_project')
+        .only(*_WORK_FIELDS, *_RELATED_ONLY)
+    )
+
+    year_q = (
+        Q(date_start__year__lte=year, date_end__year__gte=year)
+        | Q(date_start__year=year)
+        | Q(date_end__year=year)
+        | Q(date_start__isnull=True, date_end__isnull=True)
+        | Q(date_start__isnull=True, date_end__year=year)
+        | Q(date_start__year=year, date_end__isnull=True)
+    )
+    base = base.filter(year_q)
+
+    te_qs = TaskExecutor.objects.select_related('executor')
+    base = base.prefetch_related(
+        Prefetch('task_executors', queryset=te_qs, to_attr='_prefetched_executors')
+    )
+
+    return base
+
+
+# ---------------------------------------------------------------------------
+#  GET /api/dashboard/employee/<id>/?year=2026&month=3
+# ---------------------------------------------------------------------------
+
+class DashboardEmployeeView(LoginRequiredJsonMixin, View):
+    """Задачи и долги конкретного сотрудника (ленивая загрузка по клику)."""
+
+    def get(self, request, pk):
+        today = timezone.now().date()
+        year = self._int_param(request, 'year', today.year)
+        month = self._int_param(request, 'month', today.month)
+
+        emp = getattr(request.user, 'employee', None)
+        if not emp or not emp.is_writer:
+            return JsonResponse({'error': 'Нет доступа'}, status=403)
+
+        norms = _get_calendar_norms([year])
+        month_norm = norms.get(year, {}).get(month, 0)
+
+        base = _dashboard_base_qs(request.user, year)
+        all_works = list(base)
+
+        month_key = f'{year}-{month:02d}'
+        m_start = date(year, month, 1)
+        m_end = date(year, month, cal_mod.monthrange(year, month)[1])
+
+        tasks = []
+        debts = []
+
+        for w in all_works:
+            # Проверяем, является ли pk исполнителем этой задачи
+            is_executor = w.executor_id == pk
+            if not is_executor:
+                is_executor = any(
+                    te.executor_id == pk
+                    for te in getattr(w, '_prefetched_executors', [])
+                )
+            if not is_executor:
+                continue
+
+            # plan_hours для этого сотрудника
+            ph = {}
+            if w.executor_id == pk:
+                ph = w.plan_hours or {}
+            else:
+                for te in getattr(w, '_prefetched_executors', []):
+                    if te.executor_id == pk:
+                        ph = te.plan_hours or {}
+                        break
+
+            is_done = getattr(w, '_done', False)
+            is_overdue = not is_done and w.date_end and w.date_end < today
+            status = 'done' if is_done else ('overdue' if is_overdue else 'inwork')
+
+            hrs = float(ph.get(month_key, 0) or 0)
+            in_month = hrs > 0
+            if not in_month and w.date_start and w.date_end:
+                in_month = w.date_end >= m_start and w.date_start <= m_end
+
+            task_item = DashboardAPIView._serialize_task_static(
+                w, ph, status, today, year)
+
+            if status == 'overdue':
+                debts.append(task_item)
+            elif in_month:
+                tasks.append(task_item)
+
+        return JsonResponse({'tasks': tasks, 'debts': debts})
+
+    @staticmethod
+    def _int_param(request, name, default):
+        try:
+            return int(request.GET.get(name, default))
+        except (ValueError, TypeError):
+            return default
+
+
 class DashboardAPIView(LoginRequiredJsonMixin, View):
     """GET /api/dashboard/?year=2026&month=3"""
 
@@ -44,67 +181,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
         norms = _get_calendar_norms([year])
         month_norm = norms.get(year, {}).get(month, 0)
 
-        # ── Базовый queryset ──
-        vis_q = get_visibility_filter(request.user)
-        has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
-        first_report_date = Subquery(
-            WorkReport.objects.filter(work=OuterRef('pk'))
-            .order_by('created_at')
-            .values('created_at')[:1]
-        )
-
-        # Только поля, используемые в dashboard (KPI, задачи, долги).
-        # PP-специфичные поля (sheets_a4, norm, coeff, total_2d, total_3d,
-        # labor, row_code, work_order, milestone_num, justification,
-        # executors_list, actions, task_type, stage_num, deadline) не нужны.
-        _WORK_FIELDS = (
-            'id', 'work_name', 'work_num', 'work_designation',
-            'date_start', 'date_end', 'plan_hours',
-            'executor_id', 'department_id', 'sector_id',
-            'project_id', 'pp_project_id',
-        )
-        _RELATED_ONLY = (
-            # department
-            'department__id', 'department__code', 'department__name',
-            # sector
-            'sector__id', 'sector__code', 'sector__name',
-            # executor — short_name property uses last/first/patronymic
-            'executor__id', 'executor__last_name',
-            'executor__first_name', 'executor__patronymic',
-            # project — .name property uses name_short/name_full
-            'project__id', 'project__name_short', 'project__name_full',
-            # pp_project
-            'pp_project__id', 'pp_project__name',
-            'pp_project__up_project_id',
-            # pp_project__up_project
-            'pp_project__up_project__id',
-            'pp_project__up_project__name_short',
-            'pp_project__up_project__name_full',
-        )
-
-        base = (
-            Work.objects.filter(vis_q, show_in_plan=True)
-            .annotate(_done=has_reports, _report_date=first_report_date)
-            .select_related('department', 'sector', 'executor',
-                            'project', 'pp_project', 'pp_project__up_project')
-            .only(*_WORK_FIELDS, *_RELATED_ONLY)
-        )
-
-        year_q = (
-            Q(date_start__year__lte=year, date_end__year__gte=year)
-            | Q(date_start__year=year)
-            | Q(date_end__year=year)
-            | Q(date_start__isnull=True, date_end__isnull=True)
-            | Q(date_start__isnull=True, date_end__year=year)
-            | Q(date_start__year=year, date_end__isnull=True)
-        )
-        base = base.filter(year_q)
-
-        te_qs = TaskExecutor.objects.select_related('executor')
-        base = base.prefetch_related(
-            Prefetch('task_executors', queryset=te_qs, to_attr='_prefetched_executors')
-        )
-
+        base = _dashboard_base_qs(request.user, year)
         all_works = list(base)
 
         # ── Отсутствия ──
@@ -500,8 +577,6 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
                 'done_count': done_count,
                 'overdue_count': ov,
                 'inwork_count': inwork_count,
-                'tasks': tasks_list,
-                'debts': debts_list,
             }
             total_load_sum += load
             total_overdue += ov
@@ -589,6 +664,10 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
     # ── Утилиты ──────────────────────────────────────────────────────────
 
     def _serialize_task(self, w, ph, status, today, year):
+        return self._serialize_task_static(w, ph, status, today, year)
+
+    @staticmethod
+    def _serialize_task_static(w, ph, status, today, year):
         executor_name = ''
         if w.executor:
             executor_name = w.executor.short_name

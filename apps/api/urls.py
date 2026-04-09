@@ -40,7 +40,7 @@ from .views.col_settings import ColSettingsView
 
 # Вьюхи комментариев к задачам (WorkComment)
 from .views.comments import CommentDetailView, CommentListView
-from .views.dashboard import DashboardAPIView
+from .views.dashboard import DashboardAPIView, DashboardEmployeeView
 
 # Вьюхи делегирований ролей
 from .views.delegations import DelegationDetailView, DelegationListView
@@ -347,6 +347,8 @@ urlpatterns = [
     # ── Dashboard ─────────────────────────────────────────────────────
     # GET /api/dashboard/ — личный план + сводка для руководителя
     path('dashboard/', DashboardAPIView.as_view()),
+    # GET /api/dashboard/employee/<pk>/ — задачи/долги сотрудника (ленивая загрузка)
+    path('dashboard/employee/<int:pk>/', DashboardEmployeeView.as_view()),
 
     # ── Уведомления ────────────────────────────────────────────────────
     # GET /api/notifications/ — список последних 50 уведомлений
