@@ -377,35 +377,76 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ── TASKS ─────────────────────────────────────────────────────────────────
+var SP_FETCH_CHUNK = 200;
+var _spBgLoading = false;
+
+function _spBuildUrl() {
+  var search = document.getElementById("searchInput").value.trim();
+  var url;
+  if (showAll) {
+    url = '/api/tasks/?all=1';
+  } else {
+    url = '/api/tasks/?year=' + selectedYear;
+    if (selectedMonth) url += '&month=' + selectedMonth;
+  }
+  if (search) url += '&search=' + encodeURIComponent(search);
+  return url;
+}
+
 async function loadTasks() {
   // Сброс закреплённой строки (пин живёт один цикл загрузки)
   if (_spPinKeep) { _spPinKeep = false; }
   else { _spPinnedRowId = null; }
+  _spBgLoading = false;
 
-  const search = document.getElementById("searchInput").value.trim();
-  let url;
-  if (showAll) {
-    url = `/api/tasks/?all=1`;
-  } else {
-    url = `/api/tasks/?year=${selectedYear}`;
-    if (selectedMonth) url += `&month=${selectedMonth}`;
-  }
-  if (search) url += `&search=${encodeURIComponent(search)}`;
+  var baseUrl = _spBuildUrl();
 
   document.getElementById("taskBody").innerHTML = skeletonRows(10, 15);
   document.getElementById("searchCount").textContent = "...";
 
   try {
-    const res = await fetch(url);
+    // Загружаем первую порцию
+    var res = await fetch(baseUrl + '&limit=' + SP_FETCH_CHUNK + '&offset=0');
     if (!res.ok) { console.error("loadTasks HTTP error:", res.status); return; }
     tasks = await res.json();
+
     initDeptChips();
     initMfTriggers();
     renderTable();
+
+    // Дозагрузка в фоне если есть ещё
+    var hasMore = res.headers.get('X-Has-More') === 'true';
+    if (hasMore) {
+      _spBgLoading = true;
+      _spBgLoadRemaining(baseUrl, tasks.length);
+    }
   } catch(e) {
     console.error("loadTasks error:", e);
     document.getElementById("searchCount").textContent = "Ошибка загрузки";
   }
+}
+
+// Фоновая дозагрузка оставшихся строк порциями
+async function _spBgLoadRemaining(baseUrl, offset) {
+  while (true) {
+    var url = baseUrl + '&limit=' + SP_FETCH_CHUNK + '&offset=' + offset;
+    var resp;
+    try { resp = await fetch(url); } catch(e) { break; }
+    if (!resp.ok) break;
+
+    var batch = await resp.json();
+    if (!Array.isArray(batch) || batch.length === 0) break;
+
+    tasks = tasks.concat(batch);
+    offset += batch.length;
+
+    // Перерисовываем с новыми данными
+    renderTable();
+
+    var hasMore = resp.headers.get('X-Has-More') === 'true';
+    if (!hasMore) break;
+  }
+  _spBgLoading = false;
 }
 
 // ══════════════════════════════════════════════════════════════════════════

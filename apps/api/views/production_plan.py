@@ -166,6 +166,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
 
         resp = JsonResponse([_serialize_pp(w, today) for w in works], safe=False)
         resp['X-Total-Count'] = total_count
+        resp['X-Has-More'] = 'true' if (offset + limit) < total_count else 'false'
         resp['Cache-Control'] = 'private, max-age=5'
         return resp
 

@@ -321,6 +321,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
 
         response = JsonResponse(result, safe=False)
         response['X-Total-Count'] = total_count
+        response['X-Has-More'] = 'true' if (offset + limit) < total_count else 'false'
         response['Cache-Control'] = 'private, max-age=5'
         return response
 

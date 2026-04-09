@@ -249,15 +249,59 @@ async function loadProjects() {
   if (!data._error) projects = Array.isArray(data) ? data : (data.results || []);
 }
 
+// Размер порции для прогрессивной загрузки с сервера
+var PP_FETCH_CHUNK = 200;
+var _ppBgLoading = false;  // фоновая дозагрузка идёт
+
 // Загружает строки производственного плана для конкретного проекта
+// Первая порция загружается сразу, остальные — в фоне
 async function loadPPRows(projectId) {
-  _ppPinnedRowId = null;  // новые данные — сброс пина
-  const data = await fetchJson('/api/production_plan/?project_id=' + projectId);
-  if (!data._error) {
-    rows = Array.isArray(data) ? data : (data.results || []);
-    // Обратный порядок: новые строки отображаются вверху
-    rows.reverse();
+  _ppPinnedRowId = null;
+  _ppBgLoading = false;
+
+  // Загружаем первую порцию
+  var url = '/api/production_plan/?project_id=' + projectId
+          + '&limit=' + PP_FETCH_CHUNK + '&offset=0';
+  var resp = await fetch(url);
+  if (!resp.ok) { rows = []; return; }
+  var data = await resp.json();
+  rows = Array.isArray(data) ? data : (data.results || []);
+  rows.reverse();
+
+  var hasMore = resp.headers.get('X-Has-More') === 'true';
+
+  // Если есть ещё данные — дозагружаем в фоне
+  if (hasMore) {
+    _ppBgLoading = true;
+    _ppBgLoadRemaining(projectId, rows.length);
   }
+}
+
+// Фоновая дозагрузка оставшихся строк порциями
+async function _ppBgLoadRemaining(projectId, offset) {
+  while (true) {
+    var url = '/api/production_plan/?project_id=' + projectId
+            + '&limit=' + PP_FETCH_CHUNK + '&offset=' + offset;
+    var resp;
+    try { resp = await fetch(url); } catch(e) { break; }
+    if (!resp.ok) break;
+
+    var batch = await resp.json();
+    batch = Array.isArray(batch) ? batch : (batch.results || []);
+    if (batch.length === 0) break;
+
+    // Вставляем в начало (reverse: новые строки вверху)
+    batch.reverse();
+    rows = batch.concat(rows);
+    offset += batch.length;
+
+    // Перерисовываем таблицу с новыми данными
+    renderPPTable();
+
+    var hasMore = resp.headers.get('X-Has-More') === 'true';
+    if (!hasMore) break;
+  }
+  _ppBgLoading = false;
 }
 
 /* ── Режим лендинга (список ПП-проектов) ────────────────────────────── */
