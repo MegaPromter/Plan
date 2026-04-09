@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — 3D-призма v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;display:flex;flex-direction:column;gap:60px;align-items:center;padding:60px 40px;background:#0f172a}
+h2{font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:3px;margin-bottom:20px;text-align:center}
+
+/* ══════════════════════════════════════════════════════════════
+   3D ПРИЗМА — треугольная призма (вид сбоку, изометрия)
+   Три грани: левая, правая, верхняя
+   На гранях — символы программирования
+   ══════════════════════════════════════════════════════════════ */
+
+.prism-3d {
+  position: relative;
+  display: inline-block;
+}
+
+/* ── LARGE ────────────────────────────────────────────────── */
+.prism-3d-lg {
+  width: 200px;
+  height: 220px;
+}
+
+/* Левая грань (тёмно-синяя) */
+.prism-3d-lg .face-left {
+  position: absolute;
+  width: 100px; height: 180px;
+  bottom: 0; left: 0;
+  background: linear-gradient(160deg, #1e3a5f 0%, #162d4a 100%);
+  clip-path: polygon(50% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%);
+  transform: skewY(10deg);
+  transform-origin: bottom right;
+  border-radius: 0 0 0 4px;
+}
+
+/* Правая грань (синяя, светлее) */
+.prism-3d-lg .face-right {
+  position: absolute;
+  width: 100px; height: 180px;
+  bottom: 0; right: 0;
+  background: linear-gradient(200deg, #2563eb 0%, #1d4ed8 100%);
+  clip-path: polygon(0% 0%, 100% 15%, 100% 100%, 0% 100%);
+  transform: skewY(-10deg);
+  transform-origin: bottom left;
+  border-radius: 0 0 4px 0;
+}
+
+/* Верхняя грань (яркая, градиент) */
+.prism-3d-lg .face-top {
+  position: absolute;
+  width: 120px; height: 40px;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #5dcaa5 0%, #3b82f6 50%, #7f77dd 100%);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+/* Символы на гранях */
+.code-sym {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: rgba(255,255,255,0.15);
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+}
+/* Яркие акцентные символы */
+.code-sym.bright { color: rgba(255,255,255,0.35); }
+.code-sym.glow-g { color: rgba(93,202,165,0.4); }
+.code-sym.glow-o { color: rgba(239,159,39,0.35); }
+.code-sym.glow-p { color: rgba(127,119,221,0.4); }
+
+/* Свечение вершины */
+.prism-3d-lg .apex-glow {
+  position: absolute;
+  top: -5px; left: 50%; transform: translateX(-50%);
+  width: 40px; height: 40px;
+  background: radial-gradient(circle, rgba(93,202,165,0.3) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Свечение основания */
+.prism-3d-lg .base-glow {
+  position: absolute;
+  bottom: -8px; left: 50%; transform: translateX(-50%);
+  width: 180px; height: 16px;
+  background: radial-gradient(ellipse, rgba(37,99,235,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Ребро-блик (вертикальная линия по центру) */
+.prism-3d-lg .edge-highlight {
+  position: absolute;
+  left: 50%; top: 28px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, rgba(93,202,165,0.6) 0%, rgba(37,99,235,0.2) 60%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── SMALL (сайдбар) ─────────────────────────────────────── */
+.prism-3d-sm {
+  width: 56px;
+  height: 62px;
+}
+.prism-3d-sm .face-left {
+  position: absolute;
+  width: 28px; height: 50px;
+  bottom: 0; left: 0;
+  background: linear-gradient(160deg, #1e3a5f 0%, #162d4a 100%);
+  clip-path: polygon(50% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%);
+  transform: skewY(10deg);
+  transform-origin: bottom right;
+}
+.prism-3d-sm .face-right {
+  position: absolute;
+  width: 28px; height: 50px;
+  bottom: 0; right: 0;
+  background: linear-gradient(200deg, #2563eb 0%, #1d4ed8 100%);
+  clip-path: polygon(0% 0%, 100% 15%, 100% 100%, 0% 100%);
+  transform: skewY(-10deg);
+  transform-origin: bottom left;
+}
+.prism-3d-sm .face-top {
+  position: absolute;
+  width: 34px; height: 12px;
+  top: 2px; left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #5dcaa5, #3b82f6, #7f77dd);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+.prism-3d-sm .edge-highlight {
+  position: absolute;
+  left: 50%; top: 8px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, rgba(93,202,165,0.5) 0%, rgba(37,99,235,0.15) 60%, transparent 100%);
+}
+.prism-3d-sm .code-sym { font-size: 5px; }
+.prism-3d-sm .base-glow {
+  position: absolute;
+  bottom: -4px; left: 50%; transform: translateX(-50%);
+  width: 50px; height: 8px;
+  background: radial-gradient(ellipse, rgba(37,99,235,0.2) 0%, transparent 70%);
+}
+
+/* ── MEDIUM ───────────────────────────────────────────────── */
+.prism-3d-md {
+  width: 80px;
+  height: 90px;
+}
+.prism-3d-md .face-left {
+  position: absolute;
+  width: 40px; height: 72px;
+  bottom: 0; left: 0;
+  background: linear-gradient(160deg, #1e3a5f 0%, #162d4a 100%);
+  clip-path: polygon(50% 0%, 100% 15%, 100% 100%, 0% 100%, 0% 15%);
+  transform: skewY(10deg);
+  transform-origin: bottom right;
+}
+.prism-3d-md .face-right {
+  position: absolute;
+  width: 40px; height: 72px;
+  bottom: 0; right: 0;
+  background: linear-gradient(200deg, #2563eb 0%, #1d4ed8 100%);
+  clip-path: polygon(0% 0%, 100% 15%, 100% 100%, 0% 100%);
+  transform: skewY(-10deg);
+  transform-origin: bottom left;
+}
+.prism-3d-md .face-top {
+  position: absolute;
+  width: 48px; height: 16px;
+  top: 3px; left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #5dcaa5, #3b82f6, #7f77dd);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+.prism-3d-md .edge-highlight {
+  position: absolute;
+  left: 50%; top: 12px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, rgba(93,202,165,0.5) 0%, rgba(37,99,235,0.15) 60%, transparent 100%);
+}
+.prism-3d-md .code-sym { font-size: 7px; }
+.prism-3d-md .base-glow {
+  position: absolute;
+  bottom: -5px; left: 50%; transform: translateX(-50%);
+  width: 70px; height: 10px;
+  background: radial-gradient(ellipse, rgba(37,99,235,0.2) 0%, transparent 70%);
+}
+
+/* ── Текст бренда ────────────────────────────────────────── */
+.prism-text {
+  text-align: center;
+}
+.prism-text-title {
+  font-weight: 800;
+  color: #e8e6dd;
+  letter-spacing: 8px;
+}
+.prism-text-sub {
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 4px;
+  margin-top: 6px;
+}
+
+/* ── Обёртка ─────────────────────────────────────────────── */
+.logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.logo-wrap-h {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Демо-контейнеры ─────────────────────────────────────── */
+.demo { background: #1a2744; border-radius: 16px; padding: 48px; display: flex; flex-direction: column; align-items: center; }
+.demo-light { background: #f0f2f5; }
+.demo-light .prism-text-title { color: #1e293b; }
+.demo-light .prism-text-sub { color: #94a3b8; }
+.demo-sidebar { background: #1a2744; border-radius: 12px; padding: 20px; width: 220px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LARGE — Логин aside
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Large — Login aside</h2>
+<div class="demo">
+  <div class="logo-wrap">
+    <div class="prism-3d prism-3d-lg">
+      <!-- Верхняя грань -->
+      <div class="face-top"></div>
+      <div class="apex-glow"></div>
+      <!-- Левая грань -->
+      <div class="face-left">
+        <span class="code-sym" style="top:30%;left:12%;font-size:18px">&lt;/&gt;</span>
+        <span class="code-sym glow-g" style="top:55%;left:25%;font-size:12px">fn()</span>
+        <span class="code-sym" style="top:75%;left:10%;font-size:10px">&&</span>
+        <span class="code-sym bright" style="top:45%;left:55%;font-size:14px">{}</span>
+        <span class="code-sym glow-p" style="top:85%;left:50%;font-size:9px">//</span>
+        <span class="code-sym" style="top:35%;left:60%;font-size:8px">@</span>
+      </div>
+      <!-- Правая грань -->
+      <div class="face-right">
+        <span class="code-sym bright" style="top:30%;left:20%;font-size:16px">=&gt;</span>
+        <span class="code-sym glow-o" style="top:55%;left:35%;font-size:11px">[ ]</span>
+        <span class="code-sym" style="top:75%;left:55%;font-size:13px">#</span>
+        <span class="code-sym" style="top:42%;left:60%;font-size:9px">;</span>
+        <span class="code-sym glow-g" style="top:85%;left:20%;font-size:10px">**</span>
+        <span class="code-sym" style="top:65%;left:10%;font-size:8px">$</span>
+      </div>
+      <!-- Ребро -->
+      <div class="edge-highlight"></div>
+      <!-- Свечение основания -->
+      <div class="base-glow"></div>
+    </div>
+    <div class="prism-text">
+      <div class="prism-text-title" style="font-size:42px;">ПРИЗМА</div>
+      <div class="prism-text-sub" style="font-size:12px;letter-spacing:5px;">MANAGE SYSTEMS<span style="color:#5dcaa5;font-weight:700">.ru</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SMALL — Сайдбар
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Small — Sidebar</h2>
+<div class="demo-sidebar">
+  <div class="logo-wrap-h">
+    <div class="prism-3d prism-3d-sm">
+      <div class="face-top"></div>
+      <div class="face-left">
+        <span class="code-sym" style="top:35%;left:15%;font-size:6px">&lt;/&gt;</span>
+        <span class="code-sym bright" style="top:60%;left:30%;font-size:5px">{}</span>
+        <span class="code-sym" style="top:80%;left:10%;font-size:4px">#</span>
+      </div>
+      <div class="face-right">
+        <span class="code-sym bright" style="top:35%;left:25%;font-size:5px">=&gt;</span>
+        <span class="code-sym" style="top:60%;left:40%;font-size:5px">;</span>
+        <span class="code-sym" style="top:80%;left:15%;font-size:4px">@</span>
+      </div>
+      <div class="edge-highlight"></div>
+      <div class="base-glow"></div>
+    </div>
+    <div class="prism-text">
+      <div class="prism-text-title" style="font-size:22px;letter-spacing:5px;">ПРИЗМА</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MEDIUM — Угол логина
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Medium — Login corner</h2>
+<div class="demo" style="background:#f0f2f5;padding:32px;">
+  <div class="prism-3d prism-3d-md">
+    <div class="face-top"></div>
+    <div class="face-left">
+      <span class="code-sym" style="top:35%;left:15%;font-size:9px">&lt;/&gt;</span>
+      <span class="code-sym bright" style="top:60%;left:25%;font-size:7px">{}</span>
+      <span class="code-sym" style="top:80%;left:40%;font-size:6px">#</span>
+    </div>
+    <div class="face-right">
+      <span class="code-sym bright" style="top:35%;left:20%;font-size:8px">=&gt;</span>
+      <span class="code-sym" style="top:60%;left:40%;font-size:7px">;</span>
+      <span class="code-sym" style="top:80%;left:15%;font-size:6px">@</span>
+    </div>
+    <div class="edge-highlight"></div>
+    <div class="base-glow"></div>
+  </div>
+</div>
+
+</body>
+</html>

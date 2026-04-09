@@ -1,0 +1,192 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Flatpickr: кастомная тема ManageSystems
+   Стильный календарь с плавными анимациями и акцентными цветами.
+   Использует CSS-переменные из variables.css.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Контейнер календаря ─────────────────────────────────────────── */
+.flatpickr-calendar {
+  border-radius: 12px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06) !important;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 30%) !important;
+  font-family: var(--font, inherit) !important;
+  overflow: visible;
+  background: var(--surface, #fff) !important;
+  backdrop-filter: blur(8px);
+  padding: 4px !important;
+  width: 320px !important;
+}
+
+/* Анимация появления */
+.flatpickr-calendar.animate.open {
+  animation: fpFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fpFadeIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Навигация (месяц/год + стрелки) ────────────────────────────── */
+.flatpickr-months {
+  background: transparent !important;
+  padding: 8px 4px 4px !important;
+  align-items: center;
+}
+.flatpickr-months .flatpickr-month {
+  height: 32px !important;
+}
+.flatpickr-current-month {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.01em;
+  padding-top: 0 !important;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  font-weight: 700;
+  font-size: 15px;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  appearance: auto;
+  cursor: pointer;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+  color: var(--accent);
+}
+.flatpickr-current-month input.cur-year {
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+}
+
+/* Стрелки < > */
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  padding: 6px !important;
+  border-radius: 8px;
+  transition: background 0.15s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover {
+  background: rgba(var(--accent-rgb, 59,130,246), 0.1);
+  transform: scale(1.1);
+}
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg {
+  fill: var(--text2, #64748b);
+  transition: fill 0.15s;
+  width: 14px;
+  height: 14px;
+}
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+  fill: var(--accent);
+}
+
+/* ── Дни недели ──────────────────────────────────────────────────── */
+.flatpickr-weekdays {
+  background: transparent !important;
+  padding: 0 2px;
+}
+span.flatpickr-weekday {
+  color: var(--muted, #94a3b8) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Контейнер дней ──────────────────────────────────────────────── */
+.flatpickr-innerContainer,
+.flatpickr-rContainer,
+.flatpickr-days {
+  background: transparent !important;
+}
+
+/* ── Ячейки дней ─────────────────────────────────────────────────── */
+.flatpickr-day {
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  color: var(--text, #1e293b);
+  transition: all 0.12s ease;
+  max-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  margin: 1px;
+  border: 2px solid transparent !important;
+}
+
+/* Hover */
+.flatpickr-day:hover {
+  background: rgba(var(--accent-rgb, 59,130,246), 0.08) !important;
+  border-color: rgba(var(--accent-rgb, 59,130,246), 0.2) !important;
+  color: var(--accent) !important;
+  transform: scale(1.05);
+}
+
+/* Сегодня */
+.flatpickr-day.today {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  font-weight: 700;
+  background: rgba(var(--accent-rgb, 59,130,246), 0.06) !important;
+}
+.flatpickr-day.today:hover {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+
+/* Выбранный */
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb, 59,130,246), 0.35);
+  transform: scale(1.05);
+}
+
+/* Дни соседних месяцев — скрыты, строка схлопывается */
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  border: none !important;
+}
+
+/* Недоступные дни */
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+  color: var(--muted2, #cbd5e1) !important;
+  opacity: 0.35;
+  text-decoration: line-through;
+  transform: none !important;
+}
+
+/* ── Z-index — поверх всего ──────────────────────────────────────── */
+.flatpickr-calendar.open {
+  z-index: 999999 !important;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .flatpickr-calendar.animate.open { animation: none !important; }
+  .flatpickr-day,
+  .flatpickr-months .flatpickr-prev-month,
+  .flatpickr-months .flatpickr-next-month {
+    transition: none !important;
+    transform: none !important;
+  }
+}

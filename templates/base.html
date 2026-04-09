@@ -25,11 +25,11 @@
 <!-- Стили сайдбара -->
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=3">
 <!-- Таблицы и компоненты -->
-<link rel="stylesheet" href="{% static 'css/tables.css' %}?v=7">
+<link rel="stylesheet" href="{% static 'css/tables.css' %}?v=8">
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=17">
-<!-- Air Datepicker -->
-<link rel="stylesheet" href="{% static 'lib/air-datepicker/air-datepicker.css' %}">
-<link rel="stylesheet" href="{% static 'css/air-datepicker-theme.css' %}?v=2">
+<!-- Flatpickr — календарь для date-инпутов -->
+<link rel="stylesheet" href="{% static 'lib/flatpickr/flatpickr.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=2">
 {% block styles %}{% endblock %}
 <link rel="stylesheet" href="{% static 'css/tour.css' %}?v=10">
 </head>
@@ -116,7 +116,9 @@
       {% endfor %}
     {% endif %}
     <!-- Общие JS-утилиты — загружаются ДО блока контента, чтобы page-specific скрипты могли их использовать -->
-    <script src="{% static 'lib/air-datepicker/air-datepicker.js' %}"></script>
+    <!-- Flatpickr -->
+    <script src="{% static 'lib/flatpickr/flatpickr.min.js' %}"></script>
+    <script src="{% static 'lib/flatpickr/ru.js' %}"></script>
     <script src="{% static 'js/utils.js' %}?v=17"></script>
     <script src="{% static 'js/custom-dropdown.js' %}?v=3"></script>
     <script src="{% static 'js/modal.js' %}?v=5"></script>
@@ -132,7 +134,7 @@
 <!-- Контейнер для всплывающих уведомлений (Toast) — заполняется через JS -->
 <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true" role="status"></div>
 
-<script src="{% static 'js/base.js' %}?v=3"></script>
+<script src="{% static 'js/base.js' %}?v=8"></script>
 <!-- Блок пользовательских скриптов из дочерних шаблонов -->
 {% block scripts %}{% endblock %}
 <!-- Скрипт интерактивного тура по интерфейсу -->

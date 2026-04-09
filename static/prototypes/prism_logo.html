@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — Логотип-призма</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;display:flex;flex-direction:column;gap:60px;align-items:center;padding:60px 40px}
+h2{font-size:14px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+
+/* ══════════════════════════════════════════════════════════════
+   ПРИЗМА — 3D-призма (треугольная) с ячейками-гранями
+   Идея: треугольная фигура, составленная из цветных блоков,
+   с «лучами» по граням (аналог пинов микрочипа)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Общие цвета ─────────────────────────────────────────── */
+:root {
+  --prism-p: #7f77dd;   /* фиолетовый */
+  --prism-g: #5dcaa5;   /* зелёный */
+  --prism-o: #ef9f27;   /* оранжевый */
+  --prism-b: #3b82f6;   /* синий */
+  --prism-bg: #1a2230;  /* тёмный фон ячейки */
+}
+
+/* ── Контейнер призмы ────────────────────────────────────── */
+.prism-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.prism-shape {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Ячейки (грани призмы) — треугольная пирамида ────────── */
+.prism-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+.prism-row + .prism-row { margin-top: 4px; }
+
+.prism-cell {
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+/* Цвета ячеек */
+.pc-p { background: var(--prism-p); }
+.pc-g { background: var(--prism-g); }
+.pc-o { background: var(--prism-o); }
+.pc-b { background: var(--prism-b); }
+.pc-p2 { background: var(--prism-p); opacity: 0.7; }
+.pc-g2 { background: var(--prism-g); opacity: 0.8; }
+.pc-o2 { background: var(--prism-o); opacity: 0.65; }
+
+/* ── Лучи (рёбра призмы) — аналог пинов ─────────────────── */
+.prism-rays {
+  position: absolute;
+}
+
+/* Лучи сверху (от вершины) */
+.prism-rays-top {
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
+.prism-rays-top span {
+  width: 2px; height: 10px; border-radius: 1px; opacity: 0.5;
+}
+.prism-rays-top span:nth-child(1) { background: var(--prism-p); }
+.prism-rays-top span:nth-child(2) { background: var(--prism-g); }
+.prism-rays-top span:nth-child(3) { background: var(--prism-o); }
+
+/* Лучи снизу (от основания) */
+.prism-rays-bot {
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+}
+.prism-rays-bot span {
+  width: 2px; height: 10px; border-radius: 1px; opacity: 0.5;
+}
+.prism-rays-bot span:nth-child(1) { background: var(--prism-p); }
+.prism-rays-bot span:nth-child(2) { background: var(--prism-g); }
+.prism-rays-bot span:nth-child(3) { background: var(--prism-o); }
+.prism-rays-bot span:nth-child(4) { background: var(--prism-b); }
+.prism-rays-bot span:nth-child(5) { background: var(--prism-p); }
+
+/* Лучи слева */
+.prism-rays-l {
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prism-rays-l span {
+  width: 10px; height: 2px; border-radius: 1px; opacity: 0.5;
+}
+.prism-rays-l span:nth-child(1) { background: var(--prism-g); }
+.prism-rays-l span:nth-child(2) { background: var(--prism-o); }
+.prism-rays-l span:nth-child(3) { background: var(--prism-p); }
+
+/* Лучи справа */
+.prism-rays-r {
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prism-rays-r span {
+  width: 10px; height: 2px; border-radius: 1px; opacity: 0.5;
+}
+.prism-rays-r span:nth-child(1) { background: var(--prism-o); }
+.prism-rays-r span:nth-child(2) { background: var(--prism-g); }
+.prism-rays-r span:nth-child(3) { background: var(--prism-p); }
+
+/* ── Текст бренда ────────────────────────────────────────── */
+.prism-brand {
+  line-height: 1.2;
+}
+.prism-brand-title {
+  font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #e8e6dd;
+}
+.prism-brand-sub {
+  font-size: 10px; color: #666; letter-spacing: 4px; margin-top: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   РАЗМЕРЫ
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Large (страница логина) ─────────────────────────────── */
+.prism-lg .prism-cell { width: 52px; height: 52px; font-size: 14px; border-radius: 7px; }
+.prism-lg .prism-row + .prism-row { margin-top: 6px; }
+.prism-lg .prism-row { gap: 6px; }
+.prism-lg .prism-rays-top { top: -14px; }
+.prism-lg .prism-rays-top span { height: 14px; width: 3px; }
+.prism-lg .prism-rays-bot { bottom: -14px; }
+.prism-lg .prism-rays-bot span { height: 14px; width: 3px; }
+.prism-lg .prism-rays-l { left: -14px; }
+.prism-lg .prism-rays-l span { width: 14px; height: 3px; }
+.prism-lg .prism-rays-r { right: -14px; }
+.prism-lg .prism-rays-r span { width: 14px; height: 3px; }
+.prism-lg .prism-brand-title { font-size: 42px; letter-spacing: 8px; }
+.prism-lg .prism-brand-sub { font-size: 12px; letter-spacing: 5px; margin-top: 8px; }
+.prism-lg .prism-brand { text-align: center; }
+
+/* ── Small (сайдбар) ─────────────────────────────────────── */
+.prism-sm .prism-cell { width: 18px; height: 18px; font-size: 6px; border-radius: 2px; }
+.prism-sm .prism-row + .prism-row { margin-top: 2px; }
+.prism-sm .prism-row { gap: 2px; }
+.prism-sm .prism-rays-top span { height: 6px; }
+.prism-sm .prism-rays-top { top: -7px; }
+.prism-sm .prism-rays-bot span { height: 6px; }
+.prism-sm .prism-rays-bot { bottom: -7px; }
+.prism-sm .prism-rays-l { left: -8px; }
+.prism-sm .prism-rays-l span { width: 8px; }
+.prism-sm .prism-rays-r { right: -8px; }
+.prism-sm .prism-rays-r span { width: 8px; }
+.prism-sm .prism-brand-title { font-size: 24px; letter-spacing: 5px; }
+
+/* ── Medium (мини-лого) ──────────────────────────────────── */
+.prism-md .prism-cell { width: 24px; height: 24px; font-size: 7px; border-radius: 3px; }
+.prism-md .prism-row + .prism-row { margin-top: 3px; }
+.prism-md .prism-row { gap: 3px; }
+.prism-md .prism-rays-top span { height: 8px; }
+.prism-md .prism-rays-top { top: -9px; }
+.prism-md .prism-rays-bot span { height: 8px; }
+.prism-md .prism-rays-bot { bottom: -9px; }
+.prism-md .prism-rays-l { left: -9px; }
+.prism-md .prism-rays-l span { width: 8px; }
+.prism-md .prism-rays-r { right: -9px; }
+.prism-md .prism-rays-r span { width: 8px; }
+
+/* ══════════════════════════════════════════════════════════════
+   ДЕМО-СЕКЦИИ
+   ══════════════════════════════════════════════════════════════ */
+.demo-section {
+  background: #1a2744;
+  border-radius: 16px;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 500px;
+}
+.demo-light {
+  background: #f0f2f5;
+}
+.demo-light .prism-brand-title { color: #1e293b; }
+.demo-light .prism-brand-sub { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LARGE — для страницы логина (тёмный aside)
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Large — Login aside (dark)</h2>
+<div class="demo-section">
+  <div class="prism-logo prism-lg" style="flex-direction:column;">
+    <div class="prism-shape">
+      <div class="prism-rays prism-rays-top"><span></span><span></span><span></span></div>
+      <div class="prism-rays prism-rays-l"><span></span><span></span><span></span></div>
+      <!-- Ряд 1: 1 ячейка (вершина) -->
+      <div class="prism-row">
+        <div class="prism-cell pc-p">2.0</div>
+      </div>
+      <!-- Ряд 2: 2 ячейки -->
+      <div class="prism-row">
+        <div class="prism-cell pc-g">API</div>
+        <div class="prism-cell pc-o">DB</div>
+      </div>
+      <!-- Ряд 3: 3 ячейки -->
+      <div class="prism-row">
+        <div class="prism-cell pc-p2">AI</div>
+        <div class="prism-cell pc-b">MS</div>
+        <div class="prism-cell pc-g2">UI</div>
+      </div>
+      <!-- Ряд 4: 4 ячейки (основание) -->
+      <div class="prism-row">
+        <div class="prism-cell pc-o2">v3</div>
+        <div class="prism-cell pc-p">PG</div>
+        <div class="prism-cell pc-g">OK</div>
+        <div class="prism-cell pc-b" style="opacity:0.6">RU</div>
+      </div>
+      <div class="prism-rays prism-rays-r"><span></span><span></span><span></span></div>
+      <div class="prism-rays prism-rays-bot"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div class="prism-brand" style="margin-top:24px;">
+      <div class="prism-brand-title">ПРИЗМА</div>
+      <div class="prism-brand-sub">MANAGE SYSTEMS.ru</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SMALL — для сайдбара
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Small — Sidebar (dark)</h2>
+<div class="demo-section" style="min-width:240px;padding:24px;">
+  <div class="prism-logo prism-sm">
+    <div class="prism-shape">
+      <div class="prism-rays prism-rays-l"><span></span><span></span><span></span></div>
+      <div class="prism-row">
+        <div class="prism-cell pc-p">2.0</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-g">API</div>
+        <div class="prism-cell pc-o">DB</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-p2">AI</div>
+        <div class="prism-cell pc-b">MS</div>
+        <div class="prism-cell pc-g2">UI</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-o2">v3</div>
+        <div class="prism-cell pc-p">PG</div>
+        <div class="prism-cell pc-g">OK</div>
+        <div class="prism-cell pc-b" style="opacity:0.6">RU</div>
+      </div>
+      <div class="prism-rays prism-rays-r"><span></span><span></span><span></span></div>
+    </div>
+    <div class="prism-brand">
+      <div class="prism-brand-title" style="color:#e8e6dd;">ПРИЗМА</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MEDIUM — мини (углу логина)
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Medium — Login corner (light)</h2>
+<div class="demo-section demo-light" style="min-width:200px;padding:32px;">
+  <div class="prism-logo prism-md" style="flex-direction:column;">
+    <div class="prism-shape">
+      <div class="prism-rays prism-rays-top"><span></span><span></span><span></span></div>
+      <div class="prism-rays prism-rays-l"><span></span><span></span><span></span></div>
+      <div class="prism-row">
+        <div class="prism-cell pc-p">2.0</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-g">API</div>
+        <div class="prism-cell pc-o">DB</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-p2">AI</div>
+        <div class="prism-cell pc-b">MS</div>
+        <div class="prism-cell pc-g2">UI</div>
+      </div>
+      <div class="prism-row">
+        <div class="prism-cell pc-o2">v3</div>
+        <div class="prism-cell pc-p">PG</div>
+        <div class="prism-cell pc-g">OK</div>
+        <div class="prism-cell pc-b" style="opacity:0.6">RU</div>
+      </div>
+      <div class="prism-rays prism-rays-r"><span></span><span></span><span></span></div>
+      <div class="prism-rays prism-rays-bot"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

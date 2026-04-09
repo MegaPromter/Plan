@@ -1,154 +1,37 @@
 /**
  * audit_log.js — SPA журнала аудита.
- *
- * Вся конфигурация таблицы (столбцы, фильтры, сортировка) описана
- * в единственном массиве COLUMNS. Добавление/удаление столбца —
- * одна правка в этом массиве.
+ * JS рендерит всю таблицу (thead + tbody) в #auditContent.
+ * Фильтры: mf-trigger с dropdown, сортировка по клику на заголовок.
  */
 ;(function () {
   'use strict'
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  КОНФИГУРАЦИЯ СТОЛБЦОВ
-  //  key        — ключ поля в JSON ответа API
-  //  label      — заголовок колонки
-  //  sortable   — разрешена ли сортировка по колонке
-  //  sortKey    — ключ для параметра sort (если отличается от key)
-  //  filterable — показывать инпут-фильтр в шапке
-  //  filterKey  — ключ GET-параметра фильтра (если отличается от key)
-  //  filterType — 'text' | 'select' | 'date-range'
-  //  options    — массив {value, label} для select-фильтра
-  //  width      — CSS width для th
-  //  render     — функция кастомного рендера ячейки (item, value) => html
-  //  thStyle    — дополнительный inline-стиль для th
-  //  tdStyle    — дополнительный inline-стиль для td
-  // ══════════════════════════════════════════════════════════════════════
-
+  /* ── Конфигурация колонок ──────────────────────────────────── */
   var COLUMNS = [
-    {
-      key: '_index',
-      label: '№',
-      width: '50px',
-      sortable: false,
-      filterable: false,
-      tdStyle: 'text-align:center;color:var(--muted);font-size:12px;',
-      render: function (_item, _val, idx) { return idx + 1 }
-    },
-    {
-      key: 'date',
-      label: 'Дата',
-      width: '100px',
-      sortable: true,
-      filterable: true,
-      filterType: 'date-range',
-      filterKey: 'date',
-      tdStyle: 'white-space:nowrap;font-size:13px;',
-    },
-    {
-      key: 'created_at',
-      label: 'Время',
-      width: '80px',
-      sortable: true,
-      filterable: false,
-      tdStyle: 'white-space:nowrap;font-size:13px;color:var(--muted);',
-      render: function (_item, val) {
-        // из "03.04.2026 14:35" берём только время
-        return val ? val.split(' ')[1] || val : ''
-      }
-    },
-    {
-      key: 'user',
-      label: 'Пользователь',
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      filterKey: 'user',
-    },
-    {
-      key: 'action_display',
-      label: 'Действие',
-      sortable: true,
-      sortKey: 'action',
-      filterable: true,
-      filterType: 'select',
-      filterKey: 'action',
-      options: [
-        { value: '', label: 'Все' },
-        { value: 'task_create', label: 'Создание задачи' },
-        { value: 'task_update', label: 'Изменение задачи' },
-        { value: 'task_delete', label: 'Удаление задачи' },
-        { value: 'pp_create', label: 'Создание ПП' },
-        { value: 'pp_update', label: 'Изменение ПП' },
-        { value: 'pp_delete', label: 'Удаление ПП' },
-        { value: 'pp_sync', label: 'Синхронизация ПП' },
-        { value: 'dep_create', label: 'Создание зависимости' },
-        { value: 'dep_update', label: 'Изменение зависимости' },
-        { value: 'dep_delete', label: 'Удаление зависимости' },
-        { value: 'dep_align', label: 'Выравнивание дат' },
-        { value: 'role_change', label: 'Смена роли' },
-        { value: 'user_create', label: 'Создание пользователя' },
-        { value: 'user_delete', label: 'Удаление пользователя' },
-        { value: 'cs_create', label: 'Создание набора изменений' },
-        { value: 'cs_submit', label: 'Отправка на согласование' },
-        { value: 'cs_approve', label: 'Утверждение' },
-        { value: 'cs_reject', label: 'Отклонение' },
-        { value: 'comment_delete', label: 'Удаление комментария' },
-      ],
-      render: function (_item, val) {
-        return '<span class="badge badge-info" style="font-size:11px;">' + escHtml(val) + '</span>'
-      }
-    },
-    {
-      key: 'object_repr',
-      label: 'Объект',
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      filterKey: 'search',
-      tdStyle: 'max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
-    },
-    {
-      key: 'details',
-      label: 'Детали',
-      sortable: false,
-      filterable: false,
-      render: function (_item, val) {
-        if (!val || !Object.keys(val).length) return '—'
-        var json = JSON.stringify(val)
-        return '<span class="audit-details-cell" title="' + escHtml(json) + '">' +
-          escHtml(json.substring(0, 60)) + '</span>'
-      }
-    },
-    {
-      key: 'ip_address',
-      label: 'IP',
-      width: '120px',
-      sortable: true,
-      filterable: true,
-      filterType: 'text',
-      filterKey: 'ip',
-      tdStyle: 'font-size:12px;color:var(--muted);',
-      render: function (_item, val) { return escHtml(val || '—') }
-    },
+    { key: '_index',         label: '№',             width: '44px',  sortable: false, filterable: false },
+    { key: 'date',           label: 'Дата',          width: '100px', sortable: true,  filterable: true  },
+    { key: 'created_at',     label: 'Время',         width: '60px',  sortable: true,  filterable: false },
+    { key: 'user',           label: 'Пользователь',  width: '140px', sortable: true,  filterable: true  },
+    { key: 'action_display', label: 'Действие',      width: '160px', sortable: true,  filterable: true, sortKey: 'action' },
+    { key: 'object_repr',    label: 'Объект',        width: '250px', sortable: true,  filterable: true  },
+    { key: 'details',        label: 'Детали',        width: '200px', sortable: false, filterable: false },
+    { key: 'ip_address',     label: 'IP',            width: '100px', sortable: true,  filterable: true  },
   ]
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  СОСТОЯНИЕ
-  // ══════════════════════════════════════════════════════════════════════
+  /* ── Состояние ─────────────────────────────────────────────── */
   var state = {
     page: 1,
     perPage: 50,
     sort: 'created_at',
     dir: 'desc',
-    filters: {},         // filterKey → value
-    dateFrom: '',        // для date-range
-    dateTo: '',
+    allItems: [],
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  УТИЛИТЫ
-  // ══════════════════════════════════════════════════════════════════════
-  function escHtml(s) {
+  var mfActive = {}
+  var mfDropdowns = {}
+
+  /* ── Утилиты ───────────────────────────────────────────────── */
+  function esc(s) {
     if (!s) return ''
     var d = document.createElement('div')
     d.textContent = s
@@ -163,85 +46,40 @@
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  РЕНДЕР ШАПКИ (заголовки + фильтры) — из COLUMNS
-  // ══════════════════════════════════════════════════════════════════════
-  function renderThead() {
-    var thead = document.querySelector('#auditTable thead')
-    if (!thead) return
+  /* ── Рендер каркаса таблицы ────────────────────────────────── */
+  function renderTableShell() {
+    var container = document.getElementById('auditContent')
+    if (!container) return
 
-    // --- Строка заголовков ---
-    var headerHtml = '<tr>'
+    var headerRow = '<tr>'
+    var filterRow = '<tr class="filter-row">'
     COLUMNS.forEach(function (col) {
-      var style = ''
-      if (col.width) style += 'width:' + col.width + ';'
-      if (col.thStyle) style += col.thStyle
+      var w = col.width ? ' style="width:' + col.width + ';"' : ''
+      var sortAttr = col.sortable ? ' data-sort="' + (col.sortKey || col.key) + '"' : ''
+      headerRow += '<th' + w + sortAttr + '>' + esc(col.label) + '</th>'
 
-      var sortIcon = ''
-      if (col.sortable) {
-        var sk = col.sortKey || col.key
-        if (state.sort === sk) {
-          sortIcon = state.dir === 'asc'
-            ? ' <i class="fas fa-sort-up" style="opacity:0.7;"></i>'
-            : ' <i class="fas fa-sort-down" style="opacity:0.7;"></i>'
-        } else {
-          sortIcon = ' <i class="fas fa-sort" style="opacity:0.2;"></i>'
-        }
-      }
-
-      var cls = col.sortable ? 'class="sortable" data-sort-key="' + (col.sortKey || col.key) + '"' : ''
-      headerHtml += '<th style="' + style + '" ' + cls + '>' + escHtml(col.label) + sortIcon + '</th>'
-    })
-    headerHtml += '</tr>'
-
-    // --- Строка фильтров ---
-    var filterHtml = '<tr class="filter-row">'
-    COLUMNS.forEach(function (col) {
-      if (!col.filterable) {
-        filterHtml += '<th></th>'
-        return
-      }
-
-      var fk = col.filterKey || col.key
-
-      if (col.filterType === 'select') {
-        var selHtml = '<select data-filter="' + fk + '" style="width:100%;padding:4px 6px;font-size:12px;' +
-          'border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:var(--font);">'
-        ;(col.options || []).forEach(function (opt) {
-          var sel = state.filters[fk] === opt.value ? ' selected' : ''
-          selHtml += '<option value="' + opt.value + '"' + sel + '>' + escHtml(opt.label) + '</option>'
-        })
-        selHtml += '</select>'
-        filterHtml += '<th>' + selHtml + '</th>'
-      } else if (col.filterType === 'date-range') {
-        filterHtml += '<th style="padding:2px 4px;">' +
-          '<input type="date" data-filter="date_from" value="' + (state.dateFrom || '') + '" ' +
-          'style="width:100%;padding:3px 4px;font-size:11px;border:1px solid var(--border);border-radius:4px;' +
-          'background:var(--surface);color:var(--text);font-family:var(--font);margin-bottom:2px;" title="С даты">' +
-          '<input type="date" data-filter="date_to" value="' + (state.dateTo || '') + '" ' +
-          'style="width:100%;padding:3px 4px;font-size:11px;border:1px solid var(--border);border-radius:4px;' +
-          'background:var(--surface);color:var(--text);font-family:var(--font);" title="По дату">' +
-          '</th>'
+      if (col.filterable) {
+        filterRow += '<th><div class="mf-wrap"><button class="mf-trigger" data-col="' + col.key + '">▼</button></div></th>'
       } else {
-        // text
-        var val = state.filters[fk] || ''
-        filterHtml += '<th>' +
-          '<input type="text" data-filter="' + fk + '" value="' + escHtml(val) + '" ' +
-          'placeholder="Фильтр..." ' +
-          'style="width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);' +
-          'border-radius:4px;background:var(--surface);color:var(--text);font-family:var(--font);">' +
-          '</th>'
+        filterRow += '<th></th>'
       }
     })
-    filterHtml += '</tr>'
+    headerRow += '</tr>'
+    filterRow += '</tr>'
 
-    thead.innerHTML = headerHtml + filterHtml
+    container.innerHTML =
+      '<div class="data-table-wrap">' +
+        '<table class="data-table" id="auditTable">' +
+          '<thead>' + headerRow + filterRow + '</thead>' +
+          '<tbody id="auditBody"></tbody>' +
+        '</table>' +
+      '</div>'
 
-    // --- Обработчики: сортировка ---
-    thead.querySelectorAll('th.sortable').forEach(function (th) {
+    // Обработчики сортировки
+    container.querySelectorAll('th[data-sort]').forEach(function (th) {
       th.style.cursor = 'pointer'
       th.addEventListener('click', function () {
-        var sk = th.getAttribute('data-sort-key')
+        var sk = th.getAttribute('data-sort')
         if (state.sort === sk) {
           state.dir = state.dir === 'asc' ? 'desc' : 'asc'
         } else {
@@ -253,52 +91,25 @@
       })
     })
 
-    // --- Обработчики: фильтры ---
-    var debounceTimer = null
-    thead.querySelectorAll('[data-filter]').forEach(function (el) {
-      var fk = el.getAttribute('data-filter')
-
-      if (el.tagName === 'SELECT') {
-        el.addEventListener('change', function () {
-          state.filters[fk] = el.value
-          state.page = 1
-          loadAuditLog()
-        })
-      } else if (fk === 'date_from' || fk === 'date_to') {
-        el.addEventListener('change', function () {
-          if (fk === 'date_from') state.dateFrom = el.value
-          else state.dateTo = el.value
-          state.page = 1
-          loadAuditLog()
-        })
-      } else {
-        // text — debounce 300ms
-        el.addEventListener('input', function () {
-          clearTimeout(debounceTimer)
-          debounceTimer = setTimeout(function () {
-            state.filters[fk] = el.value.trim()
-            state.page = 1
-            loadAuditLog()
-          }, 300)
-        })
-        el.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter') {
-            clearTimeout(debounceTimer)
-            state.filters[fk] = el.value.trim()
-            state.page = 1
-            loadAuditLog()
-          }
-        })
-      }
+    // Обработчики мульти-фильтров
+    container.querySelectorAll('.mf-trigger').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        toggleMf(btn)
+      })
     })
   }
 
-  /** Обновить иконки сортировки без перерисовки фильтров */
+  /* ── Иконки сортировки ─────────────────────────────────────── */
   function updateSortIcons() {
-    document.querySelectorAll('#auditTable thead th.sortable').forEach(function (th) {
-      var sk = th.getAttribute('data-sort-key')
-      var icon = th.querySelector('i')
-      if (!icon) return
+    document.querySelectorAll('#auditTable thead th[data-sort]').forEach(function (th) {
+      var sk = th.getAttribute('data-sort')
+      var icon = th.querySelector('i.fa-sort, i.fa-sort-up, i.fa-sort-down')
+      if (!icon) {
+        icon = document.createElement('i')
+        icon.style.marginLeft = '4px'
+        th.appendChild(icon)
+      }
       if (state.sort === sk) {
         icon.className = state.dir === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'
         icon.style.opacity = '0.7'
@@ -309,9 +120,95 @@
     })
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  ЗАГРУЗКА ДАННЫХ
-  // ══════════════════════════════════════════════════════════════════════
+  /* ── Мульти-фильтр: dropdown ───────────────────────────────── */
+  function toggleMf(btn) {
+    var col = btn.getAttribute('data-col')
+    var existing = mfDropdowns[col]
+
+    Object.values(mfDropdowns).forEach(function (dd) { dd.remove() })
+    mfDropdowns = {}
+
+    if (existing) return
+
+    var values = new Set()
+    state.allItems.forEach(function (item) {
+      var v = item[col]
+      if (v !== null && v !== undefined && v !== '') values.add(String(v))
+    })
+    var sorted = Array.from(values).sort()
+
+    var dd = document.createElement('div')
+    dd.className = 'mf-dropdown open'
+    var selected = mfActive[col] || new Set()
+
+    var search = document.createElement('input')
+    search.type = 'text'
+    search.placeholder = 'Поиск...'
+    search.className = 'mf-search'
+    dd.appendChild(search)
+
+    var list = document.createElement('div')
+    list.className = 'mf-list'
+    sorted.forEach(function (val) {
+      var label = document.createElement('label')
+      label.className = 'mf-option'
+      var cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.value = val
+      cb.checked = selected.has(val)
+      cb.addEventListener('change', function () {
+        if (!mfActive[col]) mfActive[col] = new Set()
+        if (cb.checked) mfActive[col].add(val)
+        else mfActive[col].delete(val)
+        var cnt = mfActive[col] ? mfActive[col].size : 0
+        btn.classList.toggle('active', cnt > 0)
+        btn.textContent = cnt > 0 ? cnt + ' выбр.' : '▼'
+        renderFiltered()
+      })
+      label.appendChild(cb)
+      label.appendChild(document.createTextNode(' ' + val))
+      list.appendChild(label)
+    })
+    dd.appendChild(list)
+
+    search.addEventListener('input', function () {
+      var q = search.value.toLowerCase()
+      list.querySelectorAll('label').forEach(function (l) {
+        l.style.display = l.textContent.toLowerCase().includes(q) ? '' : 'none'
+      })
+    })
+
+    var rect = btn.getBoundingClientRect()
+    dd.style.position = 'fixed'
+    dd.style.top = (rect.bottom + 2) + 'px'
+    dd.style.left = rect.left + 'px'
+    dd.style.zIndex = '9999'
+
+    document.body.appendChild(dd)
+    mfDropdowns[col] = dd
+    search.focus()
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.mf-dropdown') || e.target.closest('.mf-trigger')) return
+    Object.values(mfDropdowns).forEach(function (dd) { dd.remove() })
+    mfDropdowns = {}
+  })
+
+  /* ── Клиентская фильтрация ─────────────────────────────────── */
+  function matchesMf(item) {
+    for (var col in mfActive) {
+      if (mfActive[col].size === 0) continue
+      if (!mfActive[col].has(String(item[col] || ''))) return false
+    }
+    return true
+  }
+
+  function renderFiltered() {
+    renderRows(state.allItems.filter(matchesMf))
+  }
+
+  /* ── Загрузка данных ───────────────────────────────────────── */
   async function loadAuditLog() {
     updateSortIcons()
     var params = new URLSearchParams({
@@ -321,71 +218,69 @@
       dir: state.dir,
     })
 
-    // Применяем фильтры
-    Object.keys(state.filters).forEach(function (k) {
-      if (state.filters[k]) params.set(k, state.filters[k])
-    })
-    if (state.dateFrom) params.set('date_from', state.dateFrom)
-    if (state.dateTo) params.set('date_to', state.dateTo)
-
-    var colCount = COLUMNS.length
     var tbody = document.getElementById('auditBody')
-    tbody.innerHTML = skeletonRows(5, colCount)
+    if (tbody) tbody.innerHTML = skeletonRows(5, COLUMNS.length)
 
     try {
       var res = await fetch('/api/audit_log/?' + params.toString(), { headers: apiHeaders() })
       if (!res.ok) {
-        tbody.innerHTML = '<tr><td colspan="' + colCount + '" style="padding:20px;text-align:center;color:var(--danger);">Ошибка загрузки</td></tr>'
+        if (tbody) tbody.innerHTML = '<tr><td colspan="' + COLUMNS.length + '" style="padding:20px;text-align:center;color:var(--danger);">Ошибка загрузки</td></tr>'
         return
       }
       var data = await res.json()
-      renderAuditTable(data)
+      state.allItems = data.items
+      renderFiltered()
+      renderPager(data)
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="' + colCount + '" style="padding:20px;text-align:center;color:var(--danger);">Ошибка сети</td></tr>'
+      var tb = document.getElementById('auditBody')
+      if (tb) tb.innerHTML = '<tr><td colspan="' + COLUMNS.length + '" style="padding:20px;text-align:center;color:var(--danger);">Ошибка сети</td></tr>'
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  РЕНДЕР ТАБЛИЦЫ (тело + пагинация) — из COLUMNS
-  // ══════════════════════════════════════════════════════════════════════
-  function renderAuditTable(data) {
+  /* ── Рендер строк ──────────────────────────────────────────── */
+  function renderRows(items) {
     var tbody = document.getElementById('auditBody')
-    var colCount = COLUMNS.length
+    if (!tbody) return
 
-    if (!data.items.length) {
-      tbody.innerHTML = '<tr><td colspan="' + colCount + '" style="padding:40px;text-align:center;color:var(--muted);">' +
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="' + COLUMNS.length + '" style="padding:40px;text-align:center;color:var(--muted);">' +
         '<i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>Нет записей</td></tr>'
-      document.getElementById('auditPager').innerHTML = ''
       return
     }
 
-    var offset = (data.page - 1) * data.per_page
-    tbody.innerHTML = data.items.map(function (item, i) {
-      var html = '<tr>'
-      COLUMNS.forEach(function (col) {
-        var val = col.key === '_index' ? null : item[col.key]
-        var cell
-        if (col.render) {
-          cell = col.render(item, val, offset + i)
-        } else {
-          cell = escHtml(val != null ? String(val) : '—')
-        }
-        var style = col.tdStyle || ''
-        html += '<td style="' + style + '">' + cell + '</td>'
-      })
-      html += '</tr>'
-      return html
+    var offset = (state.page - 1) * state.perPage
+    tbody.innerHTML = items.map(function (item, i) {
+      var time = item.created_at ? item.created_at.split(' ')[1] || '' : ''
+      var details = '—'
+      if (item.details && Object.keys(item.details).length) {
+        var json = JSON.stringify(item.details)
+        details = '<span class="audit-details-cell" title="' + esc(json) + '">' +
+          esc(json.substring(0, 50)) + (json.length > 50 ? '…' : '') + '</span>'
+      }
+      return '<tr data-id="' + item.id + '">' +
+        '<td style="text-align:center;color:var(--muted);font-size:12px;">' + (offset + i + 1) + '</td>' +
+        '<td style="white-space:nowrap;font-size:13px;">' + esc(item.date) + '</td>' +
+        '<td style="white-space:nowrap;font-size:13px;color:var(--muted);">' + esc(time) + '</td>' +
+        '<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(item.user) + '</td>' +
+        '<td><span class="badge badge-info" style="font-size:11px;">' + esc(item.action_display) + '</span></td>' +
+        '<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(item.object_repr || '—') + '</td>' +
+        '<td>' + details + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + esc(item.ip_address || '—') + '</td>' +
+        '</tr>'
     }).join('')
+  }
 
-    // Пагинация
+  /* ── Пагинация ─────────────────────────────────────────────── */
+  function renderPager(data) {
     var totalPages = Math.ceil(data.total / data.per_page)
     var pager = document.getElementById('auditPager')
+    if (!pager) return
     if (totalPages <= 1) { pager.innerHTML = ''; return }
 
-    var html = '<button ' + (state.page <= 1 ? 'disabled' : '') + ' id="auditPrev">\u2190 Назад</button>'
-    html += '<span style="color:var(--muted);font-size:13px;">Стр. ' + data.page + ' из ' + totalPages + ' (' + data.total + ' записей)</span>'
-    html += '<button ' + (state.page >= totalPages ? 'disabled' : '') + ' id="auditNext">Вперёд \u2192</button>'
-    pager.innerHTML = html
+    pager.innerHTML =
+      '<button ' + (state.page <= 1 ? 'disabled' : '') + ' id="auditPrev">← Назад</button>' +
+      '<span style="color:var(--muted);font-size:13px;">Стр. ' + data.page + ' из ' + totalPages + ' (' + data.total + ' записей)</span>' +
+      '<button ' + (state.page >= totalPages ? 'disabled' : '') + ' id="auditNext">Вперёд →</button>'
 
     document.getElementById('auditPrev')?.addEventListener('click', function () {
       state.page--
@@ -397,10 +292,9 @@
     })
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  ИНИЦИАЛИЗАЦИЯ
-  // ══════════════════════════════════════════════════════════════════════
-  renderThead()
+  /* ── Старт ─────────────────────────────────────────────────── */
+  renderTableShell()
+  updateSortIcons()
   loadAuditLog()
 
 })()

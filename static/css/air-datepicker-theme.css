@@ -4,6 +4,17 @@
    Тёмная тема адаптируется автоматически.
    ══════════════════════════════════════════════════════════════════════ */
 
+/* ── Попап поверх всех sticky-элементов таблиц ──────────────────── */
+/* Когда попап открыт — понижаем z-index обёрток таблиц,
+   чтобы sticky th/td не перекрывали календарь */
+body:has(.air-datepicker.-active-) .pp-table-wrap,
+body:has(.air-datepicker.-active-) .data-table-wrap {
+  z-index: 0 !important;
+}
+.air-datepicker.-active- {
+  z-index: 10000 !important;
+}
+
 /* ── Контейнер ────────────────────────────────────────────────────── */
 .air-datepicker {
   --adp-font-family: var(--font, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);

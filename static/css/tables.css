@@ -5,6 +5,8 @@
 /* ── Обёртка таблицы ─────────────────────────────────────────────── */
 .data-table-wrap {
   overflow: auto;
+  position: relative;
+  z-index: 1;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md, 0 1px 6px rgba(0,0,0,0.07));
   border: 1px solid var(--border2);
@@ -96,6 +98,20 @@
   border-bottom: 2px solid var(--border2);
 }
 
+/* Инпуты/селекты внутри filter-row */
+.data-table .filter-row input[type="text"],
+.data-table .filter-row select {
+  width: 100%;
+  padding: 3px 5px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  box-sizing: border-box;
+}
+
 /* Последняя колонка — без правой рамки */
 .data-table th:last-child,
 .data-table td:last-child { border-right: none; }
@@ -130,6 +146,11 @@ th input, th input[type], th select, th button {
   overflow: hidden;
   text-align: center;
   box-sizing: border-box;
+}
+/* Date input — достаточная ширина чтобы стрелки навигации не обрезались */
+input[type="date"].cell-edit {
+  overflow: visible;
+  min-width: 130px;
 }
 .cell-edit:focus {
   background: rgba(59,130,246,0.06);

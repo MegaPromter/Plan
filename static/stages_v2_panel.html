@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Этапы — Вариант 2: Slide-in панель на всю высоту</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #fff;
+    --surface2: #f0f1f5;
+    --text: #1a1d2e;
+    --muted: #7b819a;
+    --accent: #4361ee;
+    --accent-glow: #eef1ff;
+    --border: #e2e4ed;
+    --border2: #d5d8e3;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter','Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); }
+
+  /* Фон страницы для контекста */
+  .page-bg {
+    padding:40px; opacity:.3;
+  }
+  .page-bg h1 { font-size:20px; margin-bottom:12px; }
+  .page-bg .fake-table { background:var(--surface); border-radius:var(--radius-md); height:400px; border:1px solid var(--border); }
+
+  /* Оверлей */
+  .panel-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:100;
+    animation:fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  /* Панель */
+  .panel {
+    position:fixed; top:0; right:0; bottom:0; width:720px; background:var(--surface);
+    box-shadow:-4px 0 32px rgba(0,0,0,.15); z-index:101; display:flex; flex-direction:column;
+    animation:slideIn .25s ease;
+  }
+  @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+
+  .panel-header {
+    padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center;
+    justify-content:space-between; flex-shrink:0;
+  }
+  .panel-header h2 { font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .panel-close {
+    background:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+    width:32px; height:32px; cursor:pointer; font-size:16px; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .panel-close:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* Тулбар */
+  .panel-toolbar {
+    padding:12px 24px; border-bottom:1px solid var(--border); display:flex; gap:12px;
+    align-items:center; flex-shrink:0;
+  }
+  .search-input {
+    flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font:inherit; font-size:13px; background:var(--surface2); outline:none;
+  }
+  .search-input:focus { border-color:var(--accent); background:var(--surface); }
+  .btn-sm {
+    padding:7px 14px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface); font:inherit; font-size:12px; cursor:pointer; color:var(--muted);
+    transition:all .15s; white-space:nowrap;
+  }
+  .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-sm.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn-accent {
+    padding:7px 14px; border:none; border-radius:var(--radius-sm); background:var(--accent);
+    color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .15s;
+  }
+  .btn-accent:hover { opacity:.9; }
+  .stage-count { font-size:12px; color:var(--muted); margin-left:auto; }
+
+  /* Таблица */
+  .panel-body { flex:1; overflow-y:auto; min-height:0; }
+  .stages-table { width:100%; font-size:13px; border-collapse:collapse; }
+  .stages-table thead { position:sticky; top:0; z-index:5; }
+  .stages-table th {
+    background:var(--surface2); padding:10px 12px; text-align:left; font-size:11px;
+    text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:2px solid var(--border);
+  }
+  .stages-table tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:default; }
+  .stages-table tbody tr:nth-child(even) { background:var(--bg); }
+  .stages-table tbody tr:hover { background:var(--accent-glow); }
+  .stages-table td { padding:10px 12px; }
+  .stage-badge {
+    background:var(--accent); color:#fff; border-radius:var(--radius-sm); padding:2px 10px;
+    font-size:12px; font-weight:600; display:inline-block;
+  }
+  .code-badge {
+    background:var(--bg); padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace;
+  }
+  .labor-cell { text-align:center; font-size:12px; }
+  .labor-bar {
+    display:flex; align-items:center; gap:6px; justify-content:center;
+  }
+  .bar-track {
+    width:48px; height:5px; background:var(--surface2); border-radius:3px; overflow:hidden;
+  }
+  .bar-fill {
+    height:100%; border-radius:3px; transition:width .3s;
+  }
+  .bar-fill.low { background:var(--accent); }
+  .bar-fill.mid { background:#f59e0b; }
+  .bar-fill.high { background:var(--success); }
+  .bar-fill.over { background:var(--danger); }
+
+  .btn-icon {
+    background:none; border:1px solid transparent; border-radius:var(--radius-sm);
+    width:28px; height:28px; cursor:pointer; color:var(--muted); transition:all .15s;
+    display:inline-flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .btn-icon:hover { border-color:var(--border); color:var(--accent); background:var(--accent-glow); }
+  .btn-icon.danger:hover { color:var(--danger); background:#fef2f2; border-color:#fecaca; }
+
+  /* Инлайн-добавление (строка в таблице) */
+  .inline-add td {
+    padding:8px 12px; background:var(--accent-glow); border-bottom:2px solid var(--accent);
+  }
+  .inline-add input {
+    width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px;
+    font:inherit; font-size:12px; outline:none;
+  }
+  .inline-add input:focus { border-color:var(--accent); }
+
+  /* Футер */
+  .panel-footer {
+    padding:12px 24px; border-top:1px solid var(--border); display:flex;
+    justify-content:space-between; align-items:center; flex-shrink:0;
+  }
+  .summary-chips { display:flex; gap:16px; }
+  .summary-chip {
+    font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px;
+  }
+  .summary-chip strong { color:var(--text); font-weight:600; }
+  .btn-outline {
+    padding:8px 20px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface); font:inherit; font-size:13px; cursor:pointer; transition:all .15s;
+  }
+  .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="page-bg">
+  <h1>Производственный план — ДОС / Шлюзовой модуль</h1>
+  <div class="fake-table"></div>
+</div>
+
+<div class="panel-overlay"></div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2>&#9776; Этапы проекта <span style="font-weight:400;color:var(--muted);font-size:13px;margin-left:4px;">ДОС</span></h2>
+    <button class="panel-close">&times;</button>
+  </div>
+
+  <div class="panel-toolbar">
+    <input class="search-input" placeholder="Поиск..." id="searchInput" style="max-width:220px;">
+    <button class="btn-sm active">Все</button>
+    <button class="btn-sm">С работами</button>
+    <button class="btn-sm">Без работ</button>
+    <span class="stage-count" id="countLabel">25 этапов</span>
+    <button class="btn-accent" id="addBtn">+ Новый</button>
+  </div>
+
+  <div class="panel-body">
+    <table class="stages-table">
+      <thead>
+        <tr>
+          <th style="width:32%">Наименование</th>
+          <th style="width:7%;text-align:center">№</th>
+          <th style="width:14%">Наряд-заказ</th>
+          <th style="width:13%">Код строки</th>
+          <th style="width:20%;text-align:center">Трудоёмкость</th>
+          <th style="width:10%;text-align:center"></th>
+        </tr>
+      </thead>
+      <tbody id="stagesBody">
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel-footer">
+    <div class="summary-chips">
+      <div class="summary-chip">Всего: <strong id="totalPlan">0</strong> ч (план)</div>
+      <div class="summary-chip">Факт: <strong id="totalSpent">0</strong> ч</div>
+      <div class="summary-chip">Прогресс: <strong id="totalPct">0%</strong></div>
+    </div>
+    <button class="btn-outline">Закрыть</button>
+  </div>
+</div>
+
+<script>
+var STAGES = [
+  { name:'Согласование ТЗ', num:'1.1', order:'НЗ-100', code:'КС-001', plan:80, spent:80 },
+  { name:'Поставка комплектующих', num:'2.1', order:'НЗ-200', code:'КС-100', plan:160, spent:160 },
+  { name:'Входной контроль комплектующих', num:'2.2', order:'НЗ-201', code:'КС-101', plan:120, spent:90 },
+  { name:'Разработка корпусов', num:'3.1', order:'НЗ-123', code:'КС-154', plan:1240, spent:860 },
+  { name:'Разработка схем ПГС', num:'3.2', order:'НЗ-789', code:'КС-432', plan:468, spent:312 },
+  { name:'Разработка схем БКС', num:'3.3', order:'НЗ-098', code:'КС-645', plan:890, spent:0 },
+  { name:'Разработка монтажей', num:'3.4', order:'НЗ-764', code:'КС-222', plan:340, spent:340 },
+  { name:'Разработка общей документации', num:'3.5', order:'НЗ-0987', code:'КС-874', plan:560, spent:120 },
+  { name:'Разработка расчётов', num:'3.6', order:'НЗ-198', code:'888-999', plan:220, spent:0 },
+  { name:'Проектирование ДСЕ', num:'4.1', order:'НЗ-301', code:'КС-701', plan:1560, spent:980 },
+  { name:'Разработка ТУ', num:'4.2', order:'НЗ-302', code:'КС-702', plan:320, spent:160 },
+  { name:'Входной контроль', num:'5.1', order:'НЗ-400', code:'КС-800', plan:240, spent:0 },
+  { name:'Макетирование', num:'5.2', order:'НЗ-401', code:'КС-801', plan:680, spent:450 },
+  { name:'Изготовление опытного образца', num:'6.1', order:'НЗ-500', code:'КС-900', plan:2100, spent:0 },
+  { name:'Приёмочные испытания', num:'7.1', order:'НЗ-600', code:'КС-950', plan:440, spent:0 },
+  { name:'Разработка эксплуатационной документации', num:'7.2', order:'НЗ-601', code:'КС-951', plan:360, spent:0 },
+  { name:'Корректировка КД по результатам испытаний', num:'7.3', order:'НЗ-602', code:'КС-952', plan:280, spent:0 },
+  { name:'Разработка ПО бортового компьютера', num:'8.1', order:'НЗ-700', code:'КС-A01', plan:1800, spent:1200 },
+  { name:'Тестирование ПО', num:'8.2', order:'НЗ-701', code:'КС-A02', plan:600, spent:350 },
+  { name:'Интеграционные испытания', num:'8.3', order:'НЗ-702', code:'КС-A03', plan:480, spent:0 },
+  { name:'Разработка наземного оборудования', num:'9.1', order:'НЗ-800', code:'КС-B01', plan:920, spent:400 },
+  { name:'Разработка стендового оборудования', num:'9.2', order:'НЗ-801', code:'КС-B02', plan:540, spent:0 },
+  { name:'Квалификационные испытания', num:'10.1', order:'НЗ-900', code:'КС-C01', plan:380, spent:0 },
+  { name:'Сертификация изделия', num:'10.2', order:'НЗ-901', code:'КС-C02', plan:200, spent:0 },
+  { name:'Подготовка серийного производства', num:'11.1', order:'НЗ-999', code:'КС-D01', plan:1400, spent:0 },
+];
+
+function barClass(pct) {
+  if (pct > 100) return 'over';
+  if (pct >= 80) return 'high';
+  if (pct >= 40) return 'mid';
+  return 'low';
+}
+
+function renderStages(filter) {
+  var body = document.getElementById('stagesBody');
+  var q = (filter || '').toLowerCase();
+  var filtered = STAGES.filter(function(s) {
+    if (!q) return true;
+    return s.name.toLowerCase().indexOf(q) !== -1 || s.num.indexOf(q) !== -1;
+  });
+
+  var totalPlan = 0, totalSpent = 0;
+  STAGES.forEach(function(s) { totalPlan += s.plan; totalSpent += s.spent; });
+
+  body.innerHTML = filtered.map(function(s) {
+    var pct = s.plan > 0 ? Math.round(s.spent / s.plan * 100) : 0;
+    var barW = Math.min(pct, 100);
+    var cls = barClass(pct);
+    var pctStr = s.plan > 0 ? pct + '%' : '&mdash;';
+    return '<tr>' +
+      '<td style="font-weight:500">' + s.name + '</td>' +
+      '<td style="text-align:center"><span class="stage-badge">' + s.num + '</span></td>' +
+      '<td style="color:var(--muted)">' + s.order + '</td>' +
+      '<td><code class="code-badge">' + s.code + '</code></td>' +
+      '<td class="labor-cell">' +
+        '<div class="labor-bar">' +
+          '<span style="min-width:32px;text-align:right;color:var(--muted)">' + (s.spent || '&mdash;') + '</span>' +
+          '<div class="bar-track"><div class="bar-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+          '<span style="min-width:32px;color:var(--muted)">' + (s.plan || '&mdash;') + '</span>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px">' + pctStr + '</div>' +
+      '</td>' +
+      '<td style="text-align:center">' +
+        '<button class="btn-icon" title="Редактировать">&#9998;</button>' +
+        '<button class="btn-icon danger" title="Удалить">&#128465;</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  document.getElementById('countLabel').textContent = filtered.length + ' этапов';
+  document.getElementById('totalPlan').textContent = totalPlan.toLocaleString('ru');
+  document.getElementById('totalSpent').textContent = totalSpent.toLocaleString('ru');
+  document.getElementById('totalPct').textContent = totalPlan > 0 ? Math.round(totalSpent/totalPlan*100) + '%' : '0%';
+}
+
+var _showAdd = false;
+document.getElementById('addBtn').addEventListener('click', function() {
+  _showAdd = !_showAdd;
+  var body = document.getElementById('stagesBody');
+  var existing = body.querySelector('.inline-add');
+  if (existing) { existing.remove(); _showAdd = false; return; }
+  var tr = document.createElement('tr');
+  tr.className = 'inline-add';
+  tr.innerHTML =
+    '<td><input placeholder="Наименование этапа" autofocus></td>' +
+    '<td><input placeholder="№" style="text-align:center"></td>' +
+    '<td><input placeholder="Наряд-заказ"></td>' +
+    '<td><input placeholder="Код строки"></td>' +
+    '<td></td>' +
+    '<td style="text-align:center"><button class="btn-accent" style="padding:5px 10px;font-size:11px">&#10003;</button></td>';
+  body.insertBefore(tr, body.firstChild);
+  tr.querySelector('input').focus();
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  renderStages(this.value);
+});
+
+renderStages();
+</script>
+</body>
+</html>

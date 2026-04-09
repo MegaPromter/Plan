@@ -892,7 +892,12 @@ function renderSummaryCards(data) {
   var loadCls = loadBadgeCls(load);
   var colorMap = {ok: 'an-val-green', warn: 'an-val-yellow', over: 'an-val-red'};
 
+  var empCount = data.employee_count || 0;
+
   var html = '<div class="an-summary">';
+  if (empCount > 0) {
+    html += '<div class="an-summary-card"><div class="an-summary-val an-val-accent">' + empCount + '</div><div class="an-summary-label">Сотрудников</div></div>';
+  }
   html += '<div class="an-summary-card"><div class="an-summary-val an-val-accent">' + fmtHrs(planned) + '</div><div class="an-summary-label">План (ч)</div></div>';
   html += '<div class="an-summary-card"><div class="an-summary-val">' + fmtHrs(norm) + '</div><div class="an-summary-label">Норма (ч)</div></div>';
   html += '<div class="an-summary-card"><div class="an-summary-val ' + (colorMap[loadCls] || '') + '">' + fmtPct(load) + '</div><div class="an-summary-label">Загрузка</div></div>';

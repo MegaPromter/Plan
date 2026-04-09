@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — 3D v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;display:flex;flex-direction:column;gap:60px;align-items:center;padding:60px 40px;background:#0f172a}
+h2{font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:3px;margin-bottom:20px;text-align:center}
+.demo{background:#1a2744;border-radius:16px;padding:48px;display:flex;flex-direction:column;align-items:center}
+.demo-sidebar{background:#1a2744;border-radius:12px;padding:20px;width:220px}
+.demo-light{background:#f0f2f5}
+
+/* ══════════════════════════════════════════════════════════════
+   SVG-призма: треугольная стеклянная призма (вид сбоку)
+   с символами кода на гранях + радужный спектр
+   ══════════════════════════════════════════════════════════════ */
+
+.prism-text{text-align:center}
+.prism-text-title{font-weight:800;color:#e8e6dd;letter-spacing:8px}
+.prism-text-sub{color:rgba(255,255,255,0.35);letter-spacing:4px;margin-top:6px}
+.logo-wrap{display:flex;flex-direction:column;align-items:center;gap:20px}
+.logo-wrap-h{display:flex;align-items:center;gap:14px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LARGE — Login aside
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Large — Login aside</h2>
+<div class="demo">
+  <div class="logo-wrap">
+    <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Тень под призмой -->
+      <ellipse cx="100" cy="188" rx="70" ry="8" fill="url(#shadow)" opacity="0.4"/>
+
+      <!-- Луч света слева (белый, входящий) -->
+      <line x1="5" y1="75" x2="58" y2="95" stroke="rgba(255,255,255,0.25)" stroke-width="2.5"/>
+      <line x1="10" y1="80" x2="60" y2="98" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+
+      <!-- Радуга справа (спектр, расходящийся) -->
+      <line x1="142" y1="88" x2="195" y2="55" stroke="#ef4444" stroke-width="2" opacity="0.7"/>
+      <line x1="142" y1="92" x2="195" y2="65" stroke="#f97316" stroke-width="2" opacity="0.7"/>
+      <line x1="142" y1="96" x2="195" y2="75" stroke="#eab308" stroke-width="2" opacity="0.7"/>
+      <line x1="142" y1="100" x2="195" y2="86" stroke="#22c55e" stroke-width="2" opacity="0.7"/>
+      <line x1="142" y1="104" x2="195" y2="97" stroke="#3b82f6" stroke-width="2" opacity="0.7"/>
+      <line x1="142" y1="108" x2="195" y2="108" stroke="#8b5cf6" stroke-width="2" opacity="0.7"/>
+
+      <!-- ПРИЗМА: треугольник с 3D-эффектом (3 грани) -->
+
+      <!-- Задняя грань (еле видна, глубина) -->
+      <polygon points="100,18 155,168 45,168" fill="#0f1b2e" opacity="0.5"/>
+
+      <!-- Левая грань (тёмно-синяя) -->
+      <polygon points="100,22 60,168 100,168" fill="url(#faceLeft)"/>
+
+      <!-- Правая грань (ярче) -->
+      <polygon points="100,22 140,168 100,168" fill="url(#faceRight)"/>
+
+      <!-- Блик на левом ребре -->
+      <line x1="100" y1="22" x2="60" y2="168" stroke="rgba(93,202,165,0.2)" stroke-width="1"/>
+      <!-- Блик на правом ребре -->
+      <line x1="100" y1="22" x2="140" y2="168" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+      <!-- Основание -->
+      <line x1="60" y1="168" x2="140" y2="168" stroke="rgba(127,119,221,0.15)" stroke-width="1"/>
+
+      <!-- Стеклянный блик (вертикальная полоса) -->
+      <polygon points="100,28 95,168 105,168" fill="url(#glassHighlight)" opacity="0.15"/>
+
+      <!-- Верхняя грань (ребро, яркая линия) -->
+      <line x1="96" y1="24" x2="104" y2="24" stroke="url(#topEdge)" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- Свечение вершины -->
+      <circle cx="100" cy="22" r="8" fill="url(#apexGlow)" opacity="0.5"/>
+
+      <!-- Символы кода на левой грани -->
+      <text x="78" y="70" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="rgba(255,255,255,0.12)">&lt;/&gt;</text>
+      <text x="72" y="100" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="rgba(93,202,165,0.2)">fn()</text>
+      <text x="76" y="130" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(255,255,255,0.1)">{}</text>
+      <text x="68" y="150" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(127,119,221,0.18)">//</text>
+
+      <!-- Символы кода на правой грани -->
+      <text x="108" y="68" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="rgba(255,255,255,0.15)">=&gt;</text>
+      <text x="110" y="98" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(239,159,39,0.2)">[ ]</text>
+      <text x="112" y="125" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="rgba(255,255,255,0.1)">#</text>
+      <text x="115" y="152" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(59,130,246,0.2)">**</text>
+
+      <!-- Градиенты -->
+      <defs>
+        <linearGradient id="faceLeft" x1="60" y1="90" x2="100" y2="90" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#162d4a"/>
+          <stop offset="100%" stop-color="#1e3a5f"/>
+        </linearGradient>
+        <linearGradient id="faceRight" x1="100" y1="90" x2="140" y2="90" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.8"/>
+        </linearGradient>
+        <linearGradient id="glassHighlight" x1="100" y1="28" x2="100" y2="168" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#5dcaa5"/>
+          <stop offset="50%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#7f77dd"/>
+        </linearGradient>
+        <linearGradient id="topEdge" x1="96" y1="24" x2="104" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#5dcaa5"/>
+          <stop offset="50%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#7f77dd"/>
+        </linearGradient>
+        <radialGradient id="apexGlow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stop-color="#5dcaa5"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stop-color="#2563eb"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+      </defs>
+    </svg>
+    <div class="prism-text">
+      <div class="prism-text-title" style="font-size:42px;">ПРИЗМА</div>
+      <div class="prism-text-sub" style="font-size:12px;letter-spacing:5px;">MANAGE SYSTEMS<span style="color:#5dcaa5;font-weight:700">.ru</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SMALL — Сайдбар
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Small — Sidebar</h2>
+<div class="demo-sidebar">
+  <div class="logo-wrap-h">
+    <svg width="48" height="52" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="188" rx="70" ry="8" fill="url(#shadow)" opacity="0.4"/>
+      <line x1="5" y1="75" x2="58" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+      <line x1="142" y1="88" x2="195" y2="55" stroke="#ef4444" stroke-width="3" opacity="0.6"/>
+      <line x1="142" y1="94" x2="195" y2="70" stroke="#eab308" stroke-width="3" opacity="0.6"/>
+      <line x1="142" y1="100" x2="195" y2="86" stroke="#22c55e" stroke-width="3" opacity="0.6"/>
+      <line x1="142" y1="106" x2="195" y2="102" stroke="#3b82f6" stroke-width="3" opacity="0.6"/>
+      <line x1="142" y1="112" x2="195" y2="118" stroke="#8b5cf6" stroke-width="3" opacity="0.6"/>
+      <polygon points="100,22 60,168 100,168" fill="url(#faceLeft)"/>
+      <polygon points="100,22 140,168 100,168" fill="url(#faceRight)"/>
+      <polygon points="100,28 95,168 105,168" fill="url(#glassHighlight)" opacity="0.15"/>
+      <line x1="100" y1="22" x2="60" y2="168" stroke="rgba(93,202,165,0.2)" stroke-width="2"/>
+      <line x1="100" y1="22" x2="140" y2="168" stroke="rgba(59,130,246,0.2)" stroke-width="2"/>
+      <line x1="60" y1="168" x2="140" y2="168" stroke="rgba(127,119,221,0.15)" stroke-width="2"/>
+      <circle cx="100" cy="22" r="8" fill="url(#apexGlow)" opacity="0.5"/>
+    </svg>
+    <div class="prism-text">
+      <div class="prism-text-title" style="font-size:22px;letter-spacing:5px;">ПРИЗМА</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MEDIUM — Угол логина
+     ═══════════════════════════════════════════════════════════ -->
+<h2>Medium — Login corner</h2>
+<div class="demo" style="background:#f0f2f5;padding:32px;">
+  <svg width="72" height="78" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="100" cy="188" rx="70" ry="8" fill="url(#shadowLight)" opacity="0.3"/>
+    <line x1="5" y1="75" x2="58" y2="95" stroke="rgba(30,58,95,0.2)" stroke-width="3"/>
+    <line x1="142" y1="88" x2="195" y2="55" stroke="#ef4444" stroke-width="2.5" opacity="0.5"/>
+    <line x1="142" y1="94" x2="195" y2="70" stroke="#eab308" stroke-width="2.5" opacity="0.5"/>
+    <line x1="142" y1="100" x2="195" y2="86" stroke="#22c55e" stroke-width="2.5" opacity="0.5"/>
+    <line x1="142" y1="106" x2="195" y2="102" stroke="#3b82f6" stroke-width="2.5" opacity="0.5"/>
+    <line x1="142" y1="112" x2="195" y2="118" stroke="#8b5cf6" stroke-width="2.5" opacity="0.5"/>
+    <polygon points="100,22 60,168 100,168" fill="url(#faceLeftLight)"/>
+    <polygon points="100,22 140,168 100,168" fill="url(#faceRightLight)"/>
+    <polygon points="100,28 95,168 105,168" fill="url(#glassHighlight)" opacity="0.2"/>
+    <line x1="100" y1="22" x2="60" y2="168" stroke="rgba(93,202,165,0.25)" stroke-width="1.5"/>
+    <line x1="100" y1="22" x2="140" y2="168" stroke="rgba(59,130,246,0.25)" stroke-width="1.5"/>
+    <line x1="60" y1="168" x2="140" y2="168" stroke="rgba(127,119,221,0.2)" stroke-width="1.5"/>
+    <circle cx="100" cy="22" r="8" fill="url(#apexGlow)" opacity="0.4"/>
+    <defs>
+      <linearGradient id="faceLeftLight" x1="60" y1="90" x2="100" y2="90" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#c7d2e0"/>
+        <stop offset="100%" stop-color="#dbe4ef"/>
+      </linearGradient>
+      <linearGradient id="faceRightLight" x1="100" y1="90" x2="140" y2="90" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#93b4e8" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#a5c4f3" stop-opacity="0.6"/>
+      </linearGradient>
+      <radialGradient id="shadowLight" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0%" stop-color="#94a3b8"/>
+        <stop offset="100%" stop-color="transparent"/>
+      </radialGradient>
+    </defs>
+  </svg>
+</div>
+
+</body>
+</html>

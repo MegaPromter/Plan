@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Этапы — Вариант 3: Двухпанельный layout (список + детали)</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #fff;
+    --surface2: #f0f1f5;
+    --text: #1a1d2e;
+    --muted: #7b819a;
+    --accent: #4361ee;
+    --accent-glow: #eef1ff;
+    --border: #e2e4ed;
+    --border2: #d5d8e3;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter','Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding:40px 20px; }
+
+  .modal-overlay {
+    background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg);
+    width:1060px; height:80vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  /* Шапка */
+  .modal-header {
+    padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center;
+    justify-content:space-between; flex-shrink:0;
+  }
+  .modal-header h2 { font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .modal-close { background:none; border:none; cursor:pointer; font-size:20px; color:var(--muted); padding:4px 8px; border-radius:var(--radius-sm); }
+  .modal-close:hover { background:var(--surface2); color:var(--text); }
+
+  /* Две панели */
+  .split {
+    flex:1; display:flex; min-height:0;
+  }
+
+  /* Левая панель — список */
+  .left-panel {
+    width:380px; border-right:1px solid var(--border); display:flex; flex-direction:column;
+    flex-shrink:0;
+  }
+  .left-toolbar {
+    padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center;
+    flex-shrink:0;
+  }
+  .left-toolbar input {
+    flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font:inherit; font-size:12px; background:var(--surface2); outline:none;
+  }
+  .left-toolbar input:focus { border-color:var(--accent); background:var(--surface); }
+  .btn-add {
+    width:32px; height:32px; border:none; border-radius:var(--radius-sm); background:var(--accent);
+    color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:opacity .15s;
+  }
+  .btn-add:hover { opacity:.85; }
+
+  .stage-list {
+    flex:1; overflow-y:auto; padding:4px 0;
+  }
+  .stage-item {
+    padding:10px 16px; cursor:pointer; border-left:3px solid transparent;
+    transition:all .15s; display:flex; align-items:center; gap:10px;
+  }
+  .stage-item:hover { background:var(--surface2); }
+  .stage-item.active { background:var(--accent-glow); border-left-color:var(--accent); }
+  .stage-item-badge {
+    background:var(--accent); color:#fff; border-radius:var(--radius-sm); padding:2px 8px;
+    font-size:11px; font-weight:700; flex-shrink:0; min-width:36px; text-align:center;
+  }
+  .stage-item-info { flex:1; min-width:0; }
+  .stage-item-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stage-item-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .stage-item-pct {
+    font-size:11px; font-weight:600; flex-shrink:0; padding:2px 6px; border-radius:4px;
+  }
+  .stage-item-pct.done { background:#dcfce7; color:#16a34a; }
+  .stage-item-pct.partial { background:#fef3c7; color:#d97706; }
+  .stage-item-pct.none { background:var(--surface2); color:var(--muted); }
+
+  .left-footer {
+    padding:10px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--muted);
+    flex-shrink:0; display:flex; justify-content:space-between;
+  }
+
+  /* Правая панель — детали */
+  .right-panel {
+    flex:1; display:flex; flex-direction:column; min-width:0;
+  }
+  .right-empty {
+    flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    color:var(--muted); gap:12px;
+  }
+  .right-empty-icon { font-size:48px; opacity:.3; }
+  .right-empty-text { font-size:13px; }
+
+  .detail-header {
+    padding:16px 24px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .detail-title { font-size:18px; font-weight:600; margin-bottom:4px; }
+  .detail-meta { display:flex; gap:16px; font-size:12px; color:var(--muted); }
+  .detail-meta-item { display:flex; align-items:center; gap:4px; }
+
+  .detail-body {
+    flex:1; overflow-y:auto; padding:20px 24px;
+  }
+
+  /* Карточки полей */
+  .field-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;
+  }
+  .field-card {
+    background:var(--bg); border-radius:var(--radius-md); padding:14px 16px;
+  }
+  .field-card-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; margin-bottom:6px; }
+  .field-card-value { font-size:15px; font-weight:600; }
+  .field-card-value code { background:var(--surface); padding:2px 8px; border-radius:4px; font-size:13px; }
+  .field-card-value .editable {
+    border:none; background:transparent; font:inherit; font-size:15px; font-weight:600; color:var(--text);
+    border-bottom:1px dashed var(--border); outline:none; width:100%;
+  }
+  .field-card-value .editable:focus { border-bottom-color:var(--accent); }
+
+  /* Прогресс-бар */
+  .progress-section { margin-bottom:24px; }
+  .progress-section h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; margin-bottom:12px; }
+  .progress-bar-wrap {
+    background:var(--surface2); border-radius:8px; height:24px; overflow:hidden; position:relative;
+    margin-bottom:8px;
+  }
+  .progress-bar-fill {
+    height:100%; border-radius:8px; transition:width .4s ease;
+    display:flex; align-items:center; padding-left:10px; font-size:11px; font-weight:700; color:#fff;
+  }
+  .progress-bar-fill.low { background:linear-gradient(90deg, #818cf8, var(--accent)); }
+  .progress-bar-fill.mid { background:linear-gradient(90deg, #fbbf24, #f59e0b); }
+  .progress-bar-fill.high { background:linear-gradient(90deg, #4ade80, #22c55e); }
+  .progress-bar-fill.over { background:linear-gradient(90deg, #f87171, #ef4444); }
+  .progress-stats { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+
+  /* Работы этапа */
+  .works-section h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; margin-bottom:12px; }
+  .works-list { display:flex; flex-direction:column; gap:6px; }
+  .work-row {
+    display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--bg);
+    border-radius:var(--radius-sm); font-size:12px;
+  }
+  .work-row-name { flex:1; font-weight:500; }
+  .work-row-hours { color:var(--muted); min-width:60px; text-align:right; }
+  .work-row-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .work-row-status.done { background:var(--success); }
+  .work-row-status.progress { background:var(--warning); }
+  .work-row-status.pending { background:var(--border); }
+
+  /* Действия */
+  .detail-footer {
+    padding:12px 24px; border-top:1px solid var(--border); display:flex; gap:8px;
+    justify-content:flex-end; flex-shrink:0;
+  }
+  .btn-outline {
+    padding:8px 16px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface); font:inherit; font-size:12px; cursor:pointer; transition:all .15s;
+  }
+  .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-danger-outline {
+    padding:8px 16px; border:1px solid #fecaca; border-radius:var(--radius-sm);
+    background:#fff; font:inherit; font-size:12px; cursor:pointer; color:var(--danger); transition:all .15s;
+  }
+  .btn-danger-outline:hover { background:#fef2f2; border-color:var(--danger); }
+  .btn-primary {
+    padding:8px 16px; border:none; border-radius:var(--radius-sm); background:var(--accent);
+    color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .15s;
+  }
+  .btn-primary:hover { opacity:.9; }
+
+  /* Форма нового этапа (правая панель) */
+  .new-stage-form {
+    flex:1; display:flex; flex-direction:column; padding:24px;
+  }
+  .new-stage-form h3 { font-size:15px; font-weight:600; margin-bottom:20px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .form-group input {
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font:inherit; font-size:13px; outline:none; transition:border .15s;
+  }
+  .form-group input:focus { border-color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay">
+  <div class="modal-header">
+    <h2>&#9776; Этапы проекта <span style="font-weight:400;color:var(--muted);font-size:13px;margin-left:4px;">ДОС</span></h2>
+    <button class="modal-close">&times;</button>
+  </div>
+
+  <div class="split">
+    <!-- Левая панель: список -->
+    <div class="left-panel">
+      <div class="left-toolbar">
+        <input placeholder="Поиск..." id="searchInput">
+        <button class="btn-add" id="addBtn" title="Добавить этап">+</button>
+      </div>
+      <div class="stage-list" id="stageList"></div>
+      <div class="left-footer">
+        <span id="countLabel">25 этапов</span>
+        <span id="totalLabel">14 980 ч план</span>
+      </div>
+    </div>
+
+    <!-- Правая панель: детали -->
+    <div class="right-panel" id="rightPanel">
+      <div class="right-empty">
+        <div class="right-empty-icon">&#8592;</div>
+        <div class="right-empty-text">Выберите этап из списка слева</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var STAGES = [
+  { name:'Согласование ТЗ', num:'1.1', order:'НЗ-100', code:'КС-001', plan:80, spent:80,
+    works:[{name:'Анализ ТЗ заказчика',h:40,s:'done'},{name:'Протокол согласования',h:40,s:'done'}] },
+  { name:'Поставка комплектующих', num:'2.1', order:'НЗ-200', code:'КС-100', plan:160, spent:160,
+    works:[{name:'Закупка ЭРИ',h:80,s:'done'},{name:'Закупка механики',h:80,s:'done'}] },
+  { name:'Входной контроль комплектующих', num:'2.2', order:'НЗ-201', code:'КС-101', plan:120, spent:90,
+    works:[{name:'Входной контроль ЭРИ',h:60,s:'done'},{name:'Входной контроль механики',h:60,s:'progress'}] },
+  { name:'Разработка корпусов', num:'3.1', order:'НЗ-123', code:'КС-154', plan:1240, spent:860,
+    works:[{name:'3D-модель корпуса',h:400,s:'done'},{name:'Чертежи корпуса',h:340,s:'progress'},{name:'Расчёт прочности',h:200,s:'progress'},{name:'Технология изготовления',h:300,s:'pending'}] },
+  { name:'Разработка схем ПГС', num:'3.2', order:'НЗ-789', code:'КС-432', plan:468, spent:312,
+    works:[{name:'Принципиальная схема ПГС',h:168,s:'done'},{name:'Монтажная схема ПГС',h:150,s:'progress'},{name:'Спецификация ПГС',h:150,s:'pending'}] },
+  { name:'Разработка схем БКС', num:'3.3', order:'НЗ-098', code:'КС-645', plan:890, spent:0,
+    works:[{name:'Принципиальная схема БКС',h:300,s:'pending'},{name:'Монтажная схема БКС',h:290,s:'pending'},{name:'Спецификация БКС',h:300,s:'pending'}] },
+  { name:'Разработка монтажей', num:'3.4', order:'НЗ-764', code:'КС-222', plan:340, spent:340,
+    works:[{name:'Монтажные чертежи',h:200,s:'done'},{name:'Трассировка кабелей',h:140,s:'done'}] },
+  { name:'Разработка общей документации', num:'3.5', order:'НЗ-0987', code:'КС-874', plan:560, spent:120,
+    works:[{name:'Ведомость документации',h:80,s:'done'},{name:'Пояснительная записка',h:240,s:'progress'},{name:'Ведомость покупных',h:240,s:'pending'}] },
+  { name:'Разработка расчётов', num:'3.6', order:'НЗ-198', code:'888-999', plan:220, spent:0,
+    works:[{name:'Тепловой расчёт',h:110,s:'pending'},{name:'Массовая сводка',h:110,s:'pending'}] },
+  { name:'Проектирование ДСЕ', num:'4.1', order:'НЗ-301', code:'КС-701', plan:1560, spent:980,
+    works:[{name:'Моделирование ДСЕ',h:600,s:'done'},{name:'Чертежи ДСЕ',h:500,s:'progress'},{name:'Спецификации ДСЕ',h:460,s:'pending'}] },
+  { name:'Разработка ТУ', num:'4.2', order:'НЗ-302', code:'КС-702', plan:320, spent:160,
+    works:[{name:'ТУ на изделие',h:160,s:'done'},{name:'Программа испытаний',h:160,s:'progress'}] },
+  { name:'Входной контроль', num:'5.1', order:'НЗ-400', code:'КС-800', plan:240, spent:0,
+    works:[{name:'Методика контроля',h:120,s:'pending'},{name:'Проведение контроля',h:120,s:'pending'}] },
+  { name:'Макетирование', num:'5.2', order:'НЗ-401', code:'КС-801', plan:680, spent:450,
+    works:[{name:'Электрический макет',h:340,s:'done'},{name:'Конструкторский макет',h:340,s:'progress'}] },
+  { name:'Изготовление опытного образца', num:'6.1', order:'НЗ-500', code:'КС-900', plan:2100, spent:0,
+    works:[{name:'Сборка модуля',h:800,s:'pending'},{name:'Монтаж кабельной сети',h:600,s:'pending'},{name:'Пневмоиспытания',h:700,s:'pending'}] },
+  { name:'Приёмочные испытания', num:'7.1', order:'НЗ-600', code:'КС-950', plan:440, spent:0,
+    works:[{name:'Автономные испытания',h:220,s:'pending'},{name:'Комплексные испытания',h:220,s:'pending'}] },
+  { name:'Разработка эксплуатационной документации', num:'7.2', order:'НЗ-601', code:'КС-951', plan:360, spent:0,
+    works:[{name:'Руководство по эксплуатации',h:180,s:'pending'},{name:'Формуляр',h:180,s:'pending'}] },
+  { name:'Корректировка КД', num:'7.3', order:'НЗ-602', code:'КС-952', plan:280, spent:0,
+    works:[{name:'Корректировка чертежей',h:140,s:'pending'},{name:'Корректировка спецификаций',h:140,s:'pending'}] },
+  { name:'Разработка ПО бортового компьютера', num:'8.1', order:'НЗ-700', code:'КС-A01', plan:1800, spent:1200,
+    works:[{name:'Архитектура ПО',h:300,s:'done'},{name:'Модуль навигации',h:500,s:'done'},{name:'Модуль телеметрии',h:500,s:'progress'},{name:'Интеграционное тестирование',h:500,s:'pending'}] },
+  { name:'Тестирование ПО', num:'8.2', order:'НЗ-701', code:'КС-A02', plan:600, spent:350,
+    works:[{name:'Unit-тесты',h:200,s:'done'},{name:'Системные тесты',h:200,s:'progress'},{name:'Нагрузочные тесты',h:200,s:'pending'}] },
+  { name:'Интеграционные испытания', num:'8.3', order:'НЗ-702', code:'КС-A03', plan:480, spent:0,
+    works:[{name:'Стыковочные испытания',h:240,s:'pending'},{name:'Комплексная проверка',h:240,s:'pending'}] },
+  { name:'Разработка наземного оборудования', num:'9.1', order:'НЗ-800', code:'КС-B01', plan:920, spent:400,
+    works:[{name:'Стенд проверки',h:460,s:'done'},{name:'Транспортировочная оснастка',h:460,s:'pending'}] },
+  { name:'Разработка стендового оборудования', num:'9.2', order:'НЗ-801', code:'КС-B02', plan:540, spent:0,
+    works:[{name:'Испытательный стенд',h:300,s:'pending'},{name:'Программа стендовых испытаний',h:240,s:'pending'}] },
+  { name:'Квалификационные испытания', num:'10.1', order:'НЗ-900', code:'КС-C01', plan:380, spent:0,
+    works:[{name:'Вибропрочность',h:190,s:'pending'},{name:'Термовакуум',h:190,s:'pending'}] },
+  { name:'Сертификация изделия', num:'10.2', order:'НЗ-901', code:'КС-C02', plan:200, spent:0,
+    works:[{name:'Подготовка пакета документов',h:100,s:'pending'},{name:'Взаимодействие с ЦС',h:100,s:'pending'}] },
+  { name:'Подготовка серийного производства', num:'11.1', order:'НЗ-999', code:'КС-D01', plan:1400, spent:0,
+    works:[{name:'Технологический процесс',h:500,s:'pending'},{name:'Оснастка для серии',h:500,s:'pending'},{name:'Пилотная партия',h:400,s:'pending'}] },
+];
+
+var _activeIdx = -1;
+
+function pctClass(pct) {
+  if (pct >= 100) return 'done';
+  if (pct > 0) return 'partial';
+  return 'none';
+}
+function barClass(pct) {
+  if (pct > 100) return 'over';
+  if (pct >= 80) return 'high';
+  if (pct >= 40) return 'mid';
+  return 'low';
+}
+
+function renderList(filter) {
+  var list = document.getElementById('stageList');
+  var q = (filter || '').toLowerCase();
+  var totalPlan = 0;
+  STAGES.forEach(function(s) { totalPlan += s.plan; });
+
+  var html = '';
+  STAGES.forEach(function(s, i) {
+    if (q && s.name.toLowerCase().indexOf(q) === -1 && s.num.indexOf(q) === -1) return;
+    var pct = s.plan > 0 ? Math.round(s.spent / s.plan * 100) : 0;
+    var cls = pctClass(pct);
+    html += '<div class="stage-item' + (i === _activeIdx ? ' active' : '') + '" data-idx="' + i + '">' +
+      '<span class="stage-item-badge">' + s.num + '</span>' +
+      '<div class="stage-item-info">' +
+        '<div class="stage-item-name">' + s.name + '</div>' +
+        '<div class="stage-item-sub">' + s.order + ' &middot; ' + s.code + '</div>' +
+      '</div>' +
+      '<span class="stage-item-pct ' + cls + '">' + pct + '%</span>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+  document.getElementById('countLabel').textContent = STAGES.length + ' этапов';
+  document.getElementById('totalLabel').textContent = totalPlan.toLocaleString('ru') + ' ч план';
+
+  list.querySelectorAll('.stage-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      _activeIdx = parseInt(el.dataset.idx);
+      renderList(document.getElementById('searchInput').value);
+      renderDetail(STAGES[_activeIdx]);
+    });
+  });
+}
+
+function renderDetail(s) {
+  var panel = document.getElementById('rightPanel');
+  var pct = s.plan > 0 ? Math.round(s.spent / s.plan * 100) : 0;
+  var barW = Math.min(pct, 100);
+  var cls = barClass(pct);
+
+  var worksHtml = s.works.map(function(w) {
+    return '<div class="work-row">' +
+      '<div class="work-row-status ' + w.s + '"></div>' +
+      '<div class="work-row-name">' + w.name + '</div>' +
+      '<div class="work-row-hours">' + w.h + ' ч</div>' +
+    '</div>';
+  }).join('');
+
+  panel.innerHTML =
+    '<div class="detail-header">' +
+      '<div class="detail-title">' + s.name + '</div>' +
+      '<div class="detail-meta">' +
+        '<div class="detail-meta-item"><strong>Этап ' + s.num + '</strong></div>' +
+        '<div class="detail-meta-item">&#128196; ' + s.order + '</div>' +
+        '<div class="detail-meta-item">&#128218; <code style="font-size:12px">' + s.code + '</code></div>' +
+        '<div class="detail-meta-item">' + s.works.length + ' работ</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="detail-body">' +
+      '<div class="field-grid">' +
+        '<div class="field-card">' +
+          '<div class="field-card-label">Наименование</div>' +
+          '<div class="field-card-value"><input class="editable" value="' + s.name + '"></div>' +
+        '</div>' +
+        '<div class="field-card">' +
+          '<div class="field-card-label">№ этапа</div>' +
+          '<div class="field-card-value"><input class="editable" value="' + s.num + '" style="max-width:80px"></div>' +
+        '</div>' +
+        '<div class="field-card">' +
+          '<div class="field-card-label">Наряд-заказ</div>' +
+          '<div class="field-card-value"><input class="editable" value="' + s.order + '"></div>' +
+        '</div>' +
+        '<div class="field-card">' +
+          '<div class="field-card-label">Код строки</div>' +
+          '<div class="field-card-value"><code>' + s.code + '</code></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="progress-section">' +
+        '<h3>Трудоёмкость</h3>' +
+        '<div class="progress-bar-wrap">' +
+          '<div class="progress-bar-fill ' + cls + '" style="width:' + barW + '%">' +
+            (barW > 15 ? pct + '%' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="progress-stats">' +
+          '<span>Потрачено: <strong>' + s.spent.toLocaleString('ru') + '</strong> ч</span>' +
+          '<span>Запланировано: <strong>' + s.plan.toLocaleString('ru') + '</strong> ч</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="works-section">' +
+        '<h3>Работы этапа (' + s.works.length + ')</h3>' +
+        '<div class="works-list">' + worksHtml + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="detail-footer">' +
+      '<button class="btn-danger-outline">Удалить этап</button>' +
+      '<button class="btn-outline">Отмена</button>' +
+      '<button class="btn-primary">Сохранить</button>' +
+    '</div>';
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  renderList(this.value);
+});
+
+document.getElementById('addBtn').addEventListener('click', function() {
+  _activeIdx = -1;
+  renderList(document.getElementById('searchInput').value);
+  var panel = document.getElementById('rightPanel');
+  panel.innerHTML =
+    '<div class="new-stage-form">' +
+      '<h3>&#10010; Новый этап</h3>' +
+      '<div class="form-grid">' +
+        '<div class="form-group"><label>Наименование</label><input placeholder="Наименование этапа" autofocus></div>' +
+        '<div class="form-group"><label>№ этапа</label><input placeholder="Например: 3.1"></div>' +
+        '<div class="form-group"><label>Наряд-заказ</label><input placeholder="Например: НЗ-789"></div>' +
+        '<div class="form-group"><label>Код строки</label><input placeholder="Например: КС-432"></div>' +
+      '</div>' +
+      '<div style="margin-top:auto;display:flex;gap:8px;justify-content:flex-end">' +
+        '<button class="btn-outline">Отмена</button>' +
+        '<button class="btn-primary">Создать этап</button>' +
+      '</div>' +
+    '</div>';
+});
+
+renderList();
+</script>
+</body>
+</html>

@@ -1905,33 +1905,16 @@ function makeRow(t, num) {
       // ── Text/date поля (justification, description, etc.) ──
       // text → textarea, date → input[type=date]
       const inp = col.type === "text" ? document.createElement("textarea") : document.createElement("input");
-      inp.className = "cell-edit" + (col.type === "date" ? " date" : "");
+      inp.className = "cell-edit";
       inp.dataset.field = col.field;
       if (col.type === "date") {
         inp.type = "date";
-        // Дата отображается как текст (DD.MM.YYYY); при клике — раскрывается нативный date-picker
-        const fmtDate = v => v ? v.split('-').reverse().join('.') : '';
-        // Скрываем нативный input — показываем через span
-        inp.style.cssText = "position:absolute;opacity:0;pointer-events:none;width:0;height:0;";
-        const span = document.createElement("span");
-        span.className = "date-display";
-        span.dataset.field = col.field;
-        span.textContent = fmtDate(t[col.field]);
-        // Для ПП-записей разрешено редактировать date_start, date_end
+        // Для ПП-записей блокируем все date-поля кроме date_start/date_end
         const ppAllowedInline = new Set(["date_start", "date_end"]);
-        if (!isFromPP || ppAllowedInline.has(col.field)) {
-          // Клик по тексту даты → показать date-picker
-          span.style.cursor = "pointer";
-          span.title = "Нажмите для редактирования";
-          span.addEventListener("click", () => { inp.style.cssText = ""; inp.focus(); span.style.display = "none"; });
-          // При потере фокуса — скрыть picker, обновить текст
-          inp.addEventListener("blur", () => {
-            inp.style.cssText = "position:absolute;opacity:0;pointer-events:none;width:0;height:0;";
-            span.textContent = fmtDate(inp.value);
-            span.style.display = "";
-          });
+        if (isFromPP && !ppAllowedInline.has(col.field)) {
+          inp.readOnly = true;
+          inp.tabIndex = -1;
         }
-        td.appendChild(span);
       }
       inp.value = t[col.field] || "";
       // Автовысота textarea при вводе текста
@@ -2458,13 +2441,13 @@ function openInlineNewRow() {
   const spDsTd = document.createElement('td');
   spDsTd.dataset.colIdx = '12';
   const spDsInp = document.createElement('input');
-  spDsInp.type = 'date'; spDsInp.id = 'inr-date_start'; spDsInp.className = 'cell-edit date';
+  spDsInp.type = 'date'; spDsInp.id = 'inr-date_start'; spDsInp.className = 'cell-edit';
   spDsTd.appendChild(spDsInp);
   tr.appendChild(spDsTd);
   const spDeTd = document.createElement('td');
   spDeTd.dataset.colIdx = '13';
   const spDeInp = document.createElement('input');
-  spDeInp.type = 'date'; spDeInp.id = 'inr-date_end'; spDeInp.className = 'cell-edit date';
+  spDeInp.type = 'date'; spDeInp.id = 'inr-date_end'; spDeInp.className = 'cell-edit';
   spDeTd.appendChild(spDeInp);
   tr.appendChild(spDeTd);
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — V2 Wireframe вариации</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;background:#0f172a;color:#e2e8f0;padding:40px}
+h1{text-align:center;font-size:14px;letter-spacing:6px;color:#64748b;margin-bottom:50px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;max-width:1100px;margin:0 auto}
+.v{background:#1a2744;border-radius:16px;padding:36px 28px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.v h2{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:600}
+.v h3{font-size:10px;color:#475569;text-align:center;line-height:1.5;max-width:200px}
+.brand{text-align:center}
+.brand-t{font-size:24px;font-weight:800;letter-spacing:5px;color:#e8e6dd}
+.brand-s{font-size:8px;color:rgba(255,255,255,0.25);letter-spacing:3px;margin-top:3px}
+</style>
+</head>
+<body>
+
+<h1>V2 WIREFRAME — ВАРИАЦИИ СТИЛЯ</h1>
+
+<div class="grid">
+
+<!-- ═══════════════════════════════════════════════════════════
+     A: Неоновый — яркие рёбра, сильное свечение
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>A — Неон</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <filter id="neonA"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <linearGradient id="nA1" x1="80" y1="15" x2="30" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5"/><stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.2"/>
+      </linearGradient>
+      <linearGradient id="nA2" x1="80" y1="15" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.2"/>
+      </linearGradient>
+      <linearGradient id="nA3" x1="30" y1="140" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.5"/><stop offset="50%" stop-color="#7f77dd"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.5"/>
+      </linearGradient>
+    </defs>
+    <line x1="80" y1="18" x2="30" y2="142" stroke="url(#nA1)" stroke-width="2.5" filter="url(#neonA)"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="url(#nA2)" stroke-width="2.5" filter="url(#neonA)"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="url(#nA3)" stroke-width="2.5" filter="url(#neonA)"/>
+    <circle cx="80" cy="18" r="5" fill="#5dcaa5" filter="url(#neonA)"/>
+    <circle cx="30" cy="142" r="4" fill="#3b82f6" filter="url(#neonA)"/>
+    <circle cx="130" cy="142" r="4" fill="#7f77dd" filter="url(#neonA)"/>
+    <text x="50" y="72" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(93,202,165,0.4)" transform="rotate(-60,50,72)">&lt;/&gt;</text>
+    <text x="46" y="112" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(93,202,165,0.25)" transform="rotate(-60,46,112)">fn()</text>
+    <text x="108" y="72" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(59,130,246,0.4)" transform="rotate(60,108,72)">=&gt;</text>
+    <text x="112" y="112" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(59,130,246,0.25)" transform="rotate(60,112,112)">{}</text>
+    <text x="62" y="152" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.3)">#</text>
+    <text x="90" y="152" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.3)">@</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Яркий неон с glow-эффектом. Кибер-эстетика</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     B: Тонкий — тонкие линии, мягкое свечение, элегантный
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>B — Тонкий / элегантный</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="nB1" x1="80" y1="15" x2="30" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.6"/><stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.05"/>
+      </linearGradient>
+      <linearGradient id="nB2" x1="80" y1="15" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.6"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.05"/>
+      </linearGradient>
+      <linearGradient id="nB3" x1="30" y1="140" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.15"/><stop offset="50%" stop-color="#7f77dd" stop-opacity="0.3"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.15"/>
+      </linearGradient>
+      <radialGradient id="gB1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="gB2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="gB3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <polygon points="80,18 30,142 130,142" fill="rgba(37,99,235,0.02)"/>
+    <line x1="80" y1="18" x2="30" y2="142" stroke="url(#nB1)" stroke-width="1"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="url(#nB2)" stroke-width="1"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="url(#nB3)" stroke-width="1"/>
+    <circle cx="80" cy="18" r="10" fill="url(#gB1)"/>
+    <circle cx="80" cy="18" r="2" fill="#5dcaa5" opacity="0.7"/>
+    <circle cx="30" cy="142" r="8" fill="url(#gB2)"/>
+    <circle cx="30" cy="142" r="1.5" fill="#3b82f6" opacity="0.6"/>
+    <circle cx="130" cy="142" r="8" fill="url(#gB3)"/>
+    <circle cx="130" cy="142" r="1.5" fill="#7f77dd" opacity="0.6"/>
+    <text x="52" y="68" font-family="JetBrains Mono" font-size="8" font-weight="400" fill="rgba(93,202,165,0.18)" transform="rotate(-60,52,68)">&lt;/&gt;</text>
+    <text x="106" y="68" font-family="JetBrains Mono" font-size="8" font-weight="400" fill="rgba(59,130,246,0.18)" transform="rotate(60,106,68)">=&gt;</text>
+    <text x="72" y="150" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(127,119,221,0.15)">{ }</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Минимум деталей. Тонкие линии, лёгкое свечение. Премиум</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C: Заполненные грани — полупрозрачные цветные грани
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C — Цветные грани</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="nC1" x1="30" y1="80" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.2"/><stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.05"/>
+      </linearGradient>
+      <linearGradient id="nC2" x1="80" y1="80" x2="130" y2="80" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.05"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.2"/>
+      </linearGradient>
+      <filter id="glowC"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <!-- Левая половина (зелёный) -->
+    <polygon points="80,18 30,142 80,142" fill="url(#nC1)"/>
+    <!-- Правая половина (синий) -->
+    <polygon points="80,18 130,142 80,142" fill="url(#nC2)"/>
+    <!-- Рёбра -->
+    <line x1="80" y1="18" x2="30" y2="142" stroke="#5dcaa5" stroke-width="1.5" opacity="0.5"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="#3b82f6" stroke-width="1.5" opacity="0.5"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="#7f77dd" stroke-width="1.5" opacity="0.4"/>
+    <!-- Центральная ось -->
+    <line x1="80" y1="22" x2="80" y2="142" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="3 4"/>
+    <!-- Вершины -->
+    <circle cx="80" cy="18" r="4" fill="#5dcaa5" opacity="0.6" filter="url(#glowC)"/>
+    <circle cx="30" cy="142" r="3" fill="#3b82f6" opacity="0.5" filter="url(#glowC)"/>
+    <circle cx="130" cy="142" r="3" fill="#7f77dd" opacity="0.5" filter="url(#glowC)"/>
+    <!-- Символы -->
+    <text x="48" y="80" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="rgba(93,202,165,0.25)" transform="rotate(-60,48,80)">&lt;/&gt;</text>
+    <text x="44" y="118" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(93,202,165,0.15)" transform="rotate(-60,44,118)">fn</text>
+    <text x="108" y="80" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="rgba(59,130,246,0.25)" transform="rotate(60,108,80)">=&gt;</text>
+    <text x="112" y="118" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(59,130,246,0.15)" transform="rotate(60,112,118)">{}</text>
+    <text x="58" y="151" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(127,119,221,0.2)">#</text>
+    <text x="95" y="151" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(127,119,221,0.2)">@</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Полупрозрачные грани: зелёная и синяя. Глубина через цвет</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     D: Двойной контур — два треугольника со сдвигом (глубина)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>D — Двойной контур</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <filter id="glowD"><feGaussianBlur stdDeviation="2"/></filter>
+    </defs>
+    <!-- Задний треугольник (сдвинут вправо-вниз, тусклый) -->
+    <polygon points="86,24 36,148 136,148" fill="none" stroke="rgba(127,119,221,0.2)" stroke-width="1"/>
+    <!-- Передний треугольник -->
+    <polygon points="78,14 28,138 128,138" fill="rgba(37,99,235,0.03)"/>
+    <line x1="78" y1="14" x2="28" y2="138" stroke="#5dcaa5" stroke-width="1.5" opacity="0.5"/>
+    <line x1="78" y1="14" x2="128" y2="138" stroke="#3b82f6" stroke-width="1.5" opacity="0.5"/>
+    <line x1="28" y1="138" x2="128" y2="138" stroke="#7f77dd" stroke-width="1.5" opacity="0.35"/>
+    <!-- Соединения (глубина) -->
+    <line x1="78" y1="14" x2="86" y2="24" stroke="rgba(93,202,165,0.15)" stroke-width="0.8"/>
+    <line x1="28" y1="138" x2="36" y2="148" stroke="rgba(59,130,246,0.12)" stroke-width="0.8"/>
+    <line x1="128" y1="138" x2="136" y2="148" stroke="rgba(127,119,221,0.12)" stroke-width="0.8"/>
+    <!-- Вершины переднего -->
+    <circle cx="78" cy="14" r="4" fill="#5dcaa5" opacity="0.6"/>
+    <circle cx="28" cy="138" r="3" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="128" cy="138" r="3" fill="#7f77dd" opacity="0.5"/>
+    <!-- Вершины заднего (тусклые) -->
+    <circle cx="86" cy="24" r="2" fill="#5dcaa5" opacity="0.2"/>
+    <circle cx="36" cy="148" r="2" fill="#3b82f6" opacity="0.15"/>
+    <circle cx="136" cy="148" r="2" fill="#7f77dd" opacity="0.15"/>
+    <!-- Символы -->
+    <text x="42" y="78" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(93,202,165,0.3)" transform="rotate(-58,42,78)">&lt;/&gt;</text>
+    <text x="106" y="78" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(59,130,246,0.3)" transform="rotate(58,106,78)">=&gt;</text>
+    <text x="60" y="148" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(127,119,221,0.2)">{}</text>
+    <text x="92" y="148" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(127,119,221,0.2)">fn</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Два слоя — передний и задний. Ощущение объёма и глубины</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     E: Пунктирный — рёбра из точек/штрихов, данные как поток
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>E — Пунктир / данные</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <radialGradient id="gE1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.4"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="gE2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="gE3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.35"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Рёбра из точек -->
+    <line x1="80" y1="18" x2="30" y2="142" stroke="#5dcaa5" stroke-width="2" opacity="0.4" stroke-dasharray="2 6"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="#3b82f6" stroke-width="2" opacity="0.4" stroke-dasharray="2 6"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="#7f77dd" stroke-width="2" opacity="0.3" stroke-dasharray="2 6"/>
+    <!-- Сплошные тонкие дублёры -->
+    <line x1="80" y1="18" x2="30" y2="142" stroke="#5dcaa5" stroke-width="0.5" opacity="0.15"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="#3b82f6" stroke-width="0.5" opacity="0.15"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="#7f77dd" stroke-width="0.5" opacity="0.1"/>
+    <!-- Вершины -->
+    <circle cx="80" cy="18" r="12" fill="url(#gE1)"/><circle cx="80" cy="18" r="3" fill="#5dcaa5" opacity="0.8"/>
+    <circle cx="30" cy="142" r="10" fill="url(#gE2)"/><circle cx="30" cy="142" r="2.5" fill="#3b82f6" opacity="0.7"/>
+    <circle cx="130" cy="142" r="10" fill="url(#gE3)"/><circle cx="130" cy="142" r="2.5" fill="#7f77dd" opacity="0.7"/>
+    <!-- «Частицы данных» на рёбрах (маленькие точки) -->
+    <circle cx="62" cy="62" r="1.5" fill="#5dcaa5" opacity="0.5"/>
+    <circle cx="52" cy="95" r="1" fill="#5dcaa5" opacity="0.3"/>
+    <circle cx="42" cy="125" r="1.5" fill="#5dcaa5" opacity="0.4"/>
+    <circle cx="98" cy="62" r="1.5" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="108" cy="95" r="1" fill="#3b82f6" opacity="0.3"/>
+    <circle cx="118" cy="125" r="1.5" fill="#3b82f6" opacity="0.4"/>
+    <circle cx="55" cy="142" r="1" fill="#7f77dd" opacity="0.3"/>
+    <circle cx="80" cy="142" r="1.5" fill="#7f77dd" opacity="0.4"/>
+    <circle cx="105" cy="142" r="1" fill="#7f77dd" opacity="0.3"/>
+    <!-- Символы -->
+    <text x="56" y="55" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(93,202,165,0.3)">&lt;/&gt;</text>
+    <text x="97" y="55" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(59,130,246,0.3)">=&gt;</text>
+    <text x="72" y="105" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(255,255,255,0.07)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Пунктирные рёбра + частицы. Данные текут по граням призмы</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     F: Градиентная заливка — сплошной градиент внутри контура
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>F — Градиент внутри</h2>
+  <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="gF" x1="30" y1="142" x2="130" y2="18" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#7f77dd" stop-opacity="0.15"/>
+        <stop offset="40%" stop-color="#3b82f6" stop-opacity="0.12"/>
+        <stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.2"/>
+      </linearGradient>
+      <filter id="glowF"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <!-- Заливка -->
+    <polygon points="80,18 30,142 130,142" fill="url(#gF)"/>
+    <!-- Контур -->
+    <polygon points="80,18 30,142 130,142" fill="none" stroke="url(#nB3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Блик по центру -->
+    <line x1="80" y1="22" x2="80" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="20"/>
+    <!-- Вершины -->
+    <circle cx="80" cy="18" r="5" fill="#5dcaa5" filter="url(#glowF)"/>
+    <circle cx="30" cy="142" r="4" fill="#3b82f6" filter="url(#glowF)"/>
+    <circle cx="130" cy="142" r="4" fill="#7f77dd" filter="url(#glowF)"/>
+    <!-- Символы (крупнее, по центру) -->
+    <text x="62" y="72" font-family="JetBrains Mono" font-size="14" font-weight="700" fill="rgba(255,255,255,0.08)">&lt;/&gt;</text>
+    <text x="68" y="100" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="rgba(255,255,255,0.06)">=&gt;</text>
+    <text x="58" y="125" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="rgba(255,255,255,0.05)">fn(){}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Мягкий градиент от зелёного к фиолетовому. Символы как «тень» внутри</h3>
+</div>
+
+</div><!-- /grid -->
+
+</body>
+</html>

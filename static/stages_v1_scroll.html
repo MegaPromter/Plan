@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Этапы — Вариант 1: Sticky + Scroll + Сворачиваемая форма</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #fff;
+    --surface2: #f0f1f5;
+    --text: #1a1d2e;
+    --muted: #7b819a;
+    --accent: #4361ee;
+    --accent-glow: #eef1ff;
+    --border: #e2e4ed;
+    --border2: #d5d8e3;
+    --danger: #ef4444;
+    --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Inter','Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding:40px 20px; }
+
+  .modal-overlay {
+    background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg);
+    width:960px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-header {
+    padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .modal-header h2 { font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .modal-header h2 i { color:var(--accent); }
+  .modal-close { background:none; border:none; cursor:pointer; font-size:20px; color:var(--muted); padding:4px 8px; border-radius:var(--radius-sm); }
+  .modal-close:hover { background:var(--surface2); color:var(--text); }
+
+  /* Поиск */
+  .search-bar {
+    padding:12px 24px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .search-input {
+    width:100%; padding:8px 12px 8px 36px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font:inherit; font-size:13px; background:var(--surface2); outline:none; transition:border .15s;
+  }
+  .search-input:focus { border-color:var(--accent); background:var(--surface); }
+  .search-wrap { position:relative; }
+  .search-wrap::before { content:'\f002'; font-family:'Font Awesome 5 Free'; font-weight:900; position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:12px; }
+
+  /* Таблица со скроллом */
+  .table-scroll {
+    flex:1; overflow-y:auto; overflow-x:hidden; min-height:0;
+  }
+  .stages-table {
+    width:100%; font-size:13px; border-collapse:collapse;
+  }
+  .stages-table thead { position:sticky; top:0; z-index:5; }
+  .stages-table thead tr:first-child th {
+    background:var(--surface2); padding:10px 12px; text-align:left; font-size:11px;
+    text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid var(--border);
+  }
+  .stages-table thead tr:last-child th {
+    background:var(--surface2); padding:4px 8px 10px; text-align:center; font-size:10px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--muted); border-bottom:2px solid var(--border);
+  }
+  .stages-table tbody tr {
+    border-bottom:1px solid var(--border); transition:background .15s;
+  }
+  .stages-table tbody tr:nth-child(even) { background:var(--bg); }
+  .stages-table tbody tr:hover { background:var(--accent-glow); }
+  .stages-table td { padding:10px 12px; }
+  .stage-badge {
+    background:var(--accent); color:#fff; border-radius:var(--radius-sm); padding:2px 10px;
+    font-size:12px; font-weight:600; display:inline-block;
+  }
+  .code-badge {
+    background:var(--bg); padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace;
+  }
+  .labor-val { text-align:center; color:var(--muted); font-size:12px; }
+  .labor-val.has-value { color:var(--text); font-weight:500; }
+  .btn-icon {
+    background:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+    width:28px; height:28px; cursor:pointer; color:var(--muted); transition:all .15s;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .btn-icon:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+  .btn-icon.danger:hover { border-color:var(--danger); color:var(--danger); background:#fef2f2; }
+
+  /* Сворачиваемая форма */
+  .form-section {
+    border-top:1px solid var(--border); flex-shrink:0;
+  }
+  .form-toggle {
+    width:100%; padding:12px 24px; background:var(--surface); border:none; cursor:pointer;
+    font:inherit; font-size:13px; font-weight:600; color:var(--accent); display:flex;
+    align-items:center; gap:8px; transition:background .15s;
+  }
+  .form-toggle:hover { background:var(--accent-glow); }
+  .form-toggle .arrow { transition:transform .2s; font-size:10px; }
+  .form-toggle.open .arrow { transform:rotate(180deg); }
+
+  .form-body {
+    max-height:0; overflow:hidden; transition:max-height .3s ease, padding .3s ease;
+    padding:0 24px;
+  }
+  .form-body.open {
+    max-height:300px; padding:0 24px 20px;
+  }
+  .form-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; margin-bottom:14px;
+  }
+  .form-group label {
+    display:block; font-size:11px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px;
+  }
+  .form-group input {
+    width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    font:inherit; font-size:13px; outline:none; transition:border .15s;
+  }
+  .form-group input:focus { border-color:var(--accent); }
+  .btn-primary {
+    width:100%; padding:10px; border:none; border-radius:var(--radius-sm); background:var(--accent);
+    color:#fff; font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:opacity .15s;
+  }
+  .btn-primary:hover { opacity:.9; }
+
+  /* Футер */
+  .modal-footer {
+    padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:space-between;
+    align-items:center; flex-shrink:0;
+  }
+  .stage-count { font-size:12px; color:var(--muted); }
+  .btn-outline {
+    padding:8px 20px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface); font:inherit; font-size:13px; cursor:pointer; color:var(--text); transition:all .15s;
+  }
+  .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay">
+  <div class="modal-header">
+    <h2><i>&#9776;</i> Этапы проекта</h2>
+    <button class="modal-close">&times;</button>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-wrap">
+      <input class="search-input" placeholder="Поиск по названию или номеру этапа..." id="searchInput">
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="stages-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:28%">Наименование</th>
+          <th rowspan="2" style="width:8%;text-align:center">№</th>
+          <th rowspan="2" style="width:13%">Наряд-заказ</th>
+          <th rowspan="2" style="width:12%">Код строки</th>
+          <th colspan="2" style="text-align:center;border-left:1px solid var(--border)">Трудоёмкость</th>
+          <th rowspan="2" style="width:10%;text-align:center"></th>
+        </tr>
+        <tr>
+          <th style="width:9%;border-left:1px solid var(--border)">План</th>
+          <th style="width:9%">Факт</th>
+        </tr>
+      </thead>
+      <tbody id="stagesBody">
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-section">
+    <button class="form-toggle" id="formToggle" onclick="toggleForm()">
+      <span class="arrow">&#9660;</span> Новый этап
+    </button>
+    <div class="form-body" id="formBody">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Наименование</label>
+          <input placeholder="Наименование этапа">
+        </div>
+        <div class="form-group">
+          <label>№ этапа</label>
+          <input placeholder="Например: 3.1">
+        </div>
+        <div class="form-group">
+          <label>Наряд-заказ</label>
+          <input placeholder="Например: НЗ-789">
+        </div>
+        <div class="form-group">
+          <label>Код строки</label>
+          <input placeholder="Например: КС-432">
+        </div>
+      </div>
+      <button class="btn-primary">+ Добавить этап</button>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <span class="stage-count" id="countLabel">25 этапов</span>
+    <button class="btn-outline">Закрыть</button>
+  </div>
+</div>
+
+<script>
+const STAGES = [
+  { name:'Разработка корпусов', num:'3.1', order:'НЗ-123', code:'КС-154', plan:1240, spent:860 },
+  { name:'Разработка схем ПГС', num:'3.2', order:'НЗ-789', code:'КС-432', plan:468, spent:312 },
+  { name:'Разработка схем БКС', num:'3.3', order:'НЗ-098', code:'КС-645', plan:890, spent:0 },
+  { name:'Разработка общей документации', num:'3.5', order:'НЗ-0987', code:'КС-874', plan:560, spent:120 },
+  { name:'Разработка монтажей', num:'3.4', order:'НЗ-764', code:'КС-222', plan:340, spent:340 },
+  { name:'Разработка расчётов', num:'3.6', order:'НЗ-198', code:'888-999', plan:0, spent:0 },
+  { name:'Проектирование ДСЕ', num:'4.1', order:'НЗ-301', code:'КС-701', plan:1560, spent:980 },
+  { name:'Разработка ТУ', num:'4.2', order:'НЗ-302', code:'КС-702', plan:320, spent:160 },
+  { name:'Согласование ТЗ', num:'1.1', order:'НЗ-100', code:'КС-001', plan:80, spent:80 },
+  { name:'Входной контроль', num:'5.1', order:'НЗ-400', code:'КС-800', plan:240, spent:0 },
+  { name:'Макетирование', num:'5.2', order:'НЗ-401', code:'КС-801', plan:680, spent:450 },
+  { name:'Изготовление опытного образца', num:'6.1', order:'НЗ-500', code:'КС-900', plan:2100, spent:0 },
+  { name:'Приёмочные испытания', num:'7.1', order:'НЗ-600', code:'КС-950', plan:440, spent:0 },
+  { name:'Разработка эксплуатационной документации', num:'7.2', order:'НЗ-601', code:'КС-951', plan:360, spent:0 },
+  { name:'Корректировка КД по результатам испытаний', num:'7.3', order:'НЗ-602', code:'КС-952', plan:280, spent:0 },
+  { name:'Разработка ПО бортового компьютера', num:'8.1', order:'НЗ-700', code:'КС-A01', plan:1800, spent:1200 },
+  { name:'Тестирование ПО', num:'8.2', order:'НЗ-701', code:'КС-A02', plan:600, spent:350 },
+  { name:'Интеграционные испытания', num:'8.3', order:'НЗ-702', code:'КС-A03', plan:480, spent:0 },
+  { name:'Разработка наземного оборудования', num:'9.1', order:'НЗ-800', code:'КС-B01', plan:920, spent:400 },
+  { name:'Поставка комплектующих', num:'2.1', order:'НЗ-200', code:'КС-100', plan:160, spent:160 },
+  { name:'Входной контроль комплектующих', num:'2.2', order:'НЗ-201', code:'КС-101', plan:120, spent:90 },
+  { name:'Разработка стендового оборудования', num:'9.2', order:'НЗ-801', code:'КС-B02', plan:540, spent:0 },
+  { name:'Квалификационные испытания', num:'10.1', order:'НЗ-900', code:'КС-C01', plan:380, spent:0 },
+  { name:'Сертификация изделия', num:'10.2', order:'НЗ-901', code:'КС-C02', plan:200, spent:0 },
+  { name:'Подготовка серийного производства', num:'11.1', order:'НЗ-999', code:'КС-D01', plan:1400, spent:0 },
+];
+
+function renderStages(filter) {
+  var body = document.getElementById('stagesBody');
+  var q = (filter || '').toLowerCase();
+  var filtered = STAGES.filter(function(s) {
+    if (!q) return true;
+    return s.name.toLowerCase().indexOf(q) !== -1 || s.num.indexOf(q) !== -1;
+  });
+  body.innerHTML = filtered.map(function(s, i) {
+    var planStr = s.plan ? s.plan : '&mdash;';
+    var spentStr = s.spent ? s.spent : '&mdash;';
+    var spentCls = s.spent > s.plan && s.plan > 0 ? 'has-value" style="color:var(--danger);font-weight:600' : (s.spent ? 'has-value' : '');
+    return '<tr>' +
+      '<td style="font-weight:500">' + s.name + '</td>' +
+      '<td style="text-align:center"><span class="stage-badge">' + s.num + '</span></td>' +
+      '<td style="color:var(--muted)">' + s.order + '</td>' +
+      '<td><code class="code-badge">' + s.code + '</code></td>' +
+      '<td class="labor-val ' + (s.plan ? 'has-value' : '') + '" style="border-left:1px solid var(--border)">' + planStr + '</td>' +
+      '<td class="labor-val ' + spentCls + '">' + spentStr + '</td>' +
+      '<td style="text-align:center">' +
+        '<button class="btn-icon" title="Редактировать" style="margin-right:4px">&#9998;</button>' +
+        '<button class="btn-icon danger" title="Удалить">&#128465;</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('countLabel').textContent = filtered.length + ' из ' + STAGES.length + ' этапов';
+}
+
+function toggleForm() {
+  var toggle = document.getElementById('formToggle');
+  var body = document.getElementById('formBody');
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  renderStages(this.value);
+});
+
+renderStages();
+</script>
+</body>
+</html>

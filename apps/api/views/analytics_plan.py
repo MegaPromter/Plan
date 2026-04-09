@@ -495,6 +495,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             'role_info': role_info,
             'sector': {'id': sector_id, 'name': sector_name},
             'employees': employees_data,
+            'employee_count': len(employees_data),
             'months': sector_months['months'],
             'total_planned': sector_months['total_planned'],
             'total_norm': sector_months['total_norm'],
@@ -539,6 +540,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         dept_agg = self._aggregate_months(sectors_data)
         summary = _build_works_summary(dept_works, years, months_filter)
+        emp_count = sum(len(s.get('employees', [])) for s in sectors_data)
 
         return JsonResponse({
             'view': 'dept',
@@ -547,6 +549,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             'role_info': role_info,
             'dept': {'code': dept_code, 'name': dept_name},
             'sectors': sectors_data,
+            'employee_count': emp_count,
             **dept_agg,
             **summary,
             **self._nav_context(dept_works, role_info, emp, years, show_sectors=True),
@@ -608,6 +611,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         total_agg = self._aggregate_months(depts_data)
         summary = _build_works_summary(works, years, months_filter)
+        total_emp = sum(d.get('employee_count', 0) for d in depts_data)
 
         return JsonResponse({
             'view': 'all',
@@ -615,6 +619,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             'months_filter': months_filter,
             'role_info': role_info,
             'depts': depts_data,
+            'employee_count': total_emp,
             **total_agg,
             **summary,
             **self._nav_context(works, role_info, emp, years, show_sectors=show_sectors),
@@ -710,18 +715,20 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                 for sid, sname in sorted(sectors_set.items(), key=lambda x: x[1])
             ]
 
+        proj_qs = Project.objects.only('pk', 'name_short', 'name_full')
+        if role != 'admin':
+            proj_qs = proj_qs.filter(is_hidden=False)
         nav['nav_projects'] = [
             {'id': p.pk, 'name': p.name}
-            for p in Project.objects.only(
-                'pk', 'name_short', 'name_full'
-            ).order_by('name_short', 'name_full')
+            for p in proj_qs.order_by('name_short', 'name_full')
         ]
+        prod_qs = ProjectProduct.objects.only('pk', 'name', 'name_short', 'project_id')
+        if role != 'admin':
+            prod_qs = prod_qs.filter(project__is_hidden=False)
         nav['nav_products'] = [
             {'id': pp.pk, 'name': pp.name_short or pp.name,
              'project_id': pp.project_id}
-            for pp in ProjectProduct.objects.only(
-                'pk', 'name', 'name_short', 'project_id'
-            ).order_by('name')
+            for pp in prod_qs.order_by('name')
         ]
 
         base_year = years[0] if years else timezone.now().date().year

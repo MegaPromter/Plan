@@ -420,52 +420,33 @@ document.addEventListener('click', function(e) {
 })();
 
 // ══════════════════════════════════════════════════════════════════════════
-//  Air Datepicker: глобальная инициализация date-инпутов
+//  Flatpickr: глобальная инициализация date-инпутов.
+//  Попап рендерится в body по умолчанию — нет проблем с overflow/sticky.
 // ══════════════════════════════════════════════════════════════════════════
 (function() {
-  if (typeof AirDatepicker === 'undefined') return;
+  if (typeof flatpickr === 'undefined') return;
+
+  // Русская локализация
+  if (flatpickr.l10ns && flatpickr.l10ns.ru) {
+    flatpickr.localize(flatpickr.l10ns.ru);
+  }
 
   function initDatePickers(root) {
     var container = root || document;
-    var inputs = container.querySelectorAll('input[type="date"]:not([data-dp-done])');
+    var inputs = container.querySelectorAll('input[type="date"]:not([data-fp-done])');
     inputs.forEach(function(inp) {
       var val = inp.value;
-      inp.setAttribute('data-dp-done', '1');
-      inp.type = 'text';
-      inp.readOnly = false;
-      inp.placeholder = inp.placeholder || '';
+      inp.setAttribute('data-fp-done', '1');
 
-      var opts = {
-        dateFormat: 'yyyy-MM-dd',
-        autoClose: true,
-        buttons: ['clear', 'today'],
-        isMobile: window.innerWidth < 768,
-        onSelect: function(obj) {
-          // Устанавливаем значение в формате YYYY-MM-DD
-          if (obj.date) {
-            var d = obj.date;
-            var y = d.getFullYear();
-            var m = String(d.getMonth() + 1).padStart(2, '0');
-            var day = String(d.getDate()).padStart(2, '0');
-            inp.value = y + '-' + m + '-' + day;
-          } else {
-            inp.value = '';
-          }
+      flatpickr(inp, {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        appendTo: document.body,
+        onChange: function(selectedDates, dateStr) {
+          inp.value = dateStr;
           inp.dispatchEvent(new Event('change', {bubbles: true}));
         }
-      };
-
-      var dp = new AirDatepicker(inp, opts);
-
-      // Восстанавливаем значение
-      if (val) {
-        var parts = val.split('-');
-        if (parts.length === 3) {
-          dp.selectDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])), {silent: true});
-        }
-      }
-
-      inp._datepicker = dp;
+      });
     });
   }
 
@@ -477,21 +458,21 @@ document.addEventListener('click', function(e) {
     initDatePickers();
   }
 
-  // MutationObserver для динамических date-инпутов
-  var _dpObserver = new MutationObserver(function(mutations) {
+  // MutationObserver для динамических date-инпутов (ПП, СП)
+  var _fpObserver = new MutationObserver(function(mutations) {
     var hasNew = false;
     for (var i = 0; i < mutations.length; i++) {
       var added = mutations[i].addedNodes;
       for (var j = 0; j < added.length; j++) {
         var node = added[j];
         if (node.nodeType !== 1) continue;
-        if (node.matches && node.matches('input[type="date"]:not([data-dp-done])')) { hasNew = true; break; }
-        if (node.querySelector && node.querySelector('input[type="date"]:not([data-dp-done])')) { hasNew = true; break; }
+        if (node.matches && node.matches('input[type="date"]:not([data-fp-done])')) { hasNew = true; break; }
+        if (node.querySelector && node.querySelector('input[type="date"]:not([data-fp-done])')) { hasNew = true; break; }
       }
       if (hasNew) break;
     }
     if (hasNew) initDatePickers();
   });
-  _dpObserver.observe(document.body, { childList: true, subtree: true });
+  _fpObserver.observe(document.body, { childList: true, subtree: true });
 })();
 

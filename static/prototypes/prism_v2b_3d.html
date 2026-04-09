@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — V2B Тонкий 3D-призма</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;background:#0f172a;color:#e2e8f0;padding:40px}
+h1{text-align:center;font-size:14px;letter-spacing:6px;color:#64748b;margin-bottom:50px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;max-width:1100px;margin:0 auto}
+.v{background:#1a2744;border-radius:16px;padding:36px 28px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.v h2{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:600}
+.v h3{font-size:10px;color:#475569;text-align:center;line-height:1.5;max-width:200px}
+.brand{text-align:center}
+.brand-t{font-size:24px;font-weight:800;letter-spacing:5px;color:#e8e6dd}
+.brand-s{font-size:8px;color:rgba(255,255,255,0.25);letter-spacing:3px;margin-top:3px}
+</style>
+</head>
+<body>
+
+<h1>V2B ТОНКИЙ — 3D-ПРИЗМА (ТРЕУГОЛЬНАЯ, ОБЪЁМНАЯ)</h1>
+
+<div class="grid">
+
+<!-- ═══════════════════════════════════════════════════════════
+     C1: Классическая 3D-призма — лежит на ребре, видны 3 грани
+     Треугольное сечение + глубина (перспектива)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C1 — Лежащая призма</h2>
+  <svg width="160" height="140" viewBox="0 0 200 170" fill="none">
+    <defs>
+      <radialGradient id="c1g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c1g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c1g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Задняя грань (треугольник дальний) -->
+    <polygon points="155,30 185,130 125,130" fill="none" stroke="rgba(127,119,221,0.12)" stroke-width="0.7"/>
+    <!-- Передняя грань (треугольник ближний) -->
+    <polygon points="55,40 85,140 25,140" fill="none"/>
+    <line x1="55" y1="40" x2="25" y2="140" stroke="#5dcaa5" stroke-width="1" opacity="0.5"/>
+    <line x1="55" y1="40" x2="85" y2="140" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+    <line x1="25" y1="140" x2="85" y2="140" stroke="#7f77dd" stroke-width="1" opacity="0.3"/>
+    <!-- Рёбра глубины (соединяют передний и задний треугольники) -->
+    <line x1="55" y1="40" x2="155" y2="30" stroke="#5dcaa5" stroke-width="0.8" opacity="0.25"/>
+    <line x1="25" y1="140" x2="125" y2="130" stroke="#7f77dd" stroke-width="0.8" opacity="0.15"/>
+    <line x1="85" y1="140" x2="185" y2="130" stroke="#3b82f6" stroke-width="0.8" opacity="0.15"/>
+    <!-- Верхнее ребро глубины — акцент -->
+    <line x1="55" y1="40" x2="155" y2="30" stroke="#5dcaa5" stroke-width="1" opacity="0.35"/>
+    <!-- Вершины передний -->
+    <circle cx="55" cy="40" r="10" fill="url(#c1g1)"/><circle cx="55" cy="40" r="2" fill="#5dcaa5" opacity="0.6"/>
+    <circle cx="25" cy="140" r="7" fill="url(#c1g2)"/><circle cx="25" cy="140" r="1.5" fill="#3b82f6" opacity="0.45"/>
+    <circle cx="85" cy="140" r="7" fill="url(#c1g3)"/><circle cx="85" cy="140" r="1.5" fill="#7f77dd" opacity="0.45"/>
+    <!-- Вершины задний (тусклые) -->
+    <circle cx="155" cy="30" r="1.5" fill="#5dcaa5" opacity="0.2"/>
+    <circle cx="125" cy="130" r="1" fill="#3b82f6" opacity="0.12"/>
+    <circle cx="185" cy="130" r="1" fill="#7f77dd" opacity="0.12"/>
+    <!-- Символы на передней грани -->
+    <text x="38" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.18)" transform="rotate(-68,38,82)">&lt;/&gt;</text>
+    <text x="68" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(59,130,246,0.16)" transform="rotate(68,68,82)">=&gt;</text>
+    <!-- Символы на верхней грани (между треугольниками) -->
+    <text x="90" y="45" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)">fn()</text>
+    <text x="115" y="52" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(255,255,255,0.06)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Настоящая 3D-призма: два треугольных сечения соединены рёбрами глубины</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C2: Изометрическая стоячая — стоит на основании, вид 3/4
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C2 — Стоячая изометрия</h2>
+  <svg width="140" height="150" viewBox="0 0 160 180" fill="none">
+    <defs>
+      <radialGradient id="c2g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c2g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.18"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c2g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.18"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Нижнее основание (параллелограмм) -->
+    <polygon points="35,155 95,155 125,140 65,140" fill="none" stroke="#7f77dd" stroke-width="0.8" opacity="0.2"/>
+    <!-- Левая грань (трапеция) -->
+    <line x1="80" y1="20" x2="35" y2="155" stroke="#5dcaa5" stroke-width="1" opacity="0.45"/>
+    <line x1="80" y1="20" x2="65" y2="140" stroke="#5dcaa5" stroke-width="0.7" opacity="0.2"/>
+    <line x1="35" y1="155" x2="65" y2="140" stroke="#5dcaa5" stroke-width="0.6" opacity="0.12"/>
+    <!-- Правая грань -->
+    <line x1="80" y1="20" x2="95" y2="155" stroke="#3b82f6" stroke-width="1" opacity="0.45"/>
+    <line x1="80" y1="20" x2="125" y2="140" stroke="#3b82f6" stroke-width="0.7" opacity="0.2"/>
+    <line x1="95" y1="155" x2="125" y2="140" stroke="#3b82f6" stroke-width="0.6" opacity="0.12"/>
+    <!-- Переднее ребро -->
+    <line x1="35" y1="155" x2="95" y2="155" stroke="#7f77dd" stroke-width="1" opacity="0.3"/>
+    <!-- Заднее ребро (основание) -->
+    <line x1="65" y1="140" x2="125" y2="140" stroke="#7f77dd" stroke-width="0.6" opacity="0.1"/>
+    <!-- Вершина (верхнее ребро = точка, т.к. смотрим с торца) -->
+    <circle cx="80" cy="20" r="12" fill="url(#c2g1)"/><circle cx="80" cy="20" r="2.5" fill="#5dcaa5" opacity="0.65"/>
+    <!-- Передние нижние вершины -->
+    <circle cx="35" cy="155" r="7" fill="url(#c2g2)"/><circle cx="35" cy="155" r="1.5" fill="#3b82f6" opacity="0.4"/>
+    <circle cx="95" cy="155" r="7" fill="url(#c2g3)"/><circle cx="95" cy="155" r="1.5" fill="#7f77dd" opacity="0.4"/>
+    <!-- Задние -->
+    <circle cx="65" cy="140" r="1" fill="#5dcaa5" opacity="0.15"/>
+    <circle cx="125" cy="140" r="1" fill="#3b82f6" opacity="0.12"/>
+    <!-- Символы на левой грани -->
+    <text x="50" y="80" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.18)" transform="rotate(-72,50,80)">&lt;/&gt;</text>
+    <text x="42" y="120" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)" transform="rotate(-72,42,120)">fn</text>
+    <!-- Символы на правой грани -->
+    <text x="88" y="80" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(59,130,246,0.16)" transform="rotate(72,88,80)">=&gt;</text>
+    <text x="92" y="120" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(59,130,246,0.1)" transform="rotate(72,92,120)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Призма стоит вершиной вверх. Видны обе боковых грани и основание</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C3: Парящая 3D — повёрнута под углом, невесомость
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C3 — Парящая под углом</h2>
+  <svg width="160" height="150" viewBox="0 0 200 180" fill="none">
+    <defs>
+      <radialGradient id="c3g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.3"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c3g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c3g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c3sh"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.12"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Тень (размытый эллипс внизу) -->
+    <ellipse cx="105" cy="168" rx="45" ry="5" fill="url(#c3sh)"/>
+    <!-- Задний треугольник -->
+    <polygon points="148,22 178,118 118,118" fill="none" stroke="rgba(127,119,221,0.1)" stroke-width="0.6"/>
+    <!-- Передний треугольник -->
+    <line x1="62" y1="38" x2="32" y2="134" stroke="#5dcaa5" stroke-width="1" opacity="0.5"/>
+    <line x1="62" y1="38" x2="92" y2="134" stroke="#3b82f6" stroke-width="1" opacity="0.45"/>
+    <line x1="32" y1="134" x2="92" y2="134" stroke="#7f77dd" stroke-width="0.8" opacity="0.25"/>
+    <!-- Рёбра глубины -->
+    <line x1="62" y1="38" x2="148" y2="22" stroke="#5dcaa5" stroke-width="0.8" opacity="0.3"/>
+    <line x1="92" y1="134" x2="178" y2="118" stroke="#3b82f6" stroke-width="0.6" opacity="0.12"/>
+    <line x1="32" y1="134" x2="118" y2="118" stroke="#7f77dd" stroke-width="0.6" opacity="0.1"/>
+    <!-- Вершины передний -->
+    <circle cx="62" cy="38" r="11" fill="url(#c3g1)"/><circle cx="62" cy="38" r="2" fill="#5dcaa5" opacity="0.65"/>
+    <circle cx="32" cy="134" r="7" fill="url(#c3g2)"/><circle cx="32" cy="134" r="1.5" fill="#3b82f6" opacity="0.4"/>
+    <circle cx="92" cy="134" r="7" fill="url(#c3g3)"/><circle cx="92" cy="134" r="1.5" fill="#7f77dd" opacity="0.4"/>
+    <!-- Вершины задний -->
+    <circle cx="148" cy="22" r="1.5" fill="#5dcaa5" opacity="0.2"/>
+    <circle cx="118" cy="118" r="1" fill="#3b82f6" opacity="0.1"/>
+    <circle cx="178" cy="118" r="1" fill="#7f77dd" opacity="0.1"/>
+    <!-- Символы -->
+    <text x="40" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.17)" transform="rotate(-72,40,82)">&lt;/&gt;</text>
+    <text x="76" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(59,130,246,0.15)" transform="rotate(72,76,82)">=&gt;</text>
+    <text x="95" y="42" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(93,202,165,0.1)">fn()</text>
+    <text x="120" y="52" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(255,255,255,0.05)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Призма парит под углом с тенью. Лёгкость и динамика</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C4: Развёрнутая (видны все 5 рёбер) — классическая перспектива
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C4 — Развёрнутая перспектива</h2>
+  <svg width="160" height="140" viewBox="0 0 200 170" fill="none">
+    <defs>
+      <radialGradient id="c4g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c4g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.18"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c4g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.18"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Передний треугольник -->
+    <line x1="60" y1="25" x2="20" y2="135" stroke="#5dcaa5" stroke-width="1.2" opacity="0.55"/>
+    <line x1="60" y1="25" x2="100" y2="135" stroke="#3b82f6" stroke-width="1.2" opacity="0.5"/>
+    <line x1="20" y1="135" x2="100" y2="135" stroke="#7f77dd" stroke-width="1" opacity="0.3"/>
+    <!-- Задний треугольник -->
+    <line x1="140" y1="35" x2="100" y2="145" stroke="#5dcaa5" stroke-width="0.6" opacity="0.15"/>
+    <line x1="140" y1="35" x2="180" y2="145" stroke="#3b82f6" stroke-width="0.6" opacity="0.12"/>
+    <line x1="100" y1="145" x2="180" y2="145" stroke="#7f77dd" stroke-width="0.6" opacity="0.08"/>
+    <!-- Рёбра глубины (верхнее, нижнее левое, нижнее правое) -->
+    <line x1="60" y1="25" x2="140" y2="35" stroke="#5dcaa5" stroke-width="1" opacity="0.35"/>
+    <line x1="20" y1="135" x2="100" y2="145" stroke="#7f77dd" stroke-width="0.7" opacity="0.15"/>
+    <line x1="100" y1="135" x2="180" y2="145" stroke="#3b82f6" stroke-width="0.7" opacity="0.15"/>
+    <!-- Вершины передний -->
+    <circle cx="60" cy="25" r="12" fill="url(#c4g1)"/><circle cx="60" cy="25" r="2.5" fill="#5dcaa5" opacity="0.65"/>
+    <circle cx="20" cy="135" r="8" fill="url(#c4g2)"/><circle cx="20" cy="135" r="1.5" fill="#3b82f6" opacity="0.45"/>
+    <circle cx="100" cy="135" r="8" fill="url(#c4g3)"/><circle cx="100" cy="135" r="1.5" fill="#7f77dd" opacity="0.45"/>
+    <!-- Вершины задний -->
+    <circle cx="140" cy="35" r="1.5" fill="#5dcaa5" opacity="0.2"/>
+    <circle cx="100" cy="145" r="1" fill="#3b82f6" opacity="0.1"/>
+    <circle cx="180" cy="145" r="1" fill="#7f77dd" opacity="0.1"/>
+    <!-- Символы: на передней грани и ребре глубины -->
+    <text x="34" y="75" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.2)" transform="rotate(-70,34,75)">&lt;/&gt;</text>
+    <text x="80" y="75" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(59,130,246,0.18)" transform="rotate(70,80,75)">=&gt;</text>
+    <text x="88" y="30" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(93,202,165,0.12)">fn()</text>
+    <text x="110" y="38" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(255,255,255,0.06)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Все 9 рёбер видны. Передний треугольник яркий, задний — призрачный</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C5: Вид сверху-сбоку — плоская верхняя грань видна
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C5 — Вид сверху-сбоку</h2>
+  <svg width="160" height="140" viewBox="0 0 180 160" fill="none">
+    <defs>
+      <linearGradient id="c5top" x1="30" y1="55" x2="150" y2="55" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.08"/><stop offset="50%" stop-color="#3b82f6" stop-opacity="0.06"/><stop offset="100%" stop-color="#7f77dd" stop-opacity="0.04"/>
+      </linearGradient>
+      <radialGradient id="c5g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c5g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c5g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Верхняя грань (параллелограмм) — полупрозрачная заливка -->
+    <polygon points="90,15 30,55 90,75 150,35" fill="url(#c5top)"/>
+    <!-- Верхняя грань рёбра -->
+    <line x1="90" y1="15" x2="30" y2="55" stroke="#5dcaa5" stroke-width="1" opacity="0.45"/>
+    <line x1="90" y1="15" x2="150" y2="35" stroke="#3b82f6" stroke-width="1" opacity="0.4"/>
+    <line x1="30" y1="55" x2="90" y2="75" stroke="#7f77dd" stroke-width="0.8" opacity="0.25"/>
+    <line x1="150" y1="35" x2="90" y2="75" stroke="#7f77dd" stroke-width="0.8" opacity="0.2"/>
+    <!-- Левая боковая грань -->
+    <line x1="30" y1="55" x2="30" y2="130" stroke="#5dcaa5" stroke-width="1" opacity="0.3"/>
+    <line x1="90" y1="75" x2="90" y2="150" stroke="#7f77dd" stroke-width="0.8" opacity="0.2"/>
+    <line x1="30" y1="130" x2="90" y2="150" stroke="#7f77dd" stroke-width="0.7" opacity="0.15"/>
+    <!-- Правая боковая грань -->
+    <line x1="150" y1="35" x2="150" y2="110" stroke="#3b82f6" stroke-width="0.8" opacity="0.2"/>
+    <line x1="90" y1="150" x2="150" y2="110" stroke="#3b82f6" stroke-width="0.6" opacity="0.1"/>
+    <!-- Передние вершины -->
+    <circle cx="90" cy="15" r="10" fill="url(#c5g1)"/><circle cx="90" cy="15" r="2" fill="#5dcaa5" opacity="0.6"/>
+    <circle cx="30" cy="55" r="7" fill="url(#c5g2)"/><circle cx="30" cy="55" r="1.5" fill="#3b82f6" opacity="0.4"/>
+    <circle cx="150" cy="35" r="7" fill="url(#c5g3)"/><circle cx="150" cy="35" r="1.5" fill="#7f77dd" opacity="0.4"/>
+    <circle cx="90" cy="75" r="5" fill="url(#c5g3)"/><circle cx="90" cy="75" r="1" fill="#7f77dd" opacity="0.3"/>
+    <!-- Символы на верхней грани -->
+    <text x="72" y="42" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.15)">&lt;/&gt;</text>
+    <text x="98" y="50" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(59,130,246,0.12)">=&gt;</text>
+    <!-- Символы на боковой грани -->
+    <text x="42" y="95" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)">fn</text>
+    <text x="58" y="118" font-family="JetBrains Mono" font-size="5" font-weight="400" fill="rgba(255,255,255,0.05)">{}</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Призма лежит горизонтально. Видны верхняя и две боковые грани</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     C6: Стоячая на вершине — перевёрнутая, остриём вниз
+     ═══════════════════════════════════════════════════════════ -->
+<div class="v">
+  <h2>C6 — На вершине (остриём вниз)</h2>
+  <svg width="140" height="150" viewBox="0 0 160 180" fill="none">
+    <defs>
+      <radialGradient id="c6g1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c6g2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c6g3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="c6sh"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.15"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Тень -->
+    <ellipse cx="80" cy="170" rx="20" ry="4" fill="url(#c6sh)"/>
+    <!-- Верхнее основание (горизонтальная линия с глубиной) -->
+    <line x1="25" y1="25" x2="135" y2="25" stroke="#5dcaa5" stroke-width="1" opacity="0.45"/>
+    <line x1="45" y1="40" x2="115" y2="40" stroke="#5dcaa5" stroke-width="0.6" opacity="0.12"/>
+    <!-- Рёбра глубины наверху -->
+    <line x1="25" y1="25" x2="45" y2="40" stroke="#7f77dd" stroke-width="0.6" opacity="0.15"/>
+    <line x1="135" y1="25" x2="115" y2="40" stroke="#3b82f6" stroke-width="0.6" opacity="0.15"/>
+    <!-- Передние рёбра к вершине -->
+    <line x1="25" y1="25" x2="80" y2="158" stroke="#5dcaa5" stroke-width="1" opacity="0.5"/>
+    <line x1="135" y1="25" x2="80" y2="158" stroke="#3b82f6" stroke-width="1" opacity="0.45"/>
+    <!-- Задние рёбра к вершине (тусклые) -->
+    <line x1="45" y1="40" x2="80" y2="158" stroke="#5dcaa5" stroke-width="0.5" opacity="0.1"/>
+    <line x1="115" y1="40" x2="80" y2="158" stroke="#3b82f6" stroke-width="0.5" opacity="0.08"/>
+    <!-- Вершины -->
+    <circle cx="25" cy="25" r="8" fill="url(#c6g1)"/><circle cx="25" cy="25" r="1.5" fill="#5dcaa5" opacity="0.55"/>
+    <circle cx="135" cy="25" r="8" fill="url(#c6g2)"/><circle cx="135" cy="25" r="1.5" fill="#3b82f6" opacity="0.5"/>
+    <circle cx="80" cy="158" r="10" fill="url(#c6g3)"/><circle cx="80" cy="158" r="2.5" fill="#7f77dd" opacity="0.6"/>
+    <circle cx="45" cy="40" r="1" fill="#5dcaa5" opacity="0.15"/>
+    <circle cx="115" cy="40" r="1" fill="#3b82f6" opacity="0.12"/>
+    <!-- Символы на левой грани -->
+    <text x="42" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(93,202,165,0.18)" transform="rotate(67,42,82)">&lt;/&gt;</text>
+    <text x="48" y="120" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)" transform="rotate(67,48,120)">fn</text>
+    <!-- Символы на правой грани -->
+    <text x="112" y="82" font-family="JetBrains Mono" font-size="7" font-weight="400" fill="rgba(59,130,246,0.16)" transform="rotate(-67,112,82)">=&gt;</text>
+    <text x="106" y="120" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(59,130,246,0.1)" transform="rotate(-67,106,120)">{}</text>
+    <!-- Символ на верхней грани -->
+    <text x="68" y="35" font-family="JetBrains Mono" font-size="6" font-weight="400" fill="rgba(93,202,165,0.1)">#  @  ;</text>
+  </svg>
+  <div class="brand"><div class="brand-t">ПРИЗМА</div><div class="brand-s">MANAGE SYSTEMS.ru</div></div>
+  <h3>Перевёрнутая призма — баланс на вершине. Фокус и точность</h3>
+</div>
+
+</div><!-- /grid -->
+
+</body>
+</html>

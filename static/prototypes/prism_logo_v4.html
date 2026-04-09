@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРИЗМА — варианты логотипа</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:'Inter',sans-serif;background:#0f172a;color:#e2e8f0;padding:40px}
+h1{text-align:center;font-size:16px;letter-spacing:6px;color:#64748b;margin-bottom:50px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:900px;margin:0 auto}
+.variant{background:#1a2744;border-radius:16px;padding:40px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.variant h2{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:3px;font-weight:600}
+.variant h3{font-size:11px;color:#475569;text-align:center;line-height:1.5;max-width:220px}
+.brand{text-align:center}
+.brand-title{font-size:28px;font-weight:800;letter-spacing:6px;color:#e8e6dd}
+.brand-sub{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:4px;margin-top:4px}
+</style>
+</head>
+<body>
+
+<h1>ПРИЗМА — ВАРИАНТЫ ЛОГОТИПА</h1>
+
+<div class="grid">
+
+<!-- ═══════════════════════════════════════════════════════════
+     V1: ИЗОМЕТРИЧЕСКАЯ ПРИЗМА (3D-кристалл, вид сверху-сбоку)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="variant">
+  <h2>V1 — Изометрический кристалл</h2>
+  <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="v1top" x1="40" y1="40" x2="120" y2="40" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.7"/>
+      </linearGradient>
+      <linearGradient id="v1left" x1="20" y1="80" x2="80" y2="130" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#162d4a"/>
+        <stop offset="100%" stop-color="#0f1f36"/>
+      </linearGradient>
+      <linearGradient id="v1right" x1="80" y1="80" x2="140" y2="130" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.7"/>
+        <stop offset="100%" stop-color="#2563eb" stop-opacity="0.5"/>
+      </linearGradient>
+      <radialGradient id="v1glow">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="transparent"/>
+      </radialGradient>
+    </defs>
+    <!-- Тень -->
+    <ellipse cx="80" cy="148" rx="50" ry="6" fill="#2563eb" opacity="0.15"/>
+    <!-- Верхняя грань (ромб) -->
+    <polygon points="80,20 130,50 80,80 30,50" fill="url(#v1top)"/>
+    <!-- Левая грань -->
+    <polygon points="30,50 80,80 80,140 30,110" fill="url(#v1left)"/>
+    <!-- Правая грань -->
+    <polygon points="130,50 80,80 80,140 130,110" fill="url(#v1right)"/>
+    <!-- Рёбра -->
+    <line x1="80" y1="20" x2="30" y2="50" stroke="rgba(93,202,165,0.4)" stroke-width="1"/>
+    <line x1="80" y1="20" x2="130" y2="50" stroke="rgba(59,130,246,0.4)" stroke-width="1"/>
+    <line x1="30" y1="50" x2="30" y2="110" stroke="rgba(93,202,165,0.2)" stroke-width="1"/>
+    <line x1="130" y1="50" x2="130" y2="110" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+    <line x1="80" y1="80" x2="80" y2="140" stroke="rgba(127,119,221,0.3)" stroke-width="1"/>
+    <line x1="30" y1="110" x2="80" y2="140" stroke="rgba(127,119,221,0.15)" stroke-width="1"/>
+    <line x1="130" y1="110" x2="80" y2="140" stroke="rgba(127,119,221,0.15)" stroke-width="1"/>
+    <!-- Символы на левой грани -->
+    <text x="42" y="78" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="rgba(93,202,165,0.25)">&lt;/&gt;</text>
+    <text x="46" y="100" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(255,255,255,0.12)">{}</text>
+    <!-- Символы на правой грани -->
+    <text x="92" y="100" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(59,130,246,0.25)">=&gt;</text>
+    <text x="96" y="120" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(255,255,255,0.12)">fn</text>
+    <!-- Символы на верхней грани -->
+    <text x="64" y="55" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(255,255,255,0.18)">#</text>
+    <text x="88" y="62" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(255,255,255,0.12)">@</text>
+    <!-- Свечение на вершине -->
+    <circle cx="80" cy="20" r="10" fill="url(#v1glow)"/>
+  </svg>
+  <div class="brand">
+    <div class="brand-title">ПРИЗМА</div>
+    <div class="brand-sub">MANAGE SYSTEMS.ru</div>
+  </div>
+  <h3>3D-призма с высоты. Три грани — три уровня: планирование, мониторинг, анализ</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     V2: WIREFRAME (контурная) + светящиеся рёбра
+     ═══════════════════════════════════════════════════════════ -->
+<div class="variant">
+  <h2>V2 — Wireframe + свечение</h2>
+  <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="v2edge1" x1="80" y1="15" x2="30" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5"/>
+        <stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.1"/>
+      </linearGradient>
+      <linearGradient id="v2edge2" x1="80" y1="15" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.1"/>
+      </linearGradient>
+      <linearGradient id="v2edge3" x1="30" y1="140" x2="130" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.3"/>
+        <stop offset="50%" stop-color="#7f77dd" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.3"/>
+      </linearGradient>
+      <radialGradient id="v2glow1"><stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.5"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="v2glow2"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      <radialGradient id="v2glow3"><stop offset="0%" stop-color="#7f77dd" stop-opacity="0.4"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    </defs>
+    <!-- Лёгкая заливка (стекло) -->
+    <polygon points="80,18 30,142 130,142" fill="rgba(37,99,235,0.04)"/>
+    <!-- Рёбра с градиентом -->
+    <line x1="80" y1="18" x2="30" y2="142" stroke="url(#v2edge1)" stroke-width="2"/>
+    <line x1="80" y1="18" x2="130" y2="142" stroke="url(#v2edge2)" stroke-width="2"/>
+    <line x1="30" y1="142" x2="130" y2="142" stroke="url(#v2edge3)" stroke-width="2"/>
+    <!-- Точки-вершины со свечением -->
+    <circle cx="80" cy="18" r="12" fill="url(#v2glow1)"/>
+    <circle cx="80" cy="18" r="3" fill="#5dcaa5"/>
+    <circle cx="30" cy="142" r="10" fill="url(#v2glow2)"/>
+    <circle cx="30" cy="142" r="2.5" fill="#3b82f6"/>
+    <circle cx="130" cy="142" r="10" fill="url(#v2glow3)"/>
+    <circle cx="130" cy="142" r="2.5" fill="#7f77dd"/>
+    <!-- Символы вдоль рёбер -->
+    <text x="50" y="70" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(93,202,165,0.3)" transform="rotate(-60,50,70)">&lt;/&gt;</text>
+    <text x="46" y="110" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(93,202,165,0.2)" transform="rotate(-60,46,110)">fn()</text>
+    <text x="108" y="72" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(59,130,246,0.3)" transform="rotate(60,108,72)">=&gt;</text>
+    <text x="112" y="112" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(59,130,246,0.2)" transform="rotate(60,112,112)">{}</text>
+    <text x="62" y="150" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.25)">#</text>
+    <text x="92" y="150" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.25)">@</text>
+    <!-- Центральный символ -->
+    <text x="71" y="100" font-family="JetBrains Mono" font-size="14" font-weight="700" fill="rgba(255,255,255,0.08)">;</text>
+  </svg>
+  <div class="brand">
+    <div class="brand-title">ПРИЗМА</div>
+    <div class="brand-sub">MANAGE SYSTEMS.ru</div>
+  </div>
+  <h3>Минималистичный контур. Три вершины — три точки роста. Символы вдоль рёбер</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     V3: СТЕКЛЯННАЯ ПРИЗМА + СПЕКТР (классика Pink Floyd)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="variant">
+  <h2>V3 — Стеклянная + спектр</h2>
+  <svg width="200" height="160" viewBox="0 0 200 160" fill="none">
+    <defs>
+      <linearGradient id="v3glass" x1="70" y1="20" x2="100" y2="140" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="rgba(93,202,165,0.15)"/>
+        <stop offset="50%" stop-color="rgba(37,99,235,0.1)"/>
+        <stop offset="100%" stop-color="rgba(127,119,221,0.08)"/>
+      </linearGradient>
+    </defs>
+    <!-- Луч входящий -->
+    <line x1="5" y1="60" x2="62" y2="75" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+    <line x1="8" y1="65" x2="63" y2="78" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <!-- Призма (треугольник) -->
+    <polygon points="90,14 55,140 125,140" fill="url(#v3glass)" stroke="rgba(93,202,165,0.3)" stroke-width="1.5"/>
+    <!-- Внутренний блик -->
+    <polygon points="90,24 82,140 98,140" fill="rgba(255,255,255,0.03)"/>
+    <!-- Символы внутри -->
+    <text x="74" y="65" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="rgba(255,255,255,0.12)">&lt;/&gt;</text>
+    <text x="72" y="90" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(93,202,165,0.18)">fn()</text>
+    <text x="80" y="115" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(59,130,246,0.15)">=&gt;</text>
+    <text x="90" y="78" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(127,119,221,0.15)">{}</text>
+    <text x="68" y="130" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(255,255,255,0.08)">#</text>
+    <text x="98" y="130" font-family="JetBrains Mono" font-size="7" font-weight="700" fill="rgba(255,255,255,0.08)">;</text>
+    <!-- Радуга (расходящийся спектр) -->
+    <line x1="125" y1="70" x2="195" y2="30" stroke="#ef4444" stroke-width="2.5" opacity="0.6"/>
+    <line x1="125" y1="76" x2="195" y2="46" stroke="#f97316" stroke-width="2.5" opacity="0.6"/>
+    <line x1="125" y1="82" x2="195" y2="62" stroke="#eab308" stroke-width="2.5" opacity="0.6"/>
+    <line x1="125" y1="88" x2="195" y2="78" stroke="#22c55e" stroke-width="2.5" opacity="0.6"/>
+    <line x1="125" y1="94" x2="195" y2="94" stroke="#3b82f6" stroke-width="2.5" opacity="0.6"/>
+    <line x1="125" y1="100" x2="195" y2="112" stroke="#8b5cf6" stroke-width="2.5" opacity="0.6"/>
+    <!-- Свечение вершины -->
+    <circle cx="90" cy="14" r="6" fill="rgba(93,202,165,0.3)"/>
+  </svg>
+  <div class="brand">
+    <div class="brand-title">ПРИЗМА</div>
+    <div class="brand-sub">MANAGE SYSTEMS.ru</div>
+  </div>
+  <h3>Классическая стеклянная призма. Белый код на входе — радуга модулей на выходе</h3>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     V4: ЭМБЛЕМА — призма в окружности с орбитой символов
+     ═══════════════════════════════════════════════════════════ -->
+<div class="variant">
+  <h2>V4 — Эмблема + орбита</h2>
+  <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+    <defs>
+      <linearGradient id="v4ring" x1="0" y1="80" x2="160" y2="80" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.4"/>
+        <stop offset="33%" stop-color="#3b82f6" stop-opacity="0.4"/>
+        <stop offset="66%" stop-color="#7f77dd" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="#5dcaa5" stop-opacity="0.4"/>
+      </linearGradient>
+      <linearGradient id="v4prism" x1="55" y1="35" x2="80" y2="125" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#5dcaa5" stop-opacity="0.2"/>
+        <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="#7f77dd" stop-opacity="0.1"/>
+      </linearGradient>
+    </defs>
+    <!-- Внешнее кольцо -->
+    <circle cx="80" cy="80" r="72" stroke="url(#v4ring)" stroke-width="1.5" fill="none"/>
+    <!-- Пунктирная орбита -->
+    <circle cx="80" cy="80" r="62" stroke="rgba(59,130,246,0.1)" stroke-width="1" stroke-dasharray="3 5" fill="none"/>
+    <!-- Призма в центре -->
+    <polygon points="80,28 45,120 115,120" fill="url(#v4prism)" stroke="rgba(93,202,165,0.35)" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Внутренний блик -->
+    <line x1="80" y1="32" x2="80" y2="120" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <!-- Символы на орбите (по кругу) -->
+    <text x="76" y="14" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(93,202,165,0.5)">&lt;/&gt;</text>
+    <text x="134" y="42" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(59,130,246,0.45)">=&gt;</text>
+    <text x="148" y="84" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.45)">{}</text>
+    <text x="130" y="130" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(239,159,39,0.4)">fn</text>
+    <text x="22" y="130" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(239,159,39,0.4)">#</text>
+    <text x="4" y="84" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(127,119,221,0.45)">;</text>
+    <text x="18" y="42" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="rgba(59,130,246,0.45)">@</text>
+    <!-- Символы внутри призмы -->
+    <text x="68" y="70" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="rgba(255,255,255,0.1)">&lt;/&gt;</text>
+    <text x="72" y="95" font-family="JetBrains Mono" font-size="9" font-weight="700" fill="rgba(255,255,255,0.07)">=&gt;</text>
+    <!-- Светящиеся вершины -->
+    <circle cx="80" cy="28" r="4" fill="rgba(93,202,165,0.4)"/>
+    <circle cx="45" cy="120" r="3" fill="rgba(59,130,246,0.35)"/>
+    <circle cx="115" cy="120" r="3" fill="rgba(127,119,221,0.35)"/>
+  </svg>
+  <div class="brand">
+    <div class="brand-title">ПРИЗМА</div>
+    <div class="brand-sub">MANAGE SYSTEMS.ru</div>
+  </div>
+  <h3>Призма-эмблема. Символы кода вращаются вокруг — экосистема инструментов</h3>
+</div>
+
+</div><!-- /grid -->
+
+</body>
+</html>

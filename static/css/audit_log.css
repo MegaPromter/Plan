@@ -1,0 +1,51 @@
+/* ═══════════════════════════════════════════════════════════════
+   Журнал аудита — audit_log.css
+   Модульные стили. Общие — из tables.css / components.css.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Таблица аудита: auto layout вместо fixed */
+#auditTable {
+  table-layout: auto;
+}
+
+/* Отключаем sticky thead — таблица пагинирована, не нужен прилипающий заголовок.
+   base.css ставит .data-table thead { position: sticky; top: 60px } — это вызывает
+   перекрытие первой строки данных. */
+#auditTable thead {
+  position: static !important;
+}
+#auditTable thead th {
+  position: static;
+}
+
+/* Ячейка деталей — обрезка длинного JSON */
+.audit-details-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Пагинатор */
+.audit-pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+}
+.audit-pager button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+}
+.audit-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
