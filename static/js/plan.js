@@ -1568,7 +1568,9 @@ function renderTable() {
 
   // Рендерим первую порцию
   _spAppendBatch(SP_CHUNK);
-  requestAnimationFrame(() => { _resizeTextareas(tbody); updatePlanSummary(); });
+  // Дополнительный ресайз textarea после layout (гарантия корректных высот)
+  requestAnimationFrame(() => { _resizeTextareas(tbody); });
+  updatePlanSummary();
   // Ставим слушатель прокрутки для подгрузки следующих порций
   _spAttachScrollListener();
   // Пересчёт sticky top для строк thead (зависит от режима отображения)
@@ -1589,22 +1591,25 @@ function _spAppendBatch(count) {
   }
   tbody.appendChild(frag);
 
-  // Авто-высота textarea для новых строк (batch read/write — без layout thrashing)
-  requestAnimationFrame(() => {
+  // Запоминаем диапазон ПЕРЕД обновлением _spRenderedCount,
+  // иначе rAF-callback увидит _spRenderedCount === end и не обработает строки
+  const batchStart = _spRenderedCount;
+  _spRenderedCount = end;
+
+  // Авто-высота textarea для новых строк (синхронно — rAF не успевает до следующего renderTable)
+  {
     const allRows = tbody.querySelectorAll("tr");
     var textareas = [];
-    for (let r = _spRenderedCount; r < end && r < allRows.length; r++) {
+    for (let r = batchStart; r < end && r < allRows.length; r++) {
       allRows[r].querySelectorAll("textarea.cell-edit").forEach(ta => textareas.push(ta));
     }
     textareas.forEach(ta => { ta.style.height = "auto"; });
     var heights = textareas.map(ta => ta.scrollHeight);
     textareas.forEach((ta, i) => { ta.style.height = heights[i] + "px"; });
-  });
+  }
 
   /* ── Кастомные dropdown-ы для select ──────────────────────────────── */
   if (typeof initCustomDropdowns === 'function') initCustomDropdowns(tbody);
-
-  _spRenderedCount = end;
 
   // Показываем спиннер, если ещё есть строки
   if (_spRenderedCount < _spFiltered.length) {
@@ -2333,6 +2338,11 @@ const TASK_TYPES = [
 ];
 
 function openInlineNewRow() {
+  // Если включена настройка «Модальное окно» — открываем выбор типа → модалку
+  if (colSettings && colSettings.pp_input_modal) {
+    openTypeModal();
+    return;
+  }
   if (_addingTaskRow) {
     const r = document.getElementById('taskNewRow');
     if (r) { r.scrollIntoView({behavior:'smooth', block:'center'}); r.querySelector('select,input')?.focus(); }
@@ -2628,7 +2638,7 @@ function openNewTaskModal(taskType, prefill) {
   populateFormSelect(document.getElementById("nt-project"),  "project",  prefill?.project  || null, null, null);
   populateFormSelect(document.getElementById("nt-stage"),    "stage",    prefill?.stage    || null, prefill?.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
-  ["work_name","justification","date_start","date_end","deadline","actions"]
+  ["work_name","justification","description","date_start","date_end","deadline","actions"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = prefill?.[f] || ""; });
 
   document.getElementById("nt-plan-months-wrap").innerHTML = "";
@@ -2664,7 +2674,7 @@ function openEditTaskModal(t) {
   populateFormSelect(document.getElementById("nt-project"),  "project",  t.project  || null, null, null);
   populateFormSelect(document.getElementById("nt-stage"),    "stage",    t.stage    || null, t.project || null, "project");
   populateFormSelect(document.getElementById("nt-executor-select"), "executor", null, null, null);
-  ["work_name","justification","date_start","date_end","deadline"]
+  ["work_name","justification","description","date_start","date_end","deadline"]
     .forEach(f => { const el = document.getElementById(`nt-${f}`); if(el) el.value = t[f] || ""; });
 
   document.getElementById("nt-actions-wrap").style.display = "none";
@@ -2970,7 +2980,7 @@ async function submitNewTask() {
     executor:      null,
     work_name:     workNameVal || null,
     justification: document.getElementById("nt-justification").value || null,
-    description:   null,
+    description:   document.getElementById("nt-description")?.value || null,
     date_start:    ds, date_end: de,
     deadline:      document.getElementById("nt-deadline").value || null,
     plan_hours:    planHours,

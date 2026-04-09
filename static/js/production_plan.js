@@ -252,16 +252,19 @@ async function loadProjects() {
 // Размер порции для прогрессивной загрузки с сервера
 var PP_FETCH_CHUNK = 200;
 var _ppBgLoading = false;  // фоновая дозагрузка идёт
+var _ppScope = 'role';     // текущий scope: 'role' (по роли) или 'all' (все строки)
 
-// Загружает строки производственного плана для конкретного проекта
-// Первая порция загружается сразу, остальные — в фоне
-async function loadPPRows(projectId) {
+// Загружает строки производственного плана для конкретного проекта.
+// scope: 'role' — только строки по роли пользователя, 'all' — все строки проекта.
+async function loadPPRows(projectId, scope) {
   _ppPinnedRowId = null;
   _ppBgLoading = false;
+  _ppScope = scope || 'role';
 
   // Загружаем первую порцию
   var url = '/api/production_plan/?project_id=' + projectId
           + '&limit=' + PP_FETCH_CHUNK + '&offset=0';
+  if (_ppScope === 'all') url += '&scope=all';
   var resp = await fetch(url);
   if (!resp.ok) { rows = []; return; }
   var data = await resp.json();
@@ -282,6 +285,7 @@ async function _ppBgLoadRemaining(projectId, offset) {
   while (true) {
     var url = '/api/production_plan/?project_id=' + projectId
             + '&limit=' + PP_FETCH_CHUNK + '&offset=' + offset;
+    if (_ppScope === 'all') url += '&scope=all';
     var resp;
     try { resp = await fetch(url); } catch(e) { break; }
     if (!resp.ok) break;
@@ -302,6 +306,16 @@ async function _ppBgLoadRemaining(projectId, offset) {
     if (!hasMore) break;
   }
   _ppBgLoading = false;
+}
+
+// Дозагрузка всех строк проекта (при нажатии «Все» в фильтре отделов)
+async function _ppLoadAllScope() {
+  if (_ppScope === 'all' || !currentProjectId) return;
+  showToast('Загрузка всех строк...', 'info');
+  await loadPPRows(currentProjectId, 'all');
+  renderPPTable();
+  initPPPeriodBar();
+  initPPDeptChips();
 }
 
 /* ── Режим лендинга (список ПП-проектов) ────────────────────────────── */
@@ -1578,7 +1592,7 @@ function openAddRowModal() {
         rows = rows.filter(r => r.id !== resp.work.id);
         rows.unshift(resp.work);
       } else {
-        await loadPPRows(currentProjectId);
+        await loadPPRows(currentProjectId, _ppScope);
       }
       _ppPinnedRowId = resp.id || (resp.work && resp.work.id) || null;
       renderPPTable();
@@ -1779,7 +1793,7 @@ async function ppModalSave() {
     if (!resp._error) {
       closeModal('ppNewRowModal');
       colFilters = {};
-      await loadPPRows();
+      await loadPPRows(currentProjectId, _ppScope);
       showToast('Работа добавлена', 'success');
     } else {
       showToast(resp._error || 'Ошибка', 'error');
@@ -2075,6 +2089,11 @@ function initPPDeptChips() {
     setSelection: function(sel) { ppSelectedDepts = sel; },
     onApply: function() {
       _syncPPDeptFilter();
+      // Если выбрано «Все» и данные загружены только по роли — дозагружаем
+      if (ppSelectedDepts.size === 0 && _ppScope !== 'all') {
+        _ppLoadAllScope();
+        return;
+      }
       renderPPTable();
       ppUpdateStatusPanel();
       _ppSyncFiltersToUrl();
@@ -2873,7 +2892,7 @@ async function ppAlignDates(cascade) {
     if (res.ok) {
       showToast(`Даты выровнены (${data.aligned_count} задач)`, 'success');
       ppLoadDeps(ppCurrentDepsTaskId);
-      await loadPPRows(currentProjectId);
+      await loadPPRows(currentProjectId, _ppScope);
       renderPPTable();
     } else { showToast(data.error || 'Ошибка', 'error'); }
   } catch (e) { showToast('Ошибка', 'error'); }

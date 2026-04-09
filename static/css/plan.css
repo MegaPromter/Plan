@@ -111,8 +111,7 @@ tbody tr:nth-child(odd)  { background:var(--row-odd); }
 tbody tr:hover { background:var(--row-hover) !important; }
 tbody tr.new-row { background:rgba(22,163,74,0.06) !important; animation:fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)}to{opacity:1} }
-td { border-right:1px solid var(--border2); padding:0; vertical-align:middle; text-align:center; overflow:hidden; }
-td:not(.actions-cell):not(.td-date) { contain:paint; }
+td { border-right:1px solid var(--border2); padding:0; vertical-align:middle; text-align:center; }
 td.td-date { overflow:visible; contain:none; }
 
 /* ── Ячейка номера строки (sticky) ────────────────────────────────────── */
@@ -507,9 +506,6 @@ tr.pp-locked .pp-lock-badge {
 /* Toast-нотификации — используется showToast() из components.css */
 
 /* ── Модал выбора типа задачи ─────────────────────────────────────────── */
-.type-modal { position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
-  display:none; align-items:center; justify-content:center; }
-.type-modal.open { display:flex; }
 .type-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   padding:32px 36px; width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.15); }
 .type-modal-title { font-size:20px; font-weight:600; margin-bottom:6px; }
@@ -530,9 +526,6 @@ tr.pp-locked .pp-lock-badge {
 .type-badge.сопровождение { background:#faf5ff; color:#9333ea; border:1px solid #e9d5ff; }
 
 /* ── Модал создания/редактирования задачи ─────────────────────────────── */
-.new-task-modal { position:fixed; inset:0; z-index:260; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
-  display:none; align-items:center; justify-content:center; }
-.new-task-modal.open { display:flex; }
 .new-task-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
   box-shadow:0 8px 40px rgba(0,0,0,0.15); }
@@ -593,10 +586,10 @@ tr.pp-locked .pp-lock-badge {
 .nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
 
 /* ── Slideout-режим модала редактирования ──────────────────────────────── */
-.new-task-modal.slideout-mode {
+#newTaskModal.slideout-mode {
   justify-content:flex-end; align-items:stretch;
 }
-.new-task-modal.slideout-mode .new-task-box {
+#newTaskModal.slideout-mode .new-task-box {
   max-width:min(560px, 90vw); width:min(560px, 90vw); max-height:100vh;
   border-radius:var(--radius-xl) 0 0 var(--radius-xl); margin:0;
   animation:slideInRight 0.25s ease;
@@ -622,7 +615,7 @@ tr.pp-locked .pp-lock-badge {
 @media (prefers-reduced-motion: reduce) {
   tbody tr.new-row, .topbar-btn.errors.has-errors,
   .pe-overlay, .month-check-overlay,
-  .new-task-modal.slideout-mode .new-task-box {
+  #newTaskModal.slideout-mode .new-task-box {
     animation: none !important;
     transition: none !important;
   }

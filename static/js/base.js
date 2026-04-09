@@ -185,6 +185,14 @@ document.addEventListener('click', function(e) {
   e.target.classList.remove('open');
 });
 
+// ── ESC закрывает последнюю открытую модалку ──────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var modals = document.querySelectorAll('.modal-overlay.open');
+  if (!modals.length) return;
+  modals[modals.length - 1].classList.remove('open');
+});
+
 // ── Modal aria-hidden: скрываем контент от скринридеров при открытой модалке ──
 (function() {
   var mainEl = document.querySelector('main, .main-content');
@@ -475,4 +483,3 @@ document.addEventListener('click', function(e) {
   });
   _fpObserver.observe(document.body, { childList: true, subtree: true });
 })();
-

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=13">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=14">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -170,7 +170,7 @@
 <div id="ganttContainer"></div>
 
 <!-- ══ Модал выбора типа задачи ════════════════════════════════════════════ -->
-<div class="type-modal" id="typeModal">
+<div class="modal-overlay" id="typeModal">
 <div class="type-modal-box">
   <div class="type-modal-title">Выберите тип задачи</div>
   <div class="type-modal-sub">Нажмите — откроется форма заполнения</div>
@@ -195,7 +195,7 @@
 </div>
 
 <!-- NEW TASK / EDIT TASK FORM MODAL -->
-<div class="new-task-modal" id="newTaskModal">
+<div class="modal-overlay" id="newTaskModal">
 <div class="new-task-box">
   <div class="new-task-header">
     <div>
@@ -223,13 +223,14 @@
         <label class="form-label">№ Этапа</label>
         <select class="form-select" id="nt-stage"></select>
       </div>
-      <div class="form-field">
+      <div class="form-field full">
         <label class="form-label">№ работы</label>
         <span class="form-input" style="color:var(--muted);cursor:default;">(авто)</span>
       </div>
-      <div class="form-field">
-        <label class="form-label">Срок выполнения</label>
-        <input class="form-input" id="nt-deadline" type="date">
+      <input id="nt-deadline" type="hidden">
+      <div class="form-field full">
+        <label class="form-label">Обозначение</label>
+        <input class="form-input" id="nt-description" type="text" placeholder="Обозначение документа">
       </div>
       <div class="form-field full">
         <label class="form-label">Наименование работ</label>
@@ -276,9 +277,8 @@
           </div>
         </div>
       </div>
-      <div class="form-field full" id="nt-actions-wrap">
-        <label class="form-label">Действия</label>
-        <textarea class="form-textarea" id="nt-actions" placeholder="Действия..."></textarea>
+      <div class="form-field full" id="nt-actions-wrap" style="display:none;">
+        <textarea class="form-textarea" id="nt-actions" style="display:none;"></textarea>
       </div>
     </div>
   </div>
@@ -575,7 +575,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=26"></script>
+<script src="{% static 'js/plan.js' %}?v=28"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),
