@@ -71,11 +71,9 @@ cookies.txt
 prototype_*.html
 static/datepicker_compare.html
 
-# Сторонние JS-библиотеки (datepicker)
-static/lib/flatpickr/
+# Сторонние JS-библиотеки (неиспользуемые datepicker)
 static/lib/pikaday/
 static/lib/vanillajs-datepicker/
-static/css/flatpickr-theme.css
 static/css/pikaday-theme.css
 
 # Node.js (Vue frontend)
