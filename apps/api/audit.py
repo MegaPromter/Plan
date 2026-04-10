@@ -3,6 +3,7 @@
 Обеспечивает compliance (кто, когда и что изменил) и помогает при отладке.
 Вызывается во всех API-вьюхах при создании/изменении/удалении данных.
 """
+
 # Стандартный модуль логирования Python
 import logging
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 from apps.api.utils import get_client_ip as _get_ip
 
 
-def log_action(request, action, object_id=None, object_repr='', details=None):
+def log_action(request, action, object_id=None, object_repr="", details=None):
     """
     Записывает действие в AuditLog.
     Использует lazy-import, чтобы не создавать циклических зависимостей.
@@ -22,6 +23,7 @@ def log_action(request, action, object_id=None, object_repr='', details=None):
         # Ленивый импорт модели — выполняется только при вызове функции,
         # что позволяет избежать циклических импортов на уровне модуля
         from apps.works.models import AuditLog
+
         # Создаём запись в таблице аудита
         AuditLog.objects.create(
             # Пользователь: None если не авторизован (на случай анонимных действий)
@@ -40,4 +42,4 @@ def log_action(request, action, object_id=None, object_repr='', details=None):
     except Exception as e:
         # Не ломаем основной запрос из-за ошибки в аудите
         # Логируем ошибку с трейсбеком, но не пробрасываем исключение дальше
-        logger.exception('audit log error: %s', e)
+        logger.exception("audit log error: %s", e)

@@ -1,7 +1,10 @@
 """
 Шаблонные теги для безопасного обращения к профилю Employee.
 """
-from django import template  # базовый модуль Django для создания библиотек шаблонных тегов
+
+from django import (  # базовый модуль Django для создания библиотек шаблонных тегов
+    template,
+)
 
 # Регистр библиотеки тегов — обязательный объект, который Django ищет в templatetags-модулях.
 # Все фильтры и теги регистрируются через декораторы этого объекта.
@@ -44,6 +47,7 @@ def is_admin_role(user):
     try:
         # Импортируем модель Employee здесь, чтобы избежать circular import на уровне модуля
         from apps.employees.models import Employee
+
         # Сравниваем строковое значение роли с константой ROLE_ADMIN ('admin')
         return user.employee.role == Employee.ROLE_ADMIN
     except (AttributeError, TypeError):
@@ -54,24 +58,26 @@ def is_admin_role(user):
 @register.simple_tag(takes_context=True)  # тег с контекстом: {% employee_initial %}
 def employee_initial(context):
     """{% employee_initial %} — Первая буква имени для аватара."""
-    request = context.get('request')
+    request = context.get("request")
     if not request:
-        return '?'
+        return "?"
     try:
         name = request.user.employee.short_name or request.user.username
     except (AttributeError, TypeError):
         name = request.user.username
-    return name[0].upper() if name else '?'
+    return name[0].upper() if name else "?"
 
 
-@register.simple_tag(takes_context=True)  # тег, получающий контекст шаблона: {% employee_name %}
+@register.simple_tag(
+    takes_context=True
+)  # тег, получающий контекст шаблона: {% employee_name %}
 def employee_name(context):
     """{% employee_name %} — Возвращает короткое имя или username."""
     # Получаем объект запроса из контекста шаблона (добавляется context_processor'ом request)
-    request = context.get('request')
+    request = context.get("request")
     if not request:
         # Контекст без request (например, в email-шаблонах) — возвращаем пустую строку
-        return ''
+        return ""
     try:
         # short_name — свойство Employee, обычно «Фамилия И.О.»
         # Если short_name пустой/None — используем username как запасной вариант
@@ -85,10 +91,10 @@ def employee_name(context):
 def employee_role(context):
     """{% employee_role %} — Возвращает отображаемую роль."""
     # Получаем объект запроса из контекста шаблона
-    request = context.get('request')
+    request = context.get("request")
     if not request:
         # Нет контекста запроса — нечего отображать
-        return ''
+        return ""
     try:
         # get_role_display() возвращает человекочитаемое название роли из choices
         # (например, 'admin' → 'Администратор', 'user' → 'Пользователь')
@@ -96,4 +102,4 @@ def employee_role(context):
     except (AttributeError, TypeError):
         # Профиль Employee отсутствует: для суперпользователя показываем специальную метку,
         # для обычного пользователя без профиля — пустую строку
-        return 'Суперпользователь' if request.user.is_superuser else ''
+        return "Суперпользователь" if request.user.is_superuser else ""

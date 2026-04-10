@@ -3,9 +3,10 @@ Data integrity checks after each month and at end of simulation.
 
 v2: Updated for massive scale (10 depts, thousands of tasks).
 """
+
 import logging
 
-logger = logging.getLogger('simulator')
+logger = logging.getLogger("simulator")
 
 
 def check_monthly_integrity(client, month, year, calendar_hours):
@@ -31,7 +32,8 @@ def check_monthly_integrity(client, month, year, calendar_hours):
     if overloaded:
         issues.append(
             f"Overloaded employees: {len(overloaded)} "
-            f"(norm {hours_norm}h, max {max_allowed:.0f}h)")
+            f"(norm {hours_norm}h, max {max_allowed:.0f}h)"
+        )
 
     # 3. Dependency conflicts
     conflicts = _check_dependency_conflicts(client)
@@ -47,47 +49,50 @@ def check_monthly_integrity(client, month, year, calendar_hours):
 def _check_employee_load(client, month, year, max_hours):
     """Checks employee load doesn't exceed norms."""
     month_key = f"{year}-{month:02d}"
-    resp = client.get('/api/tasks/', params={
-        'limit': 5000,
-    })
+    resp = client.get(
+        "/api/tasks/",
+        params={
+            "limit": 5000,
+        },
+    )
     data = client.json_ok(resp)
     if not data:
         return []
 
-    tasks = data if isinstance(data, list) else data.get('items', [])
+    tasks = data if isinstance(data, list) else data.get("items", [])
 
     load = {}
     for task in tasks:
-        executor = task.get('executor', '')
-        plan_hours = task.get('plan_hours', {})
+        executor = task.get("executor", "")
+        plan_hours = task.get("plan_hours", {})
         if isinstance(plan_hours, dict):
             hours = plan_hours.get(month_key, 0)
             if isinstance(hours, (int, float)) and hours > 0:
                 load[executor] = load.get(executor, 0) + hours
 
     overloaded = [
-        (name, hours) for name, hours in load.items()
-        if hours > max_hours and name
+        (name, hours) for name, hours in load.items() if hours > max_hours and name
     ]
 
     # Only report top-10 most overloaded
     overloaded.sort(key=lambda x: x[1], reverse=True)
     for name, hours in overloaded[:10]:
         client.metrics.report_bug(
-            f"Overload: {name} = {hours}h (max {max_hours:.0f}h) in {month_key}")
+            f"Overload: {name} = {hours}h (max {max_hours:.0f}h) in {month_key}"
+        )
 
     return overloaded
 
 
 def _check_dependency_conflicts(client):
     """Checks for unresolved dependency conflicts."""
-    resp = client.get('/api/dependencies/', params={'context': 'plan'})
+    resp = client.get("/api/dependencies/", params={"context": "plan"})
     data = client.json_ok(resp)
     if not data:
         return 0
 
-    deps = data if isinstance(data, list) else data.get('items', [])
-    conflicts = sum(1 for d in deps if d.get('has_conflict'))
+    deps = data if isinstance(data, list) else data.get("items", [])
+    conflicts = sum(1 for d in deps if d.get("has_conflict"))
     return conflicts
 
 
@@ -109,9 +114,9 @@ def final_integrity_check(client):
         issues.append(f"Unresolved dependency conflicts: {conflicts}")
 
     # Task count sanity check
-    resp = client.get('/api/tasks/', params={'limit': 1})
+    resp = client.get("/api/tasks/", params={"limit": 1})
     if resp and resp.status_code == 200:
-        total = resp.headers.get('X-Total-Count', '?')
+        total = resp.headers.get("X-Total-Count", "?")
         logger.info("Total tasks in DB: %s", total)
         issues_info = f"Total tasks in DB: {total}"
         logger.info(issues_info)

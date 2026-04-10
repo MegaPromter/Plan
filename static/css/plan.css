@@ -480,6 +480,10 @@ tr.pp-locked .pp-lock-badge {
 .plan-summary-value { font-size:26px; font-weight:700; color:var(--accent);
   font-family:var(--mono); white-space:nowrap; }
 .plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
+.plan-summary-sep { width:1px; height:36px; background:var(--border); flex-shrink:0; }
+.plan-summary-value.load-ok    { color:var(--success); }
+.plan-summary-value.load-warn  { color:var(--warning, #e6a200); }
+.plan-summary-value.load-over  { color:var(--danger); }
 
 /* ── Строка фильтров под заголовками колонок ──────────────────────────── */
 .filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }

@@ -60,18 +60,16 @@
 - **Деплоить сюда: https://managesystems.ru/**
 - Деплой ТОЛЬКО по явной команде пользователя («деплой», «пуш»)
 - `git push` ≠ деплой на прод. Пуш на GitHub — это только пуш кода в репозиторий
-- Dockerfile: python:3.11-slim, gunicorn, collectstatic
-- entrypoint.sh: migrate + seed_calendar перед запуском gunicorn
 - Redis для сессий при `CACHE_BACKEND=redis`
 
-## Сервер (prod)
-- **IP:** 72.56.13.101, SSH: `root@72.56.13.101`
-- **OS:** Debian 13 (trixie), Python 3.13
+## Сервер (prod) — Yandex Cloud
+- **IP:** 111.88.155.59, SSH: `ssh -i ~/.ssh/id_ed25519_vps fynjy@111.88.155.59`
+- **OS:** Ubuntu 24.04 LTS
 - **Путь:** `/opt/planapp/`, venv: `/opt/planapp/venv/`
-- **nginx** → unix socket `/opt/planapp/gunicorn.sock` → gunicorn (2 воркера)
-- **SSL:** Let's Encrypt (certbot)
-- **PostgreSQL:** локальная, `planapp_db` (user: planapp)
-- **Процедура деплоя:** `git push` → SSH → `cd /opt/planapp && git pull && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && kill -HUP $(pgrep -f 'gunicorn.*planapp.*sock' -o)`
+- **nginx** → `127.0.0.1:8000` → gunicorn (2 воркера)
+- **SSL:** Let's Encrypt (certbot, автопродление)
+- **PostgreSQL:** локальная, `planapp_db` (user: planapp, pass: planapp_secure_2026)
+- **Процедура деплоя:** `git push` → SSH → `cd /opt/planapp && git pull && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn`
 
 ## Frontend-стек
 - Новые страницы: Django templates + HTMX + Alpine.js

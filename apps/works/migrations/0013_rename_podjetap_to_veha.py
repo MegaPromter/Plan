@@ -6,18 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0012_remove_duplicate_sp_fields'),
+        ("works", "0012_remove_duplicate_sp_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='directory',
-            name='dir_type',
-            field=models.CharField(choices=[('center', 'НТЦ-центр'), ('position', 'Должность'), ('dept', 'Отдел'), ('sector', 'Сектор'), ('executor', 'Исполнитель'), ('task_type', 'Тип работы'), ('work_type', 'Вид работы'), ('justification', 'Обоснование'), ('project', 'Проект'), ('milestone', 'Этап'), ('stage', 'Веха'), ('substage', 'Работа')], max_length=20, verbose_name='Тип'),
+            model_name="directory",
+            name="dir_type",
+            field=models.CharField(
+                choices=[
+                    ("center", "НТЦ-центр"),
+                    ("position", "Должность"),
+                    ("dept", "Отдел"),
+                    ("sector", "Сектор"),
+                    ("executor", "Исполнитель"),
+                    ("task_type", "Тип работы"),
+                    ("work_type", "Вид работы"),
+                    ("justification", "Обоснование"),
+                    ("project", "Проект"),
+                    ("milestone", "Этап"),
+                    ("stage", "Веха"),
+                    ("substage", "Работа"),
+                ],
+                max_length=20,
+                verbose_name="Тип",
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='milestone_num',
-            field=models.CharField(blank=True, max_length=50, verbose_name='Веха'),
+            model_name="work",
+            name="milestone_num",
+            field=models.CharField(blank=True, max_length=50, verbose_name="Веха"),
         ),
     ]

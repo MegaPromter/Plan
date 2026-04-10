@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0048_pp_date_fields'),
+        ("works", "0048_pp_date_fields"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='is_hidden',
-            field=models.BooleanField(default=False, help_text='Виден только администраторам', verbose_name='Скрытый проект'),
+            model_name="project",
+            name="is_hidden",
+            field=models.BooleanField(
+                default=False,
+                help_text="Виден только администраторам",
+                verbose_name="Скрытый проект",
+            ),
         ),
     ]

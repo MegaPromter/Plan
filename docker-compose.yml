@@ -1,0 +1,69 @@
+# docker-compose.yml — оркестрация для локальной разработки
+# Запуск: docker-compose up        (все сервисы)
+# Запуск: docker-compose up -d     (в фоне, -d = detached)
+# Стоп:   docker-compose down      (остановить)
+# Логи:   docker-compose logs -f   (следить за логами)
+
+services:
+  # PostgreSQL — база данных
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: planapp_django
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # volumes — данные сохраняются между перезапусками контейнера
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    # healthcheck — compose ждёт, пока БД будет готова, прежде чем запускать web
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis — кэш и хранилище сессий
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Django-приложение
+  web:
+    build: .
+    # command перезаписывает CMD из Dockerfile — для разработки используем runserver
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py seed_calendar &&
+             python manage.py seed_soft_stages &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      # Монтируем текущую папку внутрь контейнера — изменения в коде
+      # сразу видны без пересборки образа (hot reload)
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/planapp_django
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - CACHE_BACKEND=redis
+      - REDIS_URL=redis://redis:6379/0
+    # depends_on + condition — web стартует только после готовности db и redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+# Именованные тома (volumes) — Docker хранит данные БД между перезапусками
+volumes:
+  postgres_data:

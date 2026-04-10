@@ -6,13 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0024_rework_notice_add_workreport_closure'),
+        ("works", "0024_rework_notice_add_workreport_closure"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='notice',
-            name='status',
-            field=models.CharField(choices=[('active', 'Действует'), ('expired', 'Просрочено'), ('closed_no', 'Погашено без внесения'), ('closed_yes', 'Погашено с внесением')], default='active', max_length=20, verbose_name='Статус'),
+            model_name="notice",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("active", "Действует"),
+                    ("expired", "Просрочено"),
+                    ("closed_no", "Погашено без внесения"),
+                    ("closed_yes", "Погашено с внесением"),
+                ],
+                default="active",
+                max_length=20,
+                verbose_name="Статус",
+            ),
         ),
     ]

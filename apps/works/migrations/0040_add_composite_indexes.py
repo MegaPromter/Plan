@@ -6,16 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0039_notification'),
+        ("works", "0039_notification"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_pp', 'created_at'], name='work_work_show_in_fe169b_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_pp", "created_at"], name="work_work_show_in_fe169b_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['executor', 'show_in_plan'], name='work_work_executo_fa874c_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["executor", "show_in_plan"], name="work_work_executo_fa874c_idx"
+            ),
         ),
     ]

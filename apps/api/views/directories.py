@@ -7,6 +7,7 @@ POST    /api/directories          -- создание записи (admin)
 PUT     /api/directories/<id>     -- обновление записи (admin)
 DELETE  /api/directories/<id>     -- удаление записи (admin)
 """
+
 # Стандартный логгер Python
 import logging
 
@@ -41,11 +42,12 @@ from apps.works.models import Directory, PPProject, Project, Work
 logger = logging.getLogger(__name__)
 
 # Ключ и TTL серверного кэша справочников (5 минут)
-DIRECTORIES_CACHE_KEY = 'directories_list'
+DIRECTORIES_CACHE_KEY = "directories_list"
 DIRECTORIES_CACHE_TTL = 300
 
 
 # ── GET /api/directories ─────────────────────────────────────────────────────
+
 
 class DirectoryListView(LoginRequiredJsonMixin, View):
     """
@@ -56,124 +58,134 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
 
     # Типы, которые заменены реальными моделями — не читаем из Directory
     # Для этих типов используются модели NTCCenter, Department, Sector
-    _REAL_MODEL_TYPES = {'center', 'dept', 'sector', 'task_type'}
+    _REAL_MODEL_TYPES = {"center", "dept", "sector", "task_type"}
 
     def get(self, request):
         # Проверяем серверный кэш (справочники меняются редко)
         cached = cache.get(DIRECTORIES_CACHE_KEY)
         if cached is not None:
             response = JsonResponse(cached)
-            response['Cache-Control'] = 'max-age=60'
+            response["Cache-Control"] = "max-age=60"
             return response
 
         # Исключаем типы, дублирующие реальные модели (NTCCenter, Department, Sector)
         # Они обрабатываются отдельно ниже
         qs = Directory.objects.exclude(
             dir_type__in=self._REAL_MODEL_TYPES,
-        ).order_by('dir_type', 'value')
+        ).order_by("dir_type", "value")
 
         # Группируем записи справочника по типу (dir_type → список записей)
         result = defaultdict(list)
         for d in qs:
-            result[d.dir_type].append({
-                'id': d.pk,           # первичный ключ записи справочника
-                'value': d.value,     # значение (название/код)
-                'parent_id': d.parent_id,  # FK на родительскую запись (для иерархий)
-            })
+            result[d.dir_type].append(
+                {
+                    "id": d.pk,  # первичный ключ записи справочника
+                    "value": d.value,  # значение (название/код)
+                    "parent_id": d.parent_id,  # FK на родительскую запись (для иерархий)
+                }
+            )
 
         # Виртуальные записи из реальных моделей (заменяют Directory типов center/dept/sector)
         # НТЦ-центры из модели NTCCenter
-        result['center'] = [
-            {'id': c.pk, 'value': c.code, 'parent_id': None}
-            for c in NTCCenter.objects.order_by('code')
+        result["center"] = [
+            {"id": c.pk, "value": c.code, "parent_id": None}
+            for c in NTCCenter.objects.order_by("code")
         ]
         # Отделы из модели Department
-        result['dept'] = [
-            {'id': d.pk, 'value': d.code, 'parent_id': None}
-            for d in Department.objects.order_by('code')
+        result["dept"] = [
+            {"id": d.pk, "value": d.code, "parent_id": None}
+            for d in Department.objects.order_by("code")
         ]
         # short_name() — в apps/api/utils.py
 
         # Начальники секторов — нужны для подстановки в таблицу ПП (колонка «Нач. сектора»)
         sector_heads = {}
-        for emp in Employee.objects.filter(role=Employee.ROLE_SECTOR_HEAD).select_related('sector'):
+        for emp in Employee.objects.filter(
+            role=Employee.ROLE_SECTOR_HEAD
+        ).select_related("sector"):
             if emp.sector:
                 sector_heads[emp.sector.code] = short_name(emp.full_name)
 
-        result['sector'] = [
+        result["sector"] = [
             {
-                'id': s.pk,
-                'value': s.code,
-                'parent_id': s.department_id,
-                'head_name': sector_heads.get(s.code, ''),  # ФИО начальника сектора
+                "id": s.pk,
+                "value": s.code,
+                "parent_id": s.department_id,
+                "head_name": sector_heads.get(s.code, ""),  # ФИО начальника сектора
             }
-            for s in Sector.objects.select_related('department').order_by('department__code', 'code')
+            for s in Sector.objects.select_related("department").order_by(
+                "department__code", "code"
+            )
         ]
 
         # Виртуальный справочник сотрудников (для автодополнения поля «Исполнитель»)
         emp_qs = (
-            Employee.objects
-            .exclude(last_name='')          # исключаем сотрудников без фамилии
-            .select_related('department', 'sector')
-            .order_by('last_name', 'first_name')
+            Employee.objects.exclude(last_name="")  # исключаем сотрудников без фамилии
+            .select_related("department", "sector")
+            .order_by("last_name", "first_name")
         )
         employees = []
         for emp in emp_qs:
             # Полное имя (Фамилия Имя Отчество)
             full = emp.full_name
             # Код отдела (пустая строка если нет отдела)
-            dept_code = emp.department.code if emp.department else ''
+            dept_code = emp.department.code if emp.department else ""
             # Код сектора (пустая строка если нет сектора)
-            sector_code = emp.sector.code if emp.sector else ''
+            sector_code = emp.sector.code if emp.sector else ""
             # Читаемое название должности (через choices)
-            position = emp.get_position_display() if emp.position else ''
+            position = emp.get_position_display() if emp.position else ""
 
             # Добавляем сокращённое имя (Фамилия И.О.),
             # если сокращение недоступно — используем полное имя
             abbrev = emp.short_name
-            employees.append({
-                'id': emp.pk,
-                'value': abbrev if abbrev else full,
-                'dept': dept_code,
-                'sector': sector_code,
-                'position': position,
-            })
+            employees.append(
+                {
+                    "id": emp.pk,
+                    "value": abbrev if abbrev else full,
+                    "dept": dept_code,
+                    "sector": sector_code,
+                    "position": position,
+                }
+            )
 
         # Виртуальный справочник проектов (из модели Project)
-        result['project'] = [
-            {'id': p.pk, 'value': p.name, 'parent_id': None}
-            for p in Project.objects.order_by('name_short', 'name_full')
+        result["project"] = [
+            {"id": p.pk, "value": p.name, "parent_id": None}
+            for p in Project.objects.order_by("name_short", "name_full")
         ]
 
         # Этапы из УП (PPStage) — единый источник (ЕТБД)
         from apps.works.models import PPStage
-        result['stage'] = [
+
+        result["stage"] = [
             {
-                'id': s.id,
-                'value': s.stage_number or s.name,
-                'label': f'{s.stage_number}. {s.name}' if s.stage_number else s.name,
-                'project_id': s.project_id,
-                'row_code': s.row_code or '',
-                'work_order': s.work_order or '',
-                'parent_id': None,
+                "id": s.id,
+                "value": s.stage_number or s.name,
+                "label": f"{s.stage_number}. {s.name}" if s.stage_number else s.name,
+                "project_id": s.project_id,
+                "row_code": s.row_code or "",
+                "work_order": s.work_order or "",
+                "parent_id": None,
             }
-            for s in PPStage.objects.select_related('project').order_by('project_id', 'order', 'id')
+            for s in PPStage.objects.select_related("project").order_by(
+                "project_id", "order", "id"
+            )
         ]
 
         # Виртуальный справочник типов задач (не зависит от seed-данных в Directory)
         _TASK_TYPES = [
-            'Выпуск нового документа',
-            'Корректировка документа',
-            'Разработка',
-            'Сопровождение (ОКАН)',
+            "Выпуск нового документа",
+            "Корректировка документа",
+            "Разработка",
+            "Сопровождение (ОКАН)",
         ]
-        result['task_type'] = [
-            {'id': idx, 'value': v, 'parent_id': None}
+        result["task_type"] = [
+            {"id": idx, "value": v, "parent_id": None}
             for idx, v in enumerate(_TASK_TYPES, start=1)
         ]
 
         # Добавляем виртуальный справочник сотрудников
-        result['employees'] = employees
+        result["employees"] = employees
 
         # Сохраняем в серверный кэш (5 минут)
         payload = dict(result)
@@ -182,11 +194,12 @@ class DirectoryListView(LoginRequiredJsonMixin, View):
         # Формируем ответ
         response = JsonResponse(payload)
         # Браузерный кэш на 60 секунд (дополнительно к серверному)
-        response['Cache-Control'] = 'max-age=60'
+        response["Cache-Control"] = "max-age=60"
         return response
 
 
 # ── POST / PUT / DELETE /api/directories ─────────────────────────────────────
+
 
 class DirectoryCreateView(AdminRequiredJsonMixin, View):
     """POST -- создание записи справочника. Только admin."""
@@ -195,25 +208,23 @@ class DirectoryCreateView(AdminRequiredJsonMixin, View):
         # Парсим JSON-тело
         data = parse_json_body(request)
         if data is None:
-            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+            return JsonResponse({"error": "Невалидный JSON"}, status=400)
 
         # Тип справочника (например: 'project', 'task_type', 'position' и т.д.)
-        dir_type = data.get('type', '').strip()
+        dir_type = data.get("type", "").strip()
         # Значение записи (код или название)
-        value = data.get('value', '').strip()
+        value = data.get("value", "").strip()
         # Опциональный родитель для иерархических справочников
-        parent_id = data.get('parent_id')
+        parent_id = data.get("parent_id")
 
         if not dir_type or not value:
             # Оба поля обязательны для создания
-            return JsonResponse(
-                {'error': 'Поля type и value обязательны'}, status=400
-            )
+            return JsonResponse({"error": "Поля type и value обязательны"}, status=400)
 
         # Типы center/dept/sector управляются через реальные модели, а не Directory
         if dir_type in DirectoryListView._REAL_MODEL_TYPES:
             return JsonResponse(
-                {'error': f'Тип "{dir_type}" управляется через модули подразделений'},
+                {"error": f'Тип "{dir_type}" управляется через модули подразделений'},
                 status=400,
             )
 
@@ -224,28 +235,28 @@ class DirectoryCreateView(AdminRequiredJsonMixin, View):
                 parent = Directory.objects.get(pk=parent_id)
             except Directory.DoesNotExist:
                 return JsonResponse(
-                    {'error': 'Родительская запись не найдена'}, status=404
+                    {"error": "Родительская запись не найдена"}, status=404
                 )
 
         # Создаём запись справочника
         entry = Directory.objects.create(
             dir_type=dir_type,  # тип справочника
-            value=value,        # значение
-            parent=parent,      # FK на родителя (None для корневых записей)
+            value=value,  # значение
+            parent=parent,  # FK на родителя (None для корневых записей)
         )
 
         # Инвалидируем кэш справочников после создания записи
         cache.delete(DIRECTORIES_CACHE_KEY)
 
         # Результат: минимально — ID созданной записи
-        result = {'id': entry.pk}
+        result = {"id": entry.pk}
 
         # Автоматически создаём производственный проект при создании проекта
         # верхнего уровня (без parent)
-        if dir_type == 'project' and not parent_id:
+        if dir_type == "project" and not parent_id:
             # Корневой проект → создаём связанный PPProject
             pp = PPProject.objects.create(name=value, directory=entry)
-            result['pp_project_id'] = pp.pk
+            result["pp_project_id"] = pp.pk
 
         # Возвращаем ID с кодом 201 Created
         return JsonResponse(result, status=201)
@@ -261,51 +272,43 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
         # Парсим тело запроса
         data = parse_json_body(request)
         if data is None:
-            return JsonResponse({'error': 'Невалидный JSON'}, status=400)
+            return JsonResponse({"error": "Невалидный JSON"}, status=400)
         # Новое значение записи (обязательное)
-        value = data.get('value', '').strip()
+        value = data.get("value", "").strip()
 
         if not value:
-            return JsonResponse(
-                {'error': 'Поле value обязательно'}, status=400
-            )
+            return JsonResponse({"error": "Поле value обязательно"}, status=400)
 
         # Ищем запись по PK
         try:
             entry = Directory.objects.get(pk=pk)
         except Directory.DoesNotExist:
-            return JsonResponse(
-                {'error': 'Запись не найдена'}, status=404
-            )
+            return JsonResponse({"error": "Запись не найдена"}, status=404)
 
         # Обновляем значение
         entry.value = value
         # Сохраняем только поле value
-        entry.save(update_fields=['value'])
+        entry.save(update_fields=["value"])
 
         # Инвалидируем кэш справочников после обновления
         cache.delete(DIRECTORIES_CACHE_KEY)
 
         # Синхронизируем имя в PPProject, если это проект верхнего уровня
-        if entry.dir_type == 'project' and not entry.parent_id:
+        if entry.dir_type == "project" and not entry.parent_id:
             # Обновляем название связанного PPProject (если он есть)
             PPProject.objects.filter(directory=entry).update(name=value)
 
-        return JsonResponse({'ok': True})
+        return JsonResponse({"ok": True})
 
     def delete(self, request, pk):
         # Ищем запись по PK
         try:
             entry = Directory.objects.get(pk=pk)
         except Directory.DoesNotExist:
-            return JsonResponse(
-                {'error': 'Запись не найдена'}, status=404
-            )
+            return JsonResponse({"error": "Запись не найдена"}, status=404)
 
         # Запоминаем, является ли это корневым проектом (для каскадного удаления ПП)
-        is_top_project = (
-            entry.dir_type == 'project' and not entry.parent_id
-        )
+        is_top_project = entry.dir_type == "project" and not entry.parent_id
 
         # Рекурсивный сбор всех потомков (BFS — обход в ширину)
         to_delete_ids = [entry.pk]  # начинаем с самой записи
@@ -314,9 +317,7 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
             pid = bfs_queue.popleft()  # берём первый элемент очереди
             # Получаем ID всех дочерних записей данного родителя
             children_ids = list(
-                Directory.objects
-                .filter(parent_id=pid)
-                .values_list('id', flat=True)
+                Directory.objects.filter(parent_id=pid).values_list("id", flat=True)
             )
             # Добавляем дочерние ID в список на удаление
             to_delete_ids.extend(children_ids)
@@ -327,11 +328,14 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
         # (выполняем ДО удаления Directory, иначе FK directory_id уже NULL)
         if is_top_project:
             from django.db import transaction
+
             pp_projects = list(PPProject.objects.filter(directory_id=pk))
             if pp_projects:
                 with transaction.atomic():
                     Work.objects.filter(pp_project__in=pp_projects).delete()
-                    PPProject.objects.filter(pk__in=[pp.pk for pp in pp_projects]).delete()
+                    PPProject.objects.filter(
+                        pk__in=[pp.pk for pp in pp_projects]
+                    ).delete()
 
         # Удаляем все найденные записи справочника одним запросом
         Directory.objects.filter(pk__in=to_delete_ids).delete()
@@ -339,4 +343,4 @@ class DirectoryDetailView(AdminRequiredJsonMixin, View):
         # Инвалидируем кэш справочников после удаления
         cache.delete(DIRECTORIES_CACHE_KEY)
 
-        return JsonResponse({'ok': True})
+        return JsonResponse({"ok": True})

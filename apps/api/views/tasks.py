@@ -674,9 +674,9 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     return JsonResponse({"error": str(exc)}, status=400)
 
                 if "stage" in d and not is_from_pp:
-                    work.stage_num = d["stage"]
+                    work.stage_num = d["stage"] or ""
                 if "justification" in d and not is_from_pp:
-                    work.justification = d["justification"]
+                    work.justification = d["justification"] or ""
                 if "actions" in d:
                     actions, act_err = validate_actions(d["actions"])
                     if act_err:

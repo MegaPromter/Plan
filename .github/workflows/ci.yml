@@ -1,0 +1,117 @@
+# CI pipeline: запускается при каждом push и pull request
+# Проверяет код линтерами (black, flake8, isort) и запускает тесты
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    # Линтеры проверяют стиль кода — форматирование, импорты, ошибки
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Кэш pip — чтобы не качать пакеты каждый раз заново
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-dev-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-dev-
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # black --check: не меняет файлы, а только проверяет форматирование
+      - name: Black (formatting)
+        run: black --check .
+
+      # isort --check-only: проверяет порядок импортов
+      - name: isort (imports)
+        run: isort --check-only .
+
+      # flake8: ищет синтаксические ошибки и нарушения стиля
+      - name: Flake8 (style)
+        run: flake8 .
+
+  lint-js:
+    # Линтеры для JavaScript — ESLint + Prettier
+    name: Lint JS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ESLint проверяет логику JS-кода (ошибки, неиспользуемые переменные)
+      - name: ESLint
+        run: npx eslint static/js/
+
+      # Prettier проверяет форматирование (отступы, кавычки, переносы)
+      - name: Prettier
+        run: npx prettier --check static/js/ static/css/
+
+  test:
+    # Тесты запускаются в окружении с реальной PostgreSQL
+    name: Test
+    runs-on: ubuntu-latest
+
+    # services — контейнеры, которые поднимаются рядом с основным
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        # Ждём, пока PostgreSQL полностью запустится
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+      SECRET_KEY: ci-test-secret-key
+      DEBUG: "True"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        run: python -m pytest tests/ -x -q --cov=apps --cov-report=term-missing

@@ -1,0 +1,43 @@
+# Pre-commit hooks — автоматические проверки перед каждым git commit
+# Установка: pip install pre-commit && pre-commit install
+# После этого хуки запускаются автоматически при git commit
+
+repos:
+  # Набор базовых проверок от pre-commit (не Python-специфичные)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Убирает лишние пробелы в конце строк
+      - id: trailing-whitespace
+      # Гарантирует пустую строку в конце файла (стандарт POSIX)
+      - id: end-of-file-fixer
+      # Проверяет, что YAML/TOML файлы валидны
+      - id: check-yaml
+      - id: check-toml
+      # Ловит случайное добавление больших файлов (>500KB)
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      # Не даёт закоммитить merge-маркеры (<<<<<<< HEAD)
+      - id: check-merge-conflict
+
+  # Black — автоформатирование Python-кода
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+
+  # isort — сортировка импортов (с профилем black, чтобы не конфликтовали)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+
+  # Flake8 — линтер: ищет ошибки и нарушения стиля
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        # exclude — pre-commit запускает свою копию flake8, которая не видит .flake8
+        # поэтому дублируем исключения здесь
+        exclude: ^(ntc_simulator/|docs/|scripts/|deploy_timeweb\.py)
+        args: ["--extend-ignore=E501,W503,E203,E402", "--max-line-length=88"]

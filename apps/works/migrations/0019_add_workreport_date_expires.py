@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0018_add_workreport_ii_pi'),
+        ("works", "0018_add_workreport_ii_pi"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='workreport',
-            name='date_expires',
-            field=models.DateField(blank=True, null=True, verbose_name='Срок действия'),
+            model_name="workreport",
+            name="date_expires",
+            field=models.DateField(blank=True, null=True, verbose_name="Срок действия"),
         ),
         migrations.AlterField(
-            model_name='workreport',
-            name='date_accepted',
-            field=models.DateField(blank=True, null=True, verbose_name='Дата выпуска'),
+            model_name="workreport",
+            name="date_accepted",
+            field=models.DateField(blank=True, null=True, verbose_name="Дата выпуска"),
         ),
     ]

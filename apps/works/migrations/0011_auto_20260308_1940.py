@@ -6,61 +6,73 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0010_merge_work_tables'),
+        ("works", "0010_merge_work_tables"),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='auditlog',
-            name='audit_action_idx',
+            model_name="auditlog",
+            name="audit_action_idx",
         ),
         migrations.RemoveIndex(
-            model_name='auditlog',
-            name='audit_user_idx',
+            model_name="auditlog",
+            name="audit_user_idx",
         ),
         migrations.RemoveIndex(
-            model_name='auditlog',
-            name='audit_created_idx',
+            model_name="auditlog",
+            name="audit_created_idx",
         ),
         migrations.RemoveIndex(
-            model_name='work',
-            name='work_work_source__da40b2_idx',
+            model_name="work",
+            name="work_work_source__da40b2_idx",
         ),
         migrations.RemoveIndex(
-            model_name='work',
-            name='work_work_source__ec78db_idx',
+            model_name="work",
+            name="work_work_source__ec78db_idx",
         ),
         migrations.AlterField(
-            model_name='work',
-            name='task_type',
-            field=models.CharField(blank=True, default='', max_length=100, verbose_name='Тип работы'),
+            model_name="work",
+            name="task_type",
+            field=models.CharField(
+                blank=True, default="", max_length=100, verbose_name="Тип работы"
+            ),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['action'], name='work_audit__action_18a5b5_idx'),
+            model_name="auditlog",
+            index=models.Index(fields=["action"], name="work_audit__action_18a5b5_idx"),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['user'], name='work_audit__user_id_dbc62b_idx'),
+            model_name="auditlog",
+            index=models.Index(fields=["user"], name="work_audit__user_id_dbc62b_idx"),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['created_at'], name='work_audit__created_237a30_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["created_at"], name="work_audit__created_237a30_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_pp'], name='work_work_show_in_7645b2_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_pp"], name="work_work_show_in_7645b2_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_plan'], name='work_work_show_in_5e5ad9_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_plan"], name="work_work_show_in_5e5ad9_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_plan', 'deadline'], name='work_work_show_in_f7cb32_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_plan", "deadline"], name="work_work_show_in_f7cb32_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['pp_project'], name='work_work_pp_proj_be82b7_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["pp_project"], name="work_work_pp_proj_be82b7_idx"
+            ),
         ),
     ]

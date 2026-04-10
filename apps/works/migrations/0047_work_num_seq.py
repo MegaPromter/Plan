@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0046_remove_row_code_seq'),
+        ("works", "0046_remove_row_code_seq"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='work_num_seq',
-            field=models.PositiveIntegerField(default=0, help_text='Атомарный счётчик для generate_work_num()', verbose_name='Счётчик номеров работ'),
+            model_name="project",
+            name="work_num_seq",
+            field=models.PositiveIntegerField(
+                default=0,
+                help_text="Атомарный счётчик для generate_work_num()",
+                verbose_name="Счётчик номеров работ",
+            ),
         ),
     ]

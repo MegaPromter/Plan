@@ -26,6 +26,7 @@ const _isFullAccess = makeIsFullAccess(_spCfg);
 
 let tasks = [];
 let colSettings = _spCfg.colSettings;
+let _spCalCache = {};  // {year: [{month, hours_norm, ...}]}
 
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _spStatusFilter = 'all';
@@ -172,6 +173,10 @@ let spSelectedDepts = new Set();
   if (spSelectedDepts.size === 0) {
     var old = localStorage.getItem('sp_selected_dept');
     if (old) { spSelectedDepts.add(old); localStorage.removeItem('sp_selected_dept'); }
+  }
+  // По умолчанию: не-admin видит только свой отдел
+  if (spSelectedDepts.size === 0 && USER_DEPT && !_isFullAccess()) {
+    spSelectedDepts.add(USER_DEPT);
   }
 })();
 
@@ -405,10 +410,16 @@ async function loadTasks() {
   document.getElementById("searchCount").textContent = "...";
 
   try {
-    // Загружаем первую порцию
-    var res = await fetch(baseUrl + '&limit=' + SP_FETCH_CHUNK + '&offset=0');
+    // Загружаем первую порцию + кеш календаря (параллельно)
+    var resProm = fetch(baseUrl + '&limit=' + SP_FETCH_CHUNK + '&offset=0');
+    var calYear = selectedYear || new Date().getFullYear();
+    var calProm = _spCalCache[calYear]
+      ? Promise.resolve(_spCalCache[calYear])
+      : fetch('/api/work_calendar/?year=' + calYear).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; });
+    var [res, calData] = await Promise.all([resProm, calProm]);
     if (!res.ok) { console.error("loadTasks HTTP error:", res.status); return; }
     tasks = await res.json();
+    _spCalCache[calYear] = calData;
 
     initDeptChips();
     initMfTriggers();
@@ -447,6 +458,8 @@ async function _spBgLoadRemaining(baseUrl, offset) {
     if (!hasMore) break;
   }
   _spBgLoading = false;
+  // После полной дозагрузки — обновить чипы отделов (могли появиться новые)
+  initDeptChips();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -470,8 +483,9 @@ function peIsIgnored(key) { return !!peGetIgnored()[key]; }
 
 async function calcPlanningErrors() {
   const now = new Date();
-  const curYear  = now.getFullYear();
-  const curMonth = now.getMonth() + 1;
+  // Используем выбранный период, а не текущую дату
+  const curYear  = selectedYear || now.getFullYear();
+  const curMonth = selectedMonth || (now.getMonth() + 1);
   const curKey   = `${curYear}-${String(curMonth).padStart(2,"0")}`;
   const todayStr = now.toISOString().slice(0,10);
   // MONTHS_FULL — в utils.js
@@ -1160,6 +1174,7 @@ function updatePlanSummary() {
     : null;
 
   // Считаем по отфильтрованному массиву (не по DOM)
+  const executorSet = new Set();
   _spFiltered.forEach(t => {
     const ph = t.plan_hours_all || {};
     if (monthKey) {
@@ -1170,6 +1185,11 @@ function updatePlanSummary() {
       Object.entries(ph).forEach(([k,v]) => {
         if (k.startsWith(String(selectedYear))) total += parseFloat(v)||0;
       });
+    }
+    // Собираем уникальных исполнителей
+    if (t.executor) executorSet.add(t.executor);
+    if (t.executors_list) {
+      t.executors_list.forEach(function(ex) { if (ex.name) executorSet.add(ex.name); });
     }
   });
 
@@ -1182,9 +1202,43 @@ function updatePlanSummary() {
   else if (showAll) { periodLabel = "Все периоды"; }
   else { periodLabel = `Год ${selectedYear}`; }
   const filtered = _spFiltered.length;
-  const all = tasks.length;
   document.getElementById("planSummaryPeriod").textContent =
-    `${periodLabel} · ${filtered === all ? filtered + " зап." : filtered + " из " + all}`;
+    `${periodLabel} · ${filtered} задач`;
+
+  // ── Сотрудники ──
+  const staffCount = executorSet.size;
+  document.getElementById("planSummaryStaff").textContent = staffCount > 0 ? staffCount : "—";
+  // Название выбранного подразделения
+  const deptNames = spSelectedDepts.size > 0 ? [...spSelectedDepts].join(", ") : "Все отделы";
+  document.getElementById("planSummaryDept").textContent = deptNames;
+
+  // ── Загрузка (%) ──
+  const calYear = selectedYear || new Date().getFullYear();
+  const calArr = _spCalCache[calYear] || [];
+  let capacity = 0;
+  if (staffCount > 0 && calArr.length > 0) {
+    if (monthKey && selectedMonth) {
+      // Один месяц: сотрудники × норма часов
+      const ce = calArr.find(function(c) { return c.month === selectedMonth; });
+      capacity = staffCount * (ce ? ce.hours_norm : 160);
+    } else {
+      // Весь год (или «все периоды»): сотрудники × сумма норм за 12 месяцев
+      const yearNorm = calArr.reduce(function(s, c) { return s + (c.hours_norm || 0); }, 0);
+      capacity = staffCount * yearNorm;
+    }
+  }
+  const loadEl = document.getElementById("planSummaryLoad");
+  const capInfoEl = document.getElementById("planSummaryCapInfo");
+  if (capacity > 0) {
+    const pct = Math.round(total / capacity * 100);
+    loadEl.textContent = pct + "%";
+    loadEl.className = "plan-summary-value " + (pct <= 85 ? "load-ok" : pct <= 100 ? "load-warn" : "load-over");
+    capInfoEl.textContent = "Мощность: " + capacity.toLocaleString("ru-RU") + " ч";
+  } else {
+    loadEl.textContent = "—";
+    loadEl.className = "plan-summary-value";
+    capInfoEl.textContent = "Нет данных";
+  }
 }
 
 // ── Форматирование YYYY-MM → «Март 2026» ─────────────────────────────────
@@ -1488,7 +1542,17 @@ function renderTable() {
   _spRenderedCount = 0;
   if (_spScrollDispose) { _spScrollDispose(); _spScrollDispose = null; }
 
+  // Ключ выбранного месяца для фильтрации по трудоёмкости
+  const _monthFilterKey = selectedMonth
+    ? `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`
+    : null;
+
   _spFiltered = tasks.filter(t => {
+    // Фильтр по месяцу: показываем только задачи с часами на выбранный месяц
+    if (_monthFilterKey) {
+      const ph = t.plan_hours_all || {};
+      if (!ph[_monthFilterKey] || parseFloat(ph[_monthFilterKey]) === 0) return false;
+    }
     // Фильтр по статусу (прогресс-панель)
     if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
 

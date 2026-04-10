@@ -10,26 +10,26 @@ Management command: создаёт задачи для проектов ЗМ, Л
 Использование: python manage.py seed_workload
 Идемпотентен: удаляет старые seed-задачи перед созданием.
 """
+
 import random
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.employees.models import Department, Employee, Sector
+from apps.employees.models import Department, Employee
 from apps.works.models import PPProject, Work, WorkCalendar
-
 
 # Месяцы для распределения задач
 MONTHS = [
-    (2026, 2),   # февраль
-    (2026, 3),   # март
-    (2026, 4),   # апрель
-    (2026, 5),   # май
-    (2026, 6),   # июнь
-    (2026, 7),   # июль
-    (2026, 8),   # август
-    (2026, 9),   # сентябрь
+    (2026, 2),  # февраль
+    (2026, 3),  # март
+    (2026, 4),  # апрель
+    (2026, 5),  # май
+    (2026, 6),  # июнь
+    (2026, 7),  # июль
+    (2026, 8),  # август
+    (2026, 9),  # сентябрь
     (2026, 10),  # октябрь
     (2026, 11),  # ноябрь
     (2026, 12),  # декабрь
@@ -37,24 +37,43 @@ MONTHS = [
 
 # Названия работ по тематике
 WORK_NAMES = [
-    'Разработка КД корпуса', 'Расчёт прочности обечайки', 'Проектирование фланцевого соединения',
-    'Моделирование термонагрузки', 'Разработка схемы электропитания', 'Проектирование кабельной сети',
-    'Расчёт теплового режима', 'Разработка чертежей кронштейнов', 'Проектирование системы вентиляции',
-    'Расчёт вибрационной стойкости', 'Разработка компоновки приборного отсека',
-    'Проектирование стыковочного узла', 'Расчёт герметичности', 'Разработка КД панели управления',
-    'Проектирование системы охлаждения', 'Разработка монтажного чертежа', 'Расчёт массы изделия',
-    'Разработка КД корпуса приборного блока', 'Проектирование токосъёмника',
-    'Расчёт режимов электропитания', 'Разработка принципиальной схемы', 'Проектирование датчиков',
-    'Расчёт надёжности системы', 'Разработка технологического процесса', 'Проектирование жгутов',
-    'Разработка КД блока электроники', 'Расчёт электромагнитной совместимости',
-    'Проектирование защитного кожуха', 'Разработка сборочного чертежа', 'Расчёт ресурса изделия',
+    "Разработка КД корпуса",
+    "Расчёт прочности обечайки",
+    "Проектирование фланцевого соединения",
+    "Моделирование термонагрузки",
+    "Разработка схемы электропитания",
+    "Проектирование кабельной сети",
+    "Расчёт теплового режима",
+    "Разработка чертежей кронштейнов",
+    "Проектирование системы вентиляции",
+    "Расчёт вибрационной стойкости",
+    "Разработка компоновки приборного отсека",
+    "Проектирование стыковочного узла",
+    "Расчёт герметичности",
+    "Разработка КД панели управления",
+    "Проектирование системы охлаждения",
+    "Разработка монтажного чертежа",
+    "Расчёт массы изделия",
+    "Разработка КД корпуса приборного блока",
+    "Проектирование токосъёмника",
+    "Расчёт режимов электропитания",
+    "Разработка принципиальной схемы",
+    "Проектирование датчиков",
+    "Расчёт надёжности системы",
+    "Разработка технологического процесса",
+    "Проектирование жгутов",
+    "Разработка КД блока электроники",
+    "Расчёт электромагнитной совместимости",
+    "Проектирование защитного кожуха",
+    "Разработка сборочного чертежа",
+    "Расчёт ресурса изделия",
 ]
 
-_SEED_TAG = 'SEED_WORKLOAD'  # тег в work_designation для идентификации seed-задач
+_SEED_TAG = "SEED_WORKLOAD"  # тег в work_designation для идентификации seed-задач
 
 
 class Command(BaseCommand):
-    help = 'Создаёт задачи с распределением нагрузки по отделам и сотрудникам'
+    help = "Создаёт задачи с распределением нагрузки по отделам и сотрудникам"
 
     def handle(self, *args, **options):
         # Получаем нормы часов по месяцам
@@ -64,39 +83,43 @@ class Command(BaseCommand):
             norms[(year, month)] = float(wc.hours_norm) if wc else 176.0
 
         # Получаем ПП-проекты для ЗМ, ЛО, РО
-        pp_projects = list(PPProject.objects.filter(
-            up_project__name_short__in=['ЗМ', 'ЛО', 'РО']
-        ).select_related('up_project'))
+        pp_projects = list(
+            PPProject.objects.filter(
+                up_project__name_short__in=["ЗМ", "ЛО", "РО"]
+            ).select_related("up_project")
+        )
         if not pp_projects:
-            self.stderr.write('Нет ПП-проектов для ЗМ/ЛО/РО')
+            self.stderr.write("Нет ПП-проектов для ЗМ/ЛО/РО")
             return
 
         # Получаем отделы и сотрудников
-        depts = list(Department.objects.all().order_by('code'))
+        depts = list(Department.objects.all().order_by("code"))
         if len(depts) < 7:
-            self.stderr.write('Недостаточно отделов')
+            self.stderr.write("Недостаточно отделов")
             return
 
         random.seed(42)  # воспроизводимость
         random.shuffle(depts)
 
         # Распределяем отделы: 4 перегружены, 3 недогружены, остальные норма
-        overloaded_depts = depts[:4]    # 101-130% от нормы отдела
+        overloaded_depts = depts[:4]  # 101-130% от нормы отдела
         underloaded_depts = depts[4:7]  # 40-75% от нормы отдела
-        normal_depts = depts[7:]        # 85-100% от нормы отдела
+        normal_depts = depts[7:]  # 85-100% от нормы отдела
 
-        self.stdout.write(f'Перегружены: {[d.code for d in overloaded_depts]}')
-        self.stdout.write(f'Недогружены: {[d.code for d in underloaded_depts]}')
-        self.stdout.write(f'В норме: {[d.code for d in normal_depts]}')
+        self.stdout.write(f"Перегружены: {[d.code for d in overloaded_depts]}")
+        self.stdout.write(f"Недогружены: {[d.code for d in underloaded_depts]}")
+        self.stdout.write(f"В норме: {[d.code for d in normal_depts]}")
 
         # Удаляем старые seed-задачи
         deleted, _ = Work.objects.filter(work_designation=_SEED_TAG).delete()
         if deleted:
-            self.stdout.write(f'Удалено старых seed-задач: {deleted}')
+            self.stdout.write(f"Удалено старых seed-задач: {deleted}")
 
-        all_employees = list(Employee.objects.filter(
-            department__isnull=False, role__in=['user', 'sector_head']
-        ).select_related('department', 'sector'))
+        all_employees = list(
+            Employee.objects.filter(
+                department__isnull=False, role__in=["user", "sector_head"]
+            ).select_related("department", "sector")
+        )
 
         # Собираем сотрудников по отделам
         dept_employees = {}
@@ -104,7 +127,9 @@ class Command(BaseCommand):
             dept_employees.setdefault(emp.department_id, []).append(emp)
 
         # Выбираем сотрудников для индивидуального перегруза/недогруза
-        eligible = [e for e in all_employees if e.department_id in {d.id for d in normal_depts}]
+        eligible = [
+            e for e in all_employees if e.department_id in {d.id for d in normal_depts}
+        ]
         random.shuffle(eligible)
         overloaded_employees = set()  # id сотрудников с перегрузом
         underloaded_employees = set()  # id сотрудников с недогрузом
@@ -179,15 +204,20 @@ class Command(BaseCommand):
         # Считываем текущие счётчики проектов
         project_ids = {w.project_id for w in works_to_create if w.project_id}
         from apps.works.models import Project as P
-        seq_map = dict(P.objects.filter(id__in=project_ids).values_list('id', 'work_num_seq'))
-        prefix_map = dict(P.objects.filter(id__in=project_ids).values_list('id', 'name_short'))
+
+        seq_map = dict(
+            P.objects.filter(id__in=project_ids).values_list("id", "work_num_seq")
+        )
+        prefix_map = dict(
+            P.objects.filter(id__in=project_ids).values_list("id", "name_short")
+        )
 
         for w in works_to_create:
             pid = w.project_id
-            prefix = (prefix_map.get(pid) or '').strip()
+            prefix = (prefix_map.get(pid) or "").strip()
             if prefix and pid:
                 seq_map[pid] = seq_map.get(pid, 0) + 1
-                w.work_num = f'{prefix}.{seq_map[pid]}'
+                w.work_num = f"{prefix}.{seq_map[pid]}"
 
         with transaction.atomic():
             Work.objects.bulk_create(works_to_create, batch_size=500)
@@ -195,6 +225,8 @@ class Command(BaseCommand):
             for pid, seq in seq_map.items():
                 P.objects.filter(id=pid).update(work_num_seq=seq)
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Создано {len(works_to_create)} задач для {len(dept_employees)} отделов'
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Создано {len(works_to_create)} задач для {len(dept_employees)} отделов"
+            )
+        )

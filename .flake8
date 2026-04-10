@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E501, W503, E203, E402
+exclude =
+    migrations,
+    .git,
+    __pycache__,
+    static/lib,
+    static/vue,
+    node_modules,
+    ntc_simulator,
+    docs,
+    scripts

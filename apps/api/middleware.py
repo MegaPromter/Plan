@@ -6,6 +6,7 @@ Rate-limiting middleware для защиты API от брутфорса.
 - /api/register_public/  : 5 попыток / 300 сек с одного IP
 - /api/                  : 300 запросов / 60 сек с одного IP (общий лимит)
 """
+
 # Модуль для работы с временем (используется для скользящего окна)
 # Стандартный логгер Python
 import logging
@@ -26,9 +27,9 @@ logger = logging.getLogger(__name__)
 # (ключ-префикс, URL-префикс, макс.запросов, окно в секундах, is_api)
 # is_api=True — вернуть JSON 429; is_api=False — вернуть HTML-текст 429
 _RATE_RULES = [
-    ('rl_login',    '/accounts/login/',       10,  60,  False),  # страница входа
-    ('rl_reg',      '/api/register_public/',   5, 300,  True),   # регистрация
-    ('rl_api',      '/api/',                 300,  60,  True),   # весь API
+    ("rl_login", "/accounts/login/", 10, 60, False),  # страница входа
+    ("rl_reg", "/api/register_public/", 5, 300, True),  # регистрация
+    ("rl_api", "/api/", 300, 60, True),  # весь API
 ]
 
 
@@ -55,12 +56,12 @@ class RateLimitMiddleware:
             # Получаем IP клиента
             ip = _get_ip(request)
             # Формируем ключ кэша: prefix:ip
-            key = f'{prefix}:{ip}'
+            key = f"{prefix}:{ip}"
             # Текущее время в секундах (unix timestamp)
             now = int(time.time())
             # Ключ окна: делим время на размер окна, получаем номер текущего окна
             # Все запросы в одном окне накапливают один счётчик
-            window_key = f'{key}:{now // window}'
+            window_key = f"{key}:{now // window}"
 
             # Атомарно увеличиваем счётчик (без TOCTOU race condition)
             try:
@@ -73,21 +74,25 @@ class RateLimitMiddleware:
             if count > max_req:
                 # Лимит превышен — логируем предупреждение
                 logger.warning(
-                    'rate_limit: ip=%s path=%s count=%d limit=%d',
-                    ip, path, count, max_req,
+                    "rate_limit: ip=%s path=%s count=%d limit=%d",
+                    ip,
+                    path,
+                    count,
+                    max_req,
                 )
                 if is_api:
                     # Для API-запросов возвращаем JSON с кодом 429
                     return JsonResponse(
-                        {'error': 'Слишком много запросов. Попробуйте позже.'},
+                        {"error": "Слишком много запросов. Попробуйте позже."},
                         status=429,
                     )
                 # Для HTML-страниц возвращаем простой HTTP 429
                 from django.http import HttpResponse
+
                 return HttpResponse(
-                    'Слишком много попыток. Подождите и попробуйте снова.',
+                    "Слишком много попыток. Подождите и попробуйте снова.",
                     status=429,
-                    content_type='text/plain; charset=utf-8',
+                    content_type="text/plain; charset=utf-8",
                 )
             break  # применяем только первое совпавшее правило
 

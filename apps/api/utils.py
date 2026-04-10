@@ -2,6 +2,7 @@
 Утилиты для API: фильтрация по ролям, нормализация данных.
 Аналог Flask-хелперов: _get_visibility_filter, _norm_plan_hours и т.д.
 """
+
 # Стандартный модуль JSON (используется при парсинге строк в dict)
 # calendar — для вычисления последнего дня месяца
 import calendar
@@ -31,7 +32,7 @@ def _get_active_delegations(employee):
     Возвращает список активных делегирований для сотрудника.
     Кешируется на 60 секунд чтобы не запрашивать БД на каждый API-вызов.
     """
-    cache_key = f'delegations:{employee.pk}'
+    cache_key = f"delegations:{employee.pk}"
     result = cache.get(cache_key)
     if result is not None:
         return result
@@ -40,7 +41,7 @@ def _get_active_delegations(employee):
         RoleDelegation.objects.filter(
             delegate=employee,
             valid_until__gt=now,
-        ).values_list('scope_type', 'scope_value', named=True)
+        ).values_list("scope_type", "scope_value", named=True)
     )
     cache.set(cache_key, delegations, 60)
     return delegations
@@ -50,70 +51,97 @@ def _get_active_delegations(employee):
 
 # Все допустимые значения поля role у Employee
 VALID_ROLES = {
-    'admin', 'ntc_head', 'ntc_deputy',
-    'dept_head', 'dept_deputy', 'sector_head', 'user',
+    "admin",
+    "ntc_head",
+    "ntc_deputy",
+    "dept_head",
+    "dept_deputy",
+    "sector_head",
+    "user",
 }
 
 # Роли, которым разрешено создавать/изменять данные (не read-only)
 WRITER_ROLES = {
-    'admin', 'ntc_head', 'ntc_deputy',
-    'dept_head', 'dept_deputy', 'sector_head',
+    "admin",
+    "ntc_head",
+    "ntc_deputy",
+    "dept_head",
+    "dept_deputy",
+    "sector_head",
 }
 
 # Словарь: код роли → читаемое название на русском
 ROLE_LABELS = {
-    'admin':       'Администратор',
-    'ntc_head':    'Руководитель НТЦ',
-    'ntc_deputy':  'Зам. руководителя НТЦ',
-    'dept_head':   'Начальник отдела',
-    'dept_deputy': 'Зам. начальника отдела',
-    'sector_head': 'Начальник сектора',
-    'user':        'Исполнитель',
+    "admin": "Администратор",
+    "ntc_head": "Руководитель НТЦ",
+    "ntc_deputy": "Зам. руководителя НТЦ",
+    "dept_head": "Начальник отдела",
+    "dept_deputy": "Зам. начальника отдела",
+    "sector_head": "Начальник сектора",
+    "user": "Исполнитель",
 }
 
 # Поля, разрешённые для inline-обновления (production_plan)
 # Только эти поля можно обновлять через PUT ?field=... в ПП
 # NB: row_code и work_order НЕ входят — read-only, читаются из PPStage (ЕТБД)
 PRODUCTION_ALLOWED_FIELDS = {
-    'stage_num',
-    'work_designation', 'work_name',
+    "stage_num",
+    "work_designation",
+    "work_name",
     # work_num — read-only, авто-генерация при создании
-    'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff',
-    'total_2d', 'total_3d', 'labor', 'center', 'dept',
-    'sector_head', 'executor', 'task_type', 'cross_stage', 'pp_stage',
+    "date_start",
+    "date_end",
+    "sheets_a4",
+    "norm",
+    "coeff",
+    "total_2d",
+    "total_3d",
+    "labor",
+    "center",
+    "dept",
+    "sector_head",
+    "executor",
+    "task_type",
+    "cross_stage",
+    "pp_stage",
     # work_order и row_code — read-only, читаются из PPStage (ЕТБД)
 }
 
 # Поля, разрешённые для inline-обновления (vacations)
 # Только эти поля можно менять через PUT в модуле отпусков
 VACATION_ALLOWED_FIELDS = {
-    'executor', 'date_start', 'date_end', 'notes',
+    "executor",
+    "date_start",
+    "date_end",
+    "notes",
 }
 
 
 # ── IP-адрес клиента ──────────────────────────────────────────────────────────
 
+
 def get_client_ip(request):
     """Возвращает IP-адрес клиента из REMOTE_ADDR.
     X-Forwarded-For не используется — легко подделать."""
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+    return request.META.get("REMOTE_ADDR", "0.0.0.0")
 
 
 def short_name(full):
     """«Иванов Иван Иванович» → «Иванов И.И.» — сокращение ФИО для UI."""
-    parts = (full or '').split()
+    parts = (full or "").split()
     if len(parts) >= 3:
-        return f'{parts[0]} {parts[1][0]}.{parts[2][0]}.'
+        return f"{parts[0]} {parts[1][0]}.{parts[2][0]}."
     if len(parts) == 2:
-        return f'{parts[0]} {parts[1][0]}.'
-    return full or ''
+        return f"{parts[0]} {parts[1][0]}."
+    return full or ""
 
 
 # ── Безопасные конвертеры типов (общие для всех views) ─────────────────────────
 
+
 def safe_date(val):
     """Безопасно парсит строку даты ISO 8601 → date или None."""
-    if not val or val == '':
+    if not val or val == "":
         return None
     try:
         return date.fromisoformat(str(val))
@@ -124,10 +152,10 @@ def safe_date(val):
 def safe_decimal(val):
     """Безопасно конвертирует значение в Decimal → Decimal или None.
     Поддерживает запятую как десятичный разделитель."""
-    if val is None or val == '':
+    if val is None or val == "":
         return None
     try:
-        normalized = str(val).replace(',', '.').strip()
+        normalized = str(val).replace(",", ".").strip()
         return Decimal(normalized)
     except (InvalidOperation, ValueError, TypeError):
         return None
@@ -135,7 +163,7 @@ def safe_decimal(val):
 
 def safe_int(val):
     """Безопасно конвертирует значение в int → int или None."""
-    if val is None or val == '':
+    if val is None or val == "":
         return None
     try:
         return int(val)
@@ -145,6 +173,7 @@ def safe_int(val):
 
 # ── Генерация номера работы ────────────────────────────────────────────────────
 
+
 def generate_work_num(project):
     """Атомарно генерирует номер работы: {name_short}.{N}.
 
@@ -153,21 +182,23 @@ def generate_work_num(project):
     Возвращает строку вида 'Дельта.42' или '' если у проекта нет name_short.
     """
     from apps.works.models import Project
-    prefix = (project.name_short or '').strip()
+
+    prefix = (project.name_short or "").strip()
     if not prefix:
-        return ''
+        return ""
     proj = Project.objects.select_for_update().get(pk=project.pk)
     proj.work_num_seq += 1
-    proj.save(update_fields=['work_num_seq'])
-    return f'{prefix}.{proj.work_num_seq}'
+    proj.save(update_fields=["work_num_seq"])
+    return f"{prefix}.{proj.work_num_seq}"
 
 
 # ── Поиск Employee по ФИО ──────────────────────────────────────────────────────
 
+
 def _build_employee_qs(name):
     """Общая логика: разбивает ФИО на части и фильтрует Employee queryset.
     Возвращает (queryset, name_stripped). Если имя пустое — (None, '')."""
-    name = (name or '').strip()
+    name = (name or "").strip()
     if not name:
         return None, name
     parts = name.split()
@@ -208,7 +239,7 @@ def build_employee_q(name):
     """Строит Q-объект для фильтрации Employee по ФИО.
     Используется при массовом поиске (например, проверка конфликтов отпусков).
     Возвращает Q() или None если имя пустое."""
-    name = (name or '').strip()
+    name = (name or "").strip()
     if not name:
         return None
     parts = name.split()
@@ -224,6 +255,7 @@ def build_employee_q(name):
 
 # ── Фильтрация по ролям (visibility) ──────────────────────────────────────────
 
+
 def get_visibility_filter(user):
     """
     Возвращает Q-объект для фильтрации Work/TaskWork по роли пользователя.
@@ -233,42 +265,39 @@ def get_visibility_filter(user):
     - Work.ntc_center, Work.department, Work.sector, Work.executor
     """
     # Получаем профиль Employee для данного пользователя (None если нет профиля)
-    employee = getattr(user, 'employee', None)
+    employee = getattr(user, "employee", None)
     if not employee:
         # Нет профиля — не показываем ничего (пустой queryset через невалидный фильтр)
         return Q(pk__isnull=True)  # Ничего не показываем
 
     # Текущая роль сотрудника
     role = employee.role
-    # Текущий момент времени для проверки срока делегирований
-    now = timezone.now()
-
-    if role == 'admin':
+    if role == "admin":
         return Q()  # Без фильтра — видит всё
 
     # show_all_depts: руководители НТЦ могут включить видимость всех подразделений
     # Читаем из col_settings (JSONField, хранит пользовательские настройки)
     col_settings = employee.col_settings or {}
-    if role in ('ntc_head', 'ntc_deputy') and col_settings.get('show_all_depts'):
+    if role in ("ntc_head", "ntc_deputy") and col_settings.get("show_all_depts"):
         return Q()  # Видит всё (как admin)
 
     # Базовый фильтр по роли
     q = Q()
-    if role in ('ntc_head', 'ntc_deputy'):
+    if role in ("ntc_head", "ntc_deputy"):
         # Руководитель НТЦ видит только свой центр
         if employee.ntc_center:
             q = Q(ntc_center=employee.ntc_center)
         else:
             # Центр не назначен — ничего не показываем
             q = Q(pk__isnull=True)
-    elif role in ('dept_head', 'dept_deputy'):
+    elif role in ("dept_head", "dept_deputy"):
         # Начальник отдела видит только свой отдел
         if employee.department:
             q = Q(department=employee.department)
         else:
             # Отдел не назначен — ничего не показываем
             q = Q(pk__isnull=True)
-    elif role == 'sector_head':
+    elif role == "sector_head":
         # Начальник сектора видит только свой сектор
         if employee.department and employee.sector:
             # Оба поля заполнены — фильтруем по отделу И сектору
@@ -287,13 +316,13 @@ def get_visibility_filter(user):
 
     # Добавляем делегирования: временно расширяем видимость на чужие данные
     for d in _get_active_delegations(employee):
-        if d.scope_type == 'center':
+        if d.scope_type == "center":
             q = q | Q(ntc_center__code=d.scope_value)
-        elif d.scope_type == 'dept':
+        elif d.scope_type == "dept":
             q = q | Q(department__code=d.scope_value)
-        elif d.scope_type == 'sector':
+        elif d.scope_type == "sector":
             q = q | Q(sector__code=d.scope_value)
-        elif d.scope_type == 'executor':
+        elif d.scope_type == "executor":
             q = q | Q(executor__last_name__iexact=d.scope_value)
 
     return q
@@ -305,35 +334,32 @@ def get_vacation_visibility_filter(user):
     Vacations привязаны к Employee, не к Work — другая логика.
     """
     # Получаем профиль Employee
-    employee = getattr(user, 'employee', None)
+    employee = getattr(user, "employee", None)
     if not employee:
         # Нет профиля — ничего не показываем
         return Q(pk__isnull=True)
 
     # Роль сотрудника
     role = employee.role
-    # Текущее время для проверки делегирований
-    now = timezone.now()
-
-    if role == 'admin':
+    if role == "admin":
         # Администратор видит все отпуска
         return Q()
 
     # Базовый Q-фильтр (заполняется ниже в зависимости от роли)
     q = Q()
-    if role in ('ntc_head', 'ntc_deputy'):
+    if role in ("ntc_head", "ntc_deputy"):
         # Руководитель НТЦ — видит отпуска сотрудников своего центра
         if employee.ntc_center:
             q = Q(employee__ntc_center=employee.ntc_center)
         else:
             q = Q(pk__isnull=True)
-    elif role in ('dept_head', 'dept_deputy'):
+    elif role in ("dept_head", "dept_deputy"):
         # Начальник отдела — видит отпуска своего отдела
         if employee.department:
             q = Q(employee__department=employee.department)
         else:
             q = Q(pk__isnull=True)
-    elif role == 'sector_head':
+    elif role == "sector_head":
         # Начальник сектора — видит отпуска только своего сектора
         if employee.department and employee.sector:
             q = Q(
@@ -349,13 +375,13 @@ def get_vacation_visibility_filter(user):
 
     # Делегирования — расширяем видимость отпусков
     for d in _get_active_delegations(employee):
-        if d.scope_type == 'center':
+        if d.scope_type == "center":
             q = q | Q(employee__ntc_center__code=d.scope_value)
-        elif d.scope_type == 'dept':
+        elif d.scope_type == "dept":
             q = q | Q(employee__department__code=d.scope_value)
-        elif d.scope_type == 'sector':
+        elif d.scope_type == "sector":
             q = q | Q(employee__sector__code=d.scope_value)
-        elif d.scope_type == 'executor':
+        elif d.scope_type == "executor":
             q = q | Q(employee__last_name__iexact=d.scope_value)
 
     return q
@@ -367,7 +393,7 @@ def get_vacation_visibility_filter(user):
 import re as _re
 
 # Регулярное выражение для проверки ключей plan_hours: формат 'YYYY-MM'
-_MONTH_KEY_RE = _re.compile(r'^\d{4}-(0[1-9]|1[0-2])$')
+_MONTH_KEY_RE = _re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
 
 def validate_plan_hours(ph) -> tuple[dict, str | None]:
@@ -389,13 +415,13 @@ def validate_plan_hours(ph) -> tuple[dict, str | None]:
         try:
             ph = json.loads(ph)
         except (json.JSONDecodeError, ValueError):
-            return {}, 'plan_hours: невалидный JSON'
+            return {}, "plan_hours: невалидный JSON"
     if not isinstance(ph, dict):
         # plan_hours должен быть объектом (dict), а не массивом или числом
-        return {}, 'plan_hours: ожидается объект'
+        return {}, "plan_hours: ожидается объект"
     if len(ph) > 60:
         # Ограничение: не более 60 месяцев (~5 лет)
-        return {}, 'plan_hours: слишком много записей (максимум 60)'
+        return {}, "plan_hours: слишком много записей (максимум 60)"
     # Словарь для очищенных данных
     clean = {}
     for k, v in ph.items():
@@ -430,27 +456,27 @@ def validate_executors_list(el) -> tuple[list, str | None]:
         try:
             el = json.loads(el)
         except (json.JSONDecodeError, ValueError):
-            return [], 'executors_list: невалидный JSON'
+            return [], "executors_list: невалидный JSON"
     if not isinstance(el, list):
         # Должен быть массив объектов
-        return [], 'executors_list: ожидается массив'
+        return [], "executors_list: ожидается массив"
     if len(el) > 50:
         # Ограничение: не более 50 исполнителей на задачу
-        return [], 'executors_list: слишком много исполнителей (максимум 50)'
+        return [], "executors_list: слишком много исполнителей (максимум 50)"
     clean = []
     for i, item in enumerate(el):
         if not isinstance(item, dict):
             # Каждый элемент должен быть объектом
-            return [], f'executors_list[{i}]: ожидается объект'
+            return [], f"executors_list[{i}]: ожидается объект"
         # Имя исполнителя: обязательное поле, обрезаем пробелы
-        name = str(item.get('name', '')).strip()
+        name = str(item.get("name", "")).strip()
         if not name:
-            return [], f'executors_list[{i}]: имя исполнителя обязательно'
+            return [], f"executors_list[{i}]: имя исполнителя обязательно"
         # Валидируем вложенный plan_hours исполнителя
-        hours, err = validate_plan_hours(item.get('hours'))
+        hours, err = validate_plan_hours(item.get("hours"))
         if err:
-            return [], f'executors_list[{i}].hours: {err}'
-        clean.append({'name': name, 'hours': hours})
+            return [], f"executors_list[{i}].hours: {err}"
+        clean.append({"name": name, "hours": hours})
     return clean, None
 
 
@@ -467,10 +493,10 @@ def validate_actions(actions) -> tuple[dict, str | None]:
         try:
             actions = json.loads(actions)
         except (json.JSONDecodeError, ValueError):
-            return {}, 'actions: невалидный JSON'
+            return {}, "actions: невалидный JSON"
     if not isinstance(actions, dict):
         # actions должен быть объектом (dict)
-        return {}, 'actions: ожидается объект'
+        return {}, "actions: ожидается объект"
     # actions валиден — возвращаем как есть
     return actions, None
 
@@ -482,17 +508,26 @@ def validate_task_type(value):
     Пустая строка допускается.
     """
     if not value or not str(value).strip():
-        return '', None
+        return "", None
     value = str(value).strip()
     from django.core.cache import cache
-    cache_key = 'valid_task_types'
+
+    cache_key = "valid_task_types"
     valid = cache.get(cache_key)
     if valid is None:
         from apps.works.models import Directory
-        valid = set(Directory.objects.filter(dir_type='task_type').values_list('value', flat=True))
+
+        valid = set(
+            Directory.objects.filter(dir_type="task_type").values_list(
+                "value", flat=True
+            )
+        )
         cache.set(cache_key, valid, timeout=60)
     if valid and value not in valid:
-        return '', f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}'
+        return (
+            "",
+            f'Недопустимый тип задачи: «{value}». Допустимые: {", ".join(sorted(valid))}',
+        )
     return value, None
 
 
@@ -535,6 +570,7 @@ def parse_json_hours(raw):
 
 # ── MCC Finish (закрытие задачи в конце месяца) ──────────────────────────────
 
+
 def mcc_finish_data():
     """
     Возвращает (last_day_prev_month, cutoff_key) для закрытия задачи.
@@ -548,8 +584,9 @@ def mcc_finish_data():
     else:
         # Вычисляем последний день предыдущего месяца
         last_day = date(
-            today.year, today.month - 1,
-            calendar.monthrange(today.year, today.month - 1)[1]  # [1] = кол-во дней
+            today.year,
+            today.month - 1,
+            calendar.monthrange(today.year, today.month - 1)[1],  # [1] = кол-во дней
         )
     # Ключ-граница для plan_hours: 'YYYY-MM' текущего месяца
     # Все записи с ключом < cutoff остаются, ключи >= cutoff удаляются
@@ -559,8 +596,10 @@ def mcc_finish_data():
 
 # ── JSON-сериализация моделей ────────────────────────────────────────────────
 
+
 class DecimalEncoder(json.JSONEncoder):
     """JSON-энкодер, обрабатывающий Decimal с сохранением точности."""
+
     def default(self, obj):
         if isinstance(obj, Decimal):
             # int если целое, иначе float с ограниченной точностью
@@ -578,6 +617,7 @@ def model_to_dict_json(instance, fields=None, exclude=None):
     """Конвертация модели в dict для JSON-ответа."""
     # Используем встроенную Django-функцию model_to_dict
     from django.forms.models import model_to_dict
+
     d = model_to_dict(instance, fields=fields, exclude=exclude)
     # Конвертируем типы, несовместимые с JSON
     for k, v in d.items():
@@ -596,7 +636,7 @@ def resolve_position_key(display_name):
     Если совпадение не найдено, возвращает пустую строку.
     """
     if not display_name:
-        return ''
+        return ""
     display_lower = display_name.lower().strip()
     for key, label in Employee.POSITION_CHOICES:
         if label.lower() == display_lower:
@@ -604,4 +644,4 @@ def resolve_position_key(display_name):
     valid_keys = {k for k, _ in Employee.POSITION_CHOICES}
     if display_name in valid_keys:
         return display_name
-    return ''
+    return ""

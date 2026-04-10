@@ -6,20 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0027_add_task_dependency'),
+        ("works", "0027_add_task_dependency"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='taskexecutor',
-            index=models.Index(fields=['executor'], name='work_task_e_executo_19e7b1_idx'),
+            model_name="taskexecutor",
+            index=models.Index(
+                fields=["executor"], name="work_task_e_executo_19e7b1_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_pp', 'department'], name='work_work_show_in_d0eca8_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_pp", "department"], name="work_work_show_in_d0eca8_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['show_in_plan', 'department'], name='work_work_show_in_004b8c_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["show_in_plan", "department"],
+                name="work_work_show_in_004b8c_idx",
+            ),
         ),
     ]

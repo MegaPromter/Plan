@@ -6,20 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employees', '0004_add_ntc_to_department'),
+        ("employees", "0004_add_ntc_to_department"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='employee',
-            index=models.Index(fields=['department', 'role'], name='emp_employe_departm_f5a377_idx'),
+            model_name="employee",
+            index=models.Index(
+                fields=["department", "role"], name="emp_employe_departm_f5a377_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='employee',
-            index=models.Index(fields=['role'], name='emp_employe_role_ee10e6_idx'),
+            model_name="employee",
+            index=models.Index(fields=["role"], name="emp_employe_role_ee10e6_idx"),
         ),
         migrations.AddIndex(
-            model_name='vacation',
-            index=models.Index(fields=['employee', 'date_start'], name='emp_vacatio_employe_352708_idx'),
+            model_name="vacation",
+            index=models.Index(
+                fields=["employee", "date_start"], name="emp_vacatio_employe_352708_idx"
+            ),
         ),
     ]

@@ -1,0 +1,33 @@
+{
+  "name": "planapp_django",
+  "version": "1.0.0",
+  "description": "``` pip install -r requirements.txt ```",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "lint": "eslint static/js/",
+    "lint:fix": "eslint static/js/ --fix",
+    "format": "prettier --write static/js/ static/css/",
+    "format:check": "prettier --check static/js/ static/css/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MegaPromter/Plan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MegaPromter/Plan/issues"
+  },
+  "homepage": "https://github.com/MegaPromter/Plan#readme",
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1"
+  }
+}

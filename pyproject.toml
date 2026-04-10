@@ -1,0 +1,53 @@
+# pyproject.toml — единый конфиг для всех Python-инструментов
+# PEP 518: стандарт Python для описания проекта и его инструментов
+
+[tool.black]
+# Максимальная длина строки. 88 — дефолт black (компромисс между 79 PEP8 и 120)
+line-length = 88
+# Целевая версия Python — black не будет использовать синтаксис новее
+target-version = ["py311"]
+
+[tool.isort]
+# Профиль "black" — isort форматирует импорты совместимо с black
+# Без этого они будут конфликтовать (разный стиль скобок и переносов)
+profile = "black"
+# known_first_party — твои модули. isort группирует импорты:
+# 1) stdlib (os, sys)  2) third-party (django)  3) first-party (apps, config)
+known_first_party = ["apps", "config"]
+
+[tool.flake8]
+# flake8 пока не поддерживает pyproject.toml нативно,
+# но плагин Flake8-pyproject это исправляет.
+# Альтернатива — отдельный файл .flake8 (создадим ниже)
+max-line-length = 88
+# E501 — "строка слишком длинная". Black уже следит за этим, дублировать не нужно
+# W503 — "перенос строки перед оператором". Устаревшее правило, PEP8 теперь разрешает
+# E203 — "пробел перед ':'". Black ставит его в срезах (a[1 : 2]), flake8 ругается
+extend-ignore = ["E501", "W503", "E203", "E402"]
+# Папки, которые не нужно проверять
+exclude = [
+    "migrations",
+    ".git",
+    "__pycache__",
+    "static/lib",
+    "static/vue",
+    "node_modules",
+    "ntc_simulator",
+    "docs",
+    "scripts",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests/test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*", "*/tests/*", "*/admin.py"]
+
+[tool.coverage.report]
+fail_under = 50
+show_missing = true

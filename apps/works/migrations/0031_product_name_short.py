@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0030_project_row_code_seq'),
+        ("works", "0030_project_row_code_seq"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='projectproduct',
-            name='name_short',
-            field=models.CharField(blank=True, max_length=100, verbose_name='Краткое наименование'),
+            model_name="projectproduct",
+            name="name_short",
+            field=models.CharField(
+                blank=True, max_length=100, verbose_name="Краткое наименование"
+            ),
         ),
     ]

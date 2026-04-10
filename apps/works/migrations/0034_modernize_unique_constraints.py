@@ -6,24 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0033_notice_number_ii_pi_index'),
+        ("works", "0033_notice_number_ii_pi_index"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='taskdependency',
+            name="taskdependency",
             unique_together=set(),
         ),
         migrations.AlterUniqueTogether(
-            name='workcalendar',
+            name="workcalendar",
             unique_together=set(),
         ),
         migrations.AddConstraint(
-            model_name='taskdependency',
-            constraint=models.UniqueConstraint(fields=('predecessor', 'successor'), name='work_task_dependency_pred_succ_uniq'),
+            model_name="taskdependency",
+            constraint=models.UniqueConstraint(
+                fields=("predecessor", "successor"),
+                name="work_task_dependency_pred_succ_uniq",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='workcalendar',
-            constraint=models.UniqueConstraint(fields=('year', 'month'), name='work_calendar_year_month_uniq'),
+            model_name="workcalendar",
+            constraint=models.UniqueConstraint(
+                fields=("year", "month"), name="work_calendar_year_month_uniq"
+            ),
         ),
     ]

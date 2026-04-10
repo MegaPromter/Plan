@@ -6,18 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0019_add_workreport_date_expires'),
+        ("works", "0019_add_workreport_date_expires"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='notice',
-            name='doc_designation',
-            field=models.CharField(blank=True, max_length=200, verbose_name='Обозначение'),
+            model_name="notice",
+            name="doc_designation",
+            field=models.CharField(
+                blank=True, max_length=200, verbose_name="Обозначение"
+            ),
         ),
         migrations.AddField(
-            model_name='notice',
-            name='ii_pi',
-            field=models.CharField(blank=True, max_length=10, verbose_name='ИИ/ПИ'),
+            model_name="notice",
+            name="ii_pi",
+            field=models.CharField(blank=True, max_length=10, verbose_name="ИИ/ПИ"),
         ),
     ]

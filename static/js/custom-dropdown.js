@@ -302,7 +302,7 @@
     }
   }
 
-  function closeDropdown(wrap) {
+  function closeDropdown(wrap, skipFocus) {
     if (!wrap) return;
     wrap.classList.remove('open');
     var trigger = wrap._cdSelect ? wrap._cdSelect._cdTrigger : wrap.querySelector('.cd-trigger');
@@ -327,7 +327,8 @@
       wrap._cdKeyNavBound = null;
     }
 
-    if (trigger && trigger.offsetParent !== null) trigger.focus();
+    // Не крадём фокус при закрытии от внешнего клика — иначе кнопки рядом не срабатывают
+    if (!skipFocus && trigger && trigger.offsetParent !== null) trigger.focus();
   }
 
   document.addEventListener('mousedown', function (e) {
@@ -336,7 +337,7 @@
     var menu = _openWrap._cdSelect ? _openWrap._cdSelect._cdMenu : null;
     if (_openWrap.contains(e.target)) return;
     if (menu && menu.contains(e.target)) return;
-    closeDropdown(_openWrap);
+    closeDropdown(_openWrap, true);
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && _openWrap) closeDropdown(_openWrap);

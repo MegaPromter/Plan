@@ -13,14 +13,14 @@
 Запуск: python simulator.py
 """
 
+import io
 import random
 import sys
-import io
-from dataclasses import dataclass, field
-from datetime import date, timedelta
 from calendar import monthrange
 from collections import defaultdict
-from typing import List, Optional, Dict
+from dataclasses import dataclass, field
+from datetime import date, timedelta
+from typing import Dict, List, Optional
 
 # UTF-8 вывод для Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -30,20 +30,31 @@ random.seed(2026)
 
 # ── Константы ──────────────────────────────────────────────────────────────────
 
-YEAR             = 2026
-MONTH_NORM       = 168        # норма часов/мес
-OVERLOAD_THR     = MONTH_NORM * 1.10   # >110%
-MIN_TASKS_MONTH  = 100        # минимум новых задач в месяц
-MAX_TASKS_MONTH  = 140
+YEAR = 2026
+MONTH_NORM = 168  # норма часов/мес
+OVERLOAD_THR = MONTH_NORM * 1.10  # >110%
+MIN_TASKS_MONTH = 100  # минимум новых задач в месяц
+MAX_TASKS_MONTH = 140
 
 # Вероятности событий
-P_OVERDUE        = 0.18       # вероятность что задача не выполнена в срок
-P_EXECUTOR_SWAP  = 0.30       # вероятность смены исполнителя при сдвиге
-P_VACATION_SICK  = 0.05       # вероятность больничного вместо отпуска
+P_OVERDUE = 0.18  # вероятность что задача не выполнена в срок
+P_EXECUTOR_SWAP = 0.30  # вероятность смены исполнителя при сдвиге
+P_VACATION_SICK = 0.05  # вероятность больничного вместо отпуска
 
 MONTHS_RU = [
-    "", "Январь","Февраль","Март","Апрель","Май","Июнь",
-    "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"
+    "",
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
 ]
 
 # ── Структура НТЦ-2Ц ──────────────────────────────────────────────────────────
@@ -62,27 +73,121 @@ DEPT_SECTORS = {
 }
 
 LAST_NAMES = [
-    "Иванов","Петров","Сидоров","Козлов","Новиков","Морозов","Лебедев","Соколов",
-    "Попов","Волков","Смирнов","Михайлов","Фёдоров","Зайцев","Захаров","Орлов",
-    "Кузнецов","Тихонов","Беляев","Громов","Ермаков","Жуков","Кириллов","Ларин",
-    "Макаров","Нестеров","Осипов","Панин","Рябов","Сорокин","Титов","Уваров",
-    "Фомин","Харитонов","Цветков","Чернов","Шаров","Щербаков","Юрьев","Якушев",
-    "Абрамов","Борисов","Виноградов","Герасимов","Данилов","Егоров","Журавлёв",
-    "Зимин","Исаев","Карпов","Лысенко","Мельников","Назаров","Обухов","Павлов",
-    "Родионов","Суворов","Третьяков","Ушаков","Филиппов","Храмов","Цыганков",
+    "Иванов",
+    "Петров",
+    "Сидоров",
+    "Козлов",
+    "Новиков",
+    "Морозов",
+    "Лебедев",
+    "Соколов",
+    "Попов",
+    "Волков",
+    "Смирнов",
+    "Михайлов",
+    "Фёдоров",
+    "Зайцев",
+    "Захаров",
+    "Орлов",
+    "Кузнецов",
+    "Тихонов",
+    "Беляев",
+    "Громов",
+    "Ермаков",
+    "Жуков",
+    "Кириллов",
+    "Ларин",
+    "Макаров",
+    "Нестеров",
+    "Осипов",
+    "Панин",
+    "Рябов",
+    "Сорокин",
+    "Титов",
+    "Уваров",
+    "Фомин",
+    "Харитонов",
+    "Цветков",
+    "Чернов",
+    "Шаров",
+    "Щербаков",
+    "Юрьев",
+    "Якушев",
+    "Абрамов",
+    "Борисов",
+    "Виноградов",
+    "Герасимов",
+    "Данилов",
+    "Егоров",
+    "Журавлёв",
+    "Зимин",
+    "Исаев",
+    "Карпов",
+    "Лысенко",
+    "Мельников",
+    "Назаров",
+    "Обухов",
+    "Павлов",
+    "Родионов",
+    "Суворов",
+    "Третьяков",
+    "Ушаков",
+    "Филиппов",
+    "Храмов",
+    "Цыганков",
 ]
 
 FIRST_NAMES_M = [
-    "Александр","Алексей","Андрей","Антон","Артём","Борис","Василий","Виктор",
-    "Владимир","Дмитрий","Евгений","Иван","Игорь","Кирилл","Константин",
-    "Максим","Михаил","Николай","Олег","Павел","Роман","Сергей","Степан","Юрий",
+    "Александр",
+    "Алексей",
+    "Андрей",
+    "Антон",
+    "Артём",
+    "Борис",
+    "Василий",
+    "Виктор",
+    "Владимир",
+    "Дмитрий",
+    "Евгений",
+    "Иван",
+    "Игорь",
+    "Кирилл",
+    "Константин",
+    "Максим",
+    "Михаил",
+    "Николай",
+    "Олег",
+    "Павел",
+    "Роман",
+    "Сергей",
+    "Степан",
+    "Юрий",
 ]
 
 PATRONYMICS_M = [
-    "Александрович","Алексеевич","Андреевич","Антонович","Борисович","Васильевич",
-    "Викторович","Владимирович","Дмитриевич","Евгеньевич","Иванович","Игоревич",
-    "Кириллович","Константинович","Максимович","Михайлович","Николаевич",
-    "Олегович","Павлович","Романович","Сергеевич","Степанович","Юрьевич",
+    "Александрович",
+    "Алексеевич",
+    "Андреевич",
+    "Антонович",
+    "Борисович",
+    "Васильевич",
+    "Викторович",
+    "Владимирович",
+    "Дмитриевич",
+    "Евгеньевич",
+    "Иванович",
+    "Игоревич",
+    "Кириллович",
+    "Константинович",
+    "Максимович",
+    "Михайлович",
+    "Николаевич",
+    "Олегович",
+    "Павлович",
+    "Романович",
+    "Сергеевич",
+    "Степанович",
+    "Юрьевич",
 ]
 
 POSITIONS = [
@@ -130,6 +235,7 @@ TASK_NAMES = [
 
 # ── Модели данных ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class Employee:
     id: int
@@ -138,7 +244,7 @@ class Employee:
     patronymic: str
     dept: str
     sector: str
-    role: str        # head / deputy / user
+    role: str  # head / deputy / user
     position: str
     monthly_norm: int = MONTH_NORM
 
@@ -156,7 +262,7 @@ class VacationRecord:
     employee: Employee
     month: int
     days: int
-    vac_type: str   # annual / sick
+    vac_type: str  # annual / sick
 
 
 @dataclass
@@ -166,21 +272,24 @@ class Task:
     executor: Employee
     dept: str
     plan_hours: float
-    month_planned: int         # месяц, в котором запланирована
-    month_actual: int          # месяц фактического выполнения
-    status: str = "planned"    # planned / done / overdue / shifted / reassigned / deleted
-    shift_count: int = 0       # сколько раз сдвигалась вправо
-    prev_executor: Optional[str] = None   # ФИО предыдущего исполнителя (при смене)
+    month_planned: int  # месяц, в котором запланирована
+    month_actual: int  # месяц фактического выполнения
+    status: str = "planned"  # planned / done / overdue / shifted / reassigned / deleted
+    shift_count: int = 0  # сколько раз сдвигалась вправо
+    prev_executor: Optional[str] = None  # ФИО предыдущего исполнителя (при смене)
 
     def __repr__(self):
         ex = self.executor.short_name
         prev = f" (был: {self.prev_executor})" if self.prev_executor else ""
-        return (f"[{self.id:04d}] {self.name[:38]:<38} | {ex:<18}{prev} "
-                f"| пл.{self.month_planned:02d}->факт.{self.month_actual:02d} "
-                f"| {self.plan_hours:.0f}ч | {self.status}")
+        return (
+            f"[{self.id:04d}] {self.name[:38]:<38} | {ex:<18}{prev} "
+            f"| пл.{self.month_planned:02d}->факт.{self.month_actual:02d} "
+            f"| {self.plan_hours:.0f}ч | {self.status}"
+        )
 
 
 # ── Генерация сотрудников ──────────────────────────────────────────────────────
+
 
 def generate_employees() -> List[Employee]:
     employees = []
@@ -205,17 +314,28 @@ def generate_employees() -> List[Employee]:
                 role, pos = "deputy", "Заместитель начальника отдела"
             else:
                 role, pos = "user", random.choice(POSITIONS)
-            employees.append(Employee(
-                id=emp_id, last_name=ln, first_name=fn, patronymic=pn,
-                dept=dept, sector=sector, role=role, position=pos,
-            ))
+            employees.append(
+                Employee(
+                    id=emp_id,
+                    last_name=ln,
+                    first_name=fn,
+                    patronymic=pn,
+                    dept=dept,
+                    sector=sector,
+                    role=role,
+                    position=pos,
+                )
+            )
             emp_id += 1
     return employees
 
 
 # ── Генерация плана отпусков ───────────────────────────────────────────────────
 
-def generate_vacation_plan(employees: List[Employee]) -> Dict[int, List[VacationRecord]]:
+
+def generate_vacation_plan(
+    employees: List[Employee],
+) -> Dict[int, List[VacationRecord]]:
     """
     Каждый сотрудник берёт отпуск 1 раз в год (14–28 дней).
     Летом вероятность выше.
@@ -226,7 +346,7 @@ def generate_vacation_plan(employees: List[Employee]) -> Dict[int, List[Vacation
 
     for emp in employees:
         month = random.choices(range(1, 13), weights=month_weights, k=1)[0]
-        days  = random.randint(14, 28)
+        days = random.randint(14, 28)
         vtype = "sick" if random.random() < P_VACATION_SICK else "annual"
         rec = VacationRecord(employee=emp, month=month, days=days, vac_type=vtype)
         plan[month].append(rec)
@@ -234,8 +354,9 @@ def generate_vacation_plan(employees: List[Employee]) -> Dict[int, List[Vacation
     return plan
 
 
-def get_vacation_hours(emp: Employee, month: int,
-                       vacation_plan: Dict[int, List[VacationRecord]]) -> float:
+def get_vacation_hours(
+    emp: Employee, month: int, vacation_plan: Dict[int, List[VacationRecord]]
+) -> float:
     """Сколько рабочих часов «съедает» отпуск сотрудника в данном месяце."""
     for rec in vacation_plan.get(month, []):
         if rec.employee.id == emp.id:
@@ -248,14 +369,18 @@ def get_vacation_hours(emp: Employee, month: int,
 
 _task_id = 0
 
+
 def next_id() -> int:
     global _task_id
     _task_id += 1
     return _task_id
 
 
-def generate_month_tasks(employees: List[Employee], month: int,
-                         vacation_plan: Dict[int, List[VacationRecord]]) -> List[Task]:
+def generate_month_tasks(
+    employees: List[Employee],
+    month: int,
+    vacation_plan: Dict[int, List[VacationRecord]],
+) -> List[Task]:
     """Генерирует 100–140 новых задач на месяц, распределяя по сотрудникам."""
     count = random.randint(MIN_TASKS_MONTH, MAX_TASKS_MONTH)
     tasks = []
@@ -265,7 +390,7 @@ def generate_month_tasks(employees: List[Employee], month: int,
     for emp in employees:
         vac_h = get_vacation_hours(emp, month, vacation_plan)
         effective = MONTH_NORM - vac_h
-        if effective > 20:   # минимум 20 ч свободного времени
+        if effective > 20:  # минимум 20 ч свободного времени
             available.append((emp, effective))
 
     if not available:
@@ -275,21 +400,26 @@ def generate_month_tasks(employees: List[Employee], month: int,
         emp, effective = random.choice(available)
         # Часы задачи: 4–40 ч
         hours = round(random.uniform(4, min(40, effective)), 1)
-        tasks.append(Task(
-            id=next_id(),
-            name=random.choice(TASK_NAMES),
-            executor=emp,
-            dept=emp.dept,
-            plan_hours=hours,
-            month_planned=month,
-            month_actual=month,
-        ))
+        tasks.append(
+            Task(
+                id=next_id(),
+                name=random.choice(TASK_NAMES),
+                executor=emp,
+                dept=emp.dept,
+                plan_hours=hours,
+                month_planned=month,
+                month_actual=month,
+            )
+        )
     return tasks
 
 
 # ── Расчёт нагрузки ────────────────────────────────────────────────────────────
 
-def calc_load(tasks: List[Task], month: int, include_done: bool = False) -> Dict[int, float]:
+
+def calc_load(
+    tasks: List[Task], month: int, include_done: bool = False
+) -> Dict[int, float]:
     """
     Суммарные часы по исполнителям за указанный месяц.
     include_done=True — включать выполненные задачи (для статистики нагрузки).
@@ -304,6 +434,7 @@ def calc_load(tasks: List[Task], month: int, include_done: bool = False) -> Dict
 
 
 # ── Симуляция месяца ──────────────────────────────────────────────────────────
+
 
 def simulate_month(
     month: int,
@@ -342,17 +473,25 @@ def simulate_month(
     # БАГ-ФИКС 1: calc_load без include_done — считает только активные (не done/deleted)
     # БАГ-ФИКС 2: порог недогруза поднят до 85% нормы (было 60% — слишком низко)
     load = calc_load(all_tasks, month)
-    overloaded  = [(e, load.get(e.id, 0)) for e in employees
-                   if load.get(e.id, 0) > OVERLOAD_THR]
-    underloaded = [(e, load.get(e.id, 0)) for e in employees
-                   if 0 < load.get(e.id, 0) < MONTH_NORM * 0.85]
+    overloaded = [
+        (e, load.get(e.id, 0)) for e in employees if load.get(e.id, 0) > OVERLOAD_THR
+    ]
+    underloaded = [
+        (e, load.get(e.id, 0))
+        for e in employees
+        if 0 < load.get(e.id, 0) < MONTH_NORM * 0.85
+    ]
 
     adj_count = 0
     for emp, hours in overloaded:
         excess = hours - MONTH_NORM
-        my_tasks = [t for t in all_tasks
-                    if t.executor.id == emp.id and t.month_actual == month
-                    and t.status not in ("deleted", "done")]
+        my_tasks = [
+            t
+            for t in all_tasks
+            if t.executor.id == emp.id
+            and t.month_actual == month
+            and t.status not in ("deleted", "done")
+        ]
         if not my_tasks:
             continue
         my_tasks.sort(key=lambda t: t.plan_hours, reverse=True)
@@ -374,27 +513,34 @@ def simulate_month(
     # Недогруженным добавляем часы к последней задаче
     for emp, hours in underloaded:
         deficit = MONTH_NORM - hours
-        my_tasks = [t for t in all_tasks
-                    if t.executor.id == emp.id and t.month_actual == month
-                    and t.status not in ("deleted", "done")]
+        my_tasks = [
+            t
+            for t in all_tasks
+            if t.executor.id == emp.id
+            and t.month_actual == month
+            and t.status not in ("deleted", "done")
+        ]
         if my_tasks:
             my_tasks[-1].plan_hours = round(my_tasks[-1].plan_hours + deficit * 0.5, 1)
             my_tasks[-1].status = "adjusted"
             adj_count += 1
 
     if overloaded or underloaded:
-        print(f"  Балансировка: перегруз {len(overloaded)} чел., "
-              f"недогруз {len(underloaded)} чел. -> скорректировано {adj_count} задач")
+        print(
+            f"  Балансировка: перегруз {len(overloaded)} чел., "
+            f"недогруз {len(underloaded)} чел. -> скорректировано {adj_count} задач"
+        )
         stats["balance_corrections"] += adj_count
 
     # --- Симуляция выполнения ---
-    month_tasks = [t for t in all_tasks
-                   if t.month_actual == month and t.status not in ("deleted",)]
+    month_tasks = [
+        t for t in all_tasks if t.month_actual == month and t.status not in ("deleted",)
+    ]
 
-    done_count    = 0
+    done_count = 0
     overdue_count = 0
     shifted_count = 0
-    swap_count    = 0
+    swap_count = 0
 
     for t in month_tasks:
         if t.status == "done":
@@ -424,8 +570,11 @@ def simulate_month(
                 # Смена исполнителя?
                 if random.random() < P_EXECUTOR_SWAP:
                     # Найдём сотрудника из того же отдела с меньшей нагрузкой
-                    same_dept = [e for e in employees
-                                 if e.dept == t.dept and e.id != t.executor.id]
+                    same_dept = [
+                        e
+                        for e in employees
+                        if e.dept == t.dept and e.id != t.executor.id
+                    ]
                     if same_dept:
                         next_load = calc_load(all_tasks, month + 1)
                         same_dept.sort(key=lambda e: next_load.get(e.id, 0))
@@ -443,17 +592,23 @@ def simulate_month(
             done_count += 1
             stats["done_total"] += 1
 
-    print(f"  Выполнено: {done_count}  |  Просрочено: {overdue_count}  "
-          f"|  Сдвинуто: {shifted_count}  |  Смена исполнителя: {swap_count}")
+    print(
+        f"  Выполнено: {done_count}  |  Просрочено: {overdue_count}  "
+        f"|  Сдвинуто: {shifted_count}  |  Смена исполнителя: {swap_count}"
+    )
 
     # --- Итоговая нагрузка месяца ---
     # БАГ-ФИКС 3: include_done=True — считаем фактически отработанные часы
     load_after = calc_load(all_tasks, month, include_done=True)
     avg = sum(load_after.values()) / len(employees) if employees else 0
-    over_final  = sum(1 for e in employees if load_after.get(e.id, 0) > OVERLOAD_THR)
-    under_final = sum(1 for e in employees if 0 < load_after.get(e.id, 0) < MONTH_NORM * 0.85)
-    print(f"  Средняя нагрузка: {avg:.1f} ч  |  "
-          f"Перегруз: {over_final} чел.  |  Недогруз: {under_final} чел.")
+    over_final = sum(1 for e in employees if load_after.get(e.id, 0) > OVERLOAD_THR)
+    under_final = sum(
+        1 for e in employees if 0 < load_after.get(e.id, 0) < MONTH_NORM * 0.85
+    )
+    print(
+        f"  Средняя нагрузка: {avg:.1f} ч  |  "
+        f"Перегруз: {over_final} чел.  |  Недогруз: {under_final} чел."
+    )
 
     stats["months_processed"] += 1
     return new_tasks
@@ -461,21 +616,27 @@ def simulate_month(
 
 # ── Итоговый годовой отчёт ────────────────────────────────────────────────────
 
-def print_annual_report(all_tasks: List[Task], employees: List[Employee],
-                        vacation_plan: Dict[int, List[VacationRecord]], stats: dict):
+
+def print_annual_report(
+    all_tasks: List[Task],
+    employees: List[Employee],
+    vacation_plan: Dict[int, List[VacationRecord]],
+    stats: dict,
+):
     print(f"\n{'='*80}")
     print(f"  ГОДОВОЙ ОТЧЁТ НТЦ-2Ц — {YEAR}")
     print(f"{'='*80}")
 
     # Общая статистика задач
-    total     = len(all_tasks)
-    done      = sum(1 for t in all_tasks if t.status == "done")
-    shifted   = sum(1 for t in all_tasks if "shifted" in t.status)
-    reass     = sum(1 for t in all_tasks if "reassigned" in t.status)
-    overdue   = sum(1 for t in all_tasks if t.status == "overdue")
-    adjusted  = sum(1 for t in all_tasks if t.status == "adjusted")
+    total = len(all_tasks)
+    done = sum(1 for t in all_tasks if t.status == "done")
+    shifted = sum(1 for t in all_tasks if "shifted" in t.status)
+    reass = sum(1 for t in all_tasks if "reassigned" in t.status)
+    overdue = sum(1 for t in all_tasks if t.status == "overdue")
+    adjusted = sum(1 for t in all_tasks if t.status == "adjusted")
 
-    print(f"""
+    print(
+        f"""
   ЗАДАЧИ ЗА ГОД:
     Всего создано          : {total}
     Выполнено              : {done}  ({done/total*100:.1f}%)
@@ -484,36 +645,43 @@ def print_annual_report(all_tasks: List[Task], employees: List[Employee],
     Скорректировано часов  : {adjusted}
     Просрочено (дек.)      : {overdue}
     Балансировок нагрузки  : {stats['balance_corrections']}
-""")
+"""
+    )
 
     # Статистика по месяцам
     # БАГ-ФИКС 4: считаем выполнение только тех задач, что были запланированы в месяце
     # и выполнены именно в этом же месяце (не сдвинутые в другой)
     print(f"  ЗАДАЧИ ПО МЕСЯЦАМ:")
-    print(f"  {'Месяц':<12} {'Создано':>8} {'Вып.в срок':>11} {'Сдвинуто':>10} {'Просрочено':>11}")
+    print(
+        f"  {'Месяц':<12} {'Создано':>8} {'Вып.в срок':>11} {'Сдвинуто':>10} {'Просрочено':>11}"
+    )
     print(f"  {'-'*58}")
     for m in range(1, 13):
-        m_tasks   = [t for t in all_tasks if t.month_planned == m]
+        m_tasks = [t for t in all_tasks if t.month_planned == m]
         # Выполнено В СРОК = done И не сдвигалось (month_actual == month_planned)
-        m_done    = sum(1 for t in m_tasks
-                        if t.status == "done" and t.month_actual == m)
+        m_done = sum(1 for t in m_tasks if t.status == "done" and t.month_actual == m)
         # Сдвинуто = было запланировано в m, но выполняется позже
-        m_shift   = sum(1 for t in m_tasks if "shifted" in t.status)
+        m_shift = sum(1 for t in m_tasks if "shifted" in t.status)
         m_overdue = sum(1 for t in m_tasks if t.status == "overdue")
-        pct       = m_done/len(m_tasks)*100 if m_tasks else 0
-        print(f"  {MONTHS_RU[m]:<12} {len(m_tasks):>8} {m_done:>8} ({pct:4.0f}%) "
-              f"{m_shift:>10} {m_overdue:>11}")
+        pct = m_done / len(m_tasks) * 100 if m_tasks else 0
+        print(
+            f"  {MONTHS_RU[m]:<12} {len(m_tasks):>8} {m_done:>8} ({pct:4.0f}%) "
+            f"{m_shift:>10} {m_overdue:>11}"
+        )
 
     # Отпуска
     total_vac = sum(len(v) for v in vacation_plan.values())
-    sick      = sum(1 for recs in vacation_plan.values()
-                    for r in recs if r.vac_type == "sick")
-    print(f"""
+    sick = sum(
+        1 for recs in vacation_plan.values() for r in recs if r.vac_type == "sick"
+    )
+    print(
+        f"""
   ОТПУСКА:
     Всего запланировано    : {total_vac}
     Ежегодные              : {total_vac - sick}
     Больничные             : {sick}
-""")
+"""
+    )
 
     # Топ-10 самых нагруженных за год (по кол-ву задач)
     emp_task_count: Dict[int, int] = defaultdict(int)
@@ -530,8 +698,10 @@ def print_annual_report(all_tasks: List[Task], employees: List[Employee],
     for eid, hrs in top10:
         emp = emp_by_id.get(eid)
         if emp:
-            print(f"  {emp.short_name:<30} {emp.dept:<6} "
-                  f"{emp_task_count[eid]:>6} {hrs:>8.0f}")
+            print(
+                f"  {emp.short_name:<30} {emp.dept:<6} "
+                f"{emp_task_count[eid]:>6} {hrs:>8.0f}"
+            )
 
     # Топ задач со сдвигами
     multi_shift = [t for t in all_tasks if t.shift_count >= 2]
@@ -549,7 +719,9 @@ def print_annual_report(all_tasks: List[Task], employees: List[Employee],
         print(f"  {'Задача':<38} {'Был':<20} {'Стал':<20}")
         print(f"  {'-'*78}")
         for t in swapped[:10]:
-            print(f"  {t.name[:38]:<38} {t.prev_executor:<20} {t.executor.short_name:<20}")
+            print(
+                f"  {t.name[:38]:<38} {t.prev_executor:<20} {t.executor.short_name:<20}"
+            )
 
     print(f"\n{'='*80}")
     print(f"  Симуляция завершена. Обработано {stats['months_processed']} месяцев.")
@@ -558,10 +730,11 @@ def print_annual_report(all_tasks: List[Task], employees: List[Employee],
 
 # ── Точка входа ───────────────────────────────────────────────────────────────
 
+
 def main():
-    print("="*80)
+    print("=" * 80)
     print(f"  СИМУЛЯТОР НТЦ-2Ц — ГОДОВОЙ ЦИКЛ {YEAR}")
-    print("="*80)
+    print("=" * 80)
 
     # Генерация сотрудников
     employees = generate_employees()
@@ -575,14 +748,14 @@ def main():
 
     # Счётчики статистики
     stats = {
-        "tasks_created"     : 0,
-        "done_total"        : 0,
-        "overdue_total"     : 0,
-        "shifted_total"     : 0,
-        "executor_swaps"    : 0,
+        "tasks_created": 0,
+        "done_total": 0,
+        "overdue_total": 0,
+        "shifted_total": 0,
+        "executor_swaps": 0,
         "balance_corrections": 0,
-        "reassigned"        : 0,
-        "months_processed"  : 0,
+        "reassigned": 0,
+        "months_processed": 0,
     }
 
     all_tasks: List[Task] = []

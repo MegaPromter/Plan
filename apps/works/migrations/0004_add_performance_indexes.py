@@ -6,16 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0003_alter_directory_dir_type'),
+        ("works", "0003_alter_directory_dir_type"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['source_type', 'deadline'], name='work_work_source__ec78db_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["source_type", "deadline"], name="work_work_source__ec78db_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='work',
-            index=models.Index(fields=['deadline'], name='work_work_deadlin_b39132_idx'),
+            model_name="work",
+            index=models.Index(
+                fields=["deadline"], name="work_work_deadlin_b39132_idx"
+            ),
         ),
     ]

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=17">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=20">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -49,6 +49,25 @@
       <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
     </div>
     <span class="cal-clear" onclick="clearFilter()">Показать все</span>
+    <div class="plan-summary">
+      <div>
+        <div class="plan-summary-label">Суммарная трудоёмкость</div>
+        <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
+      </div>
+      <div class="plan-summary-value" id="planSummaryValue">—</div>
+      <div class="plan-summary-sep"></div>
+      <div>
+        <div class="plan-summary-label">Сотрудники</div>
+        <div class="plan-summary-sub" id="planSummaryDept">—</div>
+      </div>
+      <div class="plan-summary-value" id="planSummaryStaff">—</div>
+      <div class="plan-summary-sep"></div>
+      <div>
+        <div class="plan-summary-label">Загрузка</div>
+        <div class="plan-summary-sub" id="planSummaryCapInfo">—</div>
+      </div>
+      <div class="plan-summary-value" id="planSummaryLoad">—</div>
+    </div>
   </div>
 
   <!-- 2. Отдел (чипы ≤5 / dropdown >5 — как в ПП) -->
@@ -97,13 +116,6 @@
     <input type="checkbox" id="filterInstant">
   </div>
 
-  <div class="plan-summary" style="display:none;">
-    <div>
-      <div class="plan-summary-label">Суммарная трудоёмкость</div>
-      <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
-    </div>
-    <div class="plan-summary-value" id="planSummaryValue">—</div>
-  </div>
 </div>
 
 <!-- ══ Floating Bulk Actions Bar (СП) ════════════════════════════════════ -->
@@ -576,7 +588,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=33"></script>
+<script src="{% static 'js/plan.js' %}?v=36"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

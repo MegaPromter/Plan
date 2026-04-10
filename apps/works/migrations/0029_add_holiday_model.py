@@ -6,22 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0028_add_performance_indexes_v2'),
+        ("works", "0028_add_performance_indexes_v2"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Holiday',
+            name="Holiday",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField(unique=True, verbose_name='Дата')),
-                ('name', models.CharField(blank=True, default='', max_length=200, verbose_name='Название')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField(unique=True, verbose_name="Дата")),
+                (
+                    "name",
+                    models.CharField(
+                        blank=True, default="", max_length=200, verbose_name="Название"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Нерабочий день',
-                'verbose_name_plural': 'Нерабочие дни',
-                'db_table': 'work_holiday',
-                'ordering': ['date'],
+                "verbose_name": "Нерабочий день",
+                "verbose_name_plural": "Нерабочие дни",
+                "db_table": "work_holiday",
+                "ordering": ["date"],
             },
         ),
     ]

@@ -7,37 +7,79 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0022_fix_workreport_doc_type_default'),
+        ("works", "0022_fix_workreport_doc_type_default"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='work',
-            name='labor',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Трудозатраты итого'),
+            model_name="work",
+            name="labor",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=12,
+                null=True,
+                validators=[django.core.validators.MinValueValidator(0)],
+                verbose_name="Трудозатраты итого",
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='norm',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Норма (чел.-ч)'),
+            model_name="work",
+            name="norm",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=12,
+                null=True,
+                validators=[django.core.validators.MinValueValidator(0)],
+                verbose_name="Норма (чел.-ч)",
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='sheets_a4',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Листы А4'),
+            model_name="work",
+            name="sheets_a4",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=12,
+                null=True,
+                validators=[django.core.validators.MinValueValidator(0)],
+                verbose_name="Листы А4",
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='total_2d',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Трудоёмкость 2D'),
+            model_name="work",
+            name="total_2d",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=12,
+                null=True,
+                validators=[django.core.validators.MinValueValidator(0)],
+                verbose_name="Трудоёмкость 2D",
+            ),
         ),
         migrations.AlterField(
-            model_name='work',
-            name='total_3d',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Трудоёмкость 3D'),
+            model_name="work",
+            name="total_3d",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=12,
+                null=True,
+                validators=[django.core.validators.MinValueValidator(0)],
+                verbose_name="Трудоёмкость 3D",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='work',
-            constraint=models.CheckConstraint(check=models.Q(('show_in_pp', False), models.Q(('pp_project', None), _negated=True), _connector='OR'), name='work_pp_requires_project'),
+            model_name="work",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    ("show_in_pp", False),
+                    models.Q(("pp_project", None), _negated=True),
+                    _connector="OR",
+                ),
+                name="work_pp_requires_project",
+            ),
         ),
     ]

@@ -2,6 +2,7 @@
 Миксины для API-вьюх.
 Аналог Flask-декораторов login_required, admin_required, write_required.
 """
+
 # Стандартный модуль для работы с JSON
 import json
 
@@ -42,7 +43,7 @@ class WriterRequiredJsonMixin(LoginRequiredJsonMixin):
             return JsonResponse({"error": "Не авторизован"}, status=401)
 
         # Получаем профиль Employee, привязанный к пользователю (может быть None)
-        employee = getattr(request.user, 'employee', None)
+        employee = getattr(request.user, "employee", None)
         if employee and employee.is_writer:
             # Пользователь имеет роль writer — пропускаем без проверки делегирований
             # Вызываем dispatch родителя LoginRequiredJsonMixin — то есть View.dispatch
@@ -52,7 +53,7 @@ class WriterRequiredJsonMixin(LoginRequiredJsonMixin):
 
         # Проверяем делегирования с правом записи (кэш на запрос)
         if employee:
-            if not hasattr(request, '_has_write_delegation'):
+            if not hasattr(request, "_has_write_delegation"):
                 request._has_write_delegation = RoleDelegation.objects.filter(
                     delegate=employee,
                     can_write=True,
@@ -64,9 +65,7 @@ class WriterRequiredJsonMixin(LoginRequiredJsonMixin):
                 )
 
         # Ни роль writer, ни делегирование не подтверждены — 403
-        return JsonResponse(
-            {"error": "Нет прав на изменение данных"}, status=403
-        )
+        return JsonResponse({"error": "Нет прав на изменение данных"}, status=403)
 
 
 class AdminRequiredJsonMixin(LoginRequiredJsonMixin):
@@ -79,16 +78,12 @@ class AdminRequiredJsonMixin(LoginRequiredJsonMixin):
             return JsonResponse({"error": "Не авторизован"}, status=401)
 
         # Получаем профиль Employee
-        employee = getattr(request.user, 'employee', None)
-        if not employee or employee.role != 'admin':
+        employee = getattr(request.user, "employee", None)
+        if not employee or employee.role != "admin":
             # Нет профиля или роль не admin — 403
-            return JsonResponse(
-                {"error": "Нет прав администратора"}, status=403
-            )
+            return JsonResponse({"error": "Нет прав администратора"}, status=403)
         # Роль admin подтверждена — пропускаем запрос дальше по MRO
-        return super(LoginRequiredJsonMixin, self).dispatch(
-            request, *args, **kwargs
-        )
+        return super(LoginRequiredJsonMixin, self).dispatch(request, *args, **kwargs)
 
 
 def parse_json_body(request):

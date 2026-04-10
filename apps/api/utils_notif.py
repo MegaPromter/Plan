@@ -7,7 +7,7 @@
 """
 
 
-def create_notification(user, type, title, message='', link=''):
+def create_notification(user, type, title, message="", link=""):
     """Создать уведомление для пользователя.
 
     Args:
@@ -21,6 +21,11 @@ def create_notification(user, type, title, message='', link=''):
         Notification instance
     """
     from apps.works.models import Notification
+
     return Notification.objects.create(
-        user=user, type=type, title=title, message=message, link=link,
+        user=user,
+        type=type,
+        title=title,
+        message=message,
+        link=link,
     )

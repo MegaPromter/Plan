@@ -6,23 +6,42 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employees', '0015_add_date_check_constraints'),
+        ("employees", "0015_add_date_check_constraints"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='department',
-            name='staff_count',
-            field=models.PositiveIntegerField(blank=True, null=True, verbose_name='Штатная численность'),
+            model_name="department",
+            name="staff_count",
+            field=models.PositiveIntegerField(
+                blank=True, null=True, verbose_name="Штатная численность"
+            ),
         ),
         migrations.AddField(
-            model_name='sector',
-            name='staff_count',
-            field=models.PositiveIntegerField(blank=True, null=True, verbose_name='Штатная численность'),
+            model_name="sector",
+            name="staff_count",
+            field=models.PositiveIntegerField(
+                blank=True, null=True, verbose_name="Штатная численность"
+            ),
         ),
         migrations.AlterField(
-            model_name='employee',
-            name='role',
-            field=models.CharField(choices=[('admin', 'Администратор'), ('ntc_head', 'Руководитель НТЦ'), ('ntc_deputy', 'Зам. руководителя НТЦ'), ('dept_head', 'Начальник отдела'), ('dept_deputy', 'Зам. начальника отдела'), ('sector_head', 'Начальник сектора'), ('chief_designer', 'Главный конструктор'), ('deputy_gd_econ', 'Зам. ГД по экономике'), ('user', 'Исполнитель')], default='user', max_length=20, verbose_name='Роль'),
+            model_name="employee",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("admin", "Администратор"),
+                    ("ntc_head", "Руководитель НТЦ"),
+                    ("ntc_deputy", "Зам. руководителя НТЦ"),
+                    ("dept_head", "Начальник отдела"),
+                    ("dept_deputy", "Зам. начальника отдела"),
+                    ("sector_head", "Начальник сектора"),
+                    ("chief_designer", "Главный конструктор"),
+                    ("deputy_gd_econ", "Зам. ГД по экономике"),
+                    ("user", "Исполнитель"),
+                ],
+                default="user",
+                max_length=20,
+                verbose_name="Роль",
+            ),
         ),
     ]

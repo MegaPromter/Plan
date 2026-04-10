@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0029_add_holiday_model'),
+        ("works", "0029_add_holiday_model"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='row_code_seq',
-            field=models.PositiveIntegerField(default=0, verbose_name='Счётчик row_code'),
+            model_name="project",
+            name="row_code_seq",
+            field=models.PositiveIntegerField(
+                default=0, verbose_name="Счётчик row_code"
+            ),
         ),
     ]

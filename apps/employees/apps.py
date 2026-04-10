@@ -5,13 +5,13 @@ from django.apps import AppConfig
 # Конфигурация приложения employees
 class EmployeesConfig(AppConfig):
     # Тип первичного ключа по умолчанию для всех моделей приложения
-    default_auto_field = 'django.db.models.BigAutoField'
+    default_auto_field = "django.db.models.BigAutoField"
     # Полное имя модуля приложения (для INSTALLED_APPS)
-    name  = 'apps.employees'
+    name = "apps.employees"
     # Короткий метка-идентификатор приложения (используется в миграциях)
-    label = 'employees'
+    label = "employees"
     # Человекочитаемое название приложения (отображается в Django Admin)
-    verbose_name = 'Сотрудники'
+    verbose_name = "Сотрудники"
 
     def ready(self):
         # Импортируем модуль сигналов при запуске приложения —

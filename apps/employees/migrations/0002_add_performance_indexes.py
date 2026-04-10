@@ -6,12 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employees', '0001_initial'),
+        ("employees", "0001_initial"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='roledelegation',
-            index=models.Index(fields=['delegate', 'valid_until'], name='emp_role_de_delegat_0f0273_idx'),
+            model_name="roledelegation",
+            index=models.Index(
+                fields=["delegate", "valid_until"],
+                name="emp_role_de_delegat_0f0273_idx",
+            ),
         ),
     ]

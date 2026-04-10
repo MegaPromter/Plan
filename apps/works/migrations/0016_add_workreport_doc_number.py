@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0015_add_notice_sector'),
+        ("works", "0015_add_notice_sector"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='workreport',
-            name='doc_number',
-            field=models.CharField(blank=True, max_length=200, verbose_name='Номер (для корректировки)'),
+            model_name="workreport",
+            name="doc_number",
+            field=models.CharField(
+                blank=True, max_length=200, verbose_name="Номер (для корректировки)"
+            ),
         ),
     ]

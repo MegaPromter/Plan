@@ -6,18 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0017_widen_decimal_fields'),
+        ("works", "0017_widen_decimal_fields"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='workreport',
-            name='ii_pi',
-            field=models.CharField(blank=True, max_length=10, verbose_name='ИИ/ПИ'),
+            model_name="workreport",
+            name="ii_pi",
+            field=models.CharField(blank=True, max_length=10, verbose_name="ИИ/ПИ"),
         ),
         migrations.AlterField(
-            model_name='workreport',
-            name='doc_number',
-            field=models.CharField(blank=True, max_length=200, verbose_name='Номер изв.'),
+            model_name="workreport",
+            name="doc_number",
+            field=models.CharField(
+                blank=True, max_length=200, verbose_name="Номер изв."
+            ),
         ),
     ]

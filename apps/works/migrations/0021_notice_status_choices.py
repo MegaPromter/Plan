@@ -6,13 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0020_add_notice_ii_pi_designation'),
+        ("works", "0020_add_notice_ii_pi_designation"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='notice',
-            name='status',
-            field=models.CharField(choices=[('active', 'Действует'), ('expired', 'Просрочено'), ('closed_no', 'Погашено без внесения'), ('closed_yes', 'Погашено с внесением')], default='active', max_length=10, verbose_name='Статус'),
+            model_name="notice",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("active", "Действует"),
+                    ("expired", "Просрочено"),
+                    ("closed_no", "Погашено без внесения"),
+                    ("closed_yes", "Погашено с внесением"),
+                ],
+                default="active",
+                max_length=10,
+                verbose_name="Статус",
+            ),
         ),
     ]

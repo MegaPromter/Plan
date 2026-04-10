@@ -1,0 +1,4 @@
+static/lib/
+static/vue/
+node_modules/
+*.min.js

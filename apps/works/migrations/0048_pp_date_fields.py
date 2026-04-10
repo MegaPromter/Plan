@@ -6,18 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0047_work_num_seq'),
+        ("works", "0047_work_num_seq"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='work',
-            name='pp_date_end',
-            field=models.DateField(blank=True, null=True, verbose_name='Окончание (ПП)'),
+            model_name="work",
+            name="pp_date_end",
+            field=models.DateField(
+                blank=True, null=True, verbose_name="Окончание (ПП)"
+            ),
         ),
         migrations.AddField(
-            model_name='work',
-            name='pp_date_start',
-            field=models.DateField(blank=True, null=True, verbose_name='Начало (ПП)'),
+            model_name="work",
+            name="pp_date_start",
+            field=models.DateField(blank=True, null=True, verbose_name="Начало (ПП)"),
         ),
     ]

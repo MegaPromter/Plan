@@ -9,6 +9,7 @@ GET /api/enterprise/capacity/ — загрузка по НТЦ-центрам и
 GET /api/enterprise/capacity/dept/<dept_id>/ — помесячная детализация отдела
     ?year=2026&mode=staff|actual&project_id=N
 """
+
 import logging
 from collections import OrderedDict
 from datetime import date
@@ -19,7 +20,7 @@ from django.http import JsonResponse
 from django.views import View
 
 from apps.api.mixins import LoginRequiredJsonMixin
-from apps.employees.models import Department, Employee, NTCCenter
+from apps.employees.models import Department, Employee
 from apps.works.models import Work, WorkCalendar
 
 logger = logging.getLogger(__name__)
@@ -28,12 +29,12 @@ logger = logging.getLogger(__name__)
 def _level(pct):
     """Порог загрузки: <60 серый, 60-80 зелёный, 80-100 жёлтый, >100 красный."""
     if pct < 60:
-        return 'low'
+        return "low"
     elif pct < 80:
-        return 'normal'
+        return "normal"
     elif pct <= 100:
-        return 'high'
-    return 'overload'
+        return "high"
+    return "overload"
 
 
 def _dept_capacity(dept, year, mode, cal_norms, project_id=None):
@@ -54,13 +55,14 @@ def _dept_capacity(dept, year, mode, cal_norms, project_id=None):
     cal_norms: {month_int: hours_norm} — нормы из таблицы WorkCalendar.
     project_id: опциональный фильтр — считать только работы данного проекта.
     """
-    if mode == 'staff':
+    if mode == "staff":
         # Штатная численность — берём из атрибута модели (задаётся вручную)
         headcount = dept.staff_count or 0
     else:
         # Фактическая численность — считаем активных сотрудников отдела
         headcount = Employee.objects.filter(
-            department=dept, is_active=True,
+            department=dept,
+            is_active=True,
         ).count()
 
     # Годовые итоги
@@ -68,14 +70,13 @@ def _dept_capacity(dept, year, mode, cal_norms, project_id=None):
 
     work_filter = Q(executor__department=dept, date_end__year=year)
     if project_id:
-        work_filter &= (
-            Q(pp_project__up_project_id=project_id)
-            | Q(project_id=project_id)
+        work_filter &= Q(pp_project__up_project_id=project_id) | Q(
+            project_id=project_id
         )
 
     year_demand = float(
-        Work.objects.filter(work_filter).aggregate(total=Sum('labor'))['total']
-        or Decimal('0')
+        Work.objects.filter(work_filter).aggregate(total=Sum("labor"))["total"]
+        or Decimal("0")
     )
 
     loading_pct = (year_demand / year_capacity * 100) if year_capacity > 0 else 0
@@ -86,29 +87,31 @@ def _dept_capacity(dept, year, mode, cal_norms, project_id=None):
         month_cap = cal_norms.get(m, 0) * headcount
         month_filter = work_filter & Q(date_end__month=m)
         month_demand = float(
-            Work.objects.filter(month_filter).aggregate(total=Sum('labor'))['total']
-            or Decimal('0')
+            Work.objects.filter(month_filter).aggregate(total=Sum("labor"))["total"]
+            or Decimal("0")
         )
         month_pct = (month_demand / month_cap * 100) if month_cap > 0 else 0
-        monthly.append({
-            'month': m,
-            'capacity': round(month_cap, 2),
-            'demand': round(month_demand, 2),
-            'loading_pct': round(month_pct, 1),
-            'balance': round(month_cap - month_demand, 2),
-            'level': _level(month_pct),
-        })
+        monthly.append(
+            {
+                "month": m,
+                "capacity": round(month_cap, 2),
+                "demand": round(month_demand, 2),
+                "loading_pct": round(month_pct, 1),
+                "balance": round(month_cap - month_demand, 2),
+                "level": _level(month_pct),
+            }
+        )
 
     return {
-        'department_id': dept.id,
-        'department_name': dept.name or dept.code,
-        'department_code': dept.code,
-        'headcount': headcount,
-        'capacity_hours': round(year_capacity, 2),
-        'demand_hours': round(year_demand, 2),
-        'loading_pct': round(loading_pct, 1),
-        'level': _level(loading_pct),
-        'monthly': monthly,
+        "department_id": dept.id,
+        "department_name": dept.name or dept.code,
+        "department_code": dept.code,
+        "headcount": headcount,
+        "capacity_hours": round(year_capacity, 2),
+        "demand_hours": round(year_demand, 2),
+        "loading_pct": round(loading_pct, 1),
+        "level": _level(loading_pct),
+        "monthly": monthly,
     }
 
 
@@ -117,21 +120,22 @@ class CapacityView(LoginRequiredJsonMixin, View):
 
     def get(self, request):
         try:
-            year = int(request.GET.get('year', date.today().year))
+            year = int(request.GET.get("year", date.today().year))
         except (ValueError, TypeError):
-            return JsonResponse({'error': 'Невалидный год'}, status=400)
-        project_id = request.GET.get('project_id')
-        mode = request.GET.get('mode', 'actual')
-        if mode not in ('staff', 'actual'):
-            mode = 'actual'
+            return JsonResponse({"error": "Невалидный год"}, status=400)
+        project_id = request.GET.get("project_id")
+        mode = request.GET.get("mode", "actual")
+        if mode not in ("staff", "actual"):
+            mode = "actual"
 
         # Нормы по месяцам из производственного календаря
         cal_norms = {}
         for wc in WorkCalendar.objects.filter(year=year):
             cal_norms[wc.month] = float(wc.hours_norm)
 
-        departments = Department.objects.select_related('ntc_center').order_by(
-            'ntc_center__code', 'code',
+        departments = Department.objects.select_related("ntc_center").order_by(
+            "ntc_center__code",
+            "code",
         )
 
         # Группируем по НТЦ-центру
@@ -146,36 +150,38 @@ class CapacityView(LoginRequiredJsonMixin, View):
                 if cid not in centers:
                     c = dept.ntc_center
                     centers[cid] = {
-                        'center_id': c.id,
-                        'center_name': c.name or c.code,
-                        'center_code': c.code,
-                        'departments': [],
-                        'headcount': 0,
-                        'capacity_hours': 0.0,
-                        'demand_hours': 0.0,
+                        "center_id": c.id,
+                        "center_name": c.name or c.code,
+                        "center_code": c.code,
+                        "departments": [],
+                        "headcount": 0,
+                        "capacity_hours": 0.0,
+                        "demand_hours": 0.0,
                     }
-                centers[cid]['departments'].append(dept_data)
-                centers[cid]['headcount'] += dept_data['headcount']
-                centers[cid]['capacity_hours'] += dept_data['capacity_hours']
-                centers[cid]['demand_hours'] += dept_data['demand_hours']
+                centers[cid]["departments"].append(dept_data)
+                centers[cid]["headcount"] += dept_data["headcount"]
+                centers[cid]["capacity_hours"] += dept_data["capacity_hours"]
+                centers[cid]["demand_hours"] += dept_data["demand_hours"]
             else:
                 no_center_depts.append(dept_data)
 
         # Финализируем агрегаты центров
         result_centers = []
         for cdata in centers.values():
-            cap = cdata['capacity_hours']
-            dem = cdata['demand_hours']
+            cap = cdata["capacity_hours"]
+            dem = cdata["demand_hours"]
             pct = (dem / cap * 100) if cap > 0 else 0
-            cdata['capacity_hours'] = round(cap, 2)
-            cdata['demand_hours'] = round(dem, 2)
-            cdata['loading_pct'] = round(pct, 1)
-            cdata['level'] = _level(pct)
+            cdata["capacity_hours"] = round(cap, 2)
+            cdata["demand_hours"] = round(dem, 2)
+            cdata["loading_pct"] = round(pct, 1)
+            cdata["level"] = _level(pct)
             result_centers.append(cdata)
 
-        return JsonResponse({
-            'year': year,
-            'mode': mode,
-            'centers': result_centers,
-            'no_center_departments': no_center_depts,
-        })
+        return JsonResponse(
+            {
+                "year": year,
+                "mode": mode,
+                "centers": result_centers,
+                "no_center_departments": no_center_depts,
+            }
+        )

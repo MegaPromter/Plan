@@ -6,17 +6,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('works', '0032_seed_task_types'),
+        ("works", "0032_seed_task_types"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='auditlog',
-            name='action',
-            field=models.CharField(choices=[('task_create', 'Создание задачи'), ('task_update', 'Изменение задачи'), ('task_delete', 'Удаление задачи'), ('pp_sync', 'Синхронизация ПП'), ('pp_create', 'Создание записи ПП'), ('pp_update', 'Изменение записи ПП'), ('pp_delete', 'Удаление записи ПП'), ('role_change', 'Смена роли пользователя'), ('user_create', 'Создание пользователя'), ('user_delete', 'Удаление пользователя'), ('dep_create', 'Создание зависимости'), ('dep_update', 'Изменение зависимости'), ('dep_delete', 'Удаление зависимости'), ('dep_align', 'Выравнивание дат')], max_length=30, verbose_name='Действие'),
+            model_name="auditlog",
+            name="action",
+            field=models.CharField(
+                choices=[
+                    ("task_create", "Создание задачи"),
+                    ("task_update", "Изменение задачи"),
+                    ("task_delete", "Удаление задачи"),
+                    ("pp_sync", "Синхронизация ПП"),
+                    ("pp_create", "Создание записи ПП"),
+                    ("pp_update", "Изменение записи ПП"),
+                    ("pp_delete", "Удаление записи ПП"),
+                    ("role_change", "Смена роли пользователя"),
+                    ("user_create", "Создание пользователя"),
+                    ("user_delete", "Удаление пользователя"),
+                    ("dep_create", "Создание зависимости"),
+                    ("dep_update", "Изменение зависимости"),
+                    ("dep_delete", "Удаление зависимости"),
+                    ("dep_align", "Выравнивание дат"),
+                ],
+                max_length=30,
+                verbose_name="Действие",
+            ),
         ),
         migrations.AddIndex(
-            model_name='notice',
-            index=models.Index(fields=['notice_number', 'ii_pi'], name='work_notice_notice__dcabf8_idx'),
+            model_name="notice",
+            index=models.Index(
+                fields=["notice_number", "ii_pi"], name="work_notice_notice__dcabf8_idx"
+            ),
         ),
     ]

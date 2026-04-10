@@ -1,6 +1,7 @@
 """
 Общие фикстуры для тестов.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -15,32 +16,33 @@ def _clear_cache():
     yield
     cache.clear()
 
+
 User = get_user_model()
 
 
 @pytest.fixture
 def dept(db):
-    return Department.objects.create(code='101', name='Тестовый отдел')
+    return Department.objects.create(code="101", name="Тестовый отдел")
 
 
 @pytest.fixture
 def sector(db, dept):
-    return Sector.objects.create(department=dept, code='101-1', name='Тестовый сектор')
+    return Sector.objects.create(department=dept, code="101-1", name="Тестовый сектор")
 
 
 @pytest.fixture
 def ntc(db):
-    return NTCCenter.objects.create(code='НТЦ-1Ц', name='Тест НТЦ')
+    return NTCCenter.objects.create(code="НТЦ-1Ц", name="Тест НТЦ")
 
 
 @pytest.fixture
 def admin_user(db):
-    user = User.objects.create_user(username='admin_test', password='testpass123')
-    emp = Employee.objects.create(
+    user = User.objects.create_user(username="admin_test", password="testpass123")
+    Employee.objects.create(
         user=user,
-        last_name='Иванов',
-        first_name='Иван',
-        patronymic='Иванович',
+        last_name="Иванов",
+        first_name="Иван",
+        patronymic="Иванович",
         role=Employee.ROLE_ADMIN,
     )
     return user
@@ -48,12 +50,12 @@ def admin_user(db):
 
 @pytest.fixture
 def regular_user(db, dept):
-    user = User.objects.create_user(username='user_test', password='testpass123')
-    emp = Employee.objects.create(
+    user = User.objects.create_user(username="user_test", password="testpass123")
+    Employee.objects.create(
         user=user,
-        last_name='Петров',
-        first_name='Пётр',
-        patronymic='Петрович',
+        last_name="Петров",
+        first_name="Пётр",
+        patronymic="Петрович",
         role=Employee.ROLE_USER,
         department=dept,
     )
@@ -62,12 +64,12 @@ def regular_user(db, dept):
 
 @pytest.fixture
 def dept_head_user(db, dept):
-    user = User.objects.create_user(username='dept_head_test', password='testpass123')
-    emp = Employee.objects.create(
+    user = User.objects.create_user(username="dept_head_test", password="testpass123")
+    Employee.objects.create(
         user=user,
-        last_name='Сидоров',
-        first_name='Сидор',
-        patronymic='Сидорович',
+        last_name="Сидоров",
+        first_name="Сидор",
+        patronymic="Сидорович",
         role=Employee.ROLE_DEPT_HEAD,
         department=dept,
     )

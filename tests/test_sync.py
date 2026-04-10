@@ -10,6 +10,7 @@
 6. deadline заблокирован для ПП-записей
 7. Сериализация: deadline = date_end для ПП-записей
 """
+
 import json
 from datetime import date
 
@@ -22,7 +23,7 @@ from apps.works.models import PPProject, Work
 @pytest.fixture
 def pp_project(db):
     """Проект производственного плана."""
-    return PPProject.objects.create(name='Персей')
+    return PPProject.objects.create(name="Персей")
 
 
 @pytest.fixture
@@ -32,12 +33,12 @@ def pp_work(db, pp_project, dept):
         show_in_pp=True,
         show_in_plan=False,
         pp_project=pp_project,
-        work_name='Разработка корпуса',
-        work_num='001',
-        work_designation='АБВГ.123456.001',
-        stage_num='1',
-        milestone_num='2',
-        task_type='Выпуск нового документа',
+        work_name="Разработка корпуса",
+        work_num="001",
+        work_designation="АБВГ.123456.001",
+        stage_num="1",
+        milestone_num="2",
+        task_type="Выпуск нового документа",
         department=dept,
         date_end=date(2026, 6, 30),
     )
@@ -47,7 +48,7 @@ def pp_work(db, pp_project, dept):
 def synced_work(pp_work):
     """Запись ПП, синхронизированная в СП."""
     pp_work.show_in_plan = True
-    pp_work.save(update_fields=['show_in_plan'])
+    pp_work.save(update_fields=["show_in_plan"])
     return pp_work
 
 
@@ -57,8 +58,8 @@ def pure_sp_work(db, dept):
     return Work.objects.create(
         show_in_pp=False,
         show_in_plan=True,
-        work_name='Техническое задание',
-        work_num='TZ-001',
+        work_name="Техническое задание",
+        work_num="TZ-001",
         department=dept,
         deadline=date(2026, 5, 15),
     )
@@ -68,6 +69,7 @@ def pure_sp_work(db, dept):
 #  Тесты синхронизации ПП → СП
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestPPSync:
     def test_sync_sets_show_in_plan(self, admin_user, pp_work, pp_project):
@@ -75,13 +77,13 @@ class TestPPSync:
         client = Client()
         client.force_login(admin_user)
         resp = client.post(
-            '/api/production_plan/sync/',
-            data=json.dumps({'project_id': pp_project.id}),
-            content_type='application/json',
+            "/api/production_plan/sync/",
+            data=json.dumps({"project_id": pp_project.id}),
+            content_type="application/json",
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data['synced'] == 1
+        assert data["synced"] == 1
 
         pp_work.refresh_from_db()
         assert pp_work.show_in_plan is True
@@ -94,13 +96,13 @@ class TestPPSync:
         client = Client()
         client.force_login(admin_user)
         resp = client.post(
-            '/api/production_plan/sync/',
-            data=json.dumps({'project_id': pp_project.id}),
-            content_type='application/json',
+            "/api/production_plan/sync/",
+            data=json.dumps({"project_id": pp_project.id}),
+            content_type="application/json",
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data['synced'] == 0
+        assert data["synced"] == 0
         assert Work.objects.count() == 1
 
     def test_sync_requires_project_id(self, admin_user):
@@ -108,9 +110,9 @@ class TestPPSync:
         client = Client()
         client.force_login(admin_user)
         resp = client.post(
-            '/api/production_plan/sync/',
+            "/api/production_plan/sync/",
             data=json.dumps({}),
-            content_type='application/json',
+            content_type="application/json",
         )
         assert resp.status_code == 400
 
@@ -119,13 +121,14 @@ class TestPPSync:
 #  Тесты удаления из СП
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestDeleteFromSP:
     def test_delete_pp_record_only_hides_from_sp(self, admin_user, synced_work):
         """Удаление ПП-записи из СП → show_in_plan=False, запись сохраняется."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.delete(f'/api/tasks/{synced_work.id}/')
+        resp = client.delete(f"/api/tasks/{synced_work.id}/")
         assert resp.status_code == 200
 
         synced_work.refresh_from_db()
@@ -137,7 +140,7 @@ class TestDeleteFromSP:
         """Удаление чистой СП-записи → запись удаляется из БД."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.delete(f'/api/tasks/{pure_sp_work.id}/')
+        resp = client.delete(f"/api/tasks/{pure_sp_work.id}/")
         assert resp.status_code == 200
         assert not Work.objects.filter(pk=pure_sp_work.pk).exists()
 
@@ -145,6 +148,7 @@ class TestDeleteFromSP:
 # ---------------------------------------------------------------------------
 #  Тесты блокировки ПП-полей в СП
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestPPFieldLocking:
@@ -161,19 +165,21 @@ class TestPPFieldLocking:
 
         # Только заблокированные поля → 403
         resp = client.put(
-            f'/api/tasks/{synced_work.id}/',
-            data=json.dumps({
-                'work_name': 'ИЗМЕНЁННОЕ ИМЯ',
-                'description': 'ИЗМЕНЁННОЕ ОБОЗНАЧЕНИЕ',
-                'stage': '999',
-                'task_type': 'Корректировка',
-                'justification': 'Попытка изменить',
-            }),
-            content_type='application/json',
+            f"/api/tasks/{synced_work.id}/",
+            data=json.dumps(
+                {
+                    "work_name": "ИЗМЕНЁННОЕ ИМЯ",
+                    "description": "ИЗМЕНЁННОЕ ОБОЗНАЧЕНИЕ",
+                    "stage": "999",
+                    "task_type": "Корректировка",
+                    "justification": "Попытка изменить",
+                }
+            ),
+            content_type="application/json",
         )
         assert resp.status_code == 403
         data = json.loads(resp.content)
-        assert 'locked_fields' in data
+        assert "locked_fields" in data
 
         synced_work.refresh_from_db()
         # Заблокированные поля НЕ изменились
@@ -188,25 +194,29 @@ class TestPPFieldLocking:
         client.force_login(admin_user)
 
         resp = client.put(
-            f'/api/tasks/{synced_work.id}/',
-            data=json.dumps({
-                'executor': 'Новый Исполнитель',
-                'date_start': '2026-01-15',
-                'date_end': '2026-07-31',
-                'deadline': '2026-06-30',
-                'plan_hours': {'2026-01': 40, '2026-02': 80},
-            }),
-            content_type='application/json',
+            f"/api/tasks/{synced_work.id}/",
+            data=json.dumps(
+                {
+                    "executor": "Новый Исполнитель",
+                    "date_start": "2026-01-15",
+                    "date_end": "2026-07-31",
+                    "deadline": "2026-06-30",
+                    "plan_hours": {"2026-01": 40, "2026-02": 80},
+                }
+            ),
+            content_type="application/json",
         )
         assert resp.status_code == 200
 
         synced_work.refresh_from_db()
         # executor устанавливается через FK; если Employee не найден — None
-        assert synced_work.executor is None  # 'Новый Исполнитель' не существует в Employee
+        assert (
+            synced_work.executor is None
+        )  # 'Новый Исполнитель' не существует в Employee
         assert synced_work.date_start == date(2026, 1, 15)
         assert synced_work.date_end == date(2026, 7, 31)
         assert synced_work.deadline == date(2026, 6, 30)
-        assert synced_work.plan_hours == {'2026-01': 40, '2026-02': 80}
+        assert synced_work.plan_hours == {"2026-01": 40, "2026-02": 80}
 
     def test_pure_sp_all_fields_editable(self, admin_user, pure_sp_work):
         """Для чистой СП-записи все поля редактируемы, включая deadline."""
@@ -214,29 +224,32 @@ class TestPPFieldLocking:
         client.force_login(admin_user)
 
         resp = client.put(
-            f'/api/tasks/{pure_sp_work.id}/',
-            data=json.dumps({
-                'work_name': 'Обновлённое ТЗ',
-                'description': 'Новое обозначение',
-                'deadline': '2026-09-01',
-                'stage': '3',
-                'justification': 'Приказ №123',
-            }),
-            content_type='application/json',
+            f"/api/tasks/{pure_sp_work.id}/",
+            data=json.dumps(
+                {
+                    "work_name": "Обновлённое ТЗ",
+                    "description": "Новое обозначение",
+                    "deadline": "2026-09-01",
+                    "stage": "3",
+                    "justification": "Приказ №123",
+                }
+            ),
+            content_type="application/json",
         )
         assert resp.status_code == 200
 
         pure_sp_work.refresh_from_db()
-        assert pure_sp_work.work_name == 'Обновлённое ТЗ'
-        assert pure_sp_work.work_designation == 'Новое обозначение'
+        assert pure_sp_work.work_name == "Обновлённое ТЗ"
+        assert pure_sp_work.work_designation == "Новое обозначение"
         assert pure_sp_work.deadline == date(2026, 9, 1)
-        assert pure_sp_work.stage_num == '3'
-        assert pure_sp_work.justification == 'Приказ №123'
+        assert pure_sp_work.stage_num == "3"
+        assert pure_sp_work.justification == "Приказ №123"
 
 
 # ---------------------------------------------------------------------------
 #  Тесты сериализации
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestSerialization:
@@ -244,44 +257,44 @@ class TestSerialization:
         """Для ПП-записи deadline в JSON = date_end из ПП."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.get('/api/tasks/')
+        resp = client.get("/api/tasks/")
         assert resp.status_code == 200
         tasks = resp.json()
         assert len(tasks) == 1
         task = tasks[0]
-        assert task['deadline'] == '2026-06-30'  # date_end из ПП
-        assert task['from_pp'] is True
+        assert task["deadline"] == "2026-06-30"  # date_end из ПП
+        assert task["from_pp"] is True
 
     def test_pp_justification_formatted(self, admin_user, synced_work):
         """Для ПП-записи обоснование формируется из ПП-полей."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.get('/api/tasks/')
+        resp = client.get("/api/tasks/")
         tasks = resp.json()
         task = tasks[0]
         # Формат: «ПП-план; Этап X; Работа Z»
-        assert 'Персей' in task['justification']
-        assert 'Этап 1' in task['justification']
-        assert '№ работы 001' in task['justification']
+        assert "Персей" in task["justification"]
+        assert "Этап 1" in task["justification"]
+        assert "№ работы 001" in task["justification"]
 
     def test_sp_deadline_is_own(self, admin_user, pure_sp_work):
         """Для чистой СП-записи deadline = собственный deadline."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.get('/api/tasks/')
+        resp = client.get("/api/tasks/")
         tasks = resp.json()
         # Находим чистую СП-задачу
-        sp_task = [t for t in tasks if not t['from_pp']]
+        sp_task = [t for t in tasks if not t["from_pp"]]
         assert len(sp_task) == 1
-        assert sp_task[0]['deadline'] == '2026-05-15'
+        assert sp_task[0]["deadline"] == "2026-05-15"
 
     def test_pp_work_number_mapped(self, admin_user, synced_work):
         """work_num маппится в work_number в JSON."""
         client = Client()
         client.force_login(admin_user)
-        resp = client.get('/api/tasks/')
+        resp = client.get("/api/tasks/")
         tasks = resp.json()
         task = tasks[0]
-        assert task['work_number'] == '001'
-        assert task['description'] == 'АБВГ.123456.001'
-        assert task['stage'] == '1'
+        assert task["work_number"] == "001"
+        assert task["description"] == "АБВГ.123456.001"
+        assert task["stage"] == "1"

@@ -6,24 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employees', '0007_expand_positions_add_ntc16c'),
+        ("employees", "0007_expand_positions_add_ntc16c"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='kpi',
+            name="kpi",
             unique_together=set(),
         ),
         migrations.AlterUniqueTogether(
-            name='sector',
+            name="sector",
             unique_together=set(),
         ),
         migrations.AddConstraint(
-            model_name='kpi',
-            constraint=models.UniqueConstraint(fields=('employee', 'year', 'month'), name='emp_kpi_employee_year_month_uniq'),
+            model_name="kpi",
+            constraint=models.UniqueConstraint(
+                fields=("employee", "year", "month"),
+                name="emp_kpi_employee_year_month_uniq",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='sector',
-            constraint=models.UniqueConstraint(fields=('department', 'code'), name='emp_sector_dept_code_uniq'),
+            model_name="sector",
+            constraint=models.UniqueConstraint(
+                fields=("department", "code"), name="emp_sector_dept_code_uniq"
+            ),
         ),
     ]
