@@ -3,6 +3,9 @@
 """
 
 import json
+import time
+
+from django.conf import settings
 
 
 class SPAContextMixin:
@@ -22,6 +25,9 @@ class SPAContextMixin:
         )
         ctx["user_dept"] = emp.department.code if emp and emp.department else ""
         ctx["is_writer"] = emp.is_writer if emp else self.request.user.is_superuser
+        # Cache-bust для static файлов в dev-режиме (timestamp меняется при каждом запросе)
+        if settings.DEBUG:
+            ctx["v"] = int(time.time())
         if self.include_col_settings:
             col_settings = {}
             if emp and emp.col_settings:

@@ -285,6 +285,8 @@ function initDeptChips() {
     spSelectedDepts = cleaned;
     _saveSPDepts();
   }
+  // Если < 2 отделов в данных, не перезатираем ранний dropdown из конфига
+  if (depts.length < 2 && _spDeptFilter) { _syncDeptFilter(); return; }
   _spDeptFilter = initDeptFilter({
     barId: 'deptBar',
     wrapId: 'spDeptWrap',
@@ -367,7 +369,20 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   const si = document.getElementById("searchInput");
   si.value = "";
+  // Brave/Chrome autocomplete может подставить значение после DOMContentLoaded
+  setTimeout(function() { si.value = ""; }, 50);
   initViewModeToggle('#spViewModeToggle', '.table-wrap', (colSettings && colSettings.sp_view_mode) || 'full', {hiddenMap: _VM_HIDDEN_SP, settingKey: 'sp_view_mode', cssPrefix: 'sp-view'});
+  // Ранний рендер dept-dropdown из серверных данных (без ожидания loadTasks)
+  if (_spCfg.deptCodes && _spCfg.deptCodes.length > 1) {
+    _spDeptFilter = initDeptFilter({
+      barId: 'deptBar', wrapId: 'spDeptWrap', idPrefix: 'sp', multiSelect: true,
+      depts: _spCfg.deptCodes,
+      getSelection: function() { return spSelectedDepts; },
+      setSelection: function(sel) { spSelectedDepts = sel; _saveSPDepts(); },
+      onApply: function() { _syncDeptFilter(); renderTable(); spUpdateStatusPanel(); _spSyncFiltersToUrl(); _syncToolbarHeight(); }
+    });
+    _syncDeptFilter();
+  }
   _syncToolbarHeight();
   var _resizePending = false;
   window.addEventListener('resize', function() {
@@ -1576,17 +1591,7 @@ function renderTable() {
   _spRenderedCount = 0;
   if (_spScrollDispose) { _spScrollDispose(); _spScrollDispose = null; }
 
-  // Ключ выбранного месяца для фильтрации по трудоёмкости
-  const _monthFilterKey = selectedMonth
-    ? `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`
-    : null;
-
   _spFiltered = tasks.filter(t => {
-    // Фильтр по месяцу: показываем только задачи с часами на выбранный месяц
-    if (_monthFilterKey) {
-      const ph = t.plan_hours_all || {};
-      if (!ph[_monthFilterKey] || parseFloat(ph[_monthFilterKey]) === 0) return false;
-    }
     // Фильтр по статусу (прогресс-панель)
     if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
 
@@ -1645,11 +1650,13 @@ function renderTable() {
   // Обновляем панель статусов (считает по задачам с учётом фильтров, но без статус-фильтра)
   spUpdateStatusPanel();
 
-  const total = tasks.length;
   const shown = _spFiltered.length;
-  const hasFilters = Object.keys(colFilters).length > 0;
+  // «из N» только при поиске/колоночных фильтрах (dept-фильтр — контекст, не доп. фильтр)
+  const _searchVal = document.getElementById("searchInput").value.trim();
+  const hasExtraFilters = _searchVal || Object.keys(colFilters).some(k => k !== 'mf_dept');
+  const total = hasExtraFilters ? _spTasksWithoutStatusFilter().length : 0;
   document.getElementById("searchCount").textContent =
-    shown ? (hasFilters ? `${shown} из ${total} зап.` : `${shown} зап.`) : "";
+    shown ? (hasExtraFilters && total !== shown ? `${shown} из ${total} зап.` : `${shown} зап.`) : "";
 
   // Пустое состояние: вообще нет задач
   if (tasks.length === 0) {

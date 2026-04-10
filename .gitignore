@@ -83,5 +83,10 @@ frontend/node_modules/
 # SQL дампы
 *.sql
 
+# Документы для Роспатента (не коммитить в git)
+MS_Prizma_*.pdf
+MS_Prizma_*.md
+Заявка/
+
 # Мусорные файлы
 =1.1.0

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=21">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'23' }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -71,15 +71,18 @@
   </div>
 
   <!-- 2. Отдел (чипы ≤5 / dropdown >5 — как в ПП) -->
-  <div class="pp-dept-bar" id="deptBar" style="display:none;">
+  <div class="pp-dept-bar" id="deptBar">
     <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Отдел:</span>
     <div id="spDeptWrap" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
   </div>
 
-  <!-- 3. Вид + статус-pills + density справа -->
+  <!-- 3. Единая строка: вкладки | статус | плотность | поиск -->
   <div class="view-tabs" id="viewTabs">
-    <button class="view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
-    <button class="view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Диаграмма Ганта</button>
+    <!-- Вкладки Таблица/Гантт -->
+    <div class="seg-group seg-views">
+      <button class="seg-btn view-tab active" data-view="table" onclick="switchView('table')">📋 Таблица</button>
+      <button class="seg-btn view-tab" data-view="gantt" onclick="switchView('gantt')">📊 Гантт</button>
+    </div>
     <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
       <button class="gantt-scale-btn" data-scale="day" onclick="setGanttScale('day')">Дни</button>
       <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">Недели</button>
@@ -87,7 +90,11 @@
       <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
     </span>
     <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" data-tip="Показать только задачи с зависимостями">🔗 Только зависимые</button>
-    <div class="status-pills" id="spStatusPanel" style="display:none;">
+
+    <span class="seg-divider"></span>
+
+    <!-- Статус-фильтры -->
+    <div class="seg-group seg-status status-pills" id="spStatusPanel" style="display:none;">
       <button class="sp sp-all" data-status="all" onclick="spFilterStatus('all')">
         Все <span class="num" id="spCountAll">0</span>
       </button>
@@ -101,19 +108,29 @@
         ⟳ <span class="num" id="spCountInWork">0</span>
       </button>
     </div>
-    <div class="density-toggle" id="spViewModeToggle" data-tip="Режим отображения столбцов" style="margin-left:auto;">
-      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i></button>
-      <button data-view="normal" data-tip="Обычно (12 колонок)"><i class="fas fa-bars"></i></button>
-      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i></button>
-    </div>
-  </div>
 
-  <!-- Скрытые элементы для JS-совместимости (searchbar удалён визуально) -->
-  <div style="display:none;">
-    <input id="searchInput" value="">
-    <span id="searchCount"></span>
-    <span id="filtersActiveBadge"></span>
-    <input type="checkbox" id="filterInstant">
+    <span class="seg-divider"></span>
+
+    <!-- Плотность -->
+    <div class="seg-group seg-density density-toggle" id="spViewModeToggle" data-tip="Режим отображения столбцов">
+      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i> Компактно</button>
+      <button data-view="normal" data-tip="Обычно (12 колонок)"><i class="fas fa-bars"></i> Обычно</button>
+      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i> Все колонки</button>
+    </div>
+
+    <!-- Spacer -->
+    <span class="seg-spacer"></span>
+
+    <!-- Поиск + счётчик -->
+    <form autocomplete="off" style="display:contents;" onsubmit="return false;">
+      <input style="display:none;" type="text" name="fake_autocomplete_trap" tabindex="-1">
+      <input class="seg-search" id="searchInput" name="sp_search_q" type="search" placeholder="🔍 Поиск..." value="" autocomplete="off" role="searchbox">
+    </form>
+    <span class="seg-count" id="searchCount"></span>
+
+    <!-- Скрытые элементы для JS-совместимости -->
+    <span id="filtersActiveBadge" style="display:none;"></span>
+    <input type="checkbox" id="filterInstant" style="display:none;">
   </div>
 
 </div>
@@ -574,10 +591,10 @@
 
 {% block scripts %}
 <!-- utils.js уже загружен из base.html -->
-<script src="{% static 'js/shared-toolbar.js' %}?v=2"></script>
+<script src="{% static 'js/shared-toolbar.js' %}?v={{ v|default:'4' }}"></script>
 <script src="{% static 'js/export.js' %}"></script>
-<script src="{% static 'js/modal.js' %}?v=4"></script>
-<script src="{% static 'js/filters.js' %}?v=1"></script>
+<script src="{% static 'js/modal.js' %}?v={{ v|default:'4' }}"></script>
+<script src="{% static 'js/filters.js' %}?v={{ v|default:'1' }}"></script>
 <script id="sp-config" type="application/json">{
   "isWriter": {{ is_writer|yesno:"true,false" }},
   "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
@@ -585,10 +602,11 @@
   "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
   "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
   "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
-  "colSettings": {{ col_settings|safe }}
+  "colSettings": {{ col_settings|safe }},
+  "deptCodes": {{ dept_codes_json|safe }}
 }</script>
-<script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=37"></script>
+<script src="{% static 'js/gantt_common.js' %}?v={{ v|default:'2' }}"></script>
+<script src="{% static 'js/plan.js' %}?v={{ v|default:'39' }}"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

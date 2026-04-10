@@ -7,8 +7,8 @@ from django.utils import timezone
 # Базовые generic-view классы Django
 from django.views.generic import ListView, TemplateView
 
-# Модель сотрудника — нужна для получения роли и настроек пользователя
-from apps.employees.models import Employee
+# Модели сотрудников — нужны для получения роли, настроек пользователя и списка отделов
+from apps.employees.models import Department, Employee
 
 # Общий миксин для SPA-страниц
 from .mixins import SPAContextMixin
@@ -49,6 +49,16 @@ class PlanSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
 
     template_name = "works/plan_spa.html"
     include_col_settings = True
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Список кодов отделов для мгновенного рендера dept-dropdown без ожидания API
+        import json as _json
+
+        ctx["dept_codes_json"] = _json.dumps(
+            list(Department.objects.order_by("code").values_list("code", flat=True))
+        )
+        return ctx
 
 
 class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):

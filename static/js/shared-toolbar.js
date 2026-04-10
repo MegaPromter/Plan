@@ -23,7 +23,7 @@ function initDeptFilter(cfg) {
   var bar = document.getElementById(barId);
   var wrap = document.getElementById(wrapId);
   if (!bar || !wrap) return null;
-  if (!depts || depts.length < 2) { bar.style.display = 'none'; return null; }
+  if (!depts || depts.length < 2) { return null; }
   bar.style.display = '';
 
   var mode = depts.length > limit ? 'dropdown' : 'chips';
