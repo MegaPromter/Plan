@@ -1,37 +1,60 @@
+/// <reference path="types.js" />
+// @ts-check — раскомментировать для строгой проверки типов в VS Code
+
 /* === DJANGO CSRF / fetchJson === */
 // getCsrfToken(), fetchJson() — в utils.js (единый источник)
 // escapeHtml(), escapeJs() — в utils.js
+
+/** @returns {{[key: string]: string}} */
 function apiHeaders() {
   return { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() };
 }
 const _now = new Date();
+/** @type {number} */
 let selectedYear  = parseInt(localStorage.getItem("plan_year")  || _now.getFullYear());
+/** @type {number|null} */
 let selectedMonth = localStorage.getItem("plan_month") !== null
   ? (localStorage.getItem("plan_month") === "null" ? null : parseInt(localStorage.getItem("plan_month")))
   : (_now.getMonth() + 1);
+/** @type {Object<string, Array<{id: number, name: string}>>} */
 let dirs = {};
 
 // Конфигурация страницы (подставляется Django-шаблоном через JSON-блок)
+/** @type {SPConfig} */
 const _spCfg = JSON.parse(document.getElementById('sp-config').textContent);
+/** @type {boolean} */
 const IS_WRITER   = _spCfg.isWriter;
+/** @type {boolean} */
 const IS_ADMIN    = _spCfg.isAdmin;
+/** @type {string} */
 const USER_ROLE   = _spCfg.userRole;
+/** @type {string} */
 const USER_DEPT   = _spCfg.userDept;
+/** @type {string} */
 const USER_SECTOR = _spCfg.userSector;
+/** @type {string} */
 const USER_CENTER = _spCfg.userCenter;
 
 // canModifyRow(), isFullAccess() — замыкания из utils.js
 const _canModify = makeCanModify(_spCfg);
 const _isFullAccess = makeIsFullAccess(_spCfg);
 
+/** @type {Task[]} */
 let tasks = [];
+/** @type {ColSettings} */
 let colSettings = _spCfg.colSettings;
+/** @type {Object<number, CalendarMonth[]>} */
 let _spCalCache = {};  // {year: [{month, hours_norm, ...}]}
 
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _spStatusFilter = 'all';
 
 /* ── Статус-панель (прогресс-бар + фильтры) для СП ───────────────────── */
+/**
+ * Определяет статус задачи для панели фильтров.
+ * @param {Task} t
+ * @returns {'done'|'overdue'|'inwork'}
+ */
 function _spGetStatus(t) {
   if (t.has_reports) return 'done';
   // is_overdue уже приходит из API, но проверим и вручную
@@ -45,14 +68,7 @@ function _spGetStatus(t) {
  * Фильтрует tasks по всем colFilters (без статус-фильтра).
  * Нужно для корректного подсчёта в панели статусов (иначе панель обнуляется
  * когда сам статус-фильтр уже применён, и цифры не совпадут).
- *
- * colFilters — объект вида:
- *   { "dept": "021",  "mf_executor": Set(["Иванов"]), "plan_hours_total": "10" }
- *
- * Типы ключей:
- *   "mf_XXX" — мультифильтр (Set значений), совпадение любого из них
- *   "plan_hours_total" — числовой порог (сумма часов >= threshold)
- *   остальные — подстрока (case-insensitive contains)
+ * @returns {Task[]}
  */
 function _spTasksWithoutStatusFilter() {
   if (Object.keys(colFilters).length === 0) return tasks;
@@ -469,6 +485,20 @@ async function _spBgLoadRemaining(baseUrl, offset) {
 // Проверяются только по запросу пользователя (кнопка «Ошибки планирования»)
 // ══════════════════════════════════════════════════════════════════════════
 const DEFAULT_MONTH_NORM = 168; // ч/мес если в производственном календаре не задано
+
+/**
+ * Нормализует ФИО: «Иванов Иван Иванович» → «Иванов И.И.»
+ * Если уже в коротком формате — возвращает как есть.
+ * @param {string} name
+ * @returns {string}
+ */
+function _toShortName(name) {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 3) return parts[0] + ' ' + parts[1][0] + '.' + parts[2][0] + '.';
+  if (parts.length === 2 && !parts[1].includes('.')) return parts[0] + ' ' + parts[1][0] + '.';
+  return name;
+}
 const PE_IGNORE_KEY = "pe_ignored_v2"; // ключ localStorage для игнорируемых ошибок
 
 // Хранилище игнорируемых ошибок: { [errKey]: true }
@@ -508,9 +538,9 @@ async function calcPlanningErrors() {
   // Фильтр по видимости: не-admin видят только задачи своего подразделения
   if (!_isFullAccess()) {
     allTasks = allTasks.filter(t => {
-      if (USER_DEPT && t.department === USER_DEPT) return true;
+      if (USER_DEPT && t.dept === USER_DEPT) return true;
       if (USER_SECTOR && t.sector_head === USER_SECTOR) return true;
-      if (USER_CENTER && t.ntc_center === USER_CENTER) return true;
+      if (USER_CENTER && t.center === USER_CENTER) return true;
       return false;
     });
   }
@@ -544,19 +574,23 @@ async function calcPlanningErrors() {
   });
 
   // ── 3. Загрузка сотрудников (перегруз/недогруз) ──────────────────────────
+  // Имена нормализуются в короткий формат (Фамилия И.О.) для сопоставления
+  // со справочником сотрудников (dirs._ids_employees).
   const execLoad = {};
   allTasks.forEach(t => {
     const execList = t.executors_list || [];
     if (execList.length > 0) {
       execList.forEach(ex => {
         if (!ex.name) return;
+        const shortN = _toShortName(ex.name);
         const hours = parseFloat((ex.hours || {})[curKey] || 0);
-        execLoad[ex.name] = (execLoad[ex.name] || 0) + hours;
+        execLoad[shortN] = (execLoad[shortN] || 0) + hours;
       });
     } else if (t.executor) {
+      const shortN = _toShortName(t.executor);
       const ph = t.plan_hours_all || {};
       const hours = parseFloat(ph[curKey] || 0);
-      execLoad[t.executor] = (execLoad[t.executor] || 0) + hours;
+      execLoad[shortN] = (execLoad[shortN] || 0) + hours;
     }
   });
 
@@ -576,7 +610,7 @@ async function calcPlanningErrors() {
   const _totalDays  = _monthEnd.getDate();
   const _vacDays = {};
   vacations.forEach(v => {
-    const name = v.executor || v.executor_name || '';
+    const name = _toShortName(v.executor || v.executor_name || '');
     if (!name) return;
     const vs = new Date(Math.max(new Date(v.date_start), _monthStart));
     const ve = new Date(Math.min(new Date(v.date_end), _monthEnd));
@@ -597,20 +631,20 @@ async function calcPlanningErrors() {
   });
 
   // ── 4. Отпуска сотрудников с запланированными задачами ───────────────────
-  // Предварительный Set исполнителей для быстрого поиска (вместо allTasks.some на каждый отпуск)
+  // Предварительный Set исполнителей (нормализованные имена)
   const _execInTasks = new Set();
   allTasks.forEach(t => {
-    (t.executors_list || []).forEach(ex => { if (ex.name) _execInTasks.add(ex.name); });
-    if (t.executor) _execInTasks.add(t.executor);
+    (t.executors_list || []).forEach(ex => { if (ex.name) _execInTasks.add(_toShortName(ex.name)); });
+    if (t.executor) _execInTasks.add(_toShortName(t.executor));
   });
 
   const vacConflicts = [];
   vacations.forEach(v => {
-    const name = v.executor || v.executor_name || "";
+    const name = _toShortName(v.executor || v.executor_name || "");
     if (!name) return;
     const ignKey = `vacation_${name}_${v.date_start}`;
     if (isIgn(ignKey)) return;
-    if (_execInTasks.has(name)) vacConflicts.push({ ...v, ignKey });
+    if (_execInTasks.has(name)) vacConflicts.push({ ...v, name, ignKey });
   });
 
   // ── 5. Разбивка ошибок по отделам ─────────────────────────────────────

@@ -1,3 +1,4 @@
+/// <reference path="types.js" />
 /* ========================================================================
    Производственный план — SPA
    Логика: лендинг со списком ПП-проектов + таблица строк с инлайн-редактированием
@@ -19,13 +20,21 @@ function _fixFilterRowTop() {
 // escapeJs() — в utils.js
 
 // Конфигурация страницы (подставляется Django-шаблоном через JSON-блок)
+/** @type {PPConfig} */
 const _ppCfg = JSON.parse(document.getElementById('pp-config').textContent);
+/** @type {boolean} */
 const IS_WRITER = _ppCfg.isWriter;
+/** @type {boolean} */
 const IS_ADMIN  = _ppCfg.isAdmin;
+/** @type {string} */
 const USER_ROLE     = _ppCfg.userRole;
+/** @type {string} */
 const USER_DEPT     = _ppCfg.userDept;
+/** @type {string} */
 const USER_SECTOR   = _ppCfg.userSector;
+/** @type {string} */
 const USER_SECTOR_NAME = _ppCfg.userSectorName;
+/** @type {string} */
 const USER_CENTER = _ppCfg.userCenter;
 
 // canModifyRow() — замыкание из utils.js

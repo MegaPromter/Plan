@@ -1,3 +1,4 @@
+/// <reference path="types.js" />
 /**
  * analytics.js — Единый модуль аналитики «Личный план».
  * Режимы: Графики / Таблицы (переключатель).
@@ -7,19 +8,29 @@
 'use strict';
 
 /* ── Конфигурация из шаблона ──────────────────────────────────────────── */
+/** @type {AnalyticsConfig} */
 var cfg = JSON.parse(document.getElementById('an-config').textContent);
 
 /* ── Режим отображения ────────────────────────────────────────────────── */
-var currentMode = 'charts';  // 'charts' | 'tables'
+/** @type {'charts'|'tables'} */
+var currentMode = 'charts';
 
 /* Все фильтры — объекты {key: true} для мульти-выбора */
+/** @type {Object<number, boolean>} */
 var currentYears    = {};
+/** @type {Object<number, boolean>} */
 var currentMonths   = {};
+/** @type {Object<number, boolean>} */
 var currentProjectIds = {};
+/** @type {Object<number, boolean>} */
 var currentProductIds = {};
+/** @type {Object<number, boolean>} */
 var currentCenterIds  = {};
+/** @type {Object<string, boolean>} */
 var currentDeptCodes  = {};
+/** @type {Object<number, boolean>} */
 var currentSectorIds  = {};
+/** @type {Object<number, boolean>} */
 var currentExecutorIds = {};
 
 currentYears[cfg.currentYear] = true;

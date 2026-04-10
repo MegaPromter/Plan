@@ -1,3 +1,4 @@
+/// <reference path="types.js" />
 /**
  * dashboard.js — Личный план сотрудника / сводка для руководителя.
  *
@@ -15,9 +16,13 @@
 (function() {
 'use strict';
 
+/** @type {DashConfig} */
 var cfg = JSON.parse(document.getElementById('dash-config').textContent);
+/** @type {number} */
 var currentYear = cfg.currentYear;
+/** @type {number} */
 var currentMonth = cfg.currentMonth;
+/** @type {*} */
 var lastData = null;
 
 /* ── Skeleton-заглушки ──────────────────────────────────────────── */
