@@ -3,7 +3,7 @@
 {% block title %}Аналитика — ПРИЗМА{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=10">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=11">
 <link rel="stylesheet" href="{% static 'css/reports.css' %}?v=4">
 {% endblock %}
 
@@ -44,5 +44,5 @@
   "role": "{{ role|escapejs }}",
   "deptCode": "{{ user_dept|escapejs }}"
 }</script>
-<script src="{% static 'js/analytics.js' %}?v=20"></script>
+<script src="{% static 'js/analytics.js' %}?v=23"></script>
 {% endblock %}

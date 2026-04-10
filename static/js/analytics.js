@@ -204,7 +204,9 @@ function renderToolbar(data) {
   var tb = document.getElementById('anToolbar');
   var html = '';
 
-  // Год (мульти-выбор, минимум 1)
+  // ── Группа 1: Год + Месяц ──
+  html += '<div class="an-toolbar-row-inline">';
+
   html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Год:</span><div class="an-chips">';
   (data.years || []).forEach(function(y) {
     var cls = currentYears[y] ? 'an-chip active' : 'an-chip';
@@ -216,7 +218,6 @@ function renderToolbar(data) {
   }
   html += '</div></div>';
 
-  // Месяц (мульти-выбор)
   html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Месяц:</span><div class="an-chips">';
   for (var m = 1; m <= 12; m++) {
     var cls = currentMonths[m] ? 'an-chip active' : 'an-chip';
@@ -227,72 +228,77 @@ function renderToolbar(data) {
   }
   html += '</div></div>';
 
-  // Проекты (мульти-выбор)
-  var projects = data.nav_projects || [];
-  if (projects.length > 0) {
-    html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Проект:</span><div class="an-chips">';
-    projects.forEach(function(p) {
-      var cls = currentProjectIds[p.id] ? 'an-chip active' : 'an-chip';
-      html += '<button class="' + cls + '" onclick="anToggleProject(' + p.id + ')">' + esc(p.name) + '</button>';
-    });
-    if (hasAny(currentProjectIds)) {
-      html += '<button class="an-chip-clear" onclick="anClearProjects()">сбросить</button>';
-    }
-    html += '</div></div>';
-  }
+  html += '</div>';
 
-  // Изделия (фильтрованные по выбранным проектам)
+  // ── Группа 2: Проект + Изделие ──
+  var projects = data.nav_projects || [];
   var allProducts = data.nav_products || [];
   var activeProjects = idsToList(currentProjectIds);
   var products = activeProjects.length > 0
     ? allProducts.filter(function(p) { return currentProjectIds[p.project_id]; })
     : allProducts;
-  if (products.length > 0) {
-    html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Изделие:</span><div class="an-chips">';
-    products.forEach(function(p) {
-      var cls = currentProductIds[p.id] ? 'an-chip active' : 'an-chip';
-      html += '<button class="' + cls + '" onclick="anToggleProduct(' + p.id + ')">' + esc(p.name) + '</button>';
-    });
-    if (hasAny(currentProductIds)) {
-      html += '<button class="an-chip-clear" onclick="anClearProducts()">сбросить</button>';
+  if (projects.length > 0 || products.length > 0) {
+    html += '<div class="an-toolbar-row-inline">';
+    if (projects.length > 0) {
+      html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Проект:</span><div class="an-chips">';
+      projects.forEach(function(p) {
+        var cls = currentProjectIds[p.id] ? 'an-chip active' : 'an-chip';
+        html += '<button class="' + cls + '" onclick="anToggleProject(' + p.id + ')">' + esc(p.name) + '</button>';
+      });
+      if (hasAny(currentProjectIds)) {
+        html += '<button class="an-chip-clear" onclick="anClearProjects()">сбросить</button>';
+      }
+      html += '</div></div>';
     }
-    html += '</div></div>';
+    if (products.length > 0) {
+      html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Изделие:</span><div class="an-chips">';
+      products.forEach(function(p) {
+        var cls = currentProductIds[p.id] ? 'an-chip active' : 'an-chip';
+        html += '<button class="' + cls + '" onclick="anToggleProduct(' + p.id + ')">' + esc(p.name) + '</button>';
+      });
+      if (hasAny(currentProductIds)) {
+        html += '<button class="an-chip-clear" onclick="anClearProducts()">сбросить</button>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
   }
 
-  // НТЦ-центры (мульти-выбор)
+  // ── Группа 3: Центр + Отдел ──
   var centers = data.nav_centers || [];
-  if (centers.length > 0) {
-    html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Центр:</span><div class="an-chips">';
-    centers.forEach(function(c) {
-      var cls = currentCenterIds[c.id] ? 'an-chip active' : 'an-chip';
-      html += '<button class="' + cls + '" onclick="anToggleCenter(' + c.id + ')">' + esc(c.code) + '</button>';
-    });
-    if (hasAny(currentCenterIds)) {
-      html += '<button class="an-chip-clear" onclick="anClearCenters()">сбросить</button>';
-    }
-    html += '</div></div>';
-  }
-
-  // Отделы (мульти-выбор чипами, фильтрованные по выбранному центру)
   var depts = data.nav_depts || [];
-  // Фильтруем по выбранным центрам (если есть)
   var activeCenters = idsToList(currentCenterIds);
   if (activeCenters.length > 0) {
     var centerSet = {};
     activeCenters.forEach(function(cid) { centerSet[cid] = true; });
     depts = depts.filter(function(d) { return d.center_id && centerSet[d.center_id]; });
   }
-  if (depts.length > 0) {
-    html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Отдел:</span><div class="an-chips">';
-    depts.forEach(function(d) {
-      var code = d.code || d;
-      var cls = currentDeptCodes[code] ? 'an-chip active' : 'an-chip';
-      html += '<button class="' + cls + '" onclick="anToggleDept(\'' + escAttr(code) + '\')">' + esc(code) + '</button>';
-    });
-    if (hasAny(currentDeptCodes)) {
-      html += '<button class="an-chip-clear" onclick="anClearDepts()">сбросить</button>';
+  if (centers.length > 0 || depts.length > 0) {
+    html += '<div class="an-toolbar-row-inline">';
+    if (centers.length > 0) {
+      html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Центр:</span><div class="an-chips">';
+      centers.forEach(function(c) {
+        var cls = currentCenterIds[c.id] ? 'an-chip active' : 'an-chip';
+        html += '<button class="' + cls + '" onclick="anToggleCenter(' + c.id + ')">' + esc(c.code) + '</button>';
+      });
+      if (hasAny(currentCenterIds)) {
+        html += '<button class="an-chip-clear" onclick="anClearCenters()">сбросить</button>';
+      }
+      html += '</div></div>';
     }
-    html += '</div></div>';
+    if (depts.length > 0) {
+      html += '<div class="an-toolbar-panel"><span class="an-toolbar-label">Отдел:</span><div class="an-chips">';
+      depts.forEach(function(d) {
+        var code = d.code || d;
+        var cls = currentDeptCodes[code] ? 'an-chip active' : 'an-chip';
+        html += '<button class="' + cls + '" onclick="anToggleDept(\'' + escAttr(code) + '\')">' + esc(code) + '</button>';
+      });
+      if (hasAny(currentDeptCodes)) {
+        html += '<button class="an-chip-clear" onclick="anClearDepts()">сбросить</button>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
   }
 
   // Секторы (мульти-выбор чипами)

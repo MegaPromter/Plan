@@ -280,26 +280,17 @@ function _sparklineHtml(months, field, w, h) {
     '</svg>';
 }
 
-/* ── П.9: Дельта (стрелочка сравнения с пред.месяцем) ─────────── */
-function _deltaHtml(current, prev, invert) {
-  if (prev === undefined || prev === null || prev === -1) return '';
-  var diff = current - prev;
-  if (Math.abs(diff) < 0.1) return '';
-  var isGood = invert ? diff < 0 : diff > 0;
-  var cls = isGood ? 'dash-delta-good' : 'dash-delta-bad';
-  var arrow = diff > 0 ? '&#9650;' : '&#9660;';
-  return '<span class="dash-delta ' + cls + '">' + arrow + ' ' + Math.abs(Math.round(diff)) + '</span>';
-}
+/* ── П.9: Дельта — отключена (визуально загромождала карточки) ─── */
+function _deltaHtml() { return ''; }
 
 /* ── П.2 + П.5 + П.9: KPI-карточки (кликабельные, sparkline, дельта) */
 function renderKPI(kpi, months, prevKpi) {
   var loadCls = loadBadgeCls(kpi.load_pct);
   var colorMap = {ok: 'an-val-green', warn: 'an-val-yellow', over: 'an-val-red'};
-  var spark = _sparklineHtml(months, 'load_pct', 80, 24);
   var pv = prevKpi || {};
 
   var cards = [
-    { val: fmtPct(kpi.load_pct), label: 'Загрузка', cls: colorMap[loadCls] || '', extra: spark + _deltaHtml(kpi.load_pct, pv.load_pct, true) },
+    { val: fmtPct(kpi.load_pct), label: 'Загрузка', cls: colorMap[loadCls] || '' },
     { val: fmtHrs(kpi.planned_hours) + ' / ' + fmtHrs(kpi.norm_hours), label: 'План / Норма (ч)', cls: 'an-val-accent' },
     { val: kpi.done_count, label: 'Выполнено', cls: 'an-val-green', extra: _deltaHtml(kpi.done_count, pv.done_count, false) },
     { val: kpi.inwork_count, label: 'В работе', cls: 'an-val-accent', action: 'tasks' },
