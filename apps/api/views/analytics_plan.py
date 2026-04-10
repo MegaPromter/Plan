@@ -20,7 +20,14 @@ from django.views import View
 
 from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
-from apps.employees.models import BusinessTrip, Department, Employee, Sector, Vacation
+from apps.employees.models import (
+    BusinessTrip,
+    Department,
+    Employee,
+    NTCCenter,
+    Sector,
+    Vacation,
+)
 from apps.works.models import (
     Project,
     ProjectProduct,
@@ -337,6 +344,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         project_ids = _int_list_param(request, "project_ids")
         product_ids = _int_list_param(request, "product_ids")
         dept_codes = _str_list_param(request, "dept_codes")
+        center_ids = _int_list_param(request, "center_ids")
         sector_ids = _int_list_param(request, "sector_ids")
         executor_ids = _int_list_param(request, "executor_ids")
 
@@ -351,6 +359,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             .annotate(_done=has_reports)
             .select_related(
                 "department",
+                "department__ntc_center",
                 "sector",
                 "executor",
                 "project",
@@ -359,6 +368,10 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                 "pp_stage",
             )
         )
+
+        # Фильтр по НТЦ-центрам
+        if center_ids:
+            base = base.filter(department__ntc_center_id__in=center_ids)
 
         # Фильтр по годам: включаем работы с датами в выбранных годах
         # и работы без дат (у них могут быть plan_hours для нужного года)
@@ -892,10 +905,23 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         nav = {}
         role = role_info["role"]
 
+        # НТЦ-центры (все, из справочника)
         if role in ("admin", "ntc_head", "ntc_deputy"):
-            nav["nav_depts"] = sorted(
-                set(w.department.code for w in works if w.department)
-            )
+            nav["nav_centers"] = [
+                {"id": c.pk, "code": c.code, "name": c.name or c.code}
+                for c in NTCCenter.objects.order_by("code")
+            ]
+
+        if role in ("admin", "ntc_head", "ntc_deputy"):
+            # Отделы из работ + привязка к центру
+            dept_set = {}
+            for w in works:
+                if w.department and w.department.code not in dept_set:
+                    dept_set[w.department.code] = {
+                        "code": w.department.code,
+                        "center_id": w.department.ntc_center_id,
+                    }
+            nav["nav_depts"] = [dept_set[code] for code in sorted(dept_set.keys())]
 
         # Секторы показываем только если drill-down в отдел или роль dept_head/dept_deputy
         if show_sectors or role in ("dept_head", "dept_deputy"):
