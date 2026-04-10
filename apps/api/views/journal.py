@@ -9,11 +9,11 @@ DELETE  /api/journal/<id>     -- удаление записи (writer, толь
 """
 
 import logging
-from datetime import date
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 
 from apps.api.mixins import (
@@ -295,8 +295,6 @@ def _apply_status_filter(qs, status_filter):
     else:
         statuses = [status_filter]
 
-    from django.utils import timezone
-
     today = timezone.now().date()
 
     q = Q()
@@ -412,29 +410,136 @@ class JournalFacetsView(LoginRequiredJsonMixin, View):
                 | Q(work_report__isnull=True, department__code=dept)
             )
 
-        # Собираем уникальные значения через сериализацию
-        # (для гибридных полей авто/ручных нужна Python-обработка)
-        notices = list(qs[:JOURNAL_MAX])
+        # SQL DISTINCT для каждой колонки вместо Python-итерации
         facets = {}
-        for col in (
-            "ii_pi",
-            "notice_number",
-            "subject",
-            "doc_designation",
-            "date_issued",
-            "date_expires",
-            "dept",
-            "sector",
-            "executor",
-            "status",
-        ):
-            vals = set()
-            for n in notices:
-                s = _serialize_notice(n)
-                v = s.get(col, "")
-                if v:
-                    vals.add(v)
-            facets[col] = sorted(vals, key=lambda x: str(x))
+
+        # ii_pi — гибрид: авто из work_report, ручное из notice
+        auto_ii = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__ii_pi", flat=True)
+            .distinct()
+        )
+        manual_ii = (
+            qs.filter(work_report__isnull=True)
+            .values_list("ii_pi", flat=True)
+            .distinct()
+        )
+        facets["ii_pi"] = sorted({v for v in list(auto_ii) + list(manual_ii) if v})
+
+        # notice_number — авто: doc_number, ручное: notice_number
+        auto_nn = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__doc_number", flat=True)
+            .distinct()
+        )
+        manual_nn = (
+            qs.filter(work_report__isnull=True)
+            .values_list("notice_number", flat=True)
+            .distinct()
+        )
+        facets["notice_number"] = sorted(
+            {v for v in list(auto_nn) + list(manual_nn) if v}
+        )
+
+        # subject — авто: work.work_name, ручное: subject
+        auto_subj = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__work__work_name", flat=True)
+            .distinct()
+        )
+        manual_subj = (
+            qs.filter(work_report__isnull=True)
+            .values_list("subject", flat=True)
+            .distinct()
+        )
+        facets["subject"] = sorted(
+            {v for v in list(auto_subj) + list(manual_subj) if v}
+        )
+
+        # doc_designation — авто: work.work_designation, ручное: doc_designation
+        auto_dd = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__work__work_designation", flat=True)
+            .distinct()
+        )
+        manual_dd = (
+            qs.filter(work_report__isnull=True)
+            .values_list("doc_designation", flat=True)
+            .distinct()
+        )
+        facets["doc_designation"] = sorted(
+            {v for v in list(auto_dd) + list(manual_dd) if v}
+        )
+
+        # date_issued — авто: date_accepted, ручное: date_issued
+        auto_di = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__date_accepted", flat=True)
+            .distinct()
+        )
+        manual_di = (
+            qs.filter(work_report__isnull=True)
+            .values_list("date_issued", flat=True)
+            .distinct()
+        )
+        facets["date_issued"] = sorted(
+            {v.isoformat() for v in list(auto_di) + list(manual_di) if v}
+        )
+
+        # date_expires — у обоих из Notice.date_expires или work_report.date_expires
+        auto_de = (
+            qs.filter(work_report__isnull=False)
+            .values_list("work_report__date_expires", flat=True)
+            .distinct()
+        )
+        manual_de = (
+            qs.filter(work_report__isnull=True)
+            .values_list("date_expires", flat=True)
+            .distinct()
+        )
+        facets["date_expires"] = sorted(
+            {v.isoformat() for v in list(auto_de) + list(manual_de) if v}
+        )
+
+        # dept — используем аннотацию dept_code_ann из _base_queryset
+        facets["dept"] = sorted(
+            {v for v in qs.values_list("dept_code_ann", flat=True).distinct() if v}
+        )
+
+        # sector — используем аннотацию sector_name_ann
+        facets["sector"] = sorted(
+            {v for v in qs.values_list("sector_name_ann", flat=True).distinct() if v}
+        )
+
+        # executor — собираем уникальные ID, затем одним запросом ФИО
+        from apps.employees.models import Employee
+
+        auto_ids = set(
+            qs.filter(
+                work_report__isnull=False,
+                work_report__work__executor__isnull=False,
+            )
+            .values_list("work_report__work__executor_id", flat=True)
+            .distinct()
+        )
+        manual_ids = set(
+            qs.filter(work_report__isnull=True, executor__isnull=False)
+            .values_list("executor_id", flat=True)
+            .distinct()
+        )
+        all_ids = auto_ids | manual_ids
+        executor_names = set()
+        if all_ids:
+            for emp in Employee.objects.filter(pk__in=all_ids):
+                name = emp.full_name
+                if name:
+                    executor_names.add(name)
+        facets["executor"] = sorted(executor_names)
+
+        # status — computed_status зависит от Python-свойства, берём DB-значения
+        facets["status"] = sorted(
+            {v for v in qs.values_list("status", flat=True).distinct() if v}
+        )
 
         return JsonResponse(facets)
 
@@ -495,7 +600,7 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
 
         # Валидация: дата выпуска не может быть позже сегодня
         di = _safe_date(data.get("date_issued"))
-        if di and di > date.today():
+        if di and di > timezone.now().date():
             return JsonResponse(
                 {"error": "Дата выпуска не может быть позже текущей даты"}, status=400
             )
@@ -684,7 +789,7 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
 
             if "date_issued" in data:
                 di = _safe_date(data["date_issued"])
-                if di and di > date.today():
+                if di and di > timezone.now().date():
                     return JsonResponse(
                         {"error": "Дата выпуска не может быть позже текущей даты"},
                         status=400,

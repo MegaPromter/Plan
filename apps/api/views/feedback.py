@@ -16,6 +16,14 @@ from apps.works.models import Feedback, FeedbackAttachment
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 МБ
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
+# Magic bytes для проверки реального типа файла
+_MAGIC_BYTES = {
+    "image/jpeg": b"\xff\xd8\xff",
+    "image/png": b"\x89PNG",
+    "image/gif": b"GIF",
+    "image/webp": b"RIFF",
+}
+
 
 def _serialize(fb, current_user=None):
     return {
@@ -91,6 +99,18 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
                     },
                     status=400,
                 )
+            # Проверка magic bytes — реальный тип файла, а не только Content-Type
+            expected_magic = _MAGIC_BYTES.get(f.content_type)
+            if expected_magic:
+                header = f.read(len(expected_magic))
+                f.seek(0)  # сбросить позицию чтения
+                if header[: len(expected_magic)] != expected_magic:
+                    return JsonResponse(
+                        {
+                            "error": f"Файл «{f.name}»: содержимое не соответствует заявленному типу"
+                        },
+                        status=400,
+                    )
 
         fb = Feedback(user=request.user, category=category, text=text)
         if "screenshot" in request.FILES:

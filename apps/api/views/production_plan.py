@@ -37,7 +37,7 @@ from apps.works.models import AuditLog, Work, WorkReport
 
 logger = logging.getLogger(__name__)
 
-TASKS_MAX = 100000
+TASKS_MAX = 5000
 
 
 def _get_pp_scope_filter(user):

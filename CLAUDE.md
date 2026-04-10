@@ -63,7 +63,7 @@
 - Redis для сессий при `CACHE_BACKEND=redis`
 
 ## Сервер (prod) — Yandex Cloud
-- **IP:** 111.88.155.59, SSH: `ssh -i ~/.ssh/id_ed25519_vps fynjy@111.88.155.59`
+- **IP:** 89.169.163.1, SSH: `ssh -i ~/.ssh/id_ed25519_vps fynjy@89.169.163.1`
 - **OS:** Ubuntu 24.04 LTS
 - **Путь:** `/opt/planapp/`, venv: `/opt/planapp/venv/`
 - **nginx** → `127.0.0.1:8000` → gunicorn (2 воркера)

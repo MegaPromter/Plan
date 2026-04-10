@@ -14,13 +14,13 @@ DELETE /api/projects/<id>/products/<pid>/  — удаление изделия
 
 # Стандартный логгер Python
 import logging
-from datetime import date
 
 # Count — агрегация: подсчёт связанных объектов
 from django.db.models import Count
 
 # JsonResponse — HTTP-ответ в формате JSON
 from django.http import JsonResponse
+from django.utils import timezone
 
 # View — базовый класс CBV
 from django.views import View
@@ -156,7 +156,7 @@ class ProjectMetricsView(LoginRequiredJsonMixin, View):
         except Project.DoesNotExist:
             return JsonResponse({"error": "Проект не найден"}, status=404)
 
-        today = date.today()
+        today = timezone.now().date()
 
         # ПП-планы проекта
         pp_projects = PPProject.objects.filter(up_project=proj)

@@ -135,7 +135,7 @@ function renderGantt() {
   empOrder.forEach(function(key) {
     var rowTrips = empTrips[key];
     var first = rowTrips[0];
-    html += '<div class="g-name"><span class="g-name-text">' + (first.executor || '?') + '</span><span class="g-dept">' + (first.dept || '') + '</span></div>';
+    html += '<div class="g-name"><span class="g-name-text">' + esc(first.executor || '?') + '</span><span class="g-dept">' + esc(first.dept || '') + '</span></div>';
     for (var d = 1; d <= dim; d++) {
       var nw = isNonWorking(curYear, curMonth, d);
       html += '<div class="g-cell' + (nw ? ' g-we' : '') + '"';
@@ -150,9 +150,9 @@ function renderGantt() {
           var span = endDay - startDay + 1;
           var sc = STATUS_COLORS[t.status] || STATUS_COLORS.plan;
           html += ' style="position:relative">';
-          html += '<div class="g-bar" style="width:calc(' + (span * 100) + '% + ' + (span - 1) + 'px);background:' + sc.bar + '" title="' + t.location + ' · ' + t.date_start + ' — ' + t.date_end + '"';
+          html += '<div class="g-bar" style="width:calc(' + (span * 100) + '% + ' + (span - 1) + 'px);background:' + sc.bar + '" title="' + esc(t.location) + ' · ' + t.date_start + ' — ' + t.date_end + '"';
           if (IS_WRITER) html += ' onclick="openEditTripModal(' + t.id + ')"';
-          html += '>' + (span >= 3 ? t.location.substring(0, 15) : '') + '</div>';
+          html += '>' + (span >= 3 ? esc(t.location.substring(0, 15)) : '') + '</div>';
           return;
         }
       });
@@ -197,7 +197,7 @@ function renderMatrix() {
   empOrder.forEach(function(key) {
     var emp = empMap[key];
     var initials = (emp.name || '??').split(' ').map(function(w) { return w[0] || ''; }).join('').substring(0, 2).toUpperCase();
-    html += '<tr><td class="td-emp"><div class="emp-cell"><div class="emp-ava">' + initials + '</div><div><div class="emp-name">' + (emp.name || '?') + '</div><div class="emp-dept">' + (emp.dept || '') + '</div></div></div></td>';
+    html += '<tr><td class="td-emp"><div class="emp-cell"><div class="emp-ava">' + esc(initials) + '</div><div><div class="emp-name">' + esc(emp.name || '?') + '</div><div class="emp-dept">' + esc(emp.dept || '') + '</div></div></div></td>';
 
     var yearTotal = 0;
 
@@ -225,7 +225,7 @@ function renderMatrix() {
 
           var sc = STATUS_COLORS[t.status] || STATUS_COLORS.plan;
           var cls = 'trip-chip chip-' + t.status;
-          html += '<span class="' + cls + '" title="' + t.location + ' · ' + STATUS_LABELS[t.status] + '"';
+          html += '<span class="' + cls + '" title="' + esc(t.location) + ' · ' + STATUS_LABELS[t.status] + '"';
           if (IS_WRITER) html += ' onclick="openEditTripModal(' + t.id + ')"';
           html += '>' + days + 'д</span> ';
 

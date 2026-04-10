@@ -54,8 +54,8 @@ INSTALLED_APPS = [
 # --- Middleware ---------------------------------------------------------
 # Цепочка обработчиков запросов/ответов (порядок важен — выполняются сверху вниз)
 MIDDLEWARE = [
-    "django.middleware.gzip.GZipMiddleware",  # сжатие ответов GZip (первым, чтобы сжать максимум)
     "django.middleware.security.SecurityMiddleware",  # заголовки безопасности (HSTS, X-Content-Type и др.)
+    "django.middleware.gzip.GZipMiddleware",  # сжатие ответов GZip (после Security — защита от BREACH)
     "whitenoise.middleware.WhiteNoiseMiddleware",  # раздача статических файлов без отдельного сервера
     "apps.api.middleware.RateLimitMiddleware",  # ограничение частоты запросов (rate limiting)
     "django.contrib.sessions.middleware.SessionMiddleware",  # поддержка сессий (должен быть до auth)

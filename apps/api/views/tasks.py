@@ -45,7 +45,7 @@ from apps.works.models import AuditLog, Project, TaskExecutor, Work, WorkReport
 
 logger = logging.getLogger(__name__)
 
-TASKS_MAX = 100000
+TASKS_MAX = 5000
 
 
 # ---------------------------------------------------------------------------
@@ -243,9 +243,7 @@ class TaskListView(LoginRequiredJsonMixin, View):
                     # Просроченные: date_end прошёл, отчёта нет — тянутся до текущего месяца
                     | (
                         Q(date_end__lt=min(sel_start, today))
-                        & ~Q(
-                            pk__in=WorkReport.objects.values_list("work_id", flat=True)
-                        )
+                        & ~Exists(WorkReport.objects.filter(work_id=OuterRef("pk")))
                         if sel_start <= today
                         else Q()
                     )

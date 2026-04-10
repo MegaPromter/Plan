@@ -1250,6 +1250,12 @@ class Notification(models.Model):
     class Meta:
         db_table = "notification"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["user", "is_read", "-created_at"],
+                name="notif_user_read_created",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.title} → {self.user}"

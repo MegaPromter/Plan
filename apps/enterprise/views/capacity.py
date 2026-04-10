@@ -12,11 +12,11 @@ GET /api/enterprise/capacity/dept/<dept_id>/ — помесячная детал
 
 import logging
 from collections import OrderedDict
-from datetime import date
 from decimal import Decimal
 
 from django.db.models import Q, Sum
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 
 from apps.api.mixins import LoginRequiredJsonMixin
@@ -120,7 +120,7 @@ class CapacityView(LoginRequiredJsonMixin, View):
 
     def get(self, request):
         try:
-            year = int(request.GET.get("year", date.today().year))
+            year = int(request.GET.get("year", timezone.now().date().year))
         except (ValueError, TypeError):
             return JsonResponse({"error": "Невалидный год"}, status=400)
         project_id = request.GET.get("project_id")

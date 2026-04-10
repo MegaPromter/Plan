@@ -10,10 +10,10 @@ API отчётных документов (WorkReport).
 
 import logging
 import re
-from datetime import date as dt_date
 
 from django.db import transaction
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views import View
 
 from apps.api.mixins import (
@@ -214,7 +214,7 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
 
         # Валидация: дата выпуска не может быть позже сегодня
         da = _safe_date(d.get("date_accepted"))
-        if da and da > dt_date.today():
+        if da and da > timezone.now().date():
             return JsonResponse(
                 {"error": "Дата выпуска не может быть позже текущей даты"}, status=400
             )
@@ -336,7 +336,7 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
 
         if "date_accepted" in d:
             da = _safe_date(d["date_accepted"])
-            if da and da > dt_date.today():
+            if da and da > timezone.now().date():
                 return JsonResponse(
                     {"error": "Дата выпуска не может быть позже текущей даты"},
                     status=400,
