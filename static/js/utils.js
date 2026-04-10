@@ -1672,6 +1672,7 @@ function flashCell(el, type) {
   });
 }
 
+
 /** Анимация появления новой строки */
 function animateRowEnter(tr) {
   if (!tr) return;

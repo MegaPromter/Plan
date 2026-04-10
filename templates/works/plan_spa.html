@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=14">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v=17">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -22,8 +22,8 @@
 <button class="btn btn-primary btn-sm" onclick="openInlineNewRow()">
   <i class="fas fa-plus"></i> Добавить задачу
 </button>
-<button class="btn btn-outline btn-sm" id="bulkModeBtn" onclick="toggleBulkMode()" data-tip="Массовое выделение">
-  <i class="fas fa-check-square"></i>
+<button class="btn btn-outline btn-sm" id="bulkModeBtn" onclick="toggleBulkMode()" title="Массовое выделение">
+  <i class="far fa-check-square" aria-hidden="true"></i> Масс. выд.
 </button>
 {% endif %}
 <span id="exportBtnContainer"></span>
@@ -106,11 +106,12 @@
   </div>
 </div>
 
-<!-- ══ Панель массовых операций ═══════════════════════════════════════════ -->
-<div id="bulkBar" style="display:none;padding:10px 16px;background:var(--accent-light);border:1px solid var(--accent);border-radius:10px;margin-bottom:12px;align-items:center;gap:12px;">
-  <button class="btn btn-sm btn-outline" onclick="bulkSelectAll()"><i class="fas fa-check-double"></i> Выбрать все</button>
-  <span style="font-size:13px;color:var(--text2);">Выбрано: <strong id="bulkCount">0</strong></span>
-  <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()"><i class="fas fa-trash"></i> Удалить выбранные</button>
+<!-- ══ Floating Bulk Actions Bar (СП) ════════════════════════════════════ -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-bar-count"><span id="bulkCount">0</span> выбрано</span>
+  <button class="btn btn-danger-outline btn-sm" onclick="bulkDelete()"><i class="fas fa-trash" aria-hidden="true"></i> Удалить</button>
+  <button class="btn btn-outline btn-sm" onclick="bulkExport()"><i class="fas fa-download" aria-hidden="true"></i> Экспорт</button>
+  <button class="bulk-bar-close" onclick="bulkDeselectAll()" title="Снять выбор"><i class="fas fa-times"></i></button>
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
@@ -258,7 +259,7 @@
         <label class="form-label">Дата окончания</label>
         <input class="form-input" id="nt-date_end" type="date" onchange="onNewTaskDateChange()">
       </div>
-      <div class="form-field" id="nt-plan-single-wrap">
+      <div class="form-field" id="nt-plan-single-wrap" style="display:none">
         <label class="form-label">План труд (часы)</label>
         <input class="form-input" id="nt-plan_hours_single" type="number" placeholder="0" oninput="updateTotalHours()">
       </div>
@@ -575,7 +576,7 @@
   "colSettings": {{ col_settings|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/plan.js' %}?v=28"></script>
+<script src="{% static 'js/plan.js' %}?v=33"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

@@ -152,20 +152,21 @@
 /* Управляется полностью из JS (inline styles + setInterval fade) */
 
 /* ── Закреплённая новая строка (pin сверху до перезагрузки) ─────── */
-@keyframes pinnedPulse {
-  0%   { background: rgba(37,99,235,0.22); }
-  50%  { background: rgba(37,99,235,0.10); }
-  100% { background: rgba(37,99,235,0.22); }
+/* Подсветка через box-shadow inset на TD — не конфликтует с background !important */
+@keyframes pinnedTdPulse {
+  0%   { box-shadow: inset 0 0 0 200px rgba(34,197,94,0.35); }
+  50%  { box-shadow: inset 0 0 0 200px rgba(34,197,94,0.12); }
+  100% { box-shadow: inset 0 0 0 200px rgba(34,197,94,0.35); }
 }
-@keyframes pinnedFadeOut {
-  from { background: rgba(37,99,235,0.18); }
-  to   { background: transparent; }
-}
-tr.row-pinned {
-  animation: pinnedPulse 1.6s ease-in-out 3;
+@keyframes pinnedTdFade {
+  from { box-shadow: inset 0 0 0 200px rgba(34,197,94,0.30); }
+  to   { box-shadow: inset 0 0 0 200px rgba(34,197,94,0); }
 }
 tr.row-pinned > td {
-  animation: colHighlight 1.2s ease-out forwards;
+  animation: pinnedTdPulse 1.8s ease-in-out 5;
+}
+tr.row-pinned.pin-fade > td {
+  animation: pinnedTdFade 0.6s ease-out forwards;
 }
 tr.row-pinned td:first-child {
   position: relative;
@@ -178,15 +179,12 @@ tr.row-pinned td:first-child::after {
   font-size: 8px;
   font-weight: 700;
   color: #fff;
-  background: var(--accent);
+  background: var(--success, #16a34a);
   border-radius: 3px;
   padding: 0 3px;
   line-height: 14px;
   letter-spacing: 0.5px;
   pointer-events: none;
-}
-tr.row-pinned.pin-fade {
-  animation: pinnedFadeOut 0.6s ease-out forwards;
 }
 
 /* ── Slideout-панель ─────────────────────────────────────────────── */

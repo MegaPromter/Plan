@@ -1018,13 +1018,13 @@ function _ppAppendBatch(count) {
     if (_st === 'done') tr.classList.add('row-done');
     else if (_st === 'overdue') tr.classList.add('row-overdue');
     else tr.classList.add('row-inwork');
-    // Закреплённая новая строка — пульсация 4.8с, затем fade-out
+    // Закреплённая новая строка — зелёная пульсация 9с через CSS box-shadow на TD
     if (row.id === _ppPinnedRowId) {
       tr.classList.add('row-pinned');
       setTimeout(function() {
         tr.classList.add('pin-fade');
         setTimeout(function() { tr.classList.remove('row-pinned', 'pin-fade'); _ppPinnedRowId = null; }, 600);
-      }, 4800);
+      }, 9000);
     }
     // Первый столбец — порядковый номер (1-based)
     let html = `<td data-col-idx="0">${idx + 1}</td>`;
@@ -1793,7 +1793,17 @@ async function ppModalSave() {
     if (!resp._error) {
       closeModal('ppNewRowModal');
       colFilters = {};
-      await loadPPRows(currentProjectId, _ppScope);
+      // Вставляем новую строку в начало rows (если API вернул work)
+      if (resp.work) {
+        rows = rows.filter(r => r.id !== resp.work.id);
+        rows.unshift(resp.work);
+      } else {
+        await loadPPRows(currentProjectId, _ppScope);
+      }
+      _ppPinnedRowId = resp.id || (resp.work && resp.work.id) || null;
+      renderPPTable();
+      initPPPeriodBar();
+      initPPDeptChips();
       showToast('Работа добавлена', 'success');
     } else {
       showToast(resp._error || 'Ошибка', 'error');

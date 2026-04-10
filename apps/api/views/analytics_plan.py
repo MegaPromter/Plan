@@ -10,6 +10,7 @@ GET /api/analytics/plan/
     &sector_ids=7,8      (фильтр по секторам)
     &executor_ids=12,15  (фильтр по сотрудникам)
 """
+
 from collections import defaultdict
 
 from django.db.models import Exists, OuterRef, Prefetch, Q
@@ -46,13 +47,13 @@ def _get_calendar_norms(years):
 
 def _get_role_info(emp):
     if not emp:
-        return {'role': 'user', 'dept': '', 'sector': '', 'sector_id': 0, 'dept_id': 0}
+        return {"role": "user", "dept": "", "sector": "", "sector_id": 0, "dept_id": 0}
     return {
-        'role': emp.role,
-        'dept': emp.department.code if emp.department else '',
-        'dept_id': emp.department_id or 0,
-        'sector': (emp.sector.name or emp.sector.code) if emp.sector else '',
-        'sector_id': emp.sector_id or 0,
+        "role": emp.role,
+        "dept": emp.department.code if emp.department else "",
+        "dept_id": emp.department_id or 0,
+        "sector": (emp.sector.name or emp.sector.code) if emp.sector else "",
+        "sector_id": emp.sector_id or 0,
     }
 
 
@@ -60,10 +61,10 @@ def _get_absences(employee_id, years):
     """Отпуска и командировки сотрудника за выбранные годы."""
     absences = []
     vac_type_map = {
-        'annual': 'Ежегодный отпуск',
-        'unpaid': 'Без сохранения',
-        'sick': 'Больничный',
-        'other': 'Прочее',
+        "annual": "Ежегодный отпуск",
+        "unpaid": "Без сохранения",
+        "sick": "Больничный",
+        "other": "Прочее",
     }
     # Захватываем отсутствия, которые пересекаются с любым из выбранных годов
     # (включая те, что начались в предыдущем году, но заканчиваются в выбранном)
@@ -71,25 +72,35 @@ def _get_absences(employee_id, years):
     for y in years:
         year_q |= Q(date_start__year=y) | Q(date_end__year=y)
     for v in Vacation.objects.filter(year_q, employee_id=employee_id):
-        absences.append({
-            'type': 'vacation',
-            'label': vac_type_map.get(v.vac_type, 'Отпуск'),
-            'date_start': v.date_start.isoformat(),
-            'date_end': v.date_end.isoformat(),
-        })
-    trip_status_ok = (BusinessTrip.STATUS_PLAN, BusinessTrip.STATUS_ACTIVE, BusinessTrip.STATUS_DONE)
+        absences.append(
+            {
+                "type": "vacation",
+                "label": vac_type_map.get(v.vac_type, "Отпуск"),
+                "date_start": v.date_start.isoformat(),
+                "date_end": v.date_end.isoformat(),
+            }
+        )
+    trip_status_ok = (
+        BusinessTrip.STATUS_PLAN,
+        BusinessTrip.STATUS_ACTIVE,
+        BusinessTrip.STATUS_DONE,
+    )
     trip_year_q = Q()
     for y in years:
         trip_year_q |= Q(date_start__year=y) | Q(date_end__year=y)
     for bt in BusinessTrip.objects.filter(
-        trip_year_q, employee_id=employee_id, status__in=trip_status_ok,
+        trip_year_q,
+        employee_id=employee_id,
+        status__in=trip_status_ok,
     ):
-        absences.append({
-            'type': 'trip',
-            'label': bt.location or 'Командировка',
-            'date_start': bt.date_start.isoformat(),
-            'date_end': bt.date_end.isoformat(),
-        })
+        absences.append(
+            {
+                "type": "trip",
+                "label": bt.location or "Командировка",
+                "date_start": bt.date_start.isoformat(),
+                "date_end": bt.date_end.isoformat(),
+            }
+        )
     return absences
 
 
@@ -110,7 +121,7 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
         if w.executor_id == emp_id:
             ph = w.plan_hours or {}
         else:
-            for te in getattr(w, '_prefetched_executors', []):
+            for te in getattr(w, "_prefetched_executors", []):
                 if te.executor_id == emp_id:
                     ph = te.plan_hours or {}
                     break
@@ -118,37 +129,59 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
         if not ph and w.executor_id != emp_id:
             continue
 
+        # Фильтруем plan_hours: оставляем только выбранные годы/месяцы
+        filtered_ph = {}
+        has_hours_in_filter = False
         for k, v in ph.items():
             try:
-                y_str, m_str = k.split('-')
+                y_str, m_str = k.split("-")
                 y_int, m_int = int(y_str), int(m_str)
                 if y_int in years_set:
                     if not months_filter_set or m_int in months_filter_set:
                         monthly_hours[(y_int, m_int)] += float(v) if v else 0
+                        filtered_ph[k] = v
+                        if float(v) if v else 0:
+                            has_hours_in_filter = True
             except (ValueError, TypeError):
                 pass
 
-        is_done = getattr(w, '_done', False)
+        # Если выбран конкретный месяц — показываем только задачи с часами в нём
+        if months_filter_set and not has_hours_in_filter:
+            continue
+
+        is_done = getattr(w, "_done", False)
         today = timezone.now().date()
         is_overdue = not is_done and w.date_end and w.date_end < today
 
-        tasks.append({
-            'id': w.id,
-            'work_name': w.work_name or w.work_num or '',
-            'work_num': w.work_num or '',
-            'project': (w.pp_stage.row_code if w.pp_stage_id else w.row_code) or '',
-            'project_name': (
-                w.project.name if w.project else
-                (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
-                 (w.pp_project.name if w.pp_project else ''))
-            ),
-            'date_start': w.date_start.isoformat() if w.date_start else '',
-            'date_end': w.date_end.isoformat() if w.date_end else '',
-            'deadline': (w.date_end or w.deadline).isoformat() if (w.date_end or w.deadline) else '',
-            'labor': _float(w.labor),
-            'plan_hours': {k: _float(v) for k, v in ph.items()},
-            'status': 'done' if is_done else ('overdue' if is_overdue else 'inwork'),
-        })
+        tasks.append(
+            {
+                "id": w.id,
+                "work_name": w.work_name or w.work_num or "",
+                "work_num": w.work_num or "",
+                "project": (w.pp_stage.row_code if w.pp_stage_id else w.row_code) or "",
+                "project_name": (
+                    w.project.name
+                    if w.project
+                    else (
+                        w.pp_project.up_project.name
+                        if w.pp_project and w.pp_project.up_project
+                        else (w.pp_project.name if w.pp_project else "")
+                    )
+                ),
+                "date_start": w.date_start.isoformat() if w.date_start else "",
+                "date_end": w.date_end.isoformat() if w.date_end else "",
+                "deadline": (
+                    (w.date_end or w.deadline).isoformat()
+                    if (w.date_end or w.deadline)
+                    else ""
+                ),
+                "labor": _float(w.labor),
+                "plan_hours": {k: _float(v) for k, v in filtered_ph.items()},
+                "status": (
+                    "done" if is_done else ("overdue" if is_overdue else "inwork")
+                ),
+            }
+        )
 
     # Суммируем по месяцам (по всем выбранным годам)
     months_data = []
@@ -161,10 +194,15 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
             norm += all_norms.get(y, {}).get(m, 0)
         # Если фильтр по месяцам — невыбранные: план=0, но норма в months_data для графика
         if months_set and m not in months_set:
-            months_data.append({
-                'month': m, 'planned': 0, 'norm': round(norm, 2),
-                'load_pct': 0, 'filtered': False,
-            })
+            months_data.append(
+                {
+                    "month": m,
+                    "planned": 0,
+                    "norm": round(norm, 2),
+                    "load_pct": 0,
+                    "filtered": False,
+                }
+            )
             continue
         # Выбранный месяц (или все, если фильтра нет)
         total_norm += norm
@@ -174,20 +212,22 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
         planned = round(planned, 2)
         load_pct = round(planned / norm * 100, 1) if norm > 0 else 0
         total_planned += planned
-        months_data.append({
-            'month': m,
-            'planned': planned,
-            'norm': round(norm, 2),
-            'load_pct': load_pct,
-        })
+        months_data.append(
+            {
+                "month": m,
+                "planned": planned,
+                "norm": round(norm, 2),
+                "load_pct": load_pct,
+            }
+        )
 
     total_load = round(total_planned / total_norm * 100, 1) if total_norm > 0 else 0
     return {
-        'tasks': tasks,
-        'months': months_data,
-        'total_planned': round(total_planned, 2),
-        'total_norm': round(total_norm, 2),
-        'total_load_pct': total_load,
+        "tasks": tasks,
+        "months": months_data,
+        "total_planned": round(total_planned, 2),
+        "total_norm": round(total_norm, 2),
+        "total_load_pct": total_load,
     }
 
 
@@ -197,17 +237,16 @@ def _build_works_summary(works, years, months_filter):
     Возвращает dict с planned/overdue/done/not_done + списки задач.
     """
     today = timezone.now().date()
-    cur_year, cur_month = today.year, today.month
     years_set = set(years)
     months_set = set(months_filter) if months_filter else None
 
-    planned = []    # Запланировано на выбранный месяц
-    overdue = []    # Ранее просроченные
-    done = []       # Выполнено
-    not_done = []   # Не выполнено (в работе)
+    planned = []  # Запланировано на выбранный месяц
+    overdue = []  # Ранее просроченные
+    done = []  # Выполнено
+    not_done = []  # Не выполнено (в работе)
 
     for w in works:
-        is_done = getattr(w, '_done', False)
+        is_done = getattr(w, "_done", False)
         is_overdue = not is_done and w.date_end and w.date_end < today
 
         # Проверяем, попадает ли задача в выбранный период по plan_hours
@@ -215,7 +254,7 @@ def _build_works_summary(works, years, months_filter):
         ph = w.plan_hours or {}
         for k, v in ph.items():
             try:
-                y_str, m_str = k.split('-')
+                y_str, m_str = k.split("-")
                 y_int, m_int = int(y_str), int(m_str)
                 if y_int in years_set and (not months_set or m_int in months_set):
                     if v and float(v) > 0:
@@ -230,6 +269,7 @@ def _build_works_summary(works, years, months_filter):
             m = list(months_set)[0]
             for y in years:
                 from datetime import date
+
                 sel_start = date(y, m, 1)
                 sel_end = date(y, m + 1, 1) if m < 12 else date(y + 1, 1, 1)
                 if w.date_start and w.date_end:
@@ -241,17 +281,25 @@ def _build_works_summary(works, years, months_filter):
             in_period = True  # все месяцы — все задачи в периоде
 
         task_item = {
-            'id': w.id,
-            'work_name': w.work_name or w.work_num or '',
-            'project_name': (
-                w.project.name if w.project else
-                (w.pp_project.up_project.name if w.pp_project and w.pp_project.up_project else
-                 (w.pp_project.name if w.pp_project else ''))
+            "id": w.id,
+            "work_name": w.work_name or w.work_num or "",
+            "project_name": (
+                w.project.name
+                if w.project
+                else (
+                    w.pp_project.up_project.name
+                    if w.pp_project and w.pp_project.up_project
+                    else (w.pp_project.name if w.pp_project else "")
+                )
             ),
-            'executor': w.executor.short_name if w.executor else '',
-            'date_end': w.date_end.isoformat() if w.date_end else '',
-            'deadline': (w.date_end or w.deadline).isoformat() if (w.date_end or w.deadline) else '',
-            'status': 'done' if is_done else ('overdue' if is_overdue else 'inwork'),
+            "executor": w.executor.short_name if w.executor else "",
+            "date_end": w.date_end.isoformat() if w.date_end else "",
+            "deadline": (
+                (w.date_end or w.deadline).isoformat()
+                if (w.date_end or w.deadline)
+                else ""
+            ),
+            "status": "done" if is_done else ("overdue" if is_overdue else "inwork"),
         }
 
         if is_done:
@@ -263,15 +311,15 @@ def _build_works_summary(works, years, months_filter):
             not_done.append(task_item)
 
     return {
-        'summary': {
-            'planned_count': len(planned),
-            'overdue_count': len(overdue),
-            'done_count': len(done),
-            'not_done_count': len(not_done),
-            'planned': planned,
-            'overdue': overdue,
-            'done': done,
-            'not_done': not_done,
+        "summary": {
+            "planned_count": len(planned),
+            "overdue_count": len(overdue),
+            "done_count": len(done),
+            "not_done_count": len(not_done),
+            "planned": planned,
+            "overdue": overdue,
+            "done": done,
+            "not_done": not_done,
         }
     }
 
@@ -281,28 +329,35 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
     def get(self, request):
         today = timezone.now().date()
-        emp = getattr(request.user, 'employee', None)
+        emp = getattr(request.user, "employee", None)
 
         # ── Параметры (все мульти-выбор) ──
-        years = _int_list_param(request, 'years') or [today.year]
-        months_filter = _int_list_param(request, 'months')
-        project_ids = _int_list_param(request, 'project_ids')
-        product_ids = _int_list_param(request, 'product_ids')
-        dept_codes = _str_list_param(request, 'dept_codes')
-        sector_ids = _int_list_param(request, 'sector_ids')
-        executor_ids = _int_list_param(request, 'executor_ids')
+        years = _int_list_param(request, "years") or [today.year]
+        months_filter = _int_list_param(request, "months")
+        project_ids = _int_list_param(request, "project_ids")
+        product_ids = _int_list_param(request, "product_ids")
+        dept_codes = _str_list_param(request, "dept_codes")
+        sector_ids = _int_list_param(request, "sector_ids")
+        executor_ids = _int_list_param(request, "executor_ids")
 
         all_norms = _get_calendar_norms(years)
-        years_set = set(years)
 
         # ── Базовый queryset ──
         vis_q = get_visibility_filter(request.user)
-        has_reports = Exists(WorkReport.objects.filter(work=OuterRef('pk')))
+        has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
 
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
             .annotate(_done=has_reports)
-            .select_related('department', 'sector', 'executor', 'project', 'pp_project', 'pp_project__up_project', 'pp_stage')
+            .select_related(
+                "department",
+                "sector",
+                "executor",
+                "project",
+                "pp_project",
+                "pp_project__up_project",
+                "pp_stage",
+            )
         )
 
         # Фильтр по годам: включаем работы с датами в выбранных годах
@@ -328,65 +383,100 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             )
 
         # Prefetch TaskExecutor
-        te_qs = TaskExecutor.objects.select_related('executor')
+        te_qs = TaskExecutor.objects.select_related("executor")
         base = base.prefetch_related(
-            Prefetch('task_executors', queryset=te_qs, to_attr='_prefetched_executors')
+            Prefetch("task_executors", queryset=te_qs, to_attr="_prefetched_executors")
         )
 
         works_list = list(base)
 
         # ── Определяем режим отображения по роли ──
         role_info = _get_role_info(emp)
-        role = role_info['role']
+        role = role_info["role"]
 
         # Конкретные сотрудники запрошены через чипы
         if executor_ids:
             if len(executor_ids) == 1:
                 return self._respond_employee(
-                    request, executor_ids[0], works_list, all_norms, years,
-                    months_filter, role_info, emp
+                    request,
+                    executor_ids[0],
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
                 )
             return self._respond_employees_list(
-                request, executor_ids, works_list, all_norms, years,
-                months_filter, role_info, emp
+                request,
+                executor_ids,
+                works_list,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
             )
 
         # user → личный план
-        if role == 'user':
+        if role == "user":
             return self._respond_employee(
-                request, emp.pk if emp else 0, works_list, all_norms, years,
-                months_filter, role_info, emp
+                request,
+                emp.pk if emp else 0,
+                works_list,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
             )
 
         # sector_head → по умолчанию свой сектор
-        if role == 'sector_head' and not dept_codes and not sector_ids:
+        if role == "sector_head" and not dept_codes and not sector_ids:
             sid = emp.sector_id if emp and emp.sector_id else 0
             return self._respond_sector(
-                request, sid, works_list, all_norms, years,
-                months_filter, role_info, emp
+                request,
+                sid,
+                works_list,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
             )
 
         # dept_head/dept_deputy → по умолчанию свой отдел
-        if role in ('dept_head', 'dept_deputy') and not dept_codes and not sector_ids:
-            dc = emp.department.code if emp and emp.department else ''
+        if role in ("dept_head", "dept_deputy") and not dept_codes and not sector_ids:
+            dc = emp.department.code if emp and emp.department else ""
             return self._respond_dept(
-                request, dc, works_list, all_norms, years,
-                months_filter, role_info, emp
+                request, dc, works_list, all_norms, years, months_filter, role_info, emp
             )
 
         # Секторы выбраны через чипы
         if sector_ids:
             if len(sector_ids) == 1:
                 return self._respond_sector(
-                    request, sector_ids[0], works_list, all_norms, years,
-                    months_filter, role_info, emp
+                    request,
+                    sector_ids[0],
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
                 )
             # Несколько секторов — фильтруем работы по секторам и показываем отдел
             filtered = [w for w in works_list if w.sector_id in set(sector_ids)]
             if dept_codes and len(dept_codes) == 1:
                 return self._respond_dept(
-                    request, dept_codes[0], filtered, all_norms, years,
-                    months_filter, role_info, emp
+                    request,
+                    dept_codes[0],
+                    filtered,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
                 )
             return self._respond_all_depts(
                 request, filtered, all_norms, years, months_filter, role_info, emp
@@ -396,15 +486,28 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         if dept_codes:
             if len(dept_codes) == 1:
                 return self._respond_dept(
-                    request, dept_codes[0], works_list, all_norms, years,
-                    months_filter, role_info, emp
+                    request,
+                    dept_codes[0],
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
                 )
             filtered = [
-                w for w in works_list
+                w
+                for w in works_list
                 if w.department and w.department.code in set(dept_codes)
             ]
             return self._respond_all_depts(
-                request, filtered, all_norms, years, months_filter, role_info, emp,
+                request,
+                filtered,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
                 show_sectors=True,
             )
 
@@ -415,102 +518,154 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
     # ── Ответ: конкретный сотрудник ──────────────────────────────────────
 
-    def _respond_employee(self, request, executor_id, works, all_norms, years,
-                          months_filter, role_info, emp):
-        target = Employee.objects.filter(pk=executor_id).select_related(
-            'department', 'sector').first()
+    def _respond_employee(
+        self,
+        request,
+        executor_id,
+        works,
+        all_norms,
+        years,
+        months_filter,
+        role_info,
+        emp,
+    ):
+        target = (
+            Employee.objects.filter(pk=executor_id)
+            .select_related("department", "sector")
+            .first()
+        )
         if not target:
-            return JsonResponse({'error': 'Сотрудник не найден'}, status=404)
+            return JsonResponse({"error": "Сотрудник не найден"}, status=404)
 
         emp_works = [
-            w for w in works
+            w
+            for w in works
             if w.executor_id == executor_id
-            or any(te.executor_id == executor_id
-                   for te in getattr(w, '_prefetched_executors', []))
+            or any(
+                te.executor_id == executor_id
+                for te in getattr(w, "_prefetched_executors", [])
+            )
         ]
 
-        plan = _build_employee_plan(executor_id, emp_works, all_norms, years, months_filter)
+        plan = _build_employee_plan(
+            executor_id, emp_works, all_norms, years, months_filter
+        )
         absences = _get_absences(executor_id, years)
 
-        return JsonResponse({
-            'view': 'employee',
-            'years': years,
-            'months_filter': months_filter,
-            'role_info': role_info,
-            'absences': absences,
-            'employee': {
-                'id': target.pk,
-                'name': target.short_name,
-                'dept': target.department.code if target.department else '',
-                'sector': (target.sector.name or target.sector.code) if target.sector else '',
-            },
-            **plan,
-            **self._nav_context(works, role_info, emp, years),
-        })
+        return JsonResponse(
+            {
+                "view": "employee",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "absences": absences,
+                "employee": {
+                    "id": target.pk,
+                    "name": target.short_name,
+                    "dept": target.department.code if target.department else "",
+                    "sector": (
+                        (target.sector.name or target.sector.code)
+                        if target.sector
+                        else ""
+                    ),
+                },
+                **plan,
+                **self._nav_context(works, role_info, emp, years),
+            }
+        )
 
     # ── Ответ: список сотрудников (мульти-выбор) ─────────────────────────
 
-    def _respond_employees_list(self, request, executor_ids, works, all_norms, years,
-                                months_filter, role_info, emp):
+    def _respond_employees_list(
+        self,
+        request,
+        executor_ids,
+        works,
+        all_norms,
+        years,
+        months_filter,
+        role_info,
+        emp,
+    ):
         executor_set = set(executor_ids)
         employees = self._collect_employees_for_works(works)
-        employees = {eid: info for eid, info in employees.items() if eid in executor_set}
+        employees = {
+            eid: info for eid, info in employees.items() if eid in executor_set
+        }
 
         employees_data = []
-        for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
-            plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
-            employees_data.append({'id': e_id, 'name': e_info['name'], **plan})
+        for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]["name"]):
+            plan = _build_employee_plan(
+                e_id, e_info["works"], all_norms, years, months_filter
+            )
+            employees_data.append({"id": e_id, "name": e_info["name"], **plan})
 
         agg = self._aggregate_months(employees_data)
 
-        return JsonResponse({
-            'view': 'employees',
-            'years': years,
-            'months_filter': months_filter,
-            'role_info': role_info,
-            'employees': employees_data,
-            **agg,
-            **self._nav_context(works, role_info, emp, years),
-        })
+        return JsonResponse(
+            {
+                "view": "employees",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "employees": employees_data,
+                **agg,
+                **self._nav_context(works, role_info, emp, years),
+            }
+        )
 
     # ── Ответ: сектор ────────────────────────────────────────────────────
 
-    def _respond_sector(self, request, sector_id, works, all_norms, years,
-                        months_filter, role_info, emp):
-        sector = Sector.objects.filter(pk=sector_id).select_related('department').first()
-        sector_name = (sector.name or sector.code) if sector else '—'
+    def _respond_sector(
+        self, request, sector_id, works, all_norms, years, months_filter, role_info, emp
+    ):
+        sector = (
+            Sector.objects.filter(pk=sector_id).select_related("department").first()
+        )
+        sector_name = (sector.name or sector.code) if sector else "—"
 
         employees = self._collect_employees_for_works(works, sector_id=sector_id)
         employees_data = []
-        for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
-            plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
-            employees_data.append({'id': e_id, 'name': e_info['name'], **plan})
+        for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]["name"]):
+            plan = _build_employee_plan(
+                e_id, e_info["works"], all_norms, years, months_filter
+            )
+            employees_data.append({"id": e_id, "name": e_info["name"], **plan})
 
         sector_months = self._aggregate_months(employees_data)
 
-        return JsonResponse({
-            'view': 'sector',
-            'years': years,
-            'months_filter': months_filter,
-            'role_info': role_info,
-            'sector': {'id': sector_id, 'name': sector_name},
-            'employees': employees_data,
-            'employee_count': len(employees_data),
-            'months': sector_months['months'],
-            'total_planned': sector_months['total_planned'],
-            'total_norm': sector_months['total_norm'],
-            'total_load_pct': sector_months['total_load_pct'],
-            **self._nav_context(works, role_info, emp, years),
-        })
+        return JsonResponse(
+            {
+                "view": "sector",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "sector": {"id": sector_id, "name": sector_name},
+                "employees": employees_data,
+                "employee_count": len(employees_data),
+                "months": sector_months["months"],
+                "total_planned": sector_months["total_planned"],
+                "total_norm": sector_months["total_norm"],
+                "total_load_pct": sector_months["total_load_pct"],
+                **self._nav_context(works, role_info, emp, years),
+            }
+        )
 
     # ── Ответ: отдел ─────────────────────────────────────────────────────
 
-    def _respond_dept(self, request, dept_code, works, all_norms, years,
-                      months_filter, role_info, emp):
-        dept = Department.objects.prefetch_related('sectors').filter(code=dept_code).first()
+    def _respond_dept(
+        self, request, dept_code, works, all_norms, years, months_filter, role_info, emp
+    ):
+        dept = (
+            Department.objects.prefetch_related("sectors")
+            .filter(code=dept_code)
+            .first()
+        )
         dept_name = dept.name if dept else dept_code
 
-        dept_works = [w for w in works if w.department and w.department.code == dept_code]
+        dept_works = [
+            w for w in works if w.department and w.department.code == dept_code
+        ]
 
         sectors_map = defaultdict(list)
         for w in dept_works:
@@ -524,49 +679,70 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         sectors_data = []
         for s_id in sorted(sectors_map.keys()):
             s_works = sectors_map[s_id]
-            employees = self._collect_employees_for_works(s_works, sector_id=s_id if s_id else None)
+            employees = self._collect_employees_for_works(
+                s_works, sector_id=s_id if s_id else None
+            )
             emp_plans = []
-            for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
-                plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
-                emp_plans.append({'id': e_id, 'name': e_info['name'], **plan})
+            for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]["name"]):
+                plan = _build_employee_plan(
+                    e_id, e_info["works"], all_norms, years, months_filter
+                )
+                emp_plans.append({"id": e_id, "name": e_info["name"], **plan})
 
             agg = self._aggregate_months(emp_plans)
-            sectors_data.append({
-                'id': s_id,
-                'name': sector_names.get(s_id, 'Без сектора' if s_id == 0 else f'Сектор {s_id}'),
-                'employees': emp_plans,
-                **agg,
-            })
+            sectors_data.append(
+                {
+                    "id": s_id,
+                    "name": sector_names.get(
+                        s_id, "Без сектора" if s_id == 0 else f"Сектор {s_id}"
+                    ),
+                    "employees": emp_plans,
+                    **agg,
+                }
+            )
 
         dept_agg = self._aggregate_months(sectors_data)
         summary = _build_works_summary(dept_works, years, months_filter)
-        emp_count = sum(len(s.get('employees', [])) for s in sectors_data)
+        emp_count = sum(len(s.get("employees", [])) for s in sectors_data)
 
-        return JsonResponse({
-            'view': 'dept',
-            'years': years,
-            'months_filter': months_filter,
-            'role_info': role_info,
-            'dept': {'code': dept_code, 'name': dept_name},
-            'sectors': sectors_data,
-            'employee_count': emp_count,
-            **dept_agg,
-            **summary,
-            **self._nav_context(dept_works, role_info, emp, years, show_sectors=True),
-        })
+        return JsonResponse(
+            {
+                "view": "dept",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "dept": {"code": dept_code, "name": dept_name},
+                "sectors": sectors_data,
+                "employee_count": emp_count,
+                **dept_agg,
+                **summary,
+                **self._nav_context(
+                    dept_works, role_info, emp, years, show_sectors=True
+                ),
+            }
+        )
 
     # ── Ответ: все отделы ─────────────────────────────────────────────────
 
-    def _respond_all_depts(self, request, works, all_norms, years,
-                           months_filter, role_info, emp, show_sectors=False):
+    def _respond_all_depts(
+        self,
+        request,
+        works,
+        all_norms,
+        years,
+        months_filter,
+        role_info,
+        emp,
+        show_sectors=False,
+    ):
         dept_map = defaultdict(list)
         for w in works:
-            code = w.department.code if w.department else '—'
+            code = w.department.code if w.department else "—"
             dept_map[code].append(w)
 
         dept_names = {}
         all_sector_names = {}
-        for d in Department.objects.prefetch_related('sectors').all():
+        for d in Department.objects.prefetch_related("sectors").all():
             dept_names[d.code] = d.name
             for s in d.sectors.all():
                 all_sector_names[s.pk] = s.name or s.code
@@ -585,45 +761,60 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             for s_id in sorted(sectors_map.keys()):
                 s_works = sectors_map[s_id]
                 employees = self._collect_employees_for_works(
-                    s_works, sector_id=s_id if s_id else None)
+                    s_works, sector_id=s_id if s_id else None
+                )
                 emp_plans = []
-                for e_id, e_info in sorted(employees.items(), key=lambda x: x[1]['name']):
-                    plan = _build_employee_plan(e_id, e_info['works'], all_norms, years, months_filter)
-                    emp_plans.append({'id': e_id, 'name': e_info['name'], **plan})
+                for e_id, e_info in sorted(
+                    employees.items(), key=lambda x: x[1]["name"]
+                ):
+                    plan = _build_employee_plan(
+                        e_id, e_info["works"], all_norms, years, months_filter
+                    )
+                    emp_plans.append({"id": e_id, "name": e_info["name"], **plan})
                 all_emp_plans.extend(emp_plans)
 
                 s_agg = self._aggregate_months(emp_plans)
-                sectors_data.append({
-                    'id': s_id,
-                    'name': all_sector_names.get(s_id, 'Без сектора' if s_id == 0 else f'Сектор {s_id}'),
-                    'employees': emp_plans,
-                    **s_agg,
-                })
+                sectors_data.append(
+                    {
+                        "id": s_id,
+                        "name": all_sector_names.get(
+                            s_id, "Без сектора" if s_id == 0 else f"Сектор {s_id}"
+                        ),
+                        "employees": emp_plans,
+                        **s_agg,
+                    }
+                )
 
             agg = self._aggregate_months(sectors_data)
-            depts_data.append({
-                'code': code,
-                'name': dept_names.get(code, code),
-                'employee_count': len(all_emp_plans),
-                'sectors': sectors_data,
-                **agg,
-            })
+            depts_data.append(
+                {
+                    "code": code,
+                    "name": dept_names.get(code, code),
+                    "employee_count": len(all_emp_plans),
+                    "sectors": sectors_data,
+                    **agg,
+                }
+            )
 
         total_agg = self._aggregate_months(depts_data)
         summary = _build_works_summary(works, years, months_filter)
-        total_emp = sum(d.get('employee_count', 0) for d in depts_data)
+        total_emp = sum(d.get("employee_count", 0) for d in depts_data)
 
-        return JsonResponse({
-            'view': 'all',
-            'years': years,
-            'months_filter': months_filter,
-            'role_info': role_info,
-            'depts': depts_data,
-            'employee_count': total_emp,
-            **total_agg,
-            **summary,
-            **self._nav_context(works, role_info, emp, years, show_sectors=show_sectors),
-        })
+        return JsonResponse(
+            {
+                "view": "all",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "depts": depts_data,
+                "employee_count": total_emp,
+                **total_agg,
+                **summary,
+                **self._nav_context(
+                    works, role_info, emp, years, show_sectors=show_sectors
+                ),
+            }
+        )
 
     # ── Вспомогательные ──────────────────────────────────────────────────
 
@@ -637,112 +828,113 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
                     pass
                 elif e:
                     if e.pk not in employees:
-                        employees[e.pk] = {'name': e.short_name, 'works': []}
+                        employees[e.pk] = {"name": e.short_name, "works": []}
                     pair = (e.pk, w.pk)
                     if pair not in seen:
                         seen.add(pair)
-                        employees[e.pk]['works'].append(w)
+                        employees[e.pk]["works"].append(w)
 
-            for te in getattr(w, '_prefetched_executors', []):
+            for te in getattr(w, "_prefetched_executors", []):
                 if te.executor_id:
                     if sector_id and te.executor and te.executor.sector_id != sector_id:
                         continue
                     e = te.executor
                     if e:
                         if e.pk not in employees:
-                            employees[e.pk] = {'name': e.short_name, 'works': []}
+                            employees[e.pk] = {"name": e.short_name, "works": []}
                         pair = (e.pk, w.pk)
                         if pair not in seen:
                             seen.add(pair)
-                            employees[e.pk]['works'].append(w)
+                            employees[e.pk]["works"].append(w)
         return employees
 
     def _aggregate_months(self, items):
-        agg = defaultdict(lambda: {'planned': 0, 'norm': 0, 'filtered': True})
+        agg = defaultdict(lambda: {"planned": 0, "norm": 0, "filtered": True})
         for item in items:
-            for m_data in item.get('months', []):
-                m = m_data['month']
-                agg[m]['planned'] += m_data.get('planned', 0)
-                agg[m]['norm'] += m_data.get('norm', 0)
-                if m_data.get('filtered') is False:
-                    agg[m]['filtered'] = False
+            for m_data in item.get("months", []):
+                m = m_data["month"]
+                agg[m]["planned"] += m_data.get("planned", 0)
+                agg[m]["norm"] += m_data.get("norm", 0)
+                if m_data.get("filtered") is False:
+                    agg[m]["filtered"] = False
 
         months = []
         total_planned = 0
         total_norm = 0
         for m in range(1, 13):
-            data = agg.get(m, {'planned': 0, 'norm': 0, 'filtered': True})
-            planned = round(data['planned'], 2)
-            norm = data['norm']
-            in_filter = data['filtered']
+            data = agg.get(m, {"planned": 0, "norm": 0, "filtered": True})
+            planned = round(data["planned"], 2)
+            norm = data["norm"]
+            in_filter = data["filtered"]
             load_pct = round(planned / norm * 100, 1) if norm > 0 else 0
             total_planned += planned
             if in_filter:
                 total_norm += norm
             month_entry = {
-                'month': m, 'planned': planned,
-                'norm': round(norm, 2), 'load_pct': load_pct,
+                "month": m,
+                "planned": planned,
+                "norm": round(norm, 2),
+                "load_pct": load_pct,
             }
             if not in_filter:
-                month_entry['filtered'] = False
+                month_entry["filtered"] = False
             months.append(month_entry)
 
         total_load = round(total_planned / total_norm * 100, 1) if total_norm > 0 else 0
         return {
-            'months': months,
-            'total_planned': round(total_planned, 2),
-            'total_norm': round(total_norm, 2),
-            'total_load_pct': total_load,
+            "months": months,
+            "total_planned": round(total_planned, 2),
+            "total_norm": round(total_norm, 2),
+            "total_load_pct": total_load,
         }
 
     def _nav_context(self, works, role_info, emp, years, show_sectors=False):
         nav = {}
-        role = role_info['role']
+        role = role_info["role"]
 
-        if role in ('admin', 'ntc_head', 'ntc_deputy'):
-            nav['nav_depts'] = sorted(set(
-                w.department.code for w in works if w.department
-            ))
+        if role in ("admin", "ntc_head", "ntc_deputy"):
+            nav["nav_depts"] = sorted(
+                set(w.department.code for w in works if w.department)
+            )
 
         # Секторы показываем только если drill-down в отдел или роль dept_head/dept_deputy
-        if show_sectors or role in ('dept_head', 'dept_deputy'):
+        if show_sectors or role in ("dept_head", "dept_deputy"):
             sectors_set = {}
             for w in works:
                 if w.sector_id and w.sector:
                     sectors_set[w.sector_id] = w.sector.name or w.sector.code
-            nav['nav_sectors'] = [
-                {'id': sid, 'name': sname}
+            nav["nav_sectors"] = [
+                {"id": sid, "name": sname}
                 for sid, sname in sorted(sectors_set.items(), key=lambda x: x[1])
             ]
 
-        proj_qs = Project.objects.only('pk', 'name_short', 'name_full')
-        if role != 'admin':
+        proj_qs = Project.objects.only("pk", "name_short", "name_full")
+        if role != "admin":
             proj_qs = proj_qs.filter(is_hidden=False)
-        nav['nav_projects'] = [
-            {'id': p.pk, 'name': p.name}
-            for p in proj_qs.order_by('name_short', 'name_full')
+        nav["nav_projects"] = [
+            {"id": p.pk, "name": p.name}
+            for p in proj_qs.order_by("name_short", "name_full")
         ]
-        prod_qs = ProjectProduct.objects.only('pk', 'name', 'name_short', 'project_id')
-        if role != 'admin':
+        prod_qs = ProjectProduct.objects.only("pk", "name", "name_short", "project_id")
+        if role != "admin":
             prod_qs = prod_qs.filter(project__is_hidden=False)
-        nav['nav_products'] = [
-            {'id': pp.pk, 'name': pp.name_short or pp.name,
-             'project_id': pp.project_id}
-            for pp in prod_qs.order_by('name')
+        nav["nav_products"] = [
+            {"id": pp.pk, "name": pp.name_short or pp.name, "project_id": pp.project_id}
+            for pp in prod_qs.order_by("name")
         ]
 
         base_year = years[0] if years else timezone.now().date().year
-        nav['years'] = list(range(base_year - 3, base_year + 4))
+        nav["years"] = list(range(base_year - 3, base_year + 4))
 
         return nav
 
 
 def _int_list_param(request, name):
-    val = request.GET.get(name, '').strip()
+    val = request.GET.get(name, "").strip()
     if not val:
         return []
     result = []
-    for part in val.split(','):
+    for part in val.split(","):
         part = part.strip()
         if part:
             try:
@@ -753,7 +945,7 @@ def _int_list_param(request, name):
 
 
 def _str_list_param(request, name):
-    val = request.GET.get(name, '').strip()
+    val = request.GET.get(name, "").strip()
     if not val:
         return []
-    return [p.strip() for p in val.split(',') if p.strip()]
+    return [p.strip() for p in val.split(",") if p.strip()]

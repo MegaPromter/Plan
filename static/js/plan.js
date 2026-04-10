@@ -1673,13 +1673,13 @@ function makeRow(t, num) {
   // Флаг: задача перенесена из Производственного плана
   const isFromPP = !!t.from_pp;
   if (isFromPP) tr.classList.add('pp-locked');
-  // Закреплённая новая строка — пульсация 4.8с, затем fade-out
+  // Закреплённая новая строка — зелёная пульсация 9с через CSS box-shadow на TD
   if (t.id === _spPinnedRowId) {
     tr.classList.add('row-pinned');
     setTimeout(function() {
       tr.classList.add('pin-fade');
       setTimeout(function() { tr.classList.remove('row-pinned', 'pin-fade'); _spPinnedRowId = null; }, 600);
-    }, 4800);
+    }, 9000);
   }
 
   // ── Колонка «№» с бейджем 🔒 ПП для перенесённых задач ──
@@ -2041,23 +2041,19 @@ function makeRow(t, num) {
   const editBtn = document.createElement("button");
   editBtn.className = "btn-edit-row"; editBtn.textContent = isFromPP ? "🔒 ✏️" : "✏️";
   editBtn.title = isFromPP ? "Редактирование (частичное): задача из Производственного плана" : "Редактировать";
-  editBtn.style.display = "inline-block";
-  editBtn.onclick = () => openEditTaskModal(t);
+  editBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); openEditTaskModal(t); });
   // Кнопка «Отчёт» — открывает модал отчётных документов (для всех ролей)
   const repBtn = document.createElement("button");
   repBtn.className = "btn-report" + (t.has_reports ? " has-report" : ""); repBtn.textContent = "📄 Отчёт";
-  repBtn.style.display = "inline-block";
   repBtn.onclick = () => openReportModal(t);
   // Кнопка «Удалить» — удаляет задачу с подтверждением
   const delBtn = document.createElement("button");
   delBtn.className = "btn-del"; delBtn.textContent = "✕";
-  delBtn.style.display = "inline-block";
   delBtn.onclick = () => deleteTask(t.id, tr);
   // Кнопка «Зависимости» — открывает модал связей (для всех ролей)
   const depsBtn = document.createElement("button");
   depsBtn.className = "btn-deps"; depsBtn.textContent = "🔗";
   depsBtn.title = "Зависимости";
-  depsBtn.style.display = "inline-block";
   depsBtn.onclick = () => openDepsModal(t);
   // ✏️ и ✕ — только если пользователь может редактировать эту строку (свой отдел/сектор)
   // 📄 и 🔗 — для всех (read-only операции)
@@ -2235,7 +2231,6 @@ function toggleBulkMode() {
     if (_bulkMode && !existing) {
       var cb = document.createElement('input');
       cb.type = 'checkbox'; cb.className = 'bulk-cb';
-      cb.style.cssText = 'margin-right:4px;cursor:pointer;vertical-align:middle;';
       cb.onchange = function() {
         var id = parseInt(tr.dataset.id);
         if (cb.checked) _bulkSelected.add(id); else _bulkSelected.delete(id);
@@ -2253,10 +2248,7 @@ function updateBulkBar() {
   var count = document.getElementById('bulkCount');
   if (count) count.textContent = _bulkSelected.size;
   var bar = document.getElementById('bulkBar');
-  if (bar) {
-    if (_bulkMode && _bulkSelected.size > 0) bar.classList.add('visible');
-    else bar.classList.remove('visible');
-  }
+  if (bar) bar.classList.toggle('visible', _bulkMode && _bulkSelected.size > 0);
 }
 
 function bulkSelectAll() {
@@ -2310,8 +2302,7 @@ async function bulkDelete() {
     _bulkMode = false;
     var btn = document.getElementById('bulkModeBtn');
     if (btn) btn.classList.remove('active');
-    var bar = document.getElementById('bulkBar');
-    if (bar) bar.classList.remove('visible');
+    updateBulkBar();
     await loadTasks();
   } catch(e) {
     notify('Ошибка сети: ' + e.message, 'err');
@@ -2644,7 +2635,7 @@ function openNewTaskModal(taskType, prefill) {
   document.getElementById("nt-plan-months-wrap").innerHTML = "";
   document.getElementById("nt-plan_hours_single").value = "";
   document.getElementById("nt-plan-months-wrap").style.display = "none";
-  document.getElementById("nt-plan-single-wrap").style.display = "";
+  document.getElementById("nt-plan-single-wrap").style.display = "none";
   document.getElementById("nt-labor-row").style.display = "none";
 
   if (prefill?.date_start || prefill?.date_end) onNewTaskDateChange(prefill?.plan_hours_all || {});
@@ -2681,7 +2672,7 @@ function openEditTaskModal(t) {
   document.getElementById("nt-plan-months-wrap").innerHTML = "";
   document.getElementById("nt-plan_hours_single").value = "";
   document.getElementById("nt-plan-months-wrap").style.display = "none";
-  document.getElementById("nt-plan-single-wrap").style.display = "";
+  document.getElementById("nt-plan-single-wrap").style.display = "none";
   document.getElementById("nt-labor-row").style.display = "none";
 
   if (t.date_start || t.date_end) onNewTaskDateChange(t.plan_hours_all || {});

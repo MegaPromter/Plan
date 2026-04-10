@@ -202,12 +202,12 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 /* ── Панель статусов (ПП) — используются общие .status-pills / .sp из components.css ── */
 
 /* ── Подсветка строк по статусу ────────────────────────────────────── */
-.pp-table tbody tr.row-done    { background:rgba(34,197,94,0.15) !important; }
-.pp-table tbody tr.row-overdue { background:rgba(239,68,68,0.14) !important; }
-.pp-table tbody tr.row-inwork  { background:rgba(234,179,8,0.10) !important; }
-.pp-table tbody tr.row-done:hover    { background:rgba(34,197,94,0.25) !important; }
-.pp-table tbody tr.row-overdue:hover { background:rgba(239,68,68,0.24) !important; }
-.pp-table tbody tr.row-inwork:hover  { background:rgba(234,179,8,0.18) !important; }
+.pp-table tbody tr.row-done:not(.row-pinned)    { background:rgba(34,197,94,0.15) !important; }
+.pp-table tbody tr.row-overdue:not(.row-pinned) { background:rgba(239,68,68,0.14) !important; }
+.pp-table tbody tr.row-inwork:not(.row-pinned)  { background:rgba(234,179,8,0.10) !important; }
+.pp-table tbody tr.row-done:not(.row-pinned):hover    { background:rgba(34,197,94,0.25) !important; }
+.pp-table tbody tr.row-overdue:not(.row-pinned):hover { background:rgba(239,68,68,0.24) !important; }
+.pp-table tbody tr.row-inwork:not(.row-pinned):hover  { background:rgba(234,179,8,0.18) !important; }
 
 /* ══════════════════════════════════════════════════════════════════════
    Песочница (Sandbox / Changeset)

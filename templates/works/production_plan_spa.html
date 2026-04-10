@@ -34,9 +34,9 @@
     <i class="fas fa-sync-alt" aria-hidden="true"></i> Синхронизировать с СП
   </button>
   {% if request.user|is_writer %}
-  <!-- Добавить новую строку непосредственно в таблицу -->
+  <!-- Добавить новую задачу через модальное окно -->
   <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
-    <i class="fas fa-plus" aria-hidden="true"></i> Добавить строку
+    <i class="fas fa-plus" aria-hidden="true"></i> Добавить задачу
   </button>
   <button class="btn btn-outline btn-sm" id="ppBulkModeBtn" onclick="ppToggleBulkMode()" title="Массовое выделение">
     <i class="far fa-check-square" aria-hidden="true"></i> Масс. выд.
@@ -49,13 +49,6 @@
   </button>
   {% endif %}
   <span id="exportBtnContainer"></span>
-  <!-- Кнопка статистики с дропдауном -->
-  <span class="pp-stats-wrap" style="position:relative;display:inline-block;">
-    <button class="btn btn-outline btn-sm" id="ppStatsBtn" onclick="togglePPStats()">
-      <i class="fas fa-chart-pie" aria-hidden="true"></i> Статистика
-    </button>
-    <div class="pp-stats-dropdown" id="ppStatsDropdown"></div>
-  </span>
   <!-- Кнопка сброса фильтров со счётчиком строк -->
   <button id="filtersActiveBadge" onclick="clearAllColFilters()"
           style="display:none;" class="btn btn-outline btn-sm">
@@ -70,7 +63,7 @@
 {% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=8">
+<link rel="stylesheet" href="{% static 'css/production_plan.css' %}?v=9">
 {% endblock %}
 
 {% block content %}
@@ -484,7 +477,7 @@
 }</script>
 <script src="{% static 'js/shared-toolbar.js' %}?v=3"></script>
 <script src="{% static 'js/gantt_common.js' %}?v=2"></script>
-<script src="{% static 'js/production_plan.js' %}?v=25"></script>
+<script src="{% static 'js/production_plan.js' %}?v=28"></script>
 <script src="{% static 'js/sandbox.js' %}?v=8"></script>
 <script src="{% static 'js/drag-sort.js' %}?v=1"></script>
 <script>
@@ -541,9 +534,9 @@
   };
 })();
 
-// Страничные горячие клавиши: N — добавить строку в ПП
+// Страничные горячие клавиши: N — добавить задачу в ПП
 if (typeof registerShortcut === 'function') {
-  registerShortcut('n', 'Добавить строку', function() {
+  registerShortcut('n', 'Добавить задачу', function() {
     // Только когда открыт конкретный план (projectView виден)
     var pv = document.getElementById('projectView');
     if (pv && pv.style.display !== 'none' && typeof openAddRowModal === 'function') {
