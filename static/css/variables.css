@@ -31,7 +31,7 @@
   /* Текст */
   --text:  #1e293b;
   --text2: #475569;
-  --muted: #64748b;
+  --muted: #526077;
   --muted2:#94a3b8;
 
   /* Статусы */
@@ -76,6 +76,16 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+
+  /* Z-index система */
+  --z-thead:     51;
+  --z-toolbar:   90;
+  --z-topbar:    100;
+  --z-sidebar:   100;
+  --z-slideout:  195;
+  --z-modal:     9000;
+  --z-dropdown:  9999;
+  --z-toast:     10000;
 
   /* Gradient accent (blue → purple) */
   --accent-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
@@ -137,7 +147,7 @@
   /* Текст инвертирован */
   --text:  #e2e8f0;
   --text2: #94a3b8;
-  --muted: #64748b;
+  --muted: #7a8ba0;
   --muted2:#94a3b8;
 
   /* Таблица-заголовок */

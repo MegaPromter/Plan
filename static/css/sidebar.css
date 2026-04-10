@@ -47,7 +47,7 @@
 .sidebar.collapsed .nav-item { justify-content:center; padding:12px 0; position:relative; border-left:none; border-image:none; }
 .sidebar.collapsed .nav-section-btn { justify-content:center; padding:12px 0; border-left:none; border-image:none; }
 .sidebar.collapsed .nav-item i,
-.sidebar.collapsed .nav-section-btn i { margin:0; font-size:18px; }
+.sidebar.collapsed .nav-section-btn i { margin:0; font-size:17px; }
 
 /* Активный пункт в collapsed — яркая иконка + подложка вместо border-left */
 .sidebar.collapsed .nav-item.active,
@@ -135,7 +135,7 @@
 .nav-item i,
 .nav-section-btn i {
   min-width:20px; width:20px; flex-shrink:0; text-align:center;
-  font-size:14px; opacity:0.7;
+  font-size:15px; opacity:0.7;
   transition:opacity 0.15s ease, color 0.15s ease;
 }
 .nav-item:hover i,
@@ -205,7 +205,7 @@
   color:var(--nav-text); border-radius:var(--radius-md); cursor:pointer; transition:all 0.15s;
   display:flex; align-items:center; justify-content:center; text-decoration:none;
 }
-.logout-btn:hover { background:rgba(239,68,68,0.15); color:#f87171; }
+.logout-btn:hover { background:rgba(var(--danger-rgb),0.15); color:#f87171; }
 
 /* ── Кнопка сворачивания/разворачивания ───────────────────────────── */
 .sidebar-toggle {

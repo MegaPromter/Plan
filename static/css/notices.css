@@ -55,8 +55,8 @@
   background:transparent; color:var(--text2); cursor:pointer; font-size:12px; font-family:var(--font);
 }
 .ji-btn:hover { background:var(--accent-light); }
-.ji-btn-del { border-color:rgba(239,68,68,.3); color:var(--danger); }
-.ji-btn-del:hover { background:rgba(239,68,68,.07); }
+.ji-btn-del { border-color:rgba(var(--danger-rgb),.3); color:var(--danger); }
+.ji-btn-del:hover { background:rgba(var(--danger-rgb),.07); }
 .ji-btn-close { border-color:rgba(234,179,8,.4); color:#92400e; font-size:11px; }
 .ji-btn-close:hover { background:rgba(234,179,8,.08); }
 

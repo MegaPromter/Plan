@@ -174,12 +174,12 @@ select.cell-edit option {
 /* Ошибка в ячейке */
 .cell-error {
   outline: 2px solid var(--danger) !important;
-  background: rgba(239,68,68,0.12) !important;
+  background: rgba(var(--danger-rgb), 0.12) !important;
   animation: pulse-error 1s ease-in-out 2;
 }
 @keyframes pulse-error {
   0%,100% { outline-color: var(--danger); }
-  50% { outline-color: rgba(239,68,68,0.4); }
+  50% { outline-color: rgba(var(--danger-rgb), 0.4); }
 }
 
 /* ── Flash-подсветка при сохранении ──────────────────────────────── */

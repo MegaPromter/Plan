@@ -169,7 +169,7 @@
 }
 .an-load-badge.ok { background:rgba(34,197,94,0.12); color:var(--success); }
 .an-load-badge.warn { background:rgba(245,158,11,0.12); color:var(--warning); }
-.an-load-badge.over { background:rgba(239,68,68,0.12); color:var(--danger); }
+.an-load-badge.over { background:rgba(var(--danger-rgb),0.12); color:var(--danger); }
 
 /* ── Таблица задач сотрудника ────────────────────────────────────────── */
 .an-tasks-table { width:100%; border-collapse:collapse; font-size:16px; }
@@ -228,7 +228,7 @@
 }
 .an-badge-inwork { background:rgba(245,158,11,0.12); color:var(--warning); }
 .an-badge-done { background:rgba(34,197,94,0.12); color:var(--success); }
-.an-badge-overdue { background:rgba(239,68,68,0.12); color:var(--danger); }
+.an-badge-overdue { background:rgba(var(--danger-rgb),0.12); color:var(--danger); }
 
 /* ── Пустое состояние / загрузка ─────────────────────────────────────── */
 .an-empty {

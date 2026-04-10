@@ -129,7 +129,7 @@
 .status-badge--suspended   { background: rgba(234,179,8,0.15);   color: #ca8a04; }
 .status-badge--deferred    { background: rgba(168,162,158,0.15); color: #78716c; }
 .status-badge--closed      { background: rgba(107,114,128,0.12); color: #4b5563; }
-.status-badge--cancelled   { background: rgba(239,68,68,0.12);   color: var(--danger); }
+.status-badge--cancelled   { background: rgba(var(--danger-rgb),0.12);   color: var(--danger); }
 
 /* Бейджи приоритетов */
 .priority-badge {
@@ -140,7 +140,7 @@
   font-size: 12px;
   font-weight: 500;
 }
-.priority-badge--critical { background: rgba(239,68,68,0.12);   color: var(--danger); }
+.priority-badge--critical { background: rgba(var(--danger-rgb),0.12);   color: var(--danger); }
 .priority-badge--high     { background: rgba(249,115,22,0.12);  color: #ea580c; }
 .priority-badge--medium   { background: rgba(234,179,8,0.12);   color: #ca8a04; }
 .priority-badge--low      { background: rgba(107,114,128,0.12); color: var(--gray); }
@@ -369,7 +369,7 @@
 }
 .edit-lock-badge--cross  { background: rgba(34,197,94,0.12); color: var(--success); }
 .edit-lock-badge--pp     { background: rgba(59,130,246,0.12); color: var(--accent); }
-.edit-lock-badge--locked { background: rgba(239,68,68,0.12); color: var(--danger); }
+.edit-lock-badge--locked { background: rgba(var(--danger-rgb),0.12); color: var(--danger); }
 
 /* Селект режима/гранулярности */
 .edit-owner-select {
@@ -583,7 +583,7 @@
 
 /* Строки сравнения */
 .baseline-added { background: rgba(34,197,94,0.06); }
-.baseline-removed { background: rgba(239,68,68,0.06); text-decoration: line-through; color: var(--muted); }
+.baseline-removed { background: rgba(var(--danger-rgb),0.06); text-decoration: line-through; color: var(--muted); }
 .baseline-changed { background: rgba(59,130,246,0.04); }
 
 /* Ячейки с изменениями */
@@ -602,12 +602,12 @@
   white-space: nowrap;
 }
 .baseline-badge--added { background: rgba(34,197,94,0.12); color: #16a34a; }
-.baseline-badge--removed { background: rgba(239,68,68,0.12); color: #dc2626; }
+.baseline-badge--removed { background: rgba(var(--danger-rgb),0.12); color: var(--danger); }
 .baseline-badge--changed { background: rgba(59,130,246,0.12); color: var(--accent); }
 .baseline-badge--same { background: var(--surface-alt, #f1f5f9); color: var(--muted); }
 
-.btn-danger-text { color: #dc2626; }
-.btn-danger-text:hover { color: #b91c1c; background: rgba(239,68,68,0.08); }
+.btn-danger-text { color: var(--danger); }
+.btn-danger-text:hover { color: #b91c1c; background: rgba(var(--danger-rgb),0.08); }
 
 /* Чекбокс выбора снимков */
 .baseline-check { display: flex; align-items: center; justify-content: center; }

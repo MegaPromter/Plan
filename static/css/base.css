@@ -31,7 +31,7 @@ body { min-height:100vh; background:var(--bg); font-family:var(--font); color:va
 .breadcrumb span:not(.breadcrumb-current):not(.breadcrumb-sep) { color:var(--nav-text); opacity:0.4; font-size:11px; }
 .breadcrumb span:not(.breadcrumb-current):not(.breadcrumb-sep)::before { content:''; }
 /* Текущий раздел в хлебных крошках — крупный заголовок страницы */
-.breadcrumb-current { color:#fff; font-weight:700; font-size:16px; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.breadcrumb-current { color:#fff; font-weight:700; font-size:16px; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px; }
 /* Растяжка для выравнивания (толкает правые элементы к краю) */
 .topbar-spacer { flex:1; }
 /* Основная область контента страницы */
@@ -204,7 +204,7 @@ textarea { resize:vertical; min-height:80px; }
 /* ── Alerts ──────────────────────────────────────────────────────────── */
 /* Блок алертов (уведомлений над формой) */
 .alert { padding:12px 16px; border-radius:var(--radius-md); margin-bottom:16px; font-size:14px; }
-.alert-error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--danger); }
+.alert-error   { background:rgba(var(--danger-rgb),0.1);  border:1px solid rgba(var(--danger-rgb),0.3);  color:var(--danger); }
 .alert-success { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:var(--success-light); }
 .alert-warning { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:var(--warning-light); }
 
@@ -213,7 +213,7 @@ textarea { resize:vertical; min-height:80px; }
 .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; min-height:36px; border-radius:var(--radius-xl); font-size:12px; font-weight:500; }
 .badge-blue   { background:rgba(59,130,246,0.15);  color:var(--accent); }    /* синий */
 .badge-green  { background:rgba(34,197,94,0.15);   color:var(--success); }   /* зелёный */
-.badge-red    { background:rgba(239,68,68,0.15);   color:var(--danger); }    /* красный */
+.badge-red    { background:rgba(var(--danger-rgb),0.15);   color:var(--danger); }    /* красный */
 .badge-yellow { background:rgba(245,158,11,0.15);  color:var(--warning); }   /* жёлтый */
 .badge-gray   { background:var(--surface2);        color:var(--text2); }     /* серый */
 

@@ -31,7 +31,7 @@
 .topbar-sep { flex:1; }
 
 /* ── Кнопки топбара (план-специфичные) ────────────────────────────────── */
-.topbar-btn { padding:6px 14px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.2);
+.topbar-btn { padding:7px 14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.2);
   background:transparent; color:var(--nav-text2); font-family:var(--font);
   font-size:14px; cursor:pointer; transition:all 0.15s; }
 .topbar-btn:hover { border-color:rgba(255,255,255,0.45); color:#fff; }
@@ -274,9 +274,9 @@ tr.pp-locked .pp-lock-badge {
   background:var(--success); color:#fff; font-size:14px; cursor:pointer; font-family:var(--font); font-weight:700; margin-right:2px; }
 .r-save:hover { opacity:0.85; }
 .r-save:disabled { opacity:0.5; cursor:default; }
-.r-del { padding:3px 7px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
+.r-del { padding:3px 7px; border-radius:var(--radius-xs); border:1px solid rgba(var(--danger-rgb),0.3);
   background:transparent; color:var(--danger); font-size:14px; cursor:pointer; font-family:var(--font); }
-.r-del:hover { background:rgba(239,68,68,0.1); }
+.r-del:hover { background:rgba(var(--danger-rgb),0.1); }
 
 /* ── Таблица пользователей (модал управления аккаунтами) ──────────────── */
 .users-table { width:100%; border-collapse:collapse; font-size:17px; min-width:unset; }
@@ -290,8 +290,8 @@ tr.pp-locked .pp-lock-badge {
 .topbar-btn.errors.has-errors { border-color:var(--danger); color:var(--danger); animation:pulse-err 2s infinite; }
 .topbar-btn.errors.no-errors { border-color:#22c55e; color:#22c55e; }
 @keyframes pulse-err {
-  0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); }
-  50%      { box-shadow:0 0 0 4px rgba(239,68,68,0.25); }
+  0%,100% { box-shadow:0 0 0 0 rgba(var(--danger-rgb),0); }
+  50%      { box-shadow:0 0 0 4px rgba(var(--danger-rgb),0.25); }
 }
 .err-badge { display:inline-flex; align-items:center; background:var(--danger); color:#fff;
   border-radius:var(--radius-md); font-size:14px; padding:6px 8px; min-height:36px; margin-left:4px; font-weight:700; }
@@ -570,9 +570,9 @@ tr.pp-locked .pp-lock-badge {
 .executor-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
 .executor-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
 .executor-name { font-size:18px; font-weight:600; color:var(--text); }
-.executor-remove { padding:4px 10px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
+.executor-remove { padding:4px 10px; border-radius:var(--radius-xs); border:1px solid rgba(var(--danger-rgb),0.3);
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
-.executor-remove:hover { background:rgba(239,68,68,0.1); border-color:var(--danger); }
+.executor-remove:hover { background:rgba(var(--danger-rgb),0.1); border-color:var(--danger); }
 .executor-hours { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
 .executor-month { display:flex; flex-direction:column; gap:4px; }
 .executor-month-label { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
@@ -585,9 +585,9 @@ tr.pp-locked .pp-lock-badge {
 .nt-executor-item { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-md);
   padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
 .nt-executor-name { font-size:17px; font-weight:500; color:var(--text); }
-.nt-executor-remove { padding:3px 8px; border-radius:var(--radius-xs); border:1px solid rgba(239,68,68,0.3);
+.nt-executor-remove { padding:3px 8px; border-radius:var(--radius-xs); border:1px solid rgba(var(--danger-rgb),0.3);
   background:transparent; color:var(--danger); font-size:15px; cursor:pointer; transition:all 0.15s; }
-.nt-executor-remove:hover { background:rgba(239,68,68,0.1); }
+.nt-executor-remove:hover { background:rgba(var(--danger-rgb),0.1); }
 
 /* ── Slideout-режим модала редактирования ──────────────────────────────── */
 #newTaskModal.slideout-mode {
@@ -610,10 +610,10 @@ tr.pp-locked .pp-lock-badge {
 
 /* ── Подсветка строк по статусу ──────────────────────────────────────── */
 #mainTable tbody tr.row-done:not(.row-pinned)    { background:rgba(34,197,94,0.15) !important; }
-#mainTable tbody tr.row-overdue:not(.row-pinned) { background:rgba(239,68,68,0.14) !important; }
+#mainTable tbody tr.row-overdue:not(.row-pinned) { background:rgba(var(--danger-rgb),0.14) !important; }
 #mainTable tbody tr.row-inwork:not(.row-pinned)  { background:rgba(234,179,8,0.10) !important; }
 #mainTable tbody tr.row-done:not(.row-pinned):hover    { background:rgba(34,197,94,0.25) !important; }
-#mainTable tbody tr.row-overdue:not(.row-pinned):hover { background:rgba(239,68,68,0.24) !important; }
+#mainTable tbody tr.row-overdue:not(.row-pinned):hover { background:rgba(var(--danger-rgb),0.24) !important; }
 #mainTable tbody tr.row-inwork:not(.row-pinned):hover  { background:rgba(234,179,8,0.18) !important; }
 
 @media (prefers-reduced-motion: reduce) {
