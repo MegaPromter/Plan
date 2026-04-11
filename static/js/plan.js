@@ -808,10 +808,22 @@ async function openPlanningErrors() {
   if (soonExpiring.length > 0) {
     const fc = document.createElement("div");
     fc.className = "forecast-bar";
+    fc.style.cursor = "pointer";
     const noExecMsg = soonNoExec.length > 0 ? `, из них ${soonNoExec.length} без исполнителя` : '';
     fc.innerHTML = `<span class="forecast-icon">⏰</span>
-      <span class="forecast-text">В ближайшие <strong>7 дней</strong> истекает срок у <strong>${soonExpiring.length} работ</strong>${escapePe(noExecMsg)}</span>
+      <span class="forecast-text">В ближайшие <strong>7 дней</strong> истекает срок у <strong>${soonExpiring.length} работ</strong>${escapePe(noExecMsg)} <span style="opacity:.6;font-size:12px">· нажмите для подробностей</span></span>
       <span class="forecast-badge">+${soonExpiring.length}</span>`;
+    fc.addEventListener("click", () => {
+      const sec = document.getElementById("peSoonExpiring");
+      if (sec) {
+        sec.scrollIntoView({ behavior: "smooth", block: "center" });
+        const secBody = sec.querySelector(".va-sec-body");
+        if (secBody && !secBody.classList.contains("open")) {
+          secBody.classList.add("open");
+          sec.querySelector(".va-sec-arrow").textContent = "▲";
+        }
+      }
+    });
     viz.appendChild(fc);
   }
 
@@ -937,6 +949,26 @@ async function openPlanningErrors() {
         ]
       }))
     },
+    { icon: "⏰", cls: "warn", title: `Истекает срок в ближайшие 7 дней (${soonExpiring.length})`, count: soonExpiring.length,
+      id: "peSoonExpiring",
+      items: soonExpiring.map(t => {
+        const de = t.date_end ? t.date_end.slice(0, 10) : null;
+        const dead = t.deadline ? t.deadline.slice(0, 10) : null;
+        const endDate = de || dead || "—";
+        const daysLeft = de ? Math.ceil((new Date(de) - new Date(todayStr)) / 86400000)
+          : (dead ? Math.ceil((new Date(dead) - new Date(todayStr)) / 86400000) : 0);
+        const daysText = daysLeft === 0 ? "сегодня" : daysLeft === 1 ? "завтра" : `через ${daysLeft} дн.`;
+        return {
+          title: t.work_name || `Работа #${t.id}`,
+          meta: `${t.task_type || ""} · ${t.executor || "нет исполнителя"} · Окончание: ${endDate}`,
+          highlight: daysLeft <= 1 ? "Срок истекает " + daysText + "!" : "Осталось " + daysLeft + " дн.",
+          actions: [
+            { label: "✏️ Редактировать", fn: () => { closePeModal(); openEditTaskModal(tasks.find(x => x.id === t.id) || { id: t.id }); } },
+            { label: "📝 Внести отчёт",  fn: () => { closePeModal(); openReportModal(tasks.find(x => x.id === t.id) || { id: t.id }); } },
+          ]
+        };
+      })
+    },
     { icon: "📅", cls: "warn", title: `Конфликт с отпуском (всего ${vacConflicts.length})`, count: vacConflicts.length,
       items: vacConflicts.map(v => {
         const name = v.executor || v.executor_name || "—";
@@ -965,9 +997,10 @@ function escapePe(str) {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function buildPeSection({ icon, cls, title, count, items }) {
+function buildPeSection({ icon, cls, title, count, items, id }) {
   const sec = document.createElement("div");
   sec.className = "va-section";
+  if (id) sec.id = id;
   const badgeCls = count > 0 ? cls : "ok";
   const iconCls  = count > 0 ? cls : "ok";
 

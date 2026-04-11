@@ -1125,10 +1125,13 @@ function updatePpSummary() {
   document.getElementById("ppSummaryDept").innerHTML =
     '<i class="fas fa-building"></i> ' + deptNames;
 
-  // Загрузка — пока без calCache
+  // Прогресс выполнения (% выполненных задач)
+  var doneCount = _ppFiltered.filter(function(r) { return _ppGetStatus(r) === 'done'; }).length;
+  var totalCount = _ppFiltered.length;
+  var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
   var loadEl = document.getElementById("ppSummaryLoad");
-  loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> —';
-  loadEl.className = "stat-badge sb-load";
+  loadEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + pct + '% выполнено';
+  loadEl.className = "stat-badge sb-load" + (pct >= 80 ? "" : pct >= 50 ? " load-warn" : " load-over");
 }
 
 /* ── Добавление порции строк в таблицу ПП ─────────────────────────── */
