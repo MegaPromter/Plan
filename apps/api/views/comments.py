@@ -8,11 +8,11 @@ API комментариев к задачам (WorkComment).
 
 import logging
 
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
 from apps.api.utils import get_visibility_filter
 from apps.works.models import AuditLog, Work, WorkComment
 
@@ -43,39 +43,33 @@ def _serialize_comment(c):
     }
 
 
-# ---------------------------------------------------------------------------
-#  GET /api/comments/?work_id=N
-# ---------------------------------------------------------------------------
+class CommentListView(APIView):
+    """GET /api/comments/?work_id=N — список; POST — создание."""
 
-
-class CommentListView(LoginRequiredJsonMixin, View):
-    """GET /api/comments/?work_id=N — список комментариев к задаче."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
             work_id = request.GET.get("work_id")
             if not work_id:
-                return JsonResponse({"error": "work_id обязателен"}, status=400)
+                return Response({"error": "work_id обязателен"}, status=400)
 
             vis_q = get_visibility_filter(request.user)
             if not Work.objects.filter(vis_q, pk=work_id).exists():
-                return JsonResponse({"error": "Задача не найдена"}, status=404)
+                return Response({"error": "Задача не найдена"}, status=404)
 
             comments = (
                 WorkComment.objects.filter(work_id=work_id)
                 .select_related("author", "author__employee")
                 .order_by("created_at")[:200]
             )
-            result = [_serialize_comment(c) for c in comments]
-            return JsonResponse(result, safe=False)
+            return Response([_serialize_comment(c) for c in comments])
         except (ValueError, TypeError) as e:
             logger.warning("CommentListView.get bad request: %s", e)
-            return JsonResponse({"error": f"Некорректные параметры: {e}"}, status=400)
+            return Response({"error": f"Некорректные параметры: {e}"}, status=400)
         except Exception as e:
             logger.error("CommentListView.get error: %s", e, exc_info=True)
-            return JsonResponse(
-                {"error": f"Внутренняя ошибка сервера: {e}"}, status=500
-            )
+            return Response({"error": f"Внутренняя ошибка сервера: {e}"}, status=500)
 
     def post(self, request):
         """POST /api/comments/ — создание комментария."""
@@ -83,64 +77,54 @@ class CommentListView(LoginRequiredJsonMixin, View):
             return self._create(request)
         except Exception as e:
             logger.error("CommentListView.post error: %s", e, exc_info=True)
-            return JsonResponse(
-                {"error": f"Внутренняя ошибка сервера: {e}"}, status=500
-            )
+            return Response({"error": f"Внутренняя ошибка сервера: {e}"}, status=500)
 
     def _create(self, request):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
-        if not d:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+        d = request.data
+        if not isinstance(d, dict) or not d:
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         work_id = d.get("work_id")
         text = (d.get("text") or "").strip()
 
         if not work_id:
-            return JsonResponse({"error": "work_id обязателен"}, status=400)
+            return Response({"error": "work_id обязателен"}, status=400)
         if not text:
-            return JsonResponse({"error": "Текст комментария обязателен"}, status=400)
+            return Response({"error": "Текст комментария обязателен"}, status=400)
 
         vis_q = get_visibility_filter(request.user)
         if not Work.objects.filter(vis_q, pk=work_id).exists():
-            return JsonResponse({"error": "Задача не найдена"}, status=404)
+            return Response({"error": "Задача не найдена"}, status=404)
 
         comment = WorkComment.objects.create(
             work_id=work_id,
             author=request.user,
             text=text,
         )
-        # Подгружаем связанные объекты для сериализации
         comment.author = request.user
-        return JsonResponse(_serialize_comment(comment), status=201)
+        return Response(_serialize_comment(comment), status=201)
 
 
-# ---------------------------------------------------------------------------
-#  DELETE /api/comments/<pk>/
-# ---------------------------------------------------------------------------
-
-
-class CommentDetailView(LoginRequiredJsonMixin, View):
+class CommentDetailView(APIView):
     """DELETE /api/comments/<pk>/ — удаление комментария."""
+
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         try:
             try:
                 comment = WorkComment.objects.select_related("work").get(pk=pk)
             except WorkComment.DoesNotExist:
-                return JsonResponse({"error": "Комментарий не найден"}, status=404)
+                return Response({"error": "Комментарий не найден"}, status=404)
 
-            # Проверяем доступ к задаче
             vis_q = get_visibility_filter(request.user)
             if not Work.objects.filter(vis_q, pk=comment.work_id).exists():
-                return JsonResponse({"error": "Комментарий не найден"}, status=404)
+                return Response({"error": "Комментарий не найден"}, status=404)
 
-            # Удалять может только автор или admin
             employee = getattr(request.user, "employee", None)
             is_admin = employee and employee.role in ("admin", "ntc_head", "ntc_deputy")
             if comment.author_id != request.user.id and not is_admin:
-                return JsonResponse({"error": "Нет прав на удаление"}, status=403)
+                return Response({"error": "Нет прав на удаление"}, status=403)
 
             log_action(
                 request,
@@ -150,9 +134,7 @@ class CommentDetailView(LoginRequiredJsonMixin, View):
                 details={"work_id": comment.work_id, "text": comment.text[:200]},
             )
             comment.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("CommentDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse(
-                {"error": f"Внутренняя ошибка сервера: {e}"}, status=500
-            )
+            return Response({"error": f"Внутренняя ошибка сервера: {e}"}, status=500)

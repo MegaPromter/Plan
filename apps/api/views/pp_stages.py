@@ -10,14 +10,11 @@ DELETE /api/projects/<pk>/stages/<stage_id>/   — удаление этапа
 import logging
 
 from django.db.models import Exists, OuterRef, Prefetch
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.works.models import PPStage, Project, TaskExecutor, Work, WorkReport
 
 logger = logging.getLogger(__name__)
@@ -48,14 +45,7 @@ def _sum_plan_hours(ph):
 
 
 def _calc_labor_for_stages(stages):
-    """Считает запланированную и потраченную трудоёмкость по этапам.
-
-    Запланированная = сумма Work.labor для работ ПП (show_in_pp=True) этого этапа.
-    Потраченная = для работ этого этапа, у которых есть отчёт (WorkReport),
-                  сумма plan_hours основного исполнителя + plan_hours TaskExecutor.
-
-    Также возвращает список работ каждого этапа для отображения в детальной панели.
-    """
+    """Считает запланированную и потраченную трудоёмкость по этапам."""
     stage_ids = [s.id for s in stages]
     if not stage_ids:
         return {}
@@ -78,21 +68,16 @@ def _calc_labor_for_stages(stages):
 
     for w in works:
         sid = w.pp_stage_id
-        # Запланированная = labor из ПП
         labor_val = float(w.labor) if w.labor is not None else 0.0
         if w.labor is not None:
             result[sid]["planned"] += labor_val
 
-        # Потраченная = plan_hours работ с отчётами
         has_rep = getattr(w, "_has_reports", False)
         if has_rep:
-            # Часы основного исполнителя
             result[sid]["spent"] += _sum_plan_hours(w.plan_hours)
-            # Часы дополнительных исполнителей
             for te in getattr(w, "_prefetched_executors", []):
                 result[sid]["spent"] += _sum_plan_hours(te.plan_hours)
 
-        # Работа для списка
         result[sid]["works"].append(
             {
                 "id": w.id,
@@ -102,7 +87,6 @@ def _calc_labor_for_stages(stages):
             }
         )
 
-    # Округляем
     for sid in result:
         result[sid]["planned"] = round(result[sid]["planned"], 2)
         result[sid]["spent"] = round(result[sid]["spent"], 2)
@@ -110,15 +94,17 @@ def _calc_labor_for_stages(stages):
     return result
 
 
-class PPStageListView(LoginRequiredJsonMixin, View):
+class PPStageListView(APIView):
     """GET — список этапов проекта УП."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
+                return Response({"error": "Проект не найден"}, status=404)
             stages = list(proj.stages.order_by("order", "id"))
             labor_map = _calc_labor_for_stages(stages)
             result = []
@@ -129,27 +115,27 @@ class PPStageListView(LoginRequiredJsonMixin, View):
                 d["spent_labor"] = labor.get("spent", 0)
                 d["works"] = labor.get("works", [])
                 result.append(d)
-            return JsonResponse(result, safe=False)
+            return Response(result)
         except Exception as e:
             logger.error("PPStageListView.get: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
-class PPStageCreateView(WriterRequiredJsonMixin, View):
+class PPStageCreateView(APIView):
     """POST — создание этапа."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request, pk):
         try:
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+                return Response({"error": "Проект не найден"}, status=404)
+            d = request.data
             name = (d.get("name") or "").strip()
             if not name:
-                return JsonResponse({"error": "Наименование обязательно"}, status=400)
+                return Response({"error": "Наименование обязательно"}, status=400)
             stage = PPStage.objects.create(
                 project=proj,
                 name=name,
@@ -158,27 +144,27 @@ class PPStageCreateView(WriterRequiredJsonMixin, View):
                 row_code=(d.get("row_code") or "").strip(),
                 order=d.get("order", 0) or 0,
             )
-            return JsonResponse(_serialize_stage(stage), status=201)
+            return Response(_serialize_stage(stage), status=201)
         except Exception as e:
             logger.error("PPStageCreateView.post: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
-class PPStageDetailView(WriterRequiredJsonMixin, View):
+class PPStageDetailView(APIView):
     """PUT — обновление; DELETE — удаление этапа."""
+
+    permission_classes = [IsWriterPermission]
 
     def put(self, request, pk, stage_id):
         try:
             try:
                 stage = PPStage.objects.get(pk=stage_id, project_id=pk)
             except PPStage.DoesNotExist:
-                return JsonResponse({"error": "Этап не найден"}, status=404)
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+                return Response({"error": "Этап не найден"}, status=404)
+            d = request.data
             name = (d.get("name") or "").strip()
             if not name:
-                return JsonResponse({"error": "Наименование обязательно"}, status=400)
+                return Response({"error": "Наименование обязательно"}, status=400)
             stage.name = name
             stage.stage_number = (d.get("stage_number") or "").strip()
             stage.work_order = (d.get("work_order") or "").strip()
@@ -186,20 +172,20 @@ class PPStageDetailView(WriterRequiredJsonMixin, View):
             if "order" in d:
                 stage.order = d["order"] or 0
             stage.save()
-            return JsonResponse(_serialize_stage(stage))
+            return Response(_serialize_stage(stage))
         except Exception as e:
             logger.error("PPStageDetailView.put: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
     def delete(self, request, pk, stage_id):
         try:
             try:
                 stage = PPStage.objects.get(pk=stage_id, project_id=pk)
             except PPStage.DoesNotExist:
-                return JsonResponse({"error": "Этап не найден"}, status=404)
+                return Response({"error": "Этап не найден"}, status=404)
             stage.works.update(pp_stage=None)
             stage.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("PPStageDetailView.delete: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)

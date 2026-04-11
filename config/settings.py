@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "apps.works",  # основные модели: Work, TaskWork, PPWork, Project и т.д.
     "apps.api",  # REST API: все views, сериализаторы, middleware, утилиты
     "apps.enterprise",  # Управление предприятием: портфель, ГГ, сквозной график
+    "rest_framework",  # Django REST Framework для стандартизации API
 ]
 
 # --- Middleware ---------------------------------------------------------
@@ -220,6 +221,24 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = env.list(
         "CSRF_TRUSTED_ORIGINS", default=["https://managesystems.ru"]
     )
+
+# --- Django REST Framework -------------------------------------------------
+REST_FRAMEWORK = {
+    # Аутентификация через сессии (совместимо с текущим фронтендом)
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # По умолчанию — только авторизованные пользователи
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    # Кастомный обработчик ошибок: {"error": "..."} вместо {"detail": "..."}
+    "EXCEPTION_HANDLER": "apps.api.drf_utils.custom_exception_handler",
+    # JSON-рендерер по умолчанию (без BrowsableAPI в проде)
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+}
 
 # --- Email -----------------------------------------------------------------
 # Для отправки писем (сброс пароля и др.)
