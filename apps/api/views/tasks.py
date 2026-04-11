@@ -16,17 +16,13 @@ from datetime import date as dt_date
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import (
-    AdminRequiredJsonMixin,
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsAdminPermission, IsWriterPermission
 from apps.api.utils import (
     generate_work_num,
     get_visibility_filter,
@@ -169,7 +165,9 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
 # ---------------------------------------------------------------------------
 
 
-class TaskListView(LoginRequiredJsonMixin, View):
+class TaskListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET — список задач."""
 
     def get(self, request):
@@ -177,10 +175,10 @@ class TaskListView(LoginRequiredJsonMixin, View):
             return self._get_tasks(request)
         except (ValueError, TypeError) as e:
             logger.warning("TaskListView.get bad request: %s", e)
-            return JsonResponse({"error": f"Некорректные параметры: {e}"}, status=400)
+            return Response({"error": f"Некорректные параметры: {e}"}, status=400)
         except Exception as e:
             logger.error("TaskListView.get error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _get_tasks(self, request):
         try:
@@ -379,14 +377,16 @@ class TaskListView(LoginRequiredJsonMixin, View):
             )
             result.append(d)
 
-        response = JsonResponse(result, safe=False)
+        response = Response(result)
         response["X-Total-Count"] = total_count
         response["X-Has-More"] = "true" if (offset + limit) < total_count else "false"
         response["Cache-Control"] = "private, max-age=5"
         return response
 
 
-class TaskCreateView(WriterRequiredJsonMixin, View):
+class TaskCreateView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """POST /api/tasks — создание задачи."""
 
     def post(self, request):
@@ -394,41 +394,41 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             return self._create(request)
         except (ValueError, TypeError) as e:
             logger.warning("TaskCreateView bad request: %s", e)
-            return JsonResponse({"error": f"Некорректные данные: {e}"}, status=400)
+            return Response({"error": f"Некорректные данные: {e}"}, status=400)
         except Exception as e:
             logger.error("TaskCreateView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _create(self, request):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not d:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         employee = getattr(request.user, "employee", None)
 
         # Проверка прав по роли
         if employee and employee.role in ("dept_head", "dept_deputy"):
             if not employee.department:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             dept_val = (d.get("dept") or "").strip()
             if dept_val and dept_val != employee.department.code:
-                return JsonResponse(
+                return Response(
                     {"error": "Вы можете создавать задачи только для своего отдела"},
                     status=403,
                 )
 
         if employee and employee.role == "sector_head":
             if not employee.department:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             dept_val = (d.get("dept") or "").strip()
             if dept_val and dept_val != employee.department.code:
-                return JsonResponse(
+                return Response(
                     {"error": "Вы можете создавать задачи только для своего отдела"},
                     status=403,
                 )
@@ -436,7 +436,7 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             if sector_val and employee.sector:
                 own_sector_values = {employee.sector.code, employee.sector.name}
                 if sector_val not in own_sector_values:
-                    return JsonResponse(
+                    return Response(
                         {
                             "error": "Вы можете создавать задачи только для своего сектора"
                         },
@@ -445,15 +445,15 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
 
         ph, ph_err = validate_plan_hours(d.get("plan_hours"))
         if ph_err:
-            return JsonResponse({"error": ph_err}, status=400)
+            return Response({"error": ph_err}, status=400)
 
         executors_list, el_err = validate_executors_list(d.get("executors_list"))
         if el_err:
-            return JsonResponse({"error": el_err}, status=400)
+            return Response({"error": el_err}, status=400)
 
         actions, act_err = validate_actions(d.get("actions"))
         if act_err:
-            return JsonResponse({"error": act_err}, status=400)
+            return Response({"error": act_err}, status=400)
 
         with transaction.atomic():
             work = Work(
@@ -471,14 +471,14 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             if "task_type" in d:
                 tt_val, tt_err = validate_task_type(d["task_type"])
                 if tt_err:
-                    return JsonResponse({"error": tt_err}, status=400)
+                    return Response({"error": tt_err}, status=400)
                 d["task_type"] = tt_val
 
             _set_work_fk_fields(work, d, request)
             try:
                 _set_date_fields(work, d)
             except ValueError as exc:
-                return JsonResponse({"error": str(exc)}, status=400)
+                return Response({"error": str(exc)}, status=400)
 
             # Если deadline не задан — подставляем date_end
             if not work.deadline and work.date_end:
@@ -499,7 +499,7 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             object_id=work.id,
             object_repr=work.work_name,
         )
-        return JsonResponse({"id": work.id})
+        return Response({"id": work.id})
 
 
 # ---------------------------------------------------------------------------
@@ -507,7 +507,9 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class TaskDetailView(WriterRequiredJsonMixin, View):
+class TaskDetailView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """PUT /api/tasks/<id>; DELETE /api/tasks/<id>."""
 
     def put(self, request, pk):
@@ -515,10 +517,10 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             return self._update(request, pk)
         except (ValueError, TypeError) as e:
             logger.warning("TaskDetailView.put bad request: %s", e)
-            return JsonResponse({"error": f"Некорректные данные: {e}"}, status=400)
+            return Response({"error": f"Некорректные данные: {e}"}, status=400)
         except Exception as e:
             logger.error("TaskDetailView.put error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def delete(self, request, pk):
         try:
@@ -532,7 +534,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     .first()
                 )
                 if not work:
-                    return JsonResponse({"error": "Задача не найдена"}, status=404)
+                    return Response({"error": "Задача не найдена"}, status=404)
                 log_action(
                     request,
                     AuditLog.ACTION_TASK_DELETE,
@@ -546,17 +548,17 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     work.save(update_fields=["show_in_plan", "actions"])
                 else:
                     work.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("TaskDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _update(self, request, pk):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not d:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         vis_q = get_visibility_filter(request.user)
 
@@ -568,7 +570,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 .first()
             )
             if not work:
-                return JsonResponse({"error": "Задача не найдена"}, status=404)
+                return Response({"error": "Задача не найдена"}, status=404)
 
             if d.get("_mcc_finish"):
                 return self._mcc_finish(work)
@@ -585,7 +587,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 # Обрезаем микросекунды (.123456) и TZ-суффикс (+00:00 / Z)
                 client_ts = raw[:19] if len(raw) >= 19 else raw
                 if server_ts != client_ts:
-                    return JsonResponse(
+                    return Response(
                         {
                             "error": "conflict",
                             "message": "Запись была изменена другим пользователем. "
@@ -620,7 +622,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                     remaining = non_service - _PP_LOCKED_FIELDS
                     if not remaining:
                         # Все переданные поля заблокированы — отклоняем
-                        return JsonResponse(
+                        return Response(
                             {
                                 "error": "Запись из ПП: редактирование заблокированных полей запрещено",
                                 "locked_fields": attempted_locked,
@@ -638,7 +640,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             if "plan_hours_update" in d:
                 ph_upd, ph_err = validate_plan_hours(d["plan_hours_update"])
                 if ph_err:
-                    return JsonResponse({"error": ph_err}, status=400)
+                    return Response({"error": ph_err}, status=400)
                 existing = parse_json_hours(work.plan_hours)
                 existing.update(ph_upd)
                 work.plan_hours = existing
@@ -647,7 +649,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 if "plan_hours" in d:
                     ph, ph_err = validate_plan_hours(d.get("plan_hours"))
                     if ph_err:
-                        return JsonResponse({"error": ph_err}, status=400)
+                        return Response({"error": ph_err}, status=400)
                 else:
                     ph = work.plan_hours
                 if not is_from_pp:
@@ -661,14 +663,14 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 if "task_type" in d:
                     tt_val, tt_err = validate_task_type(d["task_type"])
                     if tt_err:
-                        return JsonResponse({"error": tt_err}, status=400)
+                        return Response({"error": tt_err}, status=400)
                     d["task_type"] = tt_val
 
                 _set_work_fk_fields(work, d, request)
                 try:
                     _set_date_fields(work, d)
                 except ValueError as exc:
-                    return JsonResponse({"error": str(exc)}, status=400)
+                    return Response({"error": str(exc)}, status=400)
 
                 if "stage" in d and not is_from_pp:
                     work.stage_num = d["stage"] or ""
@@ -677,7 +679,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
                 if "actions" in d:
                     actions, act_err = validate_actions(d["actions"])
                     if act_err:
-                        return JsonResponse({"error": act_err}, status=400)
+                        return Response({"error": act_err}, status=400)
                     work.actions = actions
 
                 work.save()
@@ -690,7 +692,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             if "executors_list" in d:
                 executors_list, el_err = validate_executors_list(d["executors_list"])
                 if el_err:
-                    return JsonResponse({"error": el_err}, status=400)
+                    return Response({"error": el_err}, status=400)
                 TaskExecutor.objects.filter(work=work).delete()
                 if executors_list:
                     _save_executors(work, executors_list)
@@ -701,7 +703,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
             object_id=work.id,
             object_repr=work.work_name,
         )
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
     def _mcc_finish(self, work):
         """Закрытие задачи: date_end = последний день прошлого месяца."""
@@ -711,7 +713,7 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
         work.date_end = last_day
         work.plan_hours = ph
         work.save(update_fields=["date_end", "plan_hours", "updated_at"])
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ---------------------------------------------------------------------------
@@ -719,7 +721,9 @@ class TaskDetailView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class TaskDeleteAllView(AdminRequiredJsonMixin, View):
+class TaskDeleteAllView(APIView):
+    permission_classes = [IsAdminPermission]
+
     """DELETE /api/tasks/all — удаление всех задач (только admin)."""
 
     def delete(self, request):
@@ -736,10 +740,10 @@ class TaskDeleteAllView(AdminRequiredJsonMixin, View):
                     show_in_pp=False,
                 ).delete()
             logger.info("Администратор очистил все задачи: user=%s", request.user.pk)
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("TaskDeleteAllView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -747,22 +751,24 @@ class TaskDeleteAllView(AdminRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class TaskBulkDeleteView(WriterRequiredJsonMixin, View):
+class TaskBulkDeleteView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """POST /api/tasks/bulk_delete — удаление нескольких задач по списку ID."""
 
     def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         ids = data.get("ids", [])
         if not ids or not isinstance(ids, list):
-            return JsonResponse({"error": "Не указаны ID задач"}, status=400)
+            return Response({"error": "Не указаны ID задач"}, status=400)
 
         # Ограничиваем до 100 за раз
         ids = [int(i) for i in ids[:100] if str(i).isdigit()]
         if not ids:
-            return JsonResponse({"error": "Нет валидных ID"}, status=400)
+            return Response({"error": "Нет валидных ID"}, status=400)
 
         try:
             vis_q = get_visibility_filter(request.user)
@@ -788,10 +794,10 @@ class TaskBulkDeleteView(WriterRequiredJsonMixin, View):
                         work.delete()
                     deleted += 1
 
-            return JsonResponse({"ok": True, "deleted": deleted})
+            return Response({"ok": True, "deleted": deleted})
         except Exception as e:
             logger.error("TaskBulkDeleteView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -799,14 +805,16 @@ class TaskBulkDeleteView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class TaskExecutorsView(LoginRequiredJsonMixin, View):
+class TaskExecutorsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET /api/tasks/<id>/executors — список исполнителей задачи."""
 
     def get(self, request, pk):
         try:
             vis_q = get_visibility_filter(request.user)
             if not Work.objects.filter(pk=pk, show_in_plan=True).filter(vis_q).exists():
-                return JsonResponse({"error": "Задача не найдена"}, status=403)
+                return Response({"error": "Задача не найдена"}, status=403)
             executors = TaskExecutor.objects.filter(work_id=pk).select_related(
                 "executor"
             )
@@ -817,10 +825,10 @@ class TaskExecutorsView(LoginRequiredJsonMixin, View):
                 }
                 for te in executors
             ]
-            return JsonResponse(result, safe=False)
+            return Response(result)
         except Exception as e:
             logger.error("TaskExecutorsView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------

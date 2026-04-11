@@ -12,15 +12,12 @@ import logging
 import re
 
 from django.db import transaction
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import get_visibility_filter, safe_date, safe_decimal, safe_int
 from apps.works.models import Notice, Work, WorkReport
 
@@ -29,12 +26,7 @@ logger = logging.getLogger(__name__)
 NOTICE_TASK_TYPE = "Корректировка документа"
 
 _URL_RE = re.compile(
-    r"^https?://"  # http:// или https://
-    r"[A-Za-z0-9]"  # домен начинается с буквы/цифры
-    r"[A-Za-z0-9._-]*"  # остальная часть домена
-    r"\."  # обязательная точка
-    r"[A-Za-z]{2,}"  # TLD минимум 2 буквы
-    r"[^\s]*$",  # путь/параметры (без пробелов)
+    r"^https?://" r"[A-Za-z0-9]" r"[A-Za-z0-9._-]*" r"\." r"[A-Za-z]{2,}" r"[^\s]*$",
     re.IGNORECASE,
 )
 
@@ -112,7 +104,6 @@ def _serialize_report(r):
     }
 
 
-# _safe_decimal / _safe_int / _safe_date → вынесены в apps.api.utils
 _safe_decimal = safe_decimal
 _safe_int = safe_int
 _safe_date = safe_date
@@ -123,15 +114,16 @@ _safe_date = safe_date
 # ---------------------------------------------------------------------------
 
 
-class ReportListView(LoginRequiredJsonMixin, View):
+class ReportListView(APIView):
     """GET /api/reports/<task_id> — список отчётов по задаче."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, task_id):
         try:
-            # Проверяем, что задача существует И видима для текущего пользователя
             vis_q = get_visibility_filter(request.user)
             if not Work.objects.filter(vis_q, pk=task_id).exists():
-                return JsonResponse(
+                return Response(
                     {"error": "Задача не найдена"},
                     status=404,
                 )
@@ -143,13 +135,13 @@ class ReportListView(LoginRequiredJsonMixin, View):
                 .order_by("id")
             )
             result = [_serialize_report(r) for r in reports]
-            return JsonResponse(result, safe=False)
+            return Response(result)
         except (ValueError, TypeError) as e:
             logger.warning("ReportListView.get bad request: %s", e)
-            return JsonResponse({"error": f"Некорректные параметры: {e}"}, status=400)
+            return Response({"error": f"Некорректные параметры: {e}"}, status=400)
         except Exception as e:
             logger.error("ReportListView.get error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": f"Внутренняя ошибка сервера: {e}"},
                 status=500,
             )
@@ -160,48 +152,48 @@ class ReportListView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ReportCreateView(WriterRequiredJsonMixin, View):
+class ReportCreateView(APIView):
     """POST /api/reports — создание отчёта."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request):
         try:
             return self._create(request)
         except Exception as e:
             logger.error("ReportCreateView error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": f"Внутренняя ошибка сервера: {e}"},
                 status=500,
             )
 
     def _create(self, request):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not d:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         task_id = d.get("task_id")
         if not task_id:
-            return JsonResponse(
+            return Response(
                 {"error": "task_id обязателен"},
                 status=400,
             )
 
-        # Проверяем существование задачи
         try:
             work = Work.objects.select_related("department").get(pk=task_id)
         except Work.DoesNotExist:
-            return JsonResponse({"error": "Задача не найдена"}, status=404)
+            return Response({"error": "Задача не найдена"}, status=404)
 
-        # Проверка доступа по отделу (создавать отчёт — только свой отдел)
         employee = getattr(request.user, "employee", None)
         if employee and employee.role not in ("admin", "ntc_head", "ntc_deputy"):
             if not employee.department_id:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             if work.department_id and employee.department_id != work.department_id:
-                return JsonResponse(
+                return Response(
                     {
                         "error": "Вы можете создавать отчёты только для задач своего отдела"
                     },
@@ -210,12 +202,11 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
 
         url_err = _validate_url(d.get("doc_link"))
         if url_err:
-            return JsonResponse({"error": url_err}, status=400)
+            return Response({"error": url_err}, status=400)
 
-        # Валидация: дата выпуска не может быть позже сегодня
         da = _safe_date(d.get("date_accepted"))
         if da and da > timezone.now().date():
-            return JsonResponse(
+            return Response(
                 {"error": "Дата выпуска не может быть позже текущей даты"}, status=400
             )
 
@@ -238,12 +229,9 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
                 norm_control=d.get("norm_control") or "",
                 doc_link=d.get("doc_link") or "",
             )
-            # Авто-создание записи ЖИ для «Корректировка документа»
-            # Присваиваем кешированный объект work, чтобы _sync_notice_for_report
-            # не делал лишний SQL-запрос через FK
             report.work = work
             _sync_notice_for_report(report)
-        return JsonResponse({"id": report.id})
+        return Response({"id": report.id})
 
 
 # ---------------------------------------------------------------------------
@@ -251,15 +239,17 @@ class ReportCreateView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ReportDetailView(WriterRequiredJsonMixin, View):
+class ReportDetailView(APIView):
     """PUT /api/reports/<id>; DELETE /api/reports/<id>."""
+
+    permission_classes = [IsWriterPermission]
 
     def put(self, request, pk):
         try:
             return self._update(request, pk)
         except Exception as e:
             logger.error("ReportDetailView.put error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": f"Внутренняя ошибка сервера: {e}"},
                 status=500,
             )
@@ -269,58 +259,54 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
             try:
                 report = WorkReport.objects.select_related("work").get(pk=pk)
             except WorkReport.DoesNotExist:
-                return JsonResponse(
+                return Response(
                     {"error": "Отчёт не найден"},
                     status=404,
                 )
-            # Проверка видимости задачи для текущего пользователя
             vis_q = get_visibility_filter(request.user)
             if not Work.objects.filter(pk=report.work_id).filter(vis_q).exists():
-                return JsonResponse(
+                return Response(
                     {"error": "Задача не найдена или нет доступа"},
                     status=403,
                 )
-            # Проверка доступа по отделу задачи
             err = _check_report_access(request.user, report)
             if err:
-                return JsonResponse({"error": err}, status=403)
+                return Response({"error": err}, status=403)
             report.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ReportDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": f"Внутренняя ошибка сервера: {e}"},
                 status=500,
             )
 
     def _update(self, request, pk):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not d:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         try:
             report = WorkReport.objects.select_related("work").get(pk=pk)
         except WorkReport.DoesNotExist:
-            return JsonResponse({"error": "Отчёт не найден"}, status=404)
+            return Response({"error": "Отчёт не найден"}, status=404)
 
-        # Проверка видимости задачи для текущего пользователя
         vis_q = get_visibility_filter(request.user)
         if not Work.objects.filter(pk=report.work_id).filter(vis_q).exists():
-            return JsonResponse(
+            return Response(
                 {"error": "Задача не найдена или нет доступа"},
                 status=403,
             )
-        # Проверка доступа по отделу задачи
         err = _check_report_access(request.user, report)
         if err:
-            return JsonResponse({"error": err}, status=403)
+            return Response({"error": err}, status=403)
 
         if "doc_link" in d:
             url_err = _validate_url(d["doc_link"])
             if url_err:
-                return JsonResponse({"error": url_err}, status=400)
+                return Response({"error": url_err}, status=400)
 
         report.doc_name = d.get("doc_name") or report.doc_name or ""
         report.doc_designation = (
@@ -337,7 +323,7 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
         if "date_accepted" in d:
             da = _safe_date(d["date_accepted"])
             if da and da > timezone.now().date():
-                return JsonResponse(
+                return Response(
                     {"error": "Дата выпуска не может быть позже текущей даты"},
                     status=400,
                 )
@@ -355,6 +341,5 @@ class ReportDetailView(WriterRequiredJsonMixin, View):
 
         with transaction.atomic():
             report.save()
-            # Синхронизация ЖИ при обновлении отчёта
             _sync_notice_for_report(report)
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})

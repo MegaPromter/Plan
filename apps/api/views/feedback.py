@@ -7,10 +7,10 @@ PUT    /api/feedback/<id>/  — обновление статуса (admin)
 DELETE /api/feedback/<id>/  — удаление (admin)
 """
 
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin
 from apps.works.models import Feedback, FeedbackAttachment
 
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 МБ
@@ -47,8 +47,10 @@ def _serialize(fb, current_user=None):
     }
 
 
-class FeedbackListView(LoginRequiredJsonMixin, View):
+class FeedbackListView(APIView):
     """GET — список, POST — создание."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         qs = Feedback.objects.select_related("user", "user__employee").prefetch_related(
@@ -69,13 +71,13 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
             qs = qs.filter(category=category_filter)
 
         items = [_serialize(fb, request.user) for fb in qs[:500]]
-        return JsonResponse(items, safe=False)
+        return Response(items)
 
     def post(self, request):
         category = request.POST.get("category", "other")
         text = request.POST.get("text", "").strip()
         if not text:
-            return JsonResponse({"error": "Текст обязателен"}, status=400)
+            return Response({"error": "Текст обязателен"}, status=400)
 
         valid_cats = {c[0] for c in Feedback.CATEGORY_CHOICES}
         if category not in valid_cats:
@@ -88,12 +90,12 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
         all_files.extend(request.FILES.getlist("screenshots"))
         for f in all_files:
             if f.size > MAX_UPLOAD_SIZE:
-                return JsonResponse(
+                return Response(
                     {"error": f"Файл «{f.name}» слишком большой (макс. 5 МБ)"},
                     status=400,
                 )
             if f.content_type not in ALLOWED_IMAGE_TYPES:
-                return JsonResponse(
+                return Response(
                     {
                         "error": f"Файл «{f.name}»: допустимы только изображения (JPEG, PNG, GIF, WebP)"
                     },
@@ -105,7 +107,7 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
                 header = f.read(len(expected_magic))
                 f.seek(0)  # сбросить позицию чтения
                 if header[: len(expected_magic)] != expected_magic:
-                    return JsonResponse(
+                    return Response(
                         {
                             "error": f"Файл «{f.name}»: содержимое не соответствует заявленному типу"
                         },
@@ -119,16 +121,18 @@ class FeedbackListView(LoginRequiredJsonMixin, View):
         # Дополнительные скриншоты
         for f in request.FILES.getlist("screenshots"):
             FeedbackAttachment.objects.create(feedback=fb, image=f)
-        return JsonResponse({"id": fb.pk, "feedback": _serialize(fb)}, status=201)
+        return Response({"id": fb.pk, "feedback": _serialize(fb)}, status=201)
 
 
-class FeedbackDetailView(LoginRequiredJsonMixin, View):
+class FeedbackDetailView(APIView):
     """PUT — обновление, DELETE — удаление, POST — обновление с файлом."""
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         """POST с _method=PUT — для multipart/form-data (файл скриншота)."""
         if request.POST.get("_method") != "PUT":
-            return JsonResponse({"error": "Method not allowed"}, status=405)
+            return Response({"error": "Method not allowed"}, status=405)
         return self._update(request, pk, multipart=True)
 
     def put(self, request, pk):
@@ -141,21 +145,18 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
         try:
             fb = Feedback.objects.get(pk=pk)
         except Feedback.DoesNotExist:
-            return JsonResponse({"error": "Не найдено"}, status=404)
+            return Response({"error": "Не найдено"}, status=404)
 
         is_own = fb.user_id == request.user.pk
         if not is_admin and not is_own:
-            return JsonResponse({"error": "Доступ запрещён"}, status=403)
+            return Response({"error": "Доступ запрещён"}, status=403)
 
         if multipart:
             data = request.POST.dict()
         else:
-            import json
-
-            try:
-                data = json.loads(request.body)
-            except (json.JSONDecodeError, ValueError):
-                return JsonResponse({"error": "Invalid JSON"}, status=400)
+            data = request.data
+            if not isinstance(data, dict):
+                return Response({"error": "Invalid JSON"}, status=400)
 
         changed = []
 
@@ -190,38 +191,40 @@ class FeedbackDetailView(LoginRequiredJsonMixin, View):
         if changed:
             fb.save(update_fields=changed + ["updated_at"])
 
-        return JsonResponse({"ok": True, "feedback": _serialize(fb, request.user)})
+        return Response({"ok": True, "feedback": _serialize(fb, request.user)})
 
     def delete(self, request, pk):
         emp = getattr(request.user, "employee", None)
         is_admin = (emp and emp.role == "admin") if emp else request.user.is_superuser
         if not is_admin:
-            return JsonResponse({"error": "Доступ запрещён"}, status=403)
+            return Response({"error": "Доступ запрещён"}, status=403)
 
         try:
             fb = Feedback.objects.get(pk=pk)
         except Feedback.DoesNotExist:
-            return JsonResponse({"error": "Не найдено"}, status=404)
+            return Response({"error": "Не найдено"}, status=404)
 
         fb.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
-class FeedbackAttachmentDeleteView(LoginRequiredJsonMixin, View):
+class FeedbackAttachmentDeleteView(APIView):
     """DELETE /api/feedback/attachment/<pk>/ — удаление вложения (автор или admin)."""
+
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         try:
             att = FeedbackAttachment.objects.select_related("feedback").get(pk=pk)
         except FeedbackAttachment.DoesNotExist:
-            return JsonResponse({"error": "Не найдено"}, status=404)
+            return Response({"error": "Не найдено"}, status=404)
 
         emp = getattr(request.user, "employee", None)
         is_admin = (emp and emp.role == "admin") if emp else request.user.is_superuser
         is_own = att.feedback.user_id == request.user.pk
 
         if not is_admin and not is_own:
-            return JsonResponse({"error": "Доступ запрещён"}, status=403)
+            return Response({"error": "Доступ запрещён"}, status=403)
 
         att.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})

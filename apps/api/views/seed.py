@@ -14,10 +14,10 @@ import random
 from datetime import date, timedelta
 
 from django.db import transaction
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import AdminRequiredJsonMixin, parse_json_body
+from apps.api.drf_utils import IsAdminPermission
 from apps.employees.models import BusinessTrip, Department, Employee, Sector, Vacation
 from apps.works.models import Directory, PPProject, Work, WorkCalendar
 
@@ -210,16 +210,18 @@ def _get_or_create_sector(dept, sector_code):
 # ── POST /api/seed ──────────────────────────────────────────────────────────
 
 
-class SeedDataView(AdminRequiredJsonMixin, View):
+class SeedDataView(APIView):
     """
     Генерация случайных задач (Work show_in_plan=True).
     Body: {count: 1-10000}
     """
 
+    permission_classes = [IsAdminPermission]
+
     def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         count = min(int(data.get("count", 1000)), 10_000)
 
         employee = getattr(request.user, "employee", None)
@@ -310,23 +312,25 @@ class SeedDataView(AdminRequiredJsonMixin, View):
                     )
                     created += 1
 
-        return JsonResponse({"inserted": created})
+        return Response({"inserted": created})
 
 
 # ── POST /api/seed_executors ────────────────────────────────────────────────
 
 
-class SeedExecutorsView(AdminRequiredJsonMixin, View):
+class SeedExecutorsView(APIView):
     """
     Добавление исполнителей в Directory(dir_type='executor')
     и назначение случайных исполнителей существующим задачам.
     Body: {executors: ["Иванов И.И.", ...]} (опционально)
     """
 
+    permission_classes = [IsAdminPermission]
+
     def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         executors_input = data.get("executors", _SEED_EXECUTORS)
 
         with transaction.atomic():
@@ -345,7 +349,7 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
             all_exec = sorted(existing | set(new_names))
 
             if not all_exec:
-                return JsonResponse(
+                return Response(
                     {
                         "added_executors": 0,
                         "total_executors": 0,
@@ -369,7 +373,7 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
                     batch_size=1000,
                 )
 
-        return JsonResponse(
+        return Response(
             {
                 "added_executors": len(new_names),
                 "total_executors": len(all_exec),
@@ -381,11 +385,13 @@ class SeedExecutorsView(AdminRequiredJsonMixin, View):
 # ── POST /api/seed_vacations ────────────────────────────────────────────────
 
 
-class SeedVacationsView(AdminRequiredJsonMixin, View):
+class SeedVacationsView(APIView):
     """
     Генерация случайных отпусков для существующих исполнителей.
     Берёт уникальных исполнителей из задач, создаёт Vacation.
     """
+
+    permission_classes = [IsAdminPermission]
 
     def post(self, request):
         with transaction.atomic():
@@ -413,7 +419,7 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
                 )
 
             if not executor_names:
-                return JsonResponse({"created": 0, "executors": 0})
+                return Response({"created": 0, "executors": 0})
 
             year = date.today().year
             created = 0
@@ -444,7 +450,7 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
                 )
                 created += 1
 
-        return JsonResponse(
+        return Response(
             {
                 "created": created,
                 "executors": len(executor_names),
@@ -455,11 +461,13 @@ class SeedVacationsView(AdminRequiredJsonMixin, View):
 # ── POST /api/fill_all ──────────────────────────────────────────────────────
 
 
-class FillAllView(AdminRequiredJsonMixin, View):
+class FillAllView(APIView):
     """
     Заполнение всех справочников (Directory) и обновление существующих задач
     случайными данными из справочников.
     """
+
+    permission_classes = [IsAdminPermission]
 
     def post(self, request):
         with transaction.atomic():
@@ -601,16 +609,18 @@ class FillAllView(AdminRequiredJsonMixin, View):
                     batch_size=1000,
                 )
 
-        return JsonResponse({"updated": len(works)})
+        return Response({"updated": len(works)})
 
 
 # ── POST /api/fill_dept ─────────────────────────────────────────────────────
 
 
-class FillDeptView(AdminRequiredJsonMixin, View):
+class FillDeptView(APIView):
     """
     Заполнение справочника отделов + секторов и назначение отделов задачам.
     """
+
+    permission_classes = [IsAdminPermission]
 
     def post(self, request):
         with transaction.atomic():
@@ -644,7 +654,7 @@ class FillDeptView(AdminRequiredJsonMixin, View):
             depts = list(dept_entries.keys())
 
             if not depts:
-                return JsonResponse({"error": "Нет отделов в справочнике"}, status=400)
+                return Response({"error": "Нет отделов в справочнике"}, status=400)
 
             works = list(Work.objects.filter(show_in_plan=True)[:10_000])
 
@@ -656,7 +666,7 @@ class FillDeptView(AdminRequiredJsonMixin, View):
             if works:
                 Work.objects.bulk_update(works, ["department"], batch_size=1000)
 
-        return JsonResponse({"updated": len(works), "depts_used": depts})
+        return Response({"updated": len(works), "depts_used": depts})
 
 
 # ── POST /api/seed_analytics ──────────────────────────────────────────────
@@ -686,7 +696,7 @@ _TRIP_PURPOSES = [
 ]
 
 
-class SeedAnalyticsView(AdminRequiredJsonMixin, View):
+class SeedAnalyticsView(APIView):
     """
     Генерация данных для модуля аналитики:
     1. Отпуска для ВСЕХ сотрудников (ежегодный 14-28 дней)
@@ -697,11 +707,13 @@ class SeedAnalyticsView(AdminRequiredJsonMixin, View):
        - 65% сотрудников — нормальная загрузка (70-100% нормы)
     """
 
+    permission_classes = [IsAdminPermission]
+
     def post(self, request):
         year = date.today().year
         employees = list(Employee.objects.all())
         if not employees:
-            return JsonResponse({"error": "Нет сотрудников в базе"}, status=400)
+            return Response({"error": "Нет сотрудников в базе"}, status=400)
 
         # Загружаем нормы рабочего времени
         norms = {}
@@ -709,7 +721,7 @@ class SeedAnalyticsView(AdminRequiredJsonMixin, View):
             norms[wc.month] = float(wc.hours_norm)
         annual_norm = sum(norms.values())  # полный годовой фонд
         if annual_norm == 0:
-            return JsonResponse(
+            return Response(
                 {"error": f"Нет данных WorkCalendar за {year} год"},
                 status=400,
             )
@@ -874,4 +886,4 @@ class SeedAnalyticsView(AdminRequiredJsonMixin, View):
                 Work.objects.bulk_update(updated, ["plan_hours"], batch_size=1000)
             stats["works_updated"] = len(updated)
 
-        return JsonResponse(stats)
+        return Response(stats)

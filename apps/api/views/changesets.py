@@ -24,16 +24,13 @@ import logging
 
 from django.db import transaction
 from django.db.models import Count
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import safe_date, safe_decimal
 from apps.employees.models import Department, Employee, NTCCenter, Sector
 from apps.works.models import AuditLog, Changeset, ChangesetItem, PPProject, Work
@@ -135,8 +132,10 @@ def _is_approver(user):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetListView(LoginRequiredJsonMixin, View):
+class ChangesetListView(APIView):
     """Список наборов изменений. Фильтры: pp_project_id, status, department_id."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         qs = Changeset.objects.select_related(
@@ -159,7 +158,7 @@ class ChangesetListView(LoginRequiredJsonMixin, View):
             qs = qs.filter(department_id=dept_id)
 
         data = [_serialize_changeset(cs) for cs in qs[:200]]
-        return JsonResponse({"items": data})
+        return Response({"items": data})
 
 
 # ---------------------------------------------------------------------------
@@ -167,26 +166,28 @@ class ChangesetListView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetCreateView(WriterRequiredJsonMixin, View):
+class ChangesetCreateView(APIView):
     """Создание нового набора изменений (черновик)."""
 
+    permission_classes = [IsWriterPermission]
+
     def post(self, request):
-        body = parse_json_body(request)
-        if isinstance(body, JsonResponse):
-            return body
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         pp_project_id = body.get("pp_project_id")
         if not pp_project_id:
-            return JsonResponse({"error": "pp_project_id обязателен"}, status=400)
+            return Response({"error": "pp_project_id обязателен"}, status=400)
 
         try:
             pp_project = PPProject.objects.get(pk=pp_project_id)
         except PPProject.DoesNotExist:
-            return JsonResponse({"error": "Проект ПП не найден"}, status=404)
+            return Response({"error": "Проект ПП не найден"}, status=404)
 
         title = (body.get("title") or "").strip()
         if not title:
-            return JsonResponse({"error": "Название обязательно"}, status=400)
+            return Response({"error": "Название обязательно"}, status=400)
 
         emp = getattr(request.user, "employee", None)
 
@@ -206,7 +207,7 @@ class ChangesetCreateView(WriterRequiredJsonMixin, View):
             details={"pp_project_id": pp_project_id},
         )
 
-        return JsonResponse(_serialize_changeset(cs), status=201)
+        return Response(_serialize_changeset(cs), status=201)
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +215,10 @@ class ChangesetCreateView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetDetailView(LoginRequiredJsonMixin, View):
+class ChangesetDetailView(APIView):
     """Детали, обновление, удаление набора изменений."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
@@ -230,21 +233,21 @@ class ChangesetDetailView(LoginRequiredJsonMixin, View):
                 .get(pk=pk)
             )
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
-        return JsonResponse(_serialize_changeset(cs, include_items=True))
+            return Response({"error": "Набор не найден"}, status=404)
+        return Response(_serialize_changeset(cs, include_items=True))
 
     def put(self, request, pk):
-        body = parse_json_body(request)
-        if isinstance(body, JsonResponse):
-            return body
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
+            return Response(
                 {"error": "Редактирование возможно только для черновика"}, status=400
             )
 
@@ -254,25 +257,25 @@ class ChangesetDetailView(LoginRequiredJsonMixin, View):
             cs.description = (body["description"] or "").strip()
         cs.save(update_fields=["title", "description", "updated_at"])
 
-        return JsonResponse(_serialize_changeset(cs))
+        return Response(_serialize_changeset(cs))
 
     def delete(self, request, pk):
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
+            return Response(
                 {"error": "Удаление возможно только для черновика"}, status=400
             )
 
         # Только автор или admin
         if cs.author_id != request.user.id and not _is_approver(request.user):
-            return JsonResponse({"error": "Нет прав"}, status=403)
+            return Response({"error": "Нет прав"}, status=403)
 
         cs.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ---------------------------------------------------------------------------
@@ -280,27 +283,29 @@ class ChangesetDetailView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
+class ChangesetItemCreateView(APIView):
     """Добавление элемента в набор изменений."""
 
+    permission_classes = [IsWriterPermission]
+
     def post(self, request, pk):
-        body = parse_json_body(request)
-        if isinstance(body, JsonResponse):
-            return body
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
+            return Response(
                 {"error": "Добавление возможно только в черновик"}, status=400
             )
 
         action = body.get("action")
         if action not in ("create", "update", "delete"):
-            return JsonResponse(
+            return Response(
                 {"error": "action должен быть create/update/delete"}, status=400
             )
 
@@ -310,13 +315,13 @@ class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
 
         if action in ("update", "delete"):
             if not target_row_id:
-                return JsonResponse(
+                return Response(
                     {"error": "target_row_id обязателен для update/delete"}, status=400
                 )
             try:
                 target_row = Work.objects.get(pk=target_row_id, show_in_pp=True)
             except Work.DoesNotExist:
-                return JsonResponse({"error": "Строка ПП не найдена"}, status=404)
+                return Response({"error": "Строка ПП не найдена"}, status=404)
             original_data = _snapshot_work(target_row)
 
             # Проверяем: нет ли уже такого же действия в этом наборе для этой строки
@@ -326,7 +331,7 @@ class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
                 action=action,
             ).first()
             if existing and action == "delete":
-                return JsonResponse(
+                return Response(
                     {"error": "Эта строка уже отмечена на удаление"}, status=400
                 )
             # Для update — обновляем существующий item, а не создаём новый
@@ -335,11 +340,11 @@ class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
                 changes.update(body.get("field_changes", {}))
                 existing.field_changes = changes
                 existing.save(update_fields=["field_changes", "updated_at"])
-                return JsonResponse(_serialize_item(existing), status=200)
+                return Response(_serialize_item(existing), status=200)
 
         field_changes = body.get("field_changes", {})
         if action == "create" and not field_changes:
-            return JsonResponse(
+            return Response(
                 {"error": "field_changes обязателен для create"}, status=400
             )
 
@@ -357,7 +362,7 @@ class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
             order=max_order + 1,
         )
 
-        return JsonResponse(_serialize_item(item), status=201)
+        return Response(_serialize_item(item), status=201)
 
 
 # ---------------------------------------------------------------------------
@@ -365,21 +370,23 @@ class ChangesetItemCreateView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetItemDetailView(WriterRequiredJsonMixin, View):
+class ChangesetItemDetailView(APIView):
     """Обновление и удаление элемента набора."""
 
+    permission_classes = [IsWriterPermission]
+
     def put(self, request, pk):
-        body = parse_json_body(request)
-        if isinstance(body, JsonResponse):
-            return body
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         try:
             item = ChangesetItem.objects.select_related("changeset").get(pk=pk)
         except ChangesetItem.DoesNotExist:
-            return JsonResponse({"error": "Элемент не найден"}, status=404)
+            return Response({"error": "Элемент не найден"}, status=404)
 
         if item.changeset.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
+            return Response(
                 {"error": "Редактирование возможно только в черновике"}, status=400
             )
 
@@ -389,21 +396,21 @@ class ChangesetItemDetailView(WriterRequiredJsonMixin, View):
             item.order = int(body["order"])
         item.save(update_fields=["field_changes", "order", "updated_at"])
 
-        return JsonResponse(_serialize_item(item))
+        return Response(_serialize_item(item))
 
     def delete(self, request, pk):
         try:
             item = ChangesetItem.objects.select_related("changeset").get(pk=pk)
         except ChangesetItem.DoesNotExist:
-            return JsonResponse({"error": "Элемент не найден"}, status=404)
+            return Response({"error": "Элемент не найден"}, status=404)
 
         if item.changeset.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
+            return Response(
                 {"error": "Удаление возможно только из черновика"}, status=400
             )
 
         item.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ---------------------------------------------------------------------------
@@ -411,22 +418,22 @@ class ChangesetItemDetailView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetSubmitView(WriterRequiredJsonMixin, View):
+class ChangesetSubmitView(APIView):
     """Отправка набора на согласование (draft → review)."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request, pk):
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_DRAFT:
-            return JsonResponse(
-                {"error": "Отправить можно только черновик"}, status=400
-            )
+            return Response({"error": "Отправить можно только черновик"}, status=400)
 
         if not cs.items.exists():
-            return JsonResponse(
+            return Response(
                 {"error": "Набор пуст — добавьте хотя бы одно изменение"}, status=400
             )
 
@@ -442,7 +449,7 @@ class ChangesetSubmitView(WriterRequiredJsonMixin, View):
             details={"items_count": cs.items.count()},
         )
 
-        return JsonResponse(_serialize_changeset(cs))
+        return Response(_serialize_changeset(cs))
 
 
 # ---------------------------------------------------------------------------
@@ -450,22 +457,24 @@ class ChangesetSubmitView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetApproveView(LoginRequiredJsonMixin, View):
+class ChangesetApproveView(APIView):
     """
     Утверждение набора (review → approved).
     Атомарно применяет все изменения к таблице Work.
     """
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, pk):
         if not _is_approver(request.user):
-            return JsonResponse({"error": "Нет прав на утверждение"}, status=403)
+            return Response({"error": "Нет прав на утверждение"}, status=403)
 
         try:
             with transaction.atomic():
                 cs = Changeset.objects.select_for_update().get(pk=pk)
 
                 if cs.status != Changeset.STATUS_REVIEW:
-                    return JsonResponse(
+                    return Response(
                         {"error": "Утвердить можно только набор на согласовании"},
                         status=400,
                     )
@@ -517,7 +526,7 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
                 )
 
         except _ConflictException as e:
-            return JsonResponse(
+            return Response(
                 {
                     "error": "Обнаружены конфликты — данные изменились после создания набора",
                     "conflicts": e.conflicts,
@@ -525,7 +534,7 @@ class ChangesetApproveView(LoginRequiredJsonMixin, View):
                 status=409,
             )
 
-        return JsonResponse(_serialize_changeset(cs))
+        return Response(_serialize_changeset(cs))
 
     def _apply_create(self, item, cs, request):
         """Создать новую строку Work из field_changes."""
@@ -635,30 +644,32 @@ class _ConflictException(Exception):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetRejectView(LoginRequiredJsonMixin, View):
+class ChangesetRejectView(APIView):
     """Отклонение набора (review → rejected) с комментарием."""
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         if not _is_approver(request.user):
-            return JsonResponse({"error": "Нет прав на отклонение"}, status=403)
+            return Response({"error": "Нет прав на отклонение"}, status=403)
 
-        body = parse_json_body(request)
-        if isinstance(body, JsonResponse):
-            return body
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_REVIEW:
-            return JsonResponse(
+            return Response(
                 {"error": "Отклонить можно только набор на согласовании"}, status=400
             )
 
         comment = (body.get("reject_comment") or "").strip()
         if not comment:
-            return JsonResponse({"error": "Укажите причину отклонения"}, status=400)
+            return Response({"error": "Укажите причину отклонения"}, status=400)
 
         cs.status = Changeset.STATUS_REJECTED
         cs.reject_comment = comment
@@ -682,7 +693,7 @@ class ChangesetRejectView(LoginRequiredJsonMixin, View):
             details={"reject_comment": comment},
         )
 
-        return JsonResponse(_serialize_changeset(cs))
+        return Response(_serialize_changeset(cs))
 
 
 # ---------------------------------------------------------------------------
@@ -690,17 +701,19 @@ class ChangesetRejectView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetReopenView(WriterRequiredJsonMixin, View):
+class ChangesetReopenView(APIView):
     """Переоткрытие набора (rejected → draft)."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request, pk):
         try:
             cs = Changeset.objects.get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         if cs.status != Changeset.STATUS_REJECTED:
-            return JsonResponse(
+            return Response(
                 {"error": "Переоткрыть можно только отклонённый набор"}, status=400
             )
 
@@ -718,7 +731,7 @@ class ChangesetReopenView(WriterRequiredJsonMixin, View):
             ]
         )
 
-        return JsonResponse(_serialize_changeset(cs))
+        return Response(_serialize_changeset(cs))
 
 
 # ---------------------------------------------------------------------------
@@ -726,8 +739,10 @@ class ChangesetReopenView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ChangesetDiffView(LoginRequiredJsonMixin, View):
+class ChangesetDiffView(APIView):
     """Просмотр всех изменений набора в формате diff."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
@@ -735,7 +750,7 @@ class ChangesetDiffView(LoginRequiredJsonMixin, View):
                 "pp_project", "department", "author"
             ).get(pk=pk)
         except Changeset.DoesNotExist:
-            return JsonResponse({"error": "Набор не найден"}, status=404)
+            return Response({"error": "Набор не найден"}, status=404)
 
         items = cs.items.select_related("target_row").order_by("order")
         diff_items = []
@@ -776,7 +791,7 @@ class ChangesetDiffView(LoginRequiredJsonMixin, View):
 
             diff_items.append(entry)
 
-        return JsonResponse(
+        return Response(
             {
                 "changeset": _serialize_changeset(cs),
                 "diff": diff_items,

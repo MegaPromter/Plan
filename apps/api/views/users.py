@@ -14,15 +14,12 @@ import logging
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import (
-    AdminRequiredJsonMixin,
-    LoginRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsAdminPermission
 from apps.api.utils import VALID_ROLES
 from apps.employees.models import Employee
 from apps.works.models import AuditLog
@@ -36,11 +33,13 @@ from apps.api.utils import resolve_position_key as _resolve_position_key
 # ── GET / POST /api/users ────────────────────────────────────────────────────
 
 
-class UserListView(AdminRequiredJsonMixin, View):
+class UserListView(APIView):
     """
     GET  -- список всех пользователей (admin).
     POST -- создание нового пользователя (admin).
     """
+
+    permission_classes = [IsAdminPermission]
 
     def get(self, request):
         employees = Employee.objects.select_related(
@@ -64,31 +63,29 @@ class UserListView(AdminRequiredJsonMixin, View):
                     "date_joined": emp.user.date_joined.isoformat(),
                 }
             )
-        return JsonResponse(result, safe=False)
+        return Response(result)
 
     def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         username = data.get("username", "").strip()
         password = data.get("password", "")
         role = data.get("role", "user")
 
         if not username or not password:
-            return JsonResponse({"error": "Логин и пароль обязательны"}, status=400)
+            return Response({"error": "Логин и пароль обязательны"}, status=400)
         if role not in VALID_ROLES:
-            return JsonResponse({"error": f"Недопустимая роль: {role}"}, status=400)
+            return Response({"error": f"Недопустимая роль: {role}"}, status=400)
 
         try:
-            # Атомарная транзакция: User + Employee + подразделения
             with transaction.atomic():
                 user = User.objects.create_user(
                     username=username,
                     password=password,
                 )
 
-                # Создаём профиль Employee (created_by = текущий admin)
                 emp = Employee.objects.create(
                     user=user,
                     role=role,
@@ -99,7 +96,6 @@ class UserListView(AdminRequiredJsonMixin, View):
                     created_by=request.user,
                 )
 
-                # Устанавливаем подразделение
                 from apps.employees.models import Department, NTCCenter, Sector
 
                 dept_code = data.get("dept", "").strip()
@@ -128,12 +124,12 @@ class UserListView(AdminRequiredJsonMixin, View):
                     emp.full_clean()
                     emp.save()
         except ValidationError as e:
-            return JsonResponse(
+            return Response(
                 {"error": e.message if hasattr(e, "message") else str(e)},
                 status=400,
             )
         except IntegrityError:
-            return JsonResponse({"error": "Пользователь уже существует"}, status=400)
+            return Response({"error": "Пользователь уже существует"}, status=400)
 
         log_action(
             request,
@@ -141,37 +137,38 @@ class UserListView(AdminRequiredJsonMixin, View):
             object_id=user.pk,
             object_repr=emp.full_name,
         )
-        return JsonResponse({"id": user.pk}, status=201)
+        return Response({"id": user.pk}, status=201)
 
 
 # ── PUT / DELETE /api/users/<id> ─────────────────────────────────────────────
 
 
-class UserDetailView(AdminRequiredJsonMixin, View):
+class UserDetailView(APIView):
     """
     PUT    -- обновление профиля пользователя.
     DELETE -- удаление пользователя (нельзя удалить себя).
     """
 
+    permission_classes = [IsAdminPermission]
+
     def put(self, request, pk):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not data:
-            return JsonResponse(
+            return Response(
                 {"error": "Нет допустимых полей для обновления"}, status=400
             )
 
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
-            return JsonResponse({"error": "Пользователь не найден"}, status=404)
+            return Response({"error": "Пользователь не найден"}, status=404)
 
         employee = getattr(user, "employee", None)
         if not employee:
-            return JsonResponse({"error": "Профиль сотрудника не найден"}, status=404)
+            return Response({"error": "Профиль сотрудника не найден"}, status=404)
 
-        # Допустимые поля для обновления
         allowed = {
             "role",
             "dept",
@@ -184,23 +181,20 @@ class UserDetailView(AdminRequiredJsonMixin, View):
             "patronymic",
         }
         updates = {k: v for k, v in data.items() if k in allowed}
-        # Нормализуем ntc_center -> center
         if "ntc_center" in updates and "center" not in updates:
             updates["center"] = updates.pop("ntc_center")
         else:
             updates.pop("ntc_center", None)
         if not updates:
-            return JsonResponse(
+            return Response(
                 {"error": "Нет допустимых полей для обновления"}, status=400
             )
 
-        # Валидация роли
         if "role" in updates and updates["role"] not in VALID_ROLES:
-            return JsonResponse(
+            return Response(
                 {"error": f"Недопустимая роль: {updates['role']}"}, status=400
             )
 
-        # Применяем обновления к Employee (в единой транзакции)
         with transaction.atomic():
             return self._apply_employee_updates(request, employee, updates, user)
 
@@ -221,7 +215,6 @@ class UserDetailView(AdminRequiredJsonMixin, View):
         if "position" in updates:
             employee.position = _resolve_position_key(updates["position"])
 
-        # Обновление подразделений: ищем по коду
         if "dept" in updates:
             from apps.employees.models import Department
 
@@ -263,7 +256,7 @@ class UserDetailView(AdminRequiredJsonMixin, View):
         try:
             employee.full_clean()
         except ValidationError as e:
-            return JsonResponse(
+            return Response(
                 {"error": e.message if hasattr(e, "message") else str(e)},
                 status=400,
             )
@@ -278,12 +271,11 @@ class UserDetailView(AdminRequiredJsonMixin, View):
                 object_repr=employee.full_name,
                 details={"old_role": old_role, "new_role": updates["role"]},
             )
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
     def delete(self, request, pk):
-        # Нельзя удалить собственную учётную запись
         if pk == request.user.pk:
-            return JsonResponse(
+            return Response(
                 {"error": "Нельзя удалить собственную учётную запись"},
                 status=400,
             )
@@ -291,7 +283,7 @@ class UserDetailView(AdminRequiredJsonMixin, View):
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
-            return JsonResponse({"error": "Пользователь не найден"}, status=404)
+            return Response({"error": "Пользователь не найден"}, status=404)
 
         emp = getattr(user, "employee", None)
         log_action(
@@ -301,29 +293,30 @@ class UserDetailView(AdminRequiredJsonMixin, View):
             object_repr=emp.full_name if emp else user.username,
         )
         user.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ── PUT /api/users/<id>/password ─────────────────────────────────────────────
 
 
-class UserPasswordResetView(AdminRequiredJsonMixin, View):
+class UserPasswordResetView(APIView):
     """PUT -- сброс пароля пользователя (admin)."""
 
+    permission_classes = [IsAdminPermission]
+
     def put(self, request, pk):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         new_pw = data.get("password", "")
 
-        # Валидация пароля через Django password validators
         from django.contrib.auth.password_validation import validate_password
         from django.core.exceptions import ValidationError as DjValidationError
 
         try:
             validate_password(new_pw)
         except DjValidationError as e:
-            return JsonResponse(
+            return Response(
                 {"error": "; ".join(e.messages)},
                 status=400,
             )
@@ -331,12 +324,11 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
-            return JsonResponse({"error": "Пользователь не найден"}, status=404)
+            return Response({"error": "Пользователь не найден"}, status=404)
 
         user.set_password(new_pw)
         user.save(update_fields=["password"])
 
-        # Устанавливаем флаг обязательной смены пароля
         employee = getattr(user, "employee", None)
         if employee:
             employee.must_change_password = True
@@ -347,23 +339,25 @@ class UserPasswordResetView(AdminRequiredJsonMixin, View):
             request.user.pk,
             pk,
         )
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ── GET /api/dept_employees/?dept=CODE ───────────────────────────────────────
 
 
-class DeptEmployeesView(LoginRequiredJsonMixin, View):
+class DeptEmployeesView(APIView):
     """
     GET -- список сотрудников отдела (для выпадающих списков).
     Доступен всем авторизованным пользователям.
     Параметр: ?dept=CODE (код отдела).
     """
 
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         dept_code = request.GET.get("dept", "").strip()
         if not dept_code:
-            return JsonResponse([], safe=False)
+            return Response([])
 
         employees = (
             Employee.objects.filter(department__code=dept_code, is_active=True)
@@ -379,4 +373,4 @@ class DeptEmployeesView(LoginRequiredJsonMixin, View):
                     "short_name": emp.short_name,
                 }
             )
-        return JsonResponse(result, safe=False)
+        return Response(result)

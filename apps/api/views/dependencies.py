@@ -16,15 +16,12 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import get_visibility_filter
 from apps.works.models import AuditLog, Holiday, TaskDependency, Work
 
@@ -199,8 +196,10 @@ def _check_date_conflict(successor, predecessors_qs):
 # ── Views ────────────────────────────────────────────────────────────────────
 
 
-class TaskDependencyListView(LoginRequiredJsonMixin, View):
+class TaskDependencyListView(APIView):
     """GET/POST /api/tasks/<pk>/dependencies/"""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         """Список зависимостей задачи (предшественники + последователи)."""
@@ -215,7 +214,7 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                 .first()
             )
             if not work:
-                return JsonResponse({"error": "Задача не найдена"}, status=404)
+                return Response({"error": "Задача не найдена"}, status=404)
 
             predecessors = TaskDependency.objects.filter(
                 successor_id=pk,
@@ -232,7 +231,7 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
             succ_list = [_serialize_dep_successor(d) for d in successors]
             has_succ_conflict = any(s["conflict"] for s in succ_list)
 
-            return JsonResponse(
+            return Response(
                 {
                     "predecessors": pred_list,
                     "successors": succ_list,
@@ -243,42 +242,42 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
             )
         except Exception as e:
             logger.error("TaskDependencyListView.get error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def post(self, request, pk):
         """Создание зависимости. pk = successor_id."""
         # Проверка прав записи
         employee = getattr(request.user, "employee", None)
         if not employee or not employee.is_writer:
-            return JsonResponse({"error": "Нет прав на изменение"}, status=403)
+            return Response({"error": "Нет прав на изменение"}, status=403)
 
         try:
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             if not d:
-                return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+                return Response({"error": "Пустое тело запроса"}, status=400)
 
             predecessor_id = d.get("predecessor_id")
             dep_type = d.get("dep_type", "FS")
             lag_days = int(d.get("lag_days", 0))
 
             if not predecessor_id:
-                return JsonResponse({"error": "predecessor_id обязателен"}, status=400)
+                return Response({"error": "predecessor_id обязателен"}, status=400)
             if dep_type not in ("FS", "SS", "FF", "SF"):
-                return JsonResponse(
+                return Response(
                     {"error": f"Недопустимый тип связи: {dep_type}"}, status=400
                 )
 
             predecessor_id = int(predecessor_id)
             if predecessor_id == pk:
-                return JsonResponse(
+                return Response(
                     {"error": "Задача не может зависеть от самой себя"}, status=400
                 )
 
             # Ограничение lag_days: -365..365 рабочих дней
             if lag_days < -365 or lag_days > 365:
-                return JsonResponse(
+                return Response(
                     {"error": "lag_days должен быть от -365 до 365"}, status=400
                 )
 
@@ -287,7 +286,7 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                 # Проверка существования обеих задач
                 plan_or_pp = Q(show_in_plan=True) | Q(show_in_pp=True)
                 if not Work.objects.filter(pk=pk).filter(plan_or_pp).exists():
-                    return JsonResponse(
+                    return Response(
                         {"error": "Задача-последователь не найдена"}, status=404
                     )
                 if (
@@ -295,7 +294,7 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                     .filter(plan_or_pp)
                     .exists()
                 ):
-                    return JsonResponse(
+                    return Response(
                         {"error": "Задача-предшественник не найдена"}, status=404
                     )
 
@@ -304,13 +303,13 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                     predecessor_id=predecessor_id,
                     successor_id=pk,
                 ).exists():
-                    return JsonResponse(
+                    return Response(
                         {"error": "Такая зависимость уже существует"}, status=400
                     )
 
                 # Проверка цикла
                 if _detect_cycle(pk, predecessor_id):
-                    return JsonResponse(
+                    return Response(
                         {"error": "Невозможно создать зависимость: обнаружен цикл"},
                         status=400,
                     )
@@ -329,41 +328,43 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                 object_repr=f"{predecessor_id} → {pk} ({dep_type})",
             )
 
-            return JsonResponse({"id": dep.id})
+            return Response({"id": dep.id})
         except (ValueError, TypeError) as e:
-            return JsonResponse({"error": f"Некорректные данные: {e}"}, status=400)
+            return Response({"error": f"Некорректные данные: {e}"}, status=400)
         except Exception as e:
             logger.error("TaskDependencyListView.post error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
-class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
+class TaskDependencyDetailView(APIView):
     """PUT/DELETE /api/dependencies/<pk>/"""
+
+    permission_classes = [IsWriterPermission]
 
     def put(self, request, pk):
         """Обновление зависимости (тип связи, лаг)."""
         try:
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             try:
                 dep = TaskDependency.objects.get(pk=pk)
             except TaskDependency.DoesNotExist:
-                return JsonResponse({"error": "Зависимость не найдена"}, status=404)
+                return Response({"error": "Зависимость не найдена"}, status=404)
 
             if "dep_type" in d:
                 if d["dep_type"] not in ("FS", "SS", "FF", "SF"):
-                    return JsonResponse({"error": "Недопустимый тип связи"}, status=400)
+                    return Response({"error": "Недопустимый тип связи"}, status=400)
                 dep.dep_type = d["dep_type"]
             if "lag_days" in d:
                 try:
                     new_lag = int(d["lag_days"])
                 except (ValueError, TypeError):
-                    return JsonResponse(
+                    return Response(
                         {"error": "lag_days должен быть целым числом"}, status=400
                     )
                 if new_lag < -365 or new_lag > 365:
-                    return JsonResponse(
+                    return Response(
                         {"error": "lag_days должен быть от -365 до 365"}, status=400
                     )
                 dep.lag_days = new_lag
@@ -377,10 +378,10 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
                 object_repr=f"{dep.predecessor_id} → {dep.successor_id} ({dep.dep_type})",
             )
 
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("TaskDependencyDetailView.put error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def delete(self, request, pk):
         """Удаление зависимости."""
@@ -388,7 +389,7 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
             try:
                 dep = TaskDependency.objects.get(pk=pk)
             except TaskDependency.DoesNotExist:
-                return JsonResponse({"error": "Зависимость не найдена"}, status=404)
+                return Response({"error": "Зависимость не найдена"}, status=404)
 
             log_action(
                 request,
@@ -397,14 +398,16 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
                 object_repr=f"{dep.predecessor_id} → {dep.successor_id}",
             )
             dep.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("TaskDependencyDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
-class AllDependenciesView(LoginRequiredJsonMixin, View):
+class AllDependenciesView(APIView):
     """GET /api/dependencies/ — все зависимости (для Ганта)."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
@@ -414,7 +417,7 @@ class AllDependenciesView(LoginRequiredJsonMixin, View):
                 try:
                     project_id = int(project_id)
                 except (ValueError, TypeError):
-                    return JsonResponse(
+                    return Response(
                         {"error": "project_id должен быть числом"}, status=400
                     )
 
@@ -438,7 +441,7 @@ class AllDependenciesView(LoginRequiredJsonMixin, View):
                 successor_id__in=work_ids,
             )
 
-            return JsonResponse(
+            return Response(
                 [
                     {
                         "id": d.id,
@@ -449,29 +452,30 @@ class AllDependenciesView(LoginRequiredJsonMixin, View):
                     }
                     for d in deps
                 ],
-                safe=False,
             )
         except Exception as e:
             logger.error("AllDependenciesView.get error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
 
-class AlignDatesView(WriterRequiredJsonMixin, View):
+class AlignDatesView(APIView):
     """POST /api/tasks/<pk>/align_dates/ — каскадное выравнивание дат."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request, pk):
         try:
-            d = parse_json_body(request) or {}
+            d = request.data if isinstance(request.data, dict) else {}
             cascade = d.get("cascade", False)
 
             vis_q = get_visibility_filter(request.user)
             work = Work.objects.filter(pk=pk).filter(vis_q).first()
             if not work:
-                return JsonResponse({"error": "Задача не найдена"}, status=404)
+                return Response({"error": "Задача не найдена"}, status=404)
 
             # PP-задачи нельзя выравнивать
             if work.show_in_pp and not work.show_in_plan:
-                return JsonResponse(
+                return Response(
                     {"error": "Нельзя выравнивать даты записи ПП"},
                     status=400,
                 )
@@ -484,7 +488,7 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
 
             # Если нет предшественников и не каскад — нечего выравнивать
             if not has_predecessors and not cascade:
-                return JsonResponse(
+                return Response(
                     {"error": "Нет предшественников для выравнивания"},
                     status=400,
                 )
@@ -496,13 +500,13 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                     predecessor_id=pk,
                 ).exists()
                 if not successors_exist:
-                    return JsonResponse(
+                    return Response(
                         {"error": "Нет связей для выравнивания"},
                         status=400,
                     )
                 with transaction.atomic():
                     aligned_ids = self._cascade_align(request, pk)
-                return JsonResponse(
+                return Response(
                     {
                         "ok": True,
                         "new_date_start": (
@@ -528,7 +532,7 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                     latest_start = candidate
 
             if latest_start is None:
-                return JsonResponse(
+                return Response(
                     {"error": "Невозможно определить дату: у предшественников нет дат"},
                     status=400,
                 )
@@ -559,7 +563,7 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
                         self._cascade_align(request, pk),
                     )
 
-            return JsonResponse(
+            return Response(
                 {
                     "ok": True,
                     "new_date_start": (
@@ -571,7 +575,7 @@ class AlignDatesView(WriterRequiredJsonMixin, View):
             )
         except Exception as e:
             logger.error("AlignDatesView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _cascade_align(self, request, work_id, visited=None):
         """Рекурсивно выравнивает последователей."""

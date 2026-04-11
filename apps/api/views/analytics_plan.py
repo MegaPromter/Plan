@@ -14,11 +14,11 @@ GET /api/analytics/plan/
 from collections import defaultdict
 
 from django.db.models import Exists, OuterRef, Prefetch, Q
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
 from apps.employees.models import (
     BusinessTrip,
@@ -331,8 +331,10 @@ def _build_works_summary(works, years, months_filter):
     }
 
 
-class PlanAnalyticsView(LoginRequiredJsonMixin, View):
+class PlanAnalyticsView(APIView):
     """GET /api/analytics/plan/ — иерархическая аналитика с мульти-фильтрами."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         today = timezone.now().date()
@@ -548,7 +550,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
             .first()
         )
         if not target:
-            return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+            return Response({"error": "Сотрудник не найден"}, status=404)
 
         emp_works = [
             w
@@ -565,7 +567,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         )
         absences = _get_absences(executor_id, years)
 
-        return JsonResponse(
+        return Response(
             {
                 "view": "employee",
                 "years": years,
@@ -615,7 +617,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         agg = self._aggregate_months(employees_data)
 
-        return JsonResponse(
+        return Response(
             {
                 "view": "employees",
                 "years": years,
@@ -647,7 +649,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
 
         sector_months = self._aggregate_months(employees_data)
 
-        return JsonResponse(
+        return Response(
             {
                 "view": "sector",
                 "years": years,
@@ -718,7 +720,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         summary = _build_works_summary(dept_works, years, months_filter)
         emp_count = sum(len(s.get("employees", [])) for s in sectors_data)
 
-        return JsonResponse(
+        return Response(
             {
                 "view": "dept",
                 "years": years,
@@ -813,7 +815,7 @@ class PlanAnalyticsView(LoginRequiredJsonMixin, View):
         summary = _build_works_summary(works, years, months_filter)
         total_emp = sum(d.get("employee_count", 0) for d in depts_data)
 
-        return JsonResponse(
+        return Response(
             {
                 "view": "all",
                 "years": years,

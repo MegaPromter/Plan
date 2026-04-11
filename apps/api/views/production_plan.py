@@ -13,16 +13,13 @@ import logging
 
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.api.audit import log_action
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import (
     PRODUCTION_ALLOWED_FIELDS,
     generate_work_num,
@@ -163,7 +160,9 @@ _PP_DECIMAL_FIELDS = {"sheets_a4", "norm", "coeff", "total_2d", "total_3d", "lab
 # ---------------------------------------------------------------------------
 
 
-class ProductionPlanListView(LoginRequiredJsonMixin, View):
+class ProductionPlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET — список записей ПП."""
 
     def get(self, request):
@@ -171,7 +170,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
             return self._get_list(request)
         except Exception as e:
             logger.error("ProductionPlanListView.get error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _get_list(self, request):
         try:
@@ -232,7 +231,7 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         works = list(qs)
         today = timezone.now().date()
 
-        resp = JsonResponse([_serialize_pp(w, today) for w in works], safe=False)
+        resp = Response([_serialize_pp(w, today) for w in works])
         resp["X-Total-Count"] = total_count
         resp["X-Has-More"] = "true" if (offset + limit) < total_count else "false"
         resp["X-Scope"] = scope if scope == "all" else "role"
@@ -240,7 +239,9 @@ class ProductionPlanListView(LoginRequiredJsonMixin, View):
         return resp
 
 
-class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
+class ProductionPlanCreateView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """POST /api/production_plan — создание записи ПП."""
 
     def post(self, request):
@@ -248,15 +249,15 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             return self._create(request)
         except Exception as e:
             logger.error("ProductionPlanCreateView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _create(self, request):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         project_id = d.get("project_id") or None
         if not project_id:
-            return JsonResponse(
+            return Response(
                 {"error": "Необходимо выбрать проект ПП перед добавлением строки"},
                 status=400,
             )
@@ -265,23 +266,23 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
         # Проверка прав на отдел/сектор
         if employee and employee.role in ("dept_head", "dept_deputy"):
             if not employee.department:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             dept_code = d.get("dept", "") or ""
             if dept_code and dept_code != employee.department.code:
-                return JsonResponse(
+                return Response(
                     {"error": "Вы можете создавать задачи только для своего отдела"},
                     status=403,
                 )
         elif employee and employee.role == "sector_head":
             if not employee.department:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             dept_code = d.get("dept", "") or ""
             if dept_code and dept_code != employee.department.code:
-                return JsonResponse(
+                return Response(
                     {"error": "Вы можете создавать задачи только для своего отдела"},
                     status=403,
                 )
@@ -289,7 +290,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             if sector_head_val and employee.sector:
                 own_sector_values = {employee.sector.code, employee.sector.name}
                 if sector_head_val not in own_sector_values:
-                    return JsonResponse(
+                    return Response(
                         {
                             "error": "Вы можете создавать задачи только для своего сектора"
                         },
@@ -309,7 +310,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
 
         _validated_tt, tt_err = validate_task_type(d.get("task_type", ""))
         if tt_err:
-            return JsonResponse({"error": tt_err}, status=400)
+            return Response({"error": tt_err}, status=400)
         if not _validated_tt:
             _validated_tt = "Выпуск нового документа"
 
@@ -340,7 +341,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             # Проверка дат после установки всех полей
             if work.date_start and work.date_end and work.date_start > work.date_end:
                 work.delete()
-                return JsonResponse(
+                return Response(
                     {"error": "Дата начала не может быть позже даты окончания"},
                     status=400,
                 )
@@ -382,7 +383,7 @@ class ProductionPlanCreateView(WriterRequiredJsonMixin, View):
             )
             .get(pk=work.pk)
         )
-        return JsonResponse({"id": work.id, "work": work_data})
+        return Response({"id": work.id, "work": work_data})
 
 
 # ---------------------------------------------------------------------------
@@ -415,7 +416,9 @@ def _check_dept_access(user, work):
 # ---------------------------------------------------------------------------
 
 
-class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
+class ProductionPlanDetailView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """PUT /api/production_plan/<id>; DELETE /api/production_plan/<id>."""
 
     def put(self, request, pk):
@@ -423,7 +426,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             return self._update(request, pk)
         except Exception as e:
             logger.error("ProductionPlanDetailView.put error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def delete(self, request, pk):
         try:
@@ -435,11 +438,11 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                     .first()
                 )
                 if not work:
-                    return JsonResponse({"error": "Запись ПП не найдена"}, status=404)
+                    return Response({"error": "Запись ПП не найдена"}, status=404)
                 # Проверка: не-admin может удалять только записи своего отдела
                 err = _check_dept_access(request.user, work)
                 if err:
-                    return JsonResponse({"error": err}, status=403)
+                    return Response({"error": err}, status=403)
                 work_repr = f"{work.work_name} (id={work.pk})"
                 if work.show_in_plan:
                     # Запись также видна в СП — не удаляем, а убираем из ПП
@@ -454,28 +457,28 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                     object_id=pk,
                     object_repr=work_repr,
                 )
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ProductionPlanDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _update(self, request, pk):
         """Inline single-field update."""
         field = request.GET.get("field")
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         value = d.get("value", "")
 
         if not field:
-            return JsonResponse({"error": "field parameter required"}, status=400)
+            return Response({"error": "field parameter required"}, status=400)
         if field not in PRODUCTION_ALLOWED_FIELDS:
-            return JsonResponse({"error": f"Недопустимое поле: {field}"}, status=400)
+            return Response({"error": f"Недопустимое поле: {field}"}, status=400)
 
         if field == "task_type":
             value, tt_err = validate_task_type(value)
             if tt_err:
-                return JsonResponse({"error": tt_err}, status=400)
+                return Response({"error": tt_err}, status=400)
             if not value:
                 value = "Выпуск нового документа"
 
@@ -489,12 +492,12 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 .first()
             )
             if not work:
-                return JsonResponse({"error": "Запись ПП не найдена"}, status=404)
+                return Response({"error": "Запись ПП не найдена"}, status=404)
 
             # Проверка: не-admin может редактировать только записи своего отдела
             err = _check_dept_access(request.user, work)
             if err:
-                return JsonResponse({"error": err}, status=403)
+                return Response({"error": err}, status=403)
 
             # Optimistic locking — нормализуем оба timestamp до YYYY-MM-DDTHH:MM:SS
             client_updated_at = d.get("updated_at")
@@ -507,7 +510,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 raw = str(client_updated_at).replace(" ", "T")
                 client_ts = raw[:19] if len(raw) >= 19 else raw
                 if server_ts != client_ts:
-                    return JsonResponse(
+                    return Response(
                         {
                             "error": "conflict",
                             "message": "Запись была изменена другим пользователем. "
@@ -519,7 +522,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
             try:
                 self._update_field(work, field, value)
             except ValueError as exc:
-                return JsonResponse({"error": str(exc)}, status=400)
+                return Response({"error": str(exc)}, status=400)
             log_action(
                 request,
                 AuditLog.ACTION_PP_UPDATE,
@@ -528,7 +531,7 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
                 details={"field": field, "value": str(value)[:200]},
             )
 
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
     def _update_field(self, work, field, value, save=True, skip_date_check=False):
         """Обновляет одно поле в Work."""
@@ -636,7 +639,9 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
+class ProductionPlanSyncView(APIView):
+    permission_classes = [IsWriterPermission]
+
     """POST /api/production_plan/sync — синхронизация ПП → СП.
 
     Никаких копий/дублей: просто включает show_in_plan=True на записях ПП,
@@ -649,15 +654,15 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
             return self._sync(request)
         except Exception as e:
             logger.error("ProductionPlanSyncView error: %s", e, exc_info=True)
-            return JsonResponse({"error": "Внутренняя ошибка сервера"}, status=500)
+            return Response({"error": "Внутренняя ошибка сервера"}, status=500)
 
     def _sync(self, request):
-        d = parse_json_body(request)
-        if d is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        d = request.data
+        if not isinstance(d, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         filter_project_id = d.get("project_id") or None
         if not filter_project_id:
-            return JsonResponse(
+            return Response(
                 {"error": "Необходимо указать project_id для синхронизации"},
                 status=400,
             )
@@ -665,7 +670,7 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
         # Проверка прав: только admin/ntc_head/ntc_deputy или writer своего отдела
         employee = getattr(request.user, "employee", None)
         if not employee:
-            return JsonResponse({"error": "Нет профиля сотрудника"}, status=403)
+            return Response({"error": "Нет профиля сотрудника"}, status=403)
 
         # Непустые ПП-записи проекта, ещё не показанные в СП
         qs = Work.objects.filter(
@@ -677,7 +682,7 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
         # Ограничение по отделу: не-admin/ntc видят только свой отдел
         if employee.role not in ("admin", "ntc_head", "ntc_deputy"):
             if not employee.department:
-                return JsonResponse(
+                return Response(
                     {"error": "Вашему профилю не назначен отдел"}, status=403
                 )
             qs = qs.filter(department=employee.department)
@@ -697,7 +702,7 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
         )
 
         log_action(request, AuditLog.ACTION_PP_SYNC, details={"synced": synced})
-        return JsonResponse({"synced": synced})
+        return Response({"synced": synced})
 
 
 # ---------------------------------------------------------------------------
@@ -705,7 +710,9 @@ class ProductionPlanSyncView(WriterRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class PPCrossStagesView(LoginRequiredJsonMixin, View):
+class PPCrossStagesView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET /api/pp_projects/<pk>/cross_stages/ — этапы сквозного графика для ПП-проекта."""
 
     def get(self, request, pk):
@@ -713,12 +720,12 @@ class PPCrossStagesView(LoginRequiredJsonMixin, View):
 
         pp = PPProject.objects.select_related("up_project").filter(pk=pk).first()
         if not pp or not pp.up_project_id:
-            return JsonResponse([], safe=False)
+            return Response([])
         from apps.enterprise.models import CrossSchedule
 
         cross = CrossSchedule.objects.filter(project=pp.up_project).first()
         if not cross:
-            return JsonResponse([], safe=False)
+            return Response([])
         stages_qs = (
             cross.stages.select_related("parent_item")
             .filter(
@@ -741,4 +748,4 @@ class PPCrossStagesView(LoginRequiredJsonMixin, View):
                     "date_end": s.date_end.isoformat() if s.date_end else "",
                 }
             )
-        return JsonResponse(result, safe=False)
+        return Response(result)

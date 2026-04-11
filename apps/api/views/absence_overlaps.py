@@ -5,40 +5,42 @@ POST /api/absence_overlaps/
 
 from datetime import date
 
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
 from apps.api.utils import get_vacation_visibility_filter
 from apps.employees.models import BusinessTrip, Vacation
 
 
-class AbsenceOverlapsView(LoginRequiredJsonMixin, View):
+class AbsenceOverlapsView(APIView):
     """Находит пересечения периодов отсутствия между выбранными сотрудниками."""
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        body = parse_json_body(request)
-        if body is None:
-            return JsonResponse({"error": "Некорректный JSON"}, status=400)
+        body = request.data
+        if not isinstance(body, dict):
+            return Response({"error": "Некорректный JSON"}, status=400)
 
         employee_ids = body.get("employee_ids", [])
         if not isinstance(employee_ids, list) or len(employee_ids) < 2:
-            return JsonResponse(
+            return Response(
                 {"error": "Нужно выбрать минимум 2 сотрудников"}, status=400
             )
         if len(employee_ids) > 100:
-            return JsonResponse({"error": "Максимум 100 сотрудников"}, status=400)
+            return Response({"error": "Максимум 100 сотрудников"}, status=400)
 
         # Парсим опциональный диапазон дат
         date_from = _parse_date(body.get("date_from"))
         date_to = _parse_date(body.get("date_to"))
         if date_from and date_to and date_to < date_from:
-            return JsonResponse({"error": "date_to < date_from"}, status=400)
+            return Response({"error": "date_to < date_from"}, status=400)
 
         include_vacations = body.get("include_vacations", True)
         include_trips = body.get("include_trips", True)
         if not include_vacations and not include_trips:
-            return JsonResponse(
+            return Response(
                 {"error": "Нужно включить хотя бы один тип отсутствия"}, status=400
             )
 
@@ -160,7 +162,7 @@ class AbsenceOverlapsView(LoginRequiredJsonMixin, View):
             ),
         }
 
-        return JsonResponse(
+        return Response(
             {
                 "overlaps": overlaps,
                 "timeline": timeline,

@@ -12,25 +12,15 @@ PUT    /api/projects/<id>/products/<pid>/  — обновление издели
 DELETE /api/projects/<id>/products/<pid>/  — удаление изделия
 """
 
-# Стандартный логгер Python
 import logging
 
-# Count — агрегация: подсчёт связанных объектов
 from django.db.models import Count
-
-# JsonResponse — HTTP-ответ в формате JSON
-from django.http import JsonResponse
 from django.utils import timezone
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-# View — базовый класс CBV
-from django.views import View
-
-# Миксины авторизации (login, writer, admin) и парсер тела запроса
-from apps.api.mixins import (
-    AdminRequiredJsonMixin,
-    LoginRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsAdminPermission
 
 # Модели: Project (УП-проект), ProjectProduct (изделие проекта),
 # PPProject (план ПП, связанный с УП-проектом), Work (задача)
@@ -96,7 +86,9 @@ def _serialize_product(prod):
 # ---------------------------------------------------------------------------
 
 
-class ProjectListView(LoginRequiredJsonMixin, View):
+class ProjectListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET — список всех УП-проектов с изделиями и количеством ПП-планов."""
 
     def get(self, request):
@@ -134,12 +126,12 @@ class ProjectListView(LoginRequiredJsonMixin, View):
                 }
                 result.append(_serialize_project(proj, extra))
             # Возвращаем JSON-список
-            response = JsonResponse(result, safe=False)
+            response = Response(result)
             response["Cache-Control"] = "private, max-age=30"
             return response
         except Exception as e:
             logger.error("ProjectListView.get: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -147,14 +139,16 @@ class ProjectListView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProjectMetricsView(LoginRequiredJsonMixin, View):
+class ProjectMetricsView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET — метрики проекта: задачи, исполнители, сроки, загрузка."""
 
     def get(self, request, project_id):
         try:
             proj = Project.objects.get(pk=project_id)
         except Project.DoesNotExist:
-            return JsonResponse({"error": "Проект не найден"}, status=404)
+            return Response({"error": "Проект не найден"}, status=404)
 
         today = timezone.now().date()
 
@@ -241,7 +235,7 @@ class ProjectMetricsView(LoginRequiredJsonMixin, View):
         for eid, ename in sorted(executors_set, key=lambda x: x[1]):
             executors.append({"id": eid, "name": ename})
 
-        return JsonResponse(
+        return Response(
             {
                 "id": proj.id,
                 "name_full": proj.name_full or "",
@@ -268,15 +262,16 @@ class ProjectMetricsView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProjectCreateView(AdminRequiredJsonMixin, View):
+class ProjectCreateView(APIView):
+    permission_classes = [IsAdminPermission]
+
     """POST — создание нового УП-проекта."""
 
     def post(self, request):
         try:
-            # Парсим JSON-тело запроса
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             # Обязательное поле: полное наименование
             name_full = (d.get("name_full") or "").strip()
             # Необязательное: краткое наименование
@@ -285,7 +280,7 @@ class ProjectCreateView(AdminRequiredJsonMixin, View):
             code = (d.get("code") or "").strip()
             if not name_full:
                 # Полное наименование обязательно
-                return JsonResponse(
+                return Response(
                     {"error": "Полное наименование обязательно"}, status=400
                 )
             # Создаём запись Project в БД
@@ -296,12 +291,12 @@ class ProjectCreateView(AdminRequiredJsonMixin, View):
                 code=code or name_short,
             )
             # Возвращаем сериализованный проект с пустыми списками (новый проект)
-            return JsonResponse(
+            return Response(
                 _serialize_project(proj, {"products": [], "pp_count": 0}), status=201
             )
         except Exception as e:
             logger.error("ProjectCreateView: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -309,27 +304,28 @@ class ProjectCreateView(AdminRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProjectDetailView(AdminRequiredJsonMixin, View):
+class ProjectDetailView(APIView):
+    permission_classes = [IsAdminPermission]
+
     """PUT — обновление УП-проекта; DELETE — удаление."""
 
     def put(self, request, pk):
         try:
-            # Парсим тело запроса
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             # Ищем проект по PK
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
+                return Response({"error": "Проект не найден"}, status=404)
             # Получаем новые значения полей
             name_full = (d.get("name_full") or "").strip()
             name_short = (d.get("name_short") or "").strip()
             code = (d.get("code") or "").strip()
             if not name_full:
                 # Полное наименование обязательно
-                return JsonResponse(
+                return Response(
                     {"error": "Полное наименование обязательно"}, status=400
                 )
             # Обновляем поля проекта
@@ -339,10 +335,10 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
             proj.code = code or name_short
             # Сохраняем только изменённые поля
             proj.save(update_fields=["name_full", "name_short", "code"])
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ProjectDetailView.put: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
     def delete(self, request, pk):
         try:
@@ -350,13 +346,13 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
+                return Response({"error": "Проект не найден"}, status=404)
             # Удаляем проект (CASCADE удалит связанные ProjectProduct и PPProject.up_project → SET NULL)
             proj.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ProjectDetailView.delete: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -364,7 +360,9 @@ class ProjectDetailView(AdminRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProjectProductListView(LoginRequiredJsonMixin, View):
+class ProjectProductListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     """GET — список изделий конкретного УП-проекта."""
 
     def get(self, request, pk):
@@ -373,17 +371,19 @@ class ProjectProductListView(LoginRequiredJsonMixin, View):
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
+                return Response({"error": "Проект не найден"}, status=404)
             # Получаем изделия проекта, сортируем по названию
             products = proj.products.order_by("name")
             # Сериализуем список изделий
-            return JsonResponse([_serialize_product(p) for p in products], safe=False)
+            return Response([_serialize_product(p) for p in products])
         except Exception as e:
             logger.error("ProjectProductListView.get: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
-class ProjectProductCreateView(AdminRequiredJsonMixin, View):
+class ProjectProductCreateView(APIView):
+    permission_classes = [IsAdminPermission]
+
     """POST — создание нового изделия в рамках УП-проекта."""
 
     def post(self, request, pk):
@@ -392,11 +392,10 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
             try:
                 proj = Project.objects.get(pk=pk)
             except Project.DoesNotExist:
-                return JsonResponse({"error": "Проект не найден"}, status=404)
-            # Парсим тело запроса
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+                return Response({"error": "Проект не найден"}, status=404)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             # Наименование изделия (обязательное)
             name = (d.get("name") or "").strip()
             # Краткое наименование изделия (необязательное)
@@ -404,7 +403,7 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
             # Код/обозначение изделия (необязательное)
             code = (d.get("code") or "").strip()
             if not name:
-                return JsonResponse({"error": "Наименование обязательно"}, status=400)
+                return Response({"error": "Наименование обязательно"}, status=400)
             # Создаём изделие, привязанное к проекту
             prod = ProjectProduct.objects.create(
                 project=proj,
@@ -413,10 +412,10 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
                 code=code,
             )
             # Возвращаем сериализованное изделие с кодом 201 Created
-            return JsonResponse(_serialize_product(prod), status=201)
+            return Response(_serialize_product(prod), status=201)
         except Exception as e:
             logger.error("ProjectProductCreateView: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +423,9 @@ class ProjectProductCreateView(AdminRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class ProjectProductDetailView(AdminRequiredJsonMixin, View):
+class ProjectProductDetailView(APIView):
+    permission_classes = [IsAdminPermission]
+
     """PUT — обновление изделия; DELETE — удаление изделия."""
 
     def put(self, request, pk, pid):
@@ -433,11 +434,10 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
             try:
                 prod = ProjectProduct.objects.get(pk=pid, project_id=pk)
             except ProjectProduct.DoesNotExist:
-                return JsonResponse({"error": "Изделие не найдено"}, status=404)
-            # Парсим тело запроса
-            d = parse_json_body(request)
-            if d is None:
-                return JsonResponse({"error": "Невалидный JSON"}, status=400)
+                return Response({"error": "Изделие не найдено"}, status=404)
+            d = request.data
+            if not isinstance(d, dict):
+                return Response({"error": "Невалидный JSON"}, status=400)
             # Новое наименование (обязательное)
             name = (d.get("name") or "").strip()
             # Новое краткое наименование (необязательное)
@@ -445,7 +445,7 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
             # Новый код (необязательный)
             code = (d.get("code") or "").strip()
             if not name:
-                return JsonResponse({"error": "Наименование обязательно"}, status=400)
+                return Response({"error": "Наименование обязательно"}, status=400)
             # Запоминаем старое название для синхронизации ПП
             old_name = prod.name
             old_code = prod.code
@@ -458,10 +458,10 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
             # Синхронизируем название связанных ПП (PPProject)
             if old_name != name or old_code != code:
                 _sync_pp_names_on_product_change(prod, old_name, old_code)
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ProjectProductDetailView.put: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)
 
     def delete(self, request, pk, pid):
         try:
@@ -469,10 +469,10 @@ class ProjectProductDetailView(AdminRequiredJsonMixin, View):
             try:
                 prod = ProjectProduct.objects.get(pk=pid, project_id=pk)
             except ProjectProduct.DoesNotExist:
-                return JsonResponse({"error": "Изделие не найдено"}, status=404)
+                return Response({"error": "Изделие не найдено"}, status=404)
             # Удаляем изделие
             prod.delete()
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
         except Exception as e:
             logger.error("ProjectProductDetailView.delete: %s", e, exc_info=True)
-            return JsonResponse({"error": "Ошибка сервера"}, status=500)
+            return Response({"error": "Ошибка сервера"}, status=500)

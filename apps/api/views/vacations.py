@@ -13,14 +13,11 @@ import logging
 from datetime import date
 
 from django.db.models import Q
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import (
     build_employee_q,
     get_vacation_visibility_filter,
@@ -30,21 +27,21 @@ from apps.employees.models import Employee, Vacation
 
 logger = logging.getLogger(__name__)
 
-# Максимальное количество записей на странице
 VACATIONS_MAX = 500
 
 
 # ── GET / POST /api/vacations ────────────────────────────────────────────────
 
 
-class VacationListView(LoginRequiredJsonMixin, View):
+class VacationListView(APIView):
     """
     GET  -- список отпусков с фильтрами и пагинацией.
     POST -- создание нового отпуска (только writer).
     """
 
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        # Пагинация
         try:
             per_page = int(request.GET.get("per_page", 0)) or VACATIONS_MAX
             page = int(request.GET.get("page", 1))
@@ -54,19 +51,16 @@ class VacationListView(LoginRequiredJsonMixin, View):
         page = max(page, 1)
         offset = (page - 1) * per_page
 
-        # Фильтр видимости по роли
         vis_q = get_vacation_visibility_filter(request.user)
 
         qs = Vacation.objects.filter(vis_q).select_related(
             "employee", "employee__department"
         )
 
-        # Фильтр по отделу
         dept = request.GET.get("dept", "").strip()
         if dept:
             qs = qs.filter(employee__department__code=dept)
 
-        # Фильтр по исполнителю (поиск по фамилии)
         executor = request.GET.get("executor", "").strip()
         if executor:
             qs = qs.filter(
@@ -74,7 +68,6 @@ class VacationListView(LoginRequiredJsonMixin, View):
                 | Q(employee__first_name__icontains=executor)
             )
 
-        # Фильтр по году
         year = request.GET.get("year", "").strip()
         if year:
             try:
@@ -105,18 +98,19 @@ class VacationListView(LoginRequiredJsonMixin, View):
                 }
             )
 
-        return JsonResponse(result, safe=False)
+        return Response(result)
 
 
-class VacationCreateView(WriterRequiredJsonMixin, View):
+class VacationCreateView(APIView):
     """POST -- создание отпуска."""
 
-    def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+    permission_classes = [IsWriterPermission]
 
-        # Определяем сотрудника: по employee_id или по имени (executor)
+    def post(self, request):
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
+
         employee = None
         employee_id = data.get("employee_id")
         executor_name = data.get("executor", "").strip()
@@ -125,9 +119,8 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
             try:
                 employee = Employee.objects.get(pk=employee_id)
             except Employee.DoesNotExist:
-                return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+                return Response({"error": "Сотрудник не найден"}, status=404)
         elif executor_name:
-            # Нестрогий поиск по ФИО (ручной ввод из UI)
             employee = resolve_employee_loose(executor_name)
 
         date_start_str = data.get("date_start", "")
@@ -135,18 +128,17 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
         notes = data.get("notes", "")
         vac_type = data.get("vac_type", Vacation.TYPE_ANNUAL)
 
-        # Валидация дат
         if date_start_str and date_end_str:
             try:
                 ds = date.fromisoformat(date_start_str)
                 de = date.fromisoformat(date_end_str)
                 if de < ds:
-                    return JsonResponse(
+                    return Response(
                         {"error": "Дата окончания не может быть раньше даты начала"},
                         status=400,
                     )
             except (ValueError, TypeError):
-                return JsonResponse({"error": "Неверный формат даты"}, status=400)
+                return Response({"error": "Неверный формат даты"}, status=400)
         else:
             ds = None
             de = None
@@ -160,47 +152,42 @@ class VacationCreateView(WriterRequiredJsonMixin, View):
                 notes=notes,
             )
         else:
-            # Создаём запись без привязки к сотруднику (как во Flask --
-            # пустые поля, потом заполняются через PUT)
-            # Но Vacation.employee -- NOT NULL FK, поэтому нужен сотрудник.
-            # Если не найден -- ошибка.
-            return JsonResponse(
+            return Response(
                 {"error": "Не указан или не найден сотрудник (employee_id / executor)"},
                 status=400,
             )
 
-        return JsonResponse({"id": vacation.pk}, status=201)
+        return Response({"id": vacation.pk}, status=201)
 
 
 # ── PUT / DELETE /api/vacations/<id> ─────────────────────────────────────────
 
 
-class VacationDetailView(WriterRequiredJsonMixin, View):
+class VacationDetailView(APIView):
     """
     PUT    -- обновление отпуска.
     DELETE -- удаление отпуска.
     """
 
-    def put(self, request, pk):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
-        if not data:
-            return JsonResponse({"error": "Пустой запрос"}, status=400)
+    permission_classes = [IsWriterPermission]
 
-        # Проверка видимости: writer может редактировать только свою зону
+    def put(self, request, pk):
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
+        if not data:
+            return Response({"error": "Пустой запрос"}, status=400)
+
         vis_q = get_vacation_visibility_filter(request.user)
         try:
             vacation = (
                 Vacation.objects.select_related("employee").filter(vis_q).get(pk=pk)
             )
         except Vacation.DoesNotExist:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
-        # Фильтрация допустимых полей
         update_fields = []
 
-        # executor -- меняем привязку к сотруднику по ФИО
         if "executor" in data:
             executor_name = data["executor"].strip()
             if executor_name:
@@ -217,7 +204,6 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
             except Employee.DoesNotExist:
                 pass
 
-        # date_start / date_end
         new_start = data.get("date_start")
         new_end = data.get("date_end")
 
@@ -226,19 +212,18 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
                 vacation.date_start = date.fromisoformat(new_start)
                 update_fields.append("date_start")
             except (ValueError, TypeError):
-                return JsonResponse({"error": "Неверный формат date_start"}, status=400)
+                return Response({"error": "Неверный формат date_start"}, status=400)
 
         if new_end is not None:
             try:
                 vacation.date_end = date.fromisoformat(new_end)
                 update_fields.append("date_end")
             except (ValueError, TypeError):
-                return JsonResponse({"error": "Неверный формат date_end"}, status=400)
+                return Response({"error": "Неверный формат date_end"}, status=400)
 
-        # Серверная валидация: date_end >= date_start
         if vacation.date_start and vacation.date_end:
             if vacation.date_end < vacation.date_start:
-                return JsonResponse(
+                return Response(
                     {"error": "Дата окончания не может быть раньше даты начала"},
                     status=400,
                 )
@@ -254,34 +239,35 @@ class VacationDetailView(WriterRequiredJsonMixin, View):
         if update_fields:
             vacation.save(update_fields=update_fields + ["updated_at"])
 
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
     def delete(self, request, pk):
-        # Проверка видимости: writer может удалять только свою зону
         vis_q = get_vacation_visibility_filter(request.user)
         try:
             vacation = Vacation.objects.filter(vis_q).get(pk=pk)
         except Vacation.DoesNotExist:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
         vacation.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
 
 # ── POST /api/check_vacation_conflict ────────────────────────────────────────
 
 
-class VacationConflictView(LoginRequiredJsonMixin, View):
+class VacationConflictView(APIView):
     """
     POST -- проверка пересечений с отпусками.
     Тело: {executors: [name, ...], date_start, date_end, exclude_id?}
     Ответ: {conflicts: [{executor, vacation_start, vacation_end}, ...]}
     """
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
 
         executors_raw = data.get("executors", [])
         date_start_str = data.get("date_start")
@@ -289,9 +275,8 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
         exclude_id = data.get("exclude_id")
 
         if not executors_raw or not date_start_str or not date_end_str:
-            return JsonResponse({"conflicts": []})
+            return Response({"conflicts": []})
 
-        # Нормализуем имена исполнителей
         exec_names = []
         for e in executors_raw:
             if isinstance(e, str):
@@ -302,16 +287,14 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
                     exec_names.append(name)
 
         if not exec_names:
-            return JsonResponse({"conflicts": []})
+            return Response({"conflicts": []})
 
         try:
             ds = date.fromisoformat(date_start_str)
             de = date.fromisoformat(date_end_str)
         except (ValueError, TypeError):
-            return JsonResponse({"conflicts": []})
+            return Response({"conflicts": []})
 
-        # Собираем Q для поиска сотрудников по ФИО
-        # Собираем Q-фильтр для массового поиска сотрудников по списку ФИО
         emp_q = Q()
         for name in exec_names:
             q = build_employee_q(name)
@@ -321,10 +304,8 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
         employee_ids = list(Employee.objects.filter(emp_q).values_list("pk", flat=True))
 
         if not employee_ids:
-            return JsonResponse({"conflicts": []})
+            return Response({"conflicts": []})
 
-        # Пересечение: [start1, end1] vs [start2, end2]
-        # start1 <= end2 AND end1 >= start2
         qs = Vacation.objects.filter(
             employee_id__in=employee_ids,
             date_start__lte=de,
@@ -346,4 +327,4 @@ class VacationConflictView(LoginRequiredJsonMixin, View):
                 }
             )
 
-        return JsonResponse({"conflicts": conflicts})
+        return Response({"conflicts": conflicts})

@@ -26,11 +26,12 @@ from django.db.models import (
     Value,
     When,
 )
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
 from apps.employees.models import Employee
 from apps.works.models import TaskExecutor, Work, WorkCalendar, WorkReport
@@ -524,7 +525,8 @@ def _serialize_task(w, ph, status, today, year):
 # ---------------------------------------------------------------------------
 
 
-class DashboardEmployeeView(LoginRequiredJsonMixin, View):
+class DashboardEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]
     """Задачи и долги конкретного сотрудника (ленивая загрузка по клику)."""
 
     def get(self, request, pk):
@@ -534,7 +536,7 @@ class DashboardEmployeeView(LoginRequiredJsonMixin, View):
 
         emp = getattr(request.user, "employee", None)
         if not emp or not emp.is_writer:
-            return JsonResponse({"error": "Нет доступа"}, status=403)
+            return Response({"error": "Нет доступа"}, status=403)
 
         # Загружаем только задачи ЭТОГО сотрудника (не все 9000)
         month_key = f"{year}-{month:02d}"
@@ -574,7 +576,7 @@ class DashboardEmployeeView(LoginRequiredJsonMixin, View):
             elif in_month:
                 tasks.append(task_item)
 
-        return JsonResponse({"tasks": tasks, "debts": debts})
+        return Response({"tasks": tasks, "debts": debts})
 
 
 # ---------------------------------------------------------------------------
@@ -582,7 +584,8 @@ class DashboardEmployeeView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class DashboardScopeView(LoginRequiredJsonMixin, View):
+class DashboardScopeView(APIView):
+    permission_classes = [IsAuthenticated]
     """Ленивая загрузка scope_tasks / scope_debts / scope_done_late."""
 
     def get(self, request):
@@ -595,11 +598,11 @@ class DashboardScopeView(LoginRequiredJsonMixin, View):
 
         emp = getattr(request.user, "employee", None)
         if not emp or not emp.is_writer:
-            return JsonResponse({"error": "Нет доступа"}, status=403)
+            return Response({"error": "Нет доступа"}, status=403)
 
         team_ids_set = set(_team_ids_for_role(emp))
         if not team_ids_set:
-            return JsonResponse({"items": [], "total": 0})
+            return Response({"items": [], "total": 0})
 
         team_q = Q(executor_id__in=team_ids_set) | Q(
             task_executors__executor_id__in=team_ids_set
@@ -645,7 +648,7 @@ class DashboardScopeView(LoginRequiredJsonMixin, View):
                         items.append(_serialize_task(w, ph, "done", today, year))
             total = len(items)
             items = items[offset : offset + limit]
-            return JsonResponse({"items": items, "total": total})
+            return Response({"items": items, "total": total})
         else:
             # tasks — задачи текущего месяца (не просроченные, не done_late)
             qs = qs.filter(_month_overlap(year, month))
@@ -662,7 +665,7 @@ class DashboardScopeView(LoginRequiredJsonMixin, View):
             ph = w.plan_hours or {}
             items.append(_serialize_task(w, ph, status, today, year))
 
-        return JsonResponse({"items": items, "total": total})
+        return Response({"items": items, "total": total})
 
 
 # ---------------------------------------------------------------------------
@@ -670,7 +673,8 @@ class DashboardScopeView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class DashboardAPIView(LoginRequiredJsonMixin, View):
+class DashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     """Лёгкий dashboard: KPI через SQL, team structure, без массивов задач."""
 
     def get(self, request):
@@ -680,7 +684,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
 
         emp = getattr(request.user, "employee", None)
         if not emp:
-            return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+            return Response({"error": "Сотрудник не найден"}, status=404)
 
         role = emp.role
 
@@ -770,7 +774,7 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
             result["kpi"] = personal["kpi"]
             result["months"] = personal["months"]
 
-        response = JsonResponse(result)
+        response = Response(result)
         response["Cache-Control"] = "private, max-age=10"
         return response
 
@@ -942,7 +946,8 @@ class DashboardAPIView(LoginRequiredJsonMixin, View):
 # ---------------------------------------------------------------------------
 
 
-class DashboardExportView(LoginRequiredJsonMixin, View):
+class DashboardExportView(APIView):
+    permission_classes = [IsAuthenticated]
     """Экспорт задач/долгов/done_late в CSV (для совещаний)."""
 
     def get(self, request):
@@ -953,11 +958,11 @@ class DashboardExportView(LoginRequiredJsonMixin, View):
 
         emp = getattr(request.user, "employee", None)
         if not emp or not emp.is_writer:
-            return JsonResponse({"error": "Нет доступа"}, status=403)
+            return Response({"error": "Нет доступа"}, status=403)
 
         team_ids_set = set(_team_ids_for_role(emp))
         if not team_ids_set:
-            return JsonResponse({"error": "Нет команды"}, status=400)
+            return Response({"error": "Нет команды"}, status=400)
 
         team_q = Q(executor_id__in=team_ids_set) | Q(
             task_executors__executor_id__in=team_ids_set

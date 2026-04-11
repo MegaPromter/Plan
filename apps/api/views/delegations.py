@@ -10,11 +10,12 @@ DELETE  /api/delegations/<id>     -- отзыв делегирования
 import logging
 from datetime import datetime
 
-from django.http import JsonResponse
+from django.db.models import Q
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin, parse_json_body
 from apps.employees.models import Employee, RoleDelegation
 
 logger = logging.getLogger(__name__)
@@ -23,20 +24,18 @@ logger = logging.getLogger(__name__)
 _VALID_SCOPE_TYPES = {"center", "dept", "sector", "executor"}
 
 
-# ── GET / POST /api/delegations ──────────────────────────────────────────────
-
-
-class DelegationListView(LoginRequiredJsonMixin, View):
+class DelegationListView(APIView):
     """
-    GET  -- список делегирований текущего пользователя
-            (выданных + полученных, или все для admin).
+    GET  -- список делегирований текущего пользователя.
     POST -- создание нового делегирования (только writer-роли).
     """
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         employee = getattr(request.user, "employee", None)
         if not employee:
-            return JsonResponse([], safe=False)
+            return Response([])
 
         role_filter = request.GET.get("role", "both")
 
@@ -46,26 +45,25 @@ class DelegationListView(LoginRequiredJsonMixin, View):
                 .select_related("delegate__user")
                 .order_by("-created_at")
             )
-            result = []
-            for rd in qs:
-                result.append(
-                    {
-                        "id": rd.pk,
-                        "delegator_id": rd.delegator_id,
-                        "delegate_id": rd.delegate_id,
-                        "scope_type": rd.scope_type,
-                        "scope_value": rd.scope_value,
-                        "delegator_write": rd.can_write,
-                        "valid_until": (
-                            rd.valid_until.isoformat() if rd.valid_until else None
-                        ),
-                        "created_at": (
-                            rd.created_at.isoformat() if rd.created_at else None
-                        ),
-                        "delegate_username": rd.delegate.user.username,
-                        "delegate_full_name": rd.delegate.full_name,
-                    }
-                )
+            result = [
+                {
+                    "id": rd.pk,
+                    "delegator_id": rd.delegator_id,
+                    "delegate_id": rd.delegate_id,
+                    "scope_type": rd.scope_type,
+                    "scope_value": rd.scope_value,
+                    "delegator_write": rd.can_write,
+                    "valid_until": (
+                        rd.valid_until.isoformat() if rd.valid_until else None
+                    ),
+                    "created_at": (
+                        rd.created_at.isoformat() if rd.created_at else None
+                    ),
+                    "delegate_username": rd.delegate.user.username,
+                    "delegate_full_name": rd.delegate.full_name,
+                }
+                for rd in qs
+            ]
 
         elif role_filter == "delegate":
             qs = (
@@ -73,69 +71,66 @@ class DelegationListView(LoginRequiredJsonMixin, View):
                 .select_related("delegator__user")
                 .order_by("-created_at")
             )
-            result = []
-            for rd in qs:
-                result.append(
-                    {
-                        "id": rd.pk,
-                        "delegator_id": rd.delegator_id,
-                        "delegate_id": rd.delegate_id,
-                        "scope_type": rd.scope_type,
-                        "scope_value": rd.scope_value,
-                        "delegator_write": rd.can_write,
-                        "valid_until": (
-                            rd.valid_until.isoformat() if rd.valid_until else None
-                        ),
-                        "created_at": (
-                            rd.created_at.isoformat() if rd.created_at else None
-                        ),
-                        "delegator_username": rd.delegator.user.username,
-                        "delegator_full_name": rd.delegator.full_name,
-                    }
-                )
+            result = [
+                {
+                    "id": rd.pk,
+                    "delegator_id": rd.delegator_id,
+                    "delegate_id": rd.delegate_id,
+                    "scope_type": rd.scope_type,
+                    "scope_value": rd.scope_value,
+                    "delegator_write": rd.can_write,
+                    "valid_until": (
+                        rd.valid_until.isoformat() if rd.valid_until else None
+                    ),
+                    "created_at": (
+                        rd.created_at.isoformat() if rd.created_at else None
+                    ),
+                    "delegator_username": rd.delegator.user.username,
+                    "delegator_full_name": rd.delegator.full_name,
+                }
+                for rd in qs
+            ]
 
         else:
-            # both -- все делегирования, связанные с текущим пользователем
             qs = (
-                RoleDelegation.objects.filter(models_Q_delegator_or_delegate(employee))
+                RoleDelegation.objects.filter(
+                    Q(delegator=employee) | Q(delegate=employee)
+                )
                 .select_related("delegate__user", "delegator__user")
                 .order_by("-created_at")
             )
-            result = []
-            for rd in qs:
-                result.append(
-                    {
-                        "id": rd.pk,
-                        "delegator_id": rd.delegator_id,
-                        "delegate_id": rd.delegate_id,
-                        "scope_type": rd.scope_type,
-                        "scope_value": rd.scope_value,
-                        "delegator_write": rd.can_write,
-                        "valid_until": (
-                            rd.valid_until.isoformat() if rd.valid_until else None
-                        ),
-                        "created_at": (
-                            rd.created_at.isoformat() if rd.created_at else None
-                        ),
-                    }
-                )
+            result = [
+                {
+                    "id": rd.pk,
+                    "delegator_id": rd.delegator_id,
+                    "delegate_id": rd.delegate_id,
+                    "scope_type": rd.scope_type,
+                    "scope_value": rd.scope_value,
+                    "delegator_write": rd.can_write,
+                    "valid_until": (
+                        rd.valid_until.isoformat() if rd.valid_until else None
+                    ),
+                    "created_at": (
+                        rd.created_at.isoformat() if rd.created_at else None
+                    ),
+                }
+                for rd in qs
+            ]
 
-        return JsonResponse(result, safe=False)
+        return Response(result)
 
     def post(self, request):
         employee = getattr(request.user, "employee", None)
         if not employee:
-            return JsonResponse({"error": "Профиль сотрудника не найден"}, status=400)
+            return Response({"error": "Профиль сотрудника не найден"}, status=400)
 
         role = employee.role
         if role == "user":
-            return JsonResponse(
+            return Response(
                 {"error": "Исполнители не могут делегировать права"}, status=403
             )
 
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
 
         delegate_id = data.get("delegate_id")
         scope_type = data.get("scope_type", "")
@@ -143,85 +138,74 @@ class DelegationListView(LoginRequiredJsonMixin, View):
         can_write = bool(data.get("delegator_write", False))
         valid_until_str = data.get("valid_until", "")
 
-        # Валидация
         if not delegate_id:
-            return JsonResponse(
-                {"error": "Не указан получатель делегирования"}, status=400
-            )
+            return Response({"error": "Не указан получатель делегирования"}, status=400)
 
         try:
             delegate_id = int(delegate_id)
         except (TypeError, ValueError):
-            return JsonResponse({"error": "Некорректный ID получателя"}, status=400)
+            return Response({"error": "Некорректный ID получателя"}, status=400)
         if delegate_id == employee.pk:
-            return JsonResponse(
-                {"error": "Нельзя делегировать самому себе"}, status=400
-            )
+            return Response({"error": "Нельзя делегировать самому себе"}, status=400)
 
         if scope_type not in _VALID_SCOPE_TYPES:
-            return JsonResponse(
+            return Response(
                 {"error": "Недопустимый тип области (center/dept/sector/executor)"},
                 status=400,
             )
 
         if not scope_value:
-            return JsonResponse({"error": "Не указано значение области"}, status=400)
+            return Response({"error": "Не указано значение области"}, status=400)
 
-        # Парсинг даты
         try:
             valid_until = datetime.fromisoformat(valid_until_str)
             if timezone.is_naive(valid_until):
                 valid_until = timezone.make_aware(valid_until)
             if valid_until <= timezone.now():
-                return JsonResponse(
+                return Response(
                     {"error": "Срок действия должен быть в будущем"}, status=400
                 )
         except (ValueError, TypeError):
-            return JsonResponse(
-                {"error": "Неверный формат даты (ожидается ISO 8601)"},
-                status=400,
+            return Response(
+                {"error": "Неверный формат даты (ожидается ISO 8601)"}, status=400
             )
 
-        # Проверка зоны видимости менеджера
         user_center = employee.ntc_center.code if employee.ntc_center else ""
         user_dept = employee.department.code if employee.department else ""
         user_sector = employee.sector.code if employee.sector else ""
 
         if role in ("ntc_head", "ntc_deputy"):
             if scope_type == "center" and scope_value != user_center:
-                return JsonResponse(
+                return Response(
                     {"error": "Можно делегировать только свой НТЦ"}, status=403
                 )
         elif role in ("dept_head", "dept_deputy"):
             if scope_type == "center":
-                return JsonResponse(
+                return Response(
                     {"error": "Начальник отдела не может делегировать права НТЦ"},
                     status=403,
                 )
             if scope_type == "dept" and scope_value != user_dept:
-                return JsonResponse(
+                return Response(
                     {"error": "Можно делегировать только свой отдел"}, status=403
                 )
         elif role == "sector_head":
             if scope_type in ("center", "dept"):
-                return JsonResponse(
+                return Response(
                     {
                         "error": "Начальник сектора не может делегировать права выше сектора"
                     },
                     status=403,
                 )
             if scope_type == "sector" and scope_value != user_sector:
-                return JsonResponse(
+                return Response(
                     {"error": "Можно делегировать только свой сектор"}, status=403
                 )
 
-        # Проверяем, что получатель существует
         try:
             delegate = Employee.objects.get(pk=int(delegate_id))
         except Employee.DoesNotExist:
-            return JsonResponse(
-                {"error": "Пользователь-получатель не найден"}, status=400
-            )
+            return Response({"error": "Пользователь-получатель не найден"}, status=400)
 
         rd = RoleDelegation.objects.create(
             delegator=employee,
@@ -242,42 +226,29 @@ class DelegationListView(LoginRequiredJsonMixin, View):
             can_write,
             valid_until_str,
         )
-        return JsonResponse({"id": rd.pk, "ok": True}, status=201)
+        return Response({"id": rd.pk, "ok": True}, status=201)
 
 
-# ── DELETE /api/delegations/<id> ─────────────────────────────────────────────
-
-
-class DelegationDetailView(LoginRequiredJsonMixin, View):
+class DelegationDetailView(APIView):
     """DELETE -- отзыв делегирования. Только delegator или admin."""
+
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         employee = getattr(request.user, "employee", None)
         if not employee:
-            return JsonResponse({"error": "Профиль сотрудника не найден"}, status=400)
+            return Response({"error": "Профиль сотрудника не найден"}, status=400)
 
         try:
             rd = RoleDelegation.objects.get(pk=pk)
         except RoleDelegation.DoesNotExist:
-            return JsonResponse({"error": "Делегирование не найдено"}, status=404)
+            return Response({"error": "Делегирование не найдено"}, status=404)
 
-        # Только delegator или admin могут отозвать
         if employee.role != "admin" and rd.delegator_id != employee.pk:
-            return JsonResponse(
-                {"error": "Нет прав для отзыва этого делегирования"},
-                status=403,
+            return Response(
+                {"error": "Нет прав для отзыва этого делегирования"}, status=403
             )
 
         rd.delete()
         logger.info("Delegation %s revoked by user %s", pk, employee.pk)
-        return JsonResponse({"ok": True})
-
-
-# ── Вспомогательные функции ──────────────────────────────────────────────────
-
-
-def models_Q_delegator_or_delegate(employee):
-    """Q-объект: delegator=employee OR delegate=employee."""
-    from django.db.models import Q
-
-    return Q(delegator=employee) | Q(delegate=employee)
+        return Response({"ok": True})

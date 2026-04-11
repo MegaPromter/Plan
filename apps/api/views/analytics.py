@@ -3,18 +3,20 @@ API аналитики: загрузка по отделам, выполнени
 """
 
 from django.db.models import Count, Exists, OuterRef, Q, Sum
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import LoginRequiredJsonMixin
 from apps.api.utils import get_visibility_filter
 from apps.employees.models import Employee
 from apps.works.models import PPProject, Work, WorkCalendar, WorkReport
 
 
-class WorkloadAnalyticsView(LoginRequiredJsonMixin, View):
+class WorkloadAnalyticsView(APIView):
     """GET /api/analytics/workload/?year=2026"""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         today = timezone.now().date()
@@ -123,7 +125,7 @@ class WorkloadAnalyticsView(LoginRequiredJsonMixin, View):
                 }
             )
 
-        response = JsonResponse(
+        response = Response(
             {
                 "year": year,
                 "by_dept": by_dept,
@@ -136,8 +138,10 @@ class WorkloadAnalyticsView(LoginRequiredJsonMixin, View):
         return response
 
 
-class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
+class EmployeeAnalyticsView(APIView):
     """GET /api/analytics/employee/?year=2026&executor_id=N"""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         today = timezone.now().date()
@@ -186,7 +190,7 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
                 executor_id = target_emp.pk
 
         if not target_emp:
-            return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+            return Response({"error": "Сотрудник не найден"}, status=404)
 
         # Базовый queryset задач сотрудника (с учётом visibility)
         vis_q = get_visibility_filter(request.user)
@@ -294,7 +298,7 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
                     }
                 )
 
-        response = JsonResponse(
+        response = Response(
             {
                 "year": year,
                 "executor": {
@@ -317,8 +321,10 @@ class EmployeeAnalyticsView(LoginRequiredJsonMixin, View):
         return response
 
 
-class PPAnalyticsView(LoginRequiredJsonMixin, View):
+class PPAnalyticsView(APIView):
     """GET /api/analytics/pp/?year=2026&pp_project_id=N"""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         today = timezone.now().date()
@@ -456,7 +462,7 @@ class PPAnalyticsView(LoginRequiredJsonMixin, View):
             for pk, name in PPProject.objects.order_by("name").values_list("pk", "name")
         ]
 
-        response = JsonResponse(
+        response = Response(
             {
                 "year": year,
                 "summary": summary,

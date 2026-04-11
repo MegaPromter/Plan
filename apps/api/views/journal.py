@@ -12,15 +12,12 @@ import logging
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import resolve_employee_loose, safe_date
 from apps.employees.models import Department, Sector
 from apps.works.models import Notice
@@ -327,8 +324,10 @@ def _apply_status_filter(qs, status_filter):
 # ── GET /api/journal ──────────────────────────────────────────────────────────
 
 
-class JournalListView(LoginRequiredJsonMixin, View):
+class JournalListView(APIView):
     """GET -- список записей журнала с пагинацией, сортировкой и мульти-фильтрами."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # Быстрая проверка существования по номеру и типу (для защиты от дублей)
@@ -339,7 +338,7 @@ class JournalListView(LoginRequiredJsonMixin, View):
                 notice_number=check_number,
                 ii_pi=check_ii_pi,
             ).exists()
-            return JsonResponse({"exists": exists})
+            return Response({"exists": exists})
 
         # Пагинация
         try:
@@ -386,7 +385,7 @@ class JournalListView(LoginRequiredJsonMixin, View):
         total = qs.count()
         result = [_serialize_notice(n) for n in qs[offset : offset + limit]]
 
-        resp = JsonResponse(result, safe=False)
+        resp = Response(result)
         resp["X-Total-Count"] = total
         resp["X-Has-More"] = "true" if (offset + limit) < total else "false"
         return resp
@@ -395,9 +394,11 @@ class JournalListView(LoginRequiredJsonMixin, View):
 # ── GET /api/journal/facets ───────────────────────────────────────────────────
 
 
-class JournalFacetsView(LoginRequiredJsonMixin, View):
+class JournalFacetsView(APIView):
     """GET -- уникальные значения для мульти-фильтров.
     Возвращает по каждой колонке список доступных значений."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         qs = _base_queryset()
@@ -541,31 +542,33 @@ class JournalFacetsView(LoginRequiredJsonMixin, View):
             {v for v in qs.values_list("status", flat=True).distinct() if v}
         )
 
-        return JsonResponse(facets)
+        return Response(facets)
 
 
 # ── POST /api/journal/create ──────────────────────────────────────────────────
 
 
-class JournalCreateView(WriterRequiredJsonMixin, View):
+class JournalCreateView(APIView):
     """POST -- создание записи журнала (ручной ввод, work_report=NULL)."""
+
+    permission_classes = [IsWriterPermission]
 
     def post(self, request):
         try:
             return self._create(request)
         except Exception as e:
             logger.error("JournalCreateView error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": "Внутренняя ошибка сервера"},
                 status=500,
             )
 
     def _create(self, request):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not data:
-            return JsonResponse({"error": "Пустое тело запроса"}, status=400)
+            return Response({"error": "Пустое тело запроса"}, status=400)
 
         dept_code = (data.get("dept") or "").strip()
         sector_name = (data.get("sector") or "").strip()
@@ -601,7 +604,7 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
         # Валидация: дата выпуска не может быть позже сегодня
         di = _safe_date(data.get("date_issued"))
         if di and di > timezone.now().date():
-            return JsonResponse(
+            return Response(
                 {"error": "Дата выпуска не может быть позже текущей даты"}, status=400
             )
 
@@ -612,7 +615,7 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
                     and iip
                     and Notice.objects.filter(notice_number=nn, ii_pi=iip).exists()
                 ):
-                    return JsonResponse(
+                    return Response(
                         {"error": f"Извещение {iip} № {nn} уже существует"}, status=409
                     )
 
@@ -632,11 +635,11 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
                     status=status,
                 )
         except IntegrityError:
-            return JsonResponse(
+            return Response(
                 {"error": f"Извещение {iip} № {nn} уже существует"}, status=409
             )
 
-        return JsonResponse(
+        return Response(
             {
                 "id": notice.pk,
                 "notice": _serialize_notice(
@@ -654,8 +657,10 @@ class JournalCreateView(WriterRequiredJsonMixin, View):
 # ── PUT / DELETE /api/journal/<id> ────────────────────────────────────────────
 
 
-class JournalDetailView(WriterRequiredJsonMixin, View):
+class JournalDetailView(APIView):
     """PUT / DELETE -- обновление/удаление записи журнала."""
+
+    permission_classes = [IsWriterPermission]
 
     def _get_notice(self, pk):
         try:
@@ -677,25 +682,25 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
             return self._update(request, pk)
         except Exception as e:
             logger.error("JournalDetailView.put error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": "Внутренняя ошибка сервера"},
                 status=500,
             )
 
     def _update(self, request, pk):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
+        if not isinstance(data, dict):
+            return Response({"error": "Невалидный JSON"}, status=400)
         if not data:
-            return JsonResponse({"ok": True})
+            return Response({"ok": True})
 
         notice = self._get_notice(pk)
         if not notice:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
         err = _check_journal_access(request.user, notice)
         if err:
-            return JsonResponse({"error": err}, status=403)
+            return Response({"error": err}, status=403)
 
         update_fields = []
 
@@ -710,7 +715,7 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
             )
             ce = data.get("closure_executor", notice.closure_executor or "")
             if not cn or not cd or not ce:
-                return JsonResponse(
+                return Response(
                     {
                         "error": "Для погашения необходимы: "
                         "№ документа, дата и исполнитель",
@@ -790,7 +795,7 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
             if "date_issued" in data:
                 di = _safe_date(data["date_issued"])
                 if di and di > timezone.now().date():
-                    return JsonResponse(
+                    return Response(
                         {"error": "Дата выпуска не может быть позже текущей даты"},
                         status=400,
                     )
@@ -804,14 +809,14 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
         if update_fields:
             notice.save(update_fields=update_fields + ["updated_at"])
 
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
 
     def delete(self, request, pk):
         try:
             return self._delete(request, pk)
         except Exception as e:
             logger.error("JournalDetailView.delete error: %s", e, exc_info=True)
-            return JsonResponse(
+            return Response(
                 {"error": "Внутренняя ошибка сервера"},
                 status=500,
             )
@@ -819,17 +824,17 @@ class JournalDetailView(WriterRequiredJsonMixin, View):
     def _delete(self, request, pk):
         notice = self._get_notice(pk)
         if not notice:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
         if notice.is_auto:
-            return JsonResponse(
+            return Response(
                 {"error": "Автоматические записи нельзя удалить вручную"},
                 status=400,
             )
 
         err = _check_journal_access(request.user, notice)
         if err:
-            return JsonResponse({"error": err}, status=403)
+            return Response({"error": err}, status=403)
 
         notice.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})

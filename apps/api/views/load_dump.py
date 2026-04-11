@@ -11,10 +11,11 @@ import os
 
 from django.conf import settings
 from django.core.management import call_command
-from django.http import JsonResponse
 from django.utils.decorators import method_decorator
-from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +26,15 @@ DUMP_FILE = os.path.join(
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class LoadDumpView(View):
+class LoadDumpView(APIView):
     """POST — загрузить данные из data_dump.json (требует секрет, только DEBUG)."""
+
+    permission_classes = [AllowAny]
 
     def post(self, request):
         # Эндпоинт доступен только в режиме отладки
         if not settings.DEBUG:
-            return JsonResponse({"error": "Недоступно"}, status=404)
+            return Response({"error": "Недоступно"}, status=404)
         # Проверка секрета
         import json
 
@@ -43,14 +46,14 @@ class LoadDumpView(View):
         expected_secret = os.environ.get("LOAD_DUMP_SECRET", "")
         if not expected_secret:
             logger.error("load_dump: LOAD_DUMP_SECRET не настроен")
-            return JsonResponse({"error": "Endpoint не настроен"}, status=500)
+            return Response({"error": "Endpoint не настроен"}, status=500)
         secret = body.get("secret", "").strip()
         if secret != expected_secret:
-            return JsonResponse({"error": "Forbidden"}, status=403)
+            return Response({"error": "Forbidden"}, status=403)
 
         # Проверяем наличие файла
         if not os.path.isfile(DUMP_FILE):
-            return JsonResponse(
+            return Response(
                 {"error": f"Файл {DUMP_FILE} не найден"},
                 status=404,
             )
@@ -65,7 +68,7 @@ class LoadDumpView(View):
             call_command("loaddata", DUMP_FILE)
 
             logger.info("load_dump: done")
-            return JsonResponse({"ok": True, "message": "Данные загружены"})
+            return Response({"ok": True, "message": "Данные загружены"})
         except Exception as e:
             logger.exception("load_dump: error")
-            return JsonResponse({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=500)

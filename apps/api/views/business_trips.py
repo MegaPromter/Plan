@@ -11,14 +11,11 @@ import logging
 from datetime import date
 
 from django.db.models import Q
-from django.http import JsonResponse
-from django.views import View
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.api.mixins import (
-    LoginRequiredJsonMixin,
-    WriterRequiredJsonMixin,
-    parse_json_body,
-)
+from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import get_vacation_visibility_filter, resolve_employee_loose
 from apps.employees.models import BusinessTrip, Employee
 
@@ -45,21 +42,19 @@ def _serialize_trip(t):
     }
 
 
-# ── GET / POST /api/business_trips/ ──────────────────────────────────────────
+class BusinessTripListView(APIView):
 
-
-class BusinessTripListView(LoginRequiredJsonMixin, View):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Пагинация с ограничением на максимум записей (защита от DoS)
         try:
             per_page = int(request.GET.get("per_page", 0)) or TRIPS_MAX
             page = int(request.GET.get("page", 1))
         except (ValueError, TypeError):
             per_page, page = TRIPS_MAX, 1
-        per_page = min(per_page, TRIPS_MAX)  # не выдаём больше лимита
-        page = max(page, 1)  # страница не может быть < 1
-        offset = (page - 1) * per_page  # смещение для SQL OFFSET
+        per_page = min(per_page, TRIPS_MAX)
+        page = max(page, 1)
+        offset = (page - 1) * per_page
 
         vis_q = get_vacation_visibility_filter(request.user)
 
@@ -67,12 +62,10 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
             "employee", "employee__department", "employee__department__ntc_center"
         )
 
-        # Фильтры
         year = request.GET.get("year", "").strip()
         if year:
             try:
-                yr = int(year)
-                qs = qs.filter(date_start__year=yr)
+                qs = qs.filter(date_start__year=int(year))
             except (ValueError, TypeError):
                 pass
 
@@ -94,19 +87,15 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
         qs = qs.order_by("date_start")
         rows = qs[offset : offset + per_page]
 
-        return JsonResponse([_serialize_trip(t) for t in rows], safe=False)
+        return Response([_serialize_trip(t) for t in rows])
 
     def post(self, request):
-        # Проверка writer
         emp = getattr(request.user, "employee", None)
         if not emp or not emp.is_writer:
-            return JsonResponse({"error": "Недостаточно прав"}, status=403)
+            return Response({"error": "Недостаточно прав"}, status=403)
 
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
 
-        # Сотрудник
         employee = None
         employee_id = data.get("employee_id")
         executor_name = data.get("executor", "").strip()
@@ -115,16 +104,12 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
             try:
                 employee = Employee.objects.get(pk=employee_id)
             except Employee.DoesNotExist:
-                return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+                return Response({"error": "Сотрудник не найден"}, status=404)
         elif executor_name:
-            # Нестрогий поиск по ФИО (ручной ввод из UI)
             employee = resolve_employee_loose(executor_name)
 
         if not employee:
-            return JsonResponse(
-                {"error": "Не указан или не найден сотрудник"},
-                status=400,
-            )
+            return Response({"error": "Не указан или не найден сотрудник"}, status=400)
 
         location = data.get("location", "").strip()
         purpose = data.get("purpose", "").strip()
@@ -133,27 +118,25 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
 
         valid_statuses = {c[0] for c in BusinessTrip.STATUS_CHOICES}
         if status_val not in valid_statuses:
-            return JsonResponse(
-                {"error": f"Недопустимый статус: {status_val}"}, status=400
-            )
+            return Response({"error": f"Недопустимый статус: {status_val}"}, status=400)
 
         ds_str = data.get("date_start", "")
         de_str = data.get("date_end", "")
 
         if not ds_str or not de_str:
-            return JsonResponse({"error": "Даты обязательны"}, status=400)
+            return Response({"error": "Даты обязательны"}, status=400)
         if not location:
-            return JsonResponse({"error": "Место назначения обязательно"}, status=400)
+            return Response({"error": "Место назначения обязательно"}, status=400)
 
         try:
             ds = date.fromisoformat(ds_str)
             de = date.fromisoformat(de_str)
             if de < ds:
-                return JsonResponse(
+                return Response(
                     {"error": "Дата окончания раньше даты начала"}, status=400
                 )
         except (ValueError, TypeError):
-            return JsonResponse({"error": "Неверный формат даты"}, status=400)
+            return Response({"error": "Неверный формат даты"}, status=400)
 
         trip = BusinessTrip.objects.create(
             employee=employee,
@@ -164,21 +147,18 @@ class BusinessTripListView(LoginRequiredJsonMixin, View):
             status=status_val,
             notes=notes,
         )
-        return JsonResponse(_serialize_trip(trip), status=201)
+        return Response(_serialize_trip(trip), status=201)
 
 
-# ── PUT / DELETE /api/business_trips/<id>/ ────────────────────────────────────
-
-
-class BusinessTripDetailView(WriterRequiredJsonMixin, View):
+class BusinessTripDetailView(APIView):
     http_method_names = ["put", "delete"]
 
+    permission_classes = [IsWriterPermission]
+
     def put(self, request, pk):
-        data = parse_json_body(request)
-        if data is None:
-            return JsonResponse({"error": "Невалидный JSON"}, status=400)
+        data = request.data
         if not data:
-            return JsonResponse({"error": "Пустой запрос"}, status=400)
+            return Response({"error": "Пустой запрос"}, status=400)
 
         vis_q = get_vacation_visibility_filter(request.user)
         try:
@@ -186,7 +166,7 @@ class BusinessTripDetailView(WriterRequiredJsonMixin, View):
                 BusinessTrip.objects.select_related("employee").filter(vis_q).get(pk=pk)
             )
         except BusinessTrip.DoesNotExist:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
         update_fields = []
 
@@ -196,12 +176,12 @@ class BusinessTripDetailView(WriterRequiredJsonMixin, View):
                 trip.employee = emp
                 update_fields.append("employee")
             except Employee.DoesNotExist:
-                return JsonResponse({"error": "Сотрудник не найден"}, status=404)
+                return Response({"error": "Сотрудник не найден"}, status=404)
 
         if "status" in data:
             valid_statuses = {c[0] for c in BusinessTrip.STATUS_CHOICES}
             if data["status"] not in valid_statuses:
-                return JsonResponse(
+                return Response(
                     {"error": f'Недопустимый статус: {data["status"]}'}, status=400
                 )
 
@@ -215,31 +195,29 @@ class BusinessTripDetailView(WriterRequiredJsonMixin, View):
                 trip.date_start = date.fromisoformat(data["date_start"])
                 update_fields.append("date_start")
             except (ValueError, TypeError):
-                return JsonResponse({"error": "Неверный формат date_start"}, status=400)
+                return Response({"error": "Неверный формат date_start"}, status=400)
 
         if "date_end" in data:
             try:
                 trip.date_end = date.fromisoformat(data["date_end"])
                 update_fields.append("date_end")
             except (ValueError, TypeError):
-                return JsonResponse({"error": "Неверный формат date_end"}, status=400)
+                return Response({"error": "Неверный формат date_end"}, status=400)
 
         if trip.date_start and trip.date_end and trip.date_end < trip.date_start:
-            return JsonResponse(
-                {"error": "Дата окончания раньше даты начала"}, status=400
-            )
+            return Response({"error": "Дата окончания раньше даты начала"}, status=400)
 
         if update_fields:
             trip.save(update_fields=update_fields + ["updated_at"])
 
-        return JsonResponse(_serialize_trip(trip))
+        return Response(_serialize_trip(trip))
 
     def delete(self, request, pk):
         vis_q = get_vacation_visibility_filter(request.user)
         try:
             trip = BusinessTrip.objects.filter(vis_q).get(pk=pk)
         except BusinessTrip.DoesNotExist:
-            return JsonResponse({"error": "Запись не найдена"}, status=404)
+            return Response({"error": "Запись не найдена"}, status=404)
 
         trip.delete()
-        return JsonResponse({"ok": True})
+        return Response({"ok": True})
