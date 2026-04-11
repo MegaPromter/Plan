@@ -584,18 +584,14 @@ class ProductionPlanDetailView(WriterRequiredJsonMixin, View):
         elif field in _PP_DECIMAL_FIELDS:
             setattr(work, field, _safe_decimal(value))
         elif field == "sector_head":
-            # sector_head теперь устанавливается через FK sector
+            # sector_head устанавливается через FK sector (только в рамках отдела)
             if value:
-                sec = (
-                    Sector.objects.filter(
-                        Q(code=value) | Q(name=value),
-                        department=work.department,
-                    ).first()
-                    if work.department
-                    else Sector.objects.filter(
-                        Q(code=value) | Q(name=value),
-                    ).first()
-                )
+                if not work.department:
+                    raise ValueError("Нельзя назначить сектор без указанного отдела")
+                sec = Sector.objects.filter(
+                    Q(code=value) | Q(name=value),
+                    department=work.department,
+                ).first()
                 work.sector = sec
             else:
                 work.sector = None

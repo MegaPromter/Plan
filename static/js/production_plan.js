@@ -296,8 +296,16 @@ async function _ppBgLoadRemaining(projectId, offset) {
             + '&limit=' + PP_FETCH_CHUNK + '&offset=' + offset;
     if (_ppScope === 'all') url += '&scope=all';
     var resp;
-    try { resp = await fetch(url); } catch(e) { break; }
-    if (!resp.ok) break;
+    try { resp = await fetch(url); } catch(e) {
+      console.warn('Фоновая загрузка ПП: ошибка сети', e);
+      showToast('Загружены не все данные — проверьте соединение', 'warning');
+      break;
+    }
+    if (!resp.ok) {
+      console.warn('Фоновая загрузка ПП: HTTP', resp.status);
+      showToast('Загружены не все данные', 'warning');
+      break;
+    }
 
     var batch = await resp.json();
     batch = Array.isArray(batch) ? batch : (batch.results || []);
@@ -308,8 +316,11 @@ async function _ppBgLoadRemaining(projectId, offset) {
     rows = batch.concat(rows);
     offset += batch.length;
 
-    // Перерисовываем таблицу с новыми данными
-    renderPPTable();
+    // Перерисовываем таблицу, но не если пользователь редактирует ячейку
+    var _activeEl = document.activeElement;
+    var _isEditing = _activeEl && (_activeEl.tagName === 'INPUT' || _activeEl.tagName === 'TEXTAREA' || _activeEl.tagName === 'SELECT')
+      && _activeEl.closest('.pp-table');
+    if (!_isEditing) renderPPTable();
 
     var hasMore = resp.headers.get('X-Has-More') === 'true';
     if (!hasMore) break;
@@ -368,43 +379,111 @@ function showLanding() {
   renderProjects();
 }
 
-// Отрисовывает сетку карточек ПП-проектов
-function renderProjects() {
-  const grid = document.getElementById('projectsGrid');
+// Текущий вид лендинга: grid | list | table (из localStorage)
+let _ppLandingView = localStorage.getItem('pp_landing_view') || 'grid';
 
-  // Пустое состояние: нет проектов
+// Переключает вид лендинга и перерисовывает проекты
+function ppSwitchLandingView(view) {
+  _ppLandingView = view;
+  localStorage.setItem('pp_landing_view', view);
+  // Обновляем активную кнопку
+  document.querySelectorAll('#ppViewSwitch button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  renderProjects();
+}
+
+// Генерирует кнопки действий (редактировать/удалить) для карточки проекта
+function _ppCardActions(p) {
+  if (!IS_ADMIN) return '';
+  return `
+    <button class="pp-card-btn" onclick="event.stopPropagation(); editProjectName(${p.id}, '${escapeJs(p.name || '')}', ${p.up_project_id || 'null'}, ${p.up_product_id || 'null'})" title="Переименовать">
+      <i class="fas fa-pen"></i>
+    </button>
+    <button class="pp-card-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id}, '${escapeJs(p.name || '')}')" title="Удалить">
+      <i class="fas fa-trash"></i>
+    </button>`;
+}
+
+// Отрисовывает ПП-проекты в выбранном виде (карточки / список / таблица)
+function renderProjects() {
+  const container = document.getElementById('projectsGrid');
+
+  // Активируем кнопку переключателя
+  document.querySelectorAll('#ppViewSwitch button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === _ppLandingView);
+  });
+
+  // Пустое состояние
   if (projects.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;">' + emptyStateHtml({icon:'fas fa-industry', title:'Производственных планов пока нет', desc:'Создайте первый план, чтобы начать управлять производством', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button>' : ''}) + '</div>';
+    container.className = 'pp-projects-grid';
+    container.innerHTML = '<div style="grid-column:1/-1;">' + emptyStateHtml({icon:'fas fa-industry', title:'Производственных планов пока нет', desc:'Создайте первый план, чтобы начать управлять производством', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button>' : ''}) + '</div>';
     return;
   }
 
-  // Генерируем карточки для каждого ПП-проекта
-  grid.innerHTML = projects.map(p => `
-    <div class="pp-project-card" onclick="openProject(${p.id}, '${escapeJs(p.name || '')}')">
-      <!-- Привязанный проект УП (если есть) — синяя метка -->
-      ${p.up_project_name ? `<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:2px;"><i class="fas fa-project-diagram" style="margin-right:3px;"></i>${escapeHtml(p.up_project_name)}</div>` : ''}
-      <!-- Привязанное изделие УП (если есть) — зелёная метка -->
-      ${p.up_product_name ? `<div style="font-size:11px;color:var(--success,#22c55e);font-weight:500;margin-bottom:4px;"><i class="fas fa-cog" style="margin-right:3px;"></i>${escapeHtml(p.up_product_name)}</div>` : ''}
-      <!-- Название плана -->
-      <div class="pp-project-card-name">${escapeHtml(p.name || 'Без названия')}</div>
-      <!-- Количество строк в плане -->
-      <div class="pp-project-card-count">
-        <i class="fas fa-list" style="margin-right:4px;"></i>${p.row_count || 0} строк
+  const onclick = p => `onclick="openProject(${p.id}, '${escapeJs(p.name || '')}')"`;
+
+  if (_ppLandingView === 'list') {
+    // ── Горизонтальный список ──
+    container.className = 'pp-projects-list';
+    container.innerHTML = projects.map(p => `
+      <div class="pp-list-card" ${onclick(p)}>
+        <div class="pp-list-icon"><i class="fas fa-industry"></i></div>
+        <div class="pp-list-info">
+          <div class="pp-list-name">${escapeHtml(p.name || 'Без названия')}</div>
+          <div class="pp-list-meta">
+            ${p.up_project_name ? `<span><i class="fas fa-project-diagram"></i> ${escapeHtml(p.up_project_name)}</span>` : ''}
+            ${p.up_product_name ? `<span><i class="fas fa-cog"></i> ${escapeHtml(p.up_product_name)}</span>` : ''}
+            ${!p.up_project_name && !p.up_product_name ? '<span style="font-style:italic;">без привязки</span>' : ''}
+          </div>
+        </div>
+        <div class="pp-list-right">
+          <span class="pp-list-count">${p.row_count || 0} строк</span>
+          <div class="pp-list-actions">${_ppCardActions(p)}</div>
+        </div>
       </div>
-      <!-- Кнопки редактирования/удаления (только для администраторов) -->
-      ${IS_ADMIN ? `
-        <div class="pp-project-card-actions">
-          <!-- Редактировать название и привязку к УП -->
-          <button class="pp-card-btn" onclick="event.stopPropagation(); editProjectName(${p.id}, '${escapeJs(p.name || '')}', ${p.up_project_id || 'null'}, ${p.up_product_id || 'null'})" title="Переименовать">
-            <i class="fas fa-pen"></i>
-          </button>
-          <!-- Удалить план со всеми его строками -->
-          <button class="pp-card-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id}, '${escapeJs(p.name || '')}')" title="Удалить">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>` : ''}
-    </div>
-  `).join('');
+    `).join('');
+
+  } else if (_ppLandingView === 'table') {
+    // ── Таблица ──
+    container.className = '';
+    container.innerHTML = `
+      <table class="pp-projects-table">
+        <thead><tr>
+          <th>Название плана</th>
+          <th>Проект УП</th>
+          <th>Изделие</th>
+          <th class="ppt-count">Строк</th>
+          ${IS_ADMIN ? '<th style="width:70px;"></th>' : ''}
+        </tr></thead>
+        <tbody>
+          ${projects.map(p => `
+            <tr ${onclick(p)}>
+              <td class="ppt-name">${escapeHtml(p.name || 'Без названия')}</td>
+              <td>${p.up_project_name ? `<span class="ppt-badge ppt-badge-blue"><i class="fas fa-project-diagram"></i> ${escapeHtml(p.up_project_name)}</span>` : '<span class="ppt-badge ppt-badge-muted">—</span>'}</td>
+              <td>${p.up_product_name ? `<span class="ppt-badge ppt-badge-green"><i class="fas fa-cog"></i> ${escapeHtml(p.up_product_name)}</span>` : '<span class="ppt-badge ppt-badge-muted">—</span>'}</td>
+              <td class="ppt-count">${p.row_count || 0}</td>
+              ${IS_ADMIN ? `<td><div class="ppt-actions">${_ppCardActions(p)}</div></td>` : ''}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+
+  } else {
+    // ── Карточки (по умолчанию) ──
+    container.className = 'pp-projects-grid';
+    container.innerHTML = projects.map(p => `
+      <div class="pp-project-card" ${onclick(p)}>
+        ${p.up_project_name ? `<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:2px;"><i class="fas fa-project-diagram" style="margin-right:3px;"></i>${escapeHtml(p.up_project_name)}</div>` : ''}
+        ${p.up_product_name ? `<div style="font-size:11px;color:var(--success,#22c55e);font-weight:500;margin-bottom:4px;"><i class="fas fa-cog" style="margin-right:3px;"></i>${escapeHtml(p.up_product_name)}</div>` : ''}
+        <div class="pp-project-card-name">${escapeHtml(p.name || 'Без названия')}</div>
+        <div class="pp-project-card-count">
+          <i class="fas fa-list" style="margin-right:4px;"></i>${p.row_count || 0} строк
+        </div>
+        ${IS_ADMIN ? `<div class="pp-project-card-actions">${_ppCardActions(p)}</div>` : ''}
+      </div>
+    `).join('');
+  }
 }
 
 /* ── Проекты УП (для диалога создания ПП-плана) ─────────────────────── */
@@ -754,6 +833,7 @@ async function openProject(id, name) {
   renderPPTable();
   requestAnimationFrame(_fixFilterRowTop);
   initPPPeriodBar();
+  _ppMarkTodayMonth();
   initPPDeptChips();
 }
 
@@ -1007,6 +1087,48 @@ function renderPPTable() {
   // Пересчёт sticky top для строк thead (зависит от режима отображения)
   const _wrap = document.querySelector('.pp-table-wrap');
   if (_wrap) requestAnimationFrame(() => _fixStickyHeaderTops(_wrap));
+  // Обновляем суммарные бейджи
+  updatePpSummary();
+}
+
+/* ── Суммарные бейджи-пилюли (ПП) ─────────────────────────────────── */
+function updatePpSummary() {
+  var total = 0;
+  var executorSet = new Set();
+  rows.forEach(function(r) {
+    var lab = parseFloat(r.labor);
+    if (!isNaN(lab)) total += lab;
+    if (r.executor) executorSet.add(r.executor);
+  });
+
+  // Трудоёмкость
+  document.getElementById("ppSummaryValue").innerHTML =
+    '<i class="fas fa-clock"></i> ' + (total > 0 ? total.toLocaleString("ru-RU") + ' ч' : '0 ч');
+
+  // Период
+  var periodLabel;
+  if (ppSelectedMonth) {
+    periodLabel = MONTHS_SHORT[ppSelectedMonth] + ' ' + ppSelectedYear;
+  } else {
+    periodLabel = 'Год ' + ppSelectedYear;
+  }
+  document.getElementById("ppSummaryPeriod").innerHTML =
+    '<i class="fas fa-calendar"></i> ' + periodLabel + ' · ' + _ppFiltered.length + ' работ';
+
+  // Сотрудники
+  var staffCount = executorSet.size;
+  document.getElementById("ppSummaryStaff").innerHTML =
+    '<i class="fas fa-users"></i> ' + (staffCount > 0 ? staffCount + ' сотр.' : '—');
+
+  // Отдел
+  var deptNames = ppSelectedDepts.size > 0 ? [...ppSelectedDepts].join(", ") : "Все отделы";
+  document.getElementById("ppSummaryDept").innerHTML =
+    '<i class="fas fa-building"></i> ' + deptNames;
+
+  // Загрузка — пока без calCache
+  var loadEl = document.getElementById("ppSummaryLoad");
+  loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> —';
+  loadEl.className = "stat-badge sb-load";
 }
 
 /* ── Добавление порции строк в таблицу ПП ─────────────────────────── */
@@ -1210,6 +1332,10 @@ async function handleCellChange(e) {
     if (rowObj) {
       rowObj.dept = value;
       rowObj.sector_head = '';  // Сброс сектора при смене отдела
+      // Отправляем сброс сектора на сервер
+      fetchJson('/api/production_plan/' + id + '/?field=sector_head', {
+        method: 'PUT', body: JSON.stringify({ value: '' }),
+      });
       // Обновляем нач. секторов
       const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
       if (headSel) {
@@ -1572,6 +1698,7 @@ function openAddRowModal() {
     } catch (e) {
       console.error('Ошибка сохранения строки:', e);
       showToast('Ошибка сети', 'error');
+      _addingRow = false;
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
       return;
     }
@@ -1610,6 +1737,7 @@ function openAddRowModal() {
       showToast('Строка добавлена', 'success');
     } else {
       showToast(resp.error || 'Ошибка сохранения строки', 'error');
+      _addingRow = false;
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
     }
   }
@@ -1981,7 +2109,7 @@ function _ppInitSort() {
         th.style.cursor = 'pointer';
         th.style.userSelect = 'none';
         th.addEventListener('click', function(e) {
-            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger')) return;
+            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger') || e.target.closest('.mf-trigger')) return;
             toggleSort(_ppSortState, th.getAttribute('data-sort'));
             renderSortIndicators(thead, _ppSortState);
             renderPPTable();
@@ -2018,9 +2146,19 @@ function initPPPeriodBar() {
   });
 }
 
+// Подсвечивает чип текущего месяца точкой (класс .today)
+function _ppMarkTodayMonth() {
+  var now = new Date();
+  var curYear = now.getFullYear(), curMonth = now.getMonth() + 1;
+  document.querySelectorAll('.pp-cal-month').forEach(function(el) {
+    el.classList.toggle('today', ppSelectedYear === curYear && parseInt(el.dataset.m) === curMonth);
+  });
+}
+
 function ppChangeYear(d) {
   ppSelectedYear += d;
   document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
+  _ppMarkTodayMonth();
   _applyPPPeriodFilter();
   _ppSyncFiltersToUrl();
 }
@@ -2039,11 +2177,12 @@ function ppClearPeriod() {
   ppSelectedYear = new Date().getFullYear();
   document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
   document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+  _ppMarkTodayMonth();
   // Убираем date_end фильтр из colFilters
   delete colFilters['mf_date_end'];
   mfSelections['date_end'] = new Set();
   const btn = document.querySelector('.mf-trigger[data-col="date_end"]');
-  if (btn) { btn.textContent = MF_DEFAULTS['date_end'] || '\u25BC'; btn.classList.remove('active'); }
+  if (btn) { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['date_end'] || '\u25BC'; btn.classList.remove('active'); }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
   renderPPTable();
@@ -2132,7 +2271,7 @@ function _syncPPDeptFilter() {
   } else {
     delete colFilters['mf_dept'];
     mfSelections['dept'] = new Set();
-    if (btn) { btn.textContent = MF_DEFAULTS['dept'] || '\u25BC'; btn.classList.remove('active'); }
+    if (btn) { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['dept'] || '\u25BC'; btn.classList.remove('active'); }
   }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
@@ -2309,21 +2448,24 @@ function toggleMf(btn) {
 // Обновляет colFilters и перерисовывает таблицу при изменении выборки фильтра
 function applyMfFilter(col, btn) {
   const sel = mfSelections[col] || new Set();
+  const isIcon = btn.classList.contains('mf-icon');
   const def = MF_DEFAULTS[col] || '\u25BC';
   if (sel.size === 0) {
     // Нет выбранных значений — убираем фильтр
     delete colFilters['mf_' + col];
-    btn.textContent = def;
+    if (!isIcon) btn.textContent = def;
     btn.classList.remove('active');
   } else {
     // Обновляем активный фильтр
     colFilters['mf_' + col] = sel;
     // Текст кнопки: одно значение (для date_end — «Март 2026») или «N выбрано»
-    if (sel.size === 1) {
-      const singleVal = [...sel][0];
-      btn.textContent = (col === 'date_end') ? formatYearMonth(singleVal) : singleVal;
-    } else {
-      btn.textContent = sel.size + ' выбрано';
+    if (!isIcon) {
+      if (sel.size === 1) {
+        const singleVal = [...sel][0];
+        btn.textContent = (col === 'date_end') ? formatYearMonth(singleVal) : singleVal;
+      } else {
+        btn.textContent = sel.size + ' выбрано';
+      }
     }
     btn.classList.add('active');
   }
@@ -2363,7 +2505,7 @@ function clearAllColFilters() {
   Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
   // Возвращаем все кнопки к дефолтному тексту и убираем active-класс
   document.querySelectorAll('.mf-trigger').forEach(btn => {
-    btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
+    if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
     btn.classList.remove('active');
   });
   if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }

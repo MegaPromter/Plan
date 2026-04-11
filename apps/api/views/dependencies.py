@@ -276,34 +276,45 @@ class TaskDependencyListView(LoginRequiredJsonMixin, View):
                     {"error": "Задача не может зависеть от самой себя"}, status=400
                 )
 
-            # Проверка существования обеих задач
-            plan_or_pp = Q(show_in_plan=True) | Q(show_in_pp=True)
-            if not Work.objects.filter(pk=pk).filter(plan_or_pp).exists():
+            # Ограничение lag_days: -365..365 рабочих дней
+            if lag_days < -365 or lag_days > 365:
                 return JsonResponse(
-                    {"error": "Задача-последователь не найдена"}, status=404
-                )
-            if not Work.objects.filter(pk=predecessor_id).filter(plan_or_pp).exists():
-                return JsonResponse(
-                    {"error": "Задача-предшественник не найдена"}, status=404
+                    {"error": "lag_days должен быть от -365 до 365"}, status=400
                 )
 
-            # Проверка дубликата
-            if TaskDependency.objects.filter(
-                predecessor_id=predecessor_id,
-                successor_id=pk,
-            ).exists():
-                return JsonResponse(
-                    {"error": "Такая зависимость уже существует"}, status=400
-                )
-
-            # Проверка цикла
-            if _detect_cycle(pk, predecessor_id):
-                return JsonResponse(
-                    {"error": "Невозможно создать зависимость: обнаружен цикл"},
-                    status=400,
-                )
-
+            # Все проверки и создание внутри транзакции (TOCTOU защита)
             with transaction.atomic():
+                # Проверка существования обеих задач
+                plan_or_pp = Q(show_in_plan=True) | Q(show_in_pp=True)
+                if not Work.objects.filter(pk=pk).filter(plan_or_pp).exists():
+                    return JsonResponse(
+                        {"error": "Задача-последователь не найдена"}, status=404
+                    )
+                if (
+                    not Work.objects.filter(pk=predecessor_id)
+                    .filter(plan_or_pp)
+                    .exists()
+                ):
+                    return JsonResponse(
+                        {"error": "Задача-предшественник не найдена"}, status=404
+                    )
+
+                # Проверка дубликата
+                if TaskDependency.objects.filter(
+                    predecessor_id=predecessor_id,
+                    successor_id=pk,
+                ).exists():
+                    return JsonResponse(
+                        {"error": "Такая зависимость уже существует"}, status=400
+                    )
+
+                # Проверка цикла
+                if _detect_cycle(pk, predecessor_id):
+                    return JsonResponse(
+                        {"error": "Невозможно создать зависимость: обнаружен цикл"},
+                        status=400,
+                    )
+
                 dep = TaskDependency.objects.create(
                     predecessor_id=predecessor_id,
                     successor_id=pk,
@@ -345,7 +356,17 @@ class TaskDependencyDetailView(WriterRequiredJsonMixin, View):
                     return JsonResponse({"error": "Недопустимый тип связи"}, status=400)
                 dep.dep_type = d["dep_type"]
             if "lag_days" in d:
-                dep.lag_days = int(d["lag_days"])
+                try:
+                    new_lag = int(d["lag_days"])
+                except (ValueError, TypeError):
+                    return JsonResponse(
+                        {"error": "lag_days должен быть целым числом"}, status=400
+                    )
+                if new_lag < -365 or new_lag > 365:
+                    return JsonResponse(
+                        {"error": "lag_days должен быть от -365 до 365"}, status=400
+                    )
+                dep.lag_days = new_lag
 
             dep.save()
 
@@ -389,6 +410,13 @@ class AllDependenciesView(LoginRequiredJsonMixin, View):
         try:
             context = request.GET.get("context", "plan")
             project_id = request.GET.get("project_id")
+            if project_id:
+                try:
+                    project_id = int(project_id)
+                except (ValueError, TypeError):
+                    return JsonResponse(
+                        {"error": "project_id должен быть числом"}, status=400
+                    )
 
             if context == "pp" and project_id:
                 work_ids = Work.objects.filter(

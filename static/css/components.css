@@ -556,6 +556,27 @@ tr.row-pinned td:first-child::after {
   z-index: 1; position: relative;
 }
 
+/* ── Toolbar segmented controls (общие) ─────────────────────────── */
+.seg-divider { width:1px; height:22px; background:var(--border); margin:0 2px; flex-shrink:0; }
+.seg-spacer { flex:1; }
+.seg-count { font-size:12px; color:var(--muted); white-space:nowrap; }
+
+/* ── Бейджи-пилюли (суммарная трудоёмкость) ─────────────────────── */
+.badge-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.stat-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600;
+  font-family:var(--mono); white-space:nowrap;
+}
+.stat-badge i { font-size:11px; }
+.stat-badge.sb-labor  { background:rgba(var(--accent-rgb),.08); color:var(--accent); }
+.stat-badge.sb-period { background:var(--surface2); color:var(--text2); font-family:inherit; font-weight:500; }
+.stat-badge.sb-staff  { background:rgba(139,92,246,.08); color:#7c3aed; }
+.stat-badge.sb-dept   { background:var(--surface2); color:var(--muted); font-family:inherit; }
+.stat-badge.sb-load          { background:rgba(var(--success-rgb),.08); color:var(--success); }
+.stat-badge.sb-load.load-warn { background:rgba(var(--warning-rgb),.1); color:var(--warning); }
+.stat-badge.sb-load.load-over { background:rgba(var(--danger-rgb),.1); color:var(--danger); }
+
 /* ── Переключатель темы ──────────────────────────────────────────── */
 .theme-toggle {
   display: inline-flex;

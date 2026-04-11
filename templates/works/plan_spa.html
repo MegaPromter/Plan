@@ -49,24 +49,12 @@
       <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
     </div>
     <span class="cal-clear" onclick="clearFilter()">Показать все</span>
-    <div class="plan-summary">
-      <div>
-        <div class="plan-summary-label">Суммарная трудоёмкость</div>
-        <div class="plan-summary-sub" id="planSummaryPeriod">—</div>
-      </div>
-      <div class="plan-summary-value" id="planSummaryValue">—</div>
-      <div class="plan-summary-sep"></div>
-      <div>
-        <div class="plan-summary-label">Сотрудники</div>
-        <div class="plan-summary-sub" id="planSummaryDept">—</div>
-      </div>
-      <div class="plan-summary-value" id="planSummaryStaff">—</div>
-      <div class="plan-summary-sep"></div>
-      <div>
-        <div class="plan-summary-label">Загрузка</div>
-        <div class="plan-summary-sub" id="planSummaryCapInfo">—</div>
-      </div>
-      <div class="plan-summary-value" id="planSummaryLoad">—</div>
+    <div class="plan-summary badge-row">
+      <span class="stat-badge sb-labor" id="planSummaryValue"><i class="fas fa-clock"></i> —</span>
+      <span class="stat-badge sb-period" id="planSummaryPeriod"><i class="fas fa-calendar"></i> —</span>
+      <span class="stat-badge sb-staff" id="planSummaryStaff"><i class="fas fa-users"></i> —</span>
+      <span class="stat-badge sb-load" id="planSummaryLoad"><i class="fas fa-tachometer-alt"></i> —</span>
+      <span class="stat-badge sb-dept" id="planSummaryDept"><i class="fas fa-building"></i> —</span>
     </div>
   </div>
 
@@ -149,46 +137,27 @@
 <thead>
 <tr>
   <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1"><div class="th-inner">Проект<div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="2"><div class="th-inner">Код строки<div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3"><div class="th-inner">Наряд-заказ<div class="col-resize" data-col="wo"></div></div></th>
-  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="4"><div class="th-inner">№ Этапа<div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="5"><div class="th-inner">№ работы<div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="6"><div class="th-inner">Обоснование<div class="col-resize" data-col="just"></div></div></th>
+  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1"><div class="th-inner">Проект<button class="mf-trigger mf-icon" data-col="project" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="project"></div></div></th>
+  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="2"><div class="th-inner">Код строки<button class="mf-trigger mf-icon" data-col="task_type" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="type"></div></div></th>
+  <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3"><div class="th-inner">Наряд-заказ<button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wo"></div></div></th>
+  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="4"><div class="th-inner">№ Этапа<button class="mf-trigger mf-icon" data-col="stage" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="stage"></div></div></th>
+  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="5"><div class="th-inner">№ работы<button class="mf-trigger mf-icon" data-col="work_number" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wnum"></div></div></th>
+  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="6"><div class="th-inner">Обоснование<button class="mf-trigger mf-icon" data-col="justification" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="just"></div></div></th>
   <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
-  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9"><div class="th-inner">Отдел<div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10"><div class="th-inner">Сектор /<br>Нач. сектора<div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11"><div class="th-inner">Разработчик / план(ч)<div class="col-resize" data-col="exec"></div></div></th>
+  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9"><div class="th-inner">Отдел<button class="mf-trigger mf-icon" data-col="dept" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="dept"></div></div></th>
+  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10"><div class="th-inner">Сектор /<br>Нач. сектора<button class="mf-trigger mf-icon" data-col="sector" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="sector"></div></div></th>
+  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11"><div class="th-inner">Разработчик / план(ч)<button class="mf-trigger mf-icon" data-col="executor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="exec"></div></div></th>
   <th colspan="2" style="text-align:center;" data-col-group="sp-dates"><div class="th-inner" style="justify-content:center;">Сроки выполнения</div></th>
   <th colspan="2" style="text-align:center;" data-col-group="pp-dates"><div class="th-inner" style="justify-content:center;">Сроки согласно ПП</div></th>
   <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="16"><div class="th-inner">Действия</div></th>
 </tr>
 <tr>
-  <th id="th-desc" data-sort="description" data-col-idx="7"><div class="th-inner">обозначение<div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname" data-sort="work_name" data-col-idx="8"><div class="th-inner">наименование<div class="col-resize" data-col="wname"></div></div></th>
-  <th id="th-spds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<div class="col-resize" data-col="spds"></div></div></th>
-  <th id="th-spde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<div class="col-resize" data-col="spde"></div></div></th>
-  <th id="th-ppds" data-sort="date_start" data-col-idx="14"><div class="th-inner">Начало<div class="col-resize" data-col="ppds"></div></div></th>
-  <th id="th-ppde" data-sort="date_end" data-col-idx="15"><div class="th-inner">Окончание<div class="col-resize" data-col="ppde"></div></div></th>
-</tr>
-<tr class="filter-row" id="filterRow">
-  <th class="th-num" data-col-idx="0"></th>
-  <th data-col-idx="1"><div class="mf-wrap"><button class="mf-trigger" data-col="project" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="2"><div class="mf-wrap"><button class="mf-trigger" data-col="task_type" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="3"><div class="mf-wrap"><button class="mf-trigger" data-col="work_order" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="4"><div class="mf-wrap"><button class="mf-trigger" data-col="stage" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="5"><div class="mf-wrap"><button class="mf-trigger" data-col="work_number" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="6"><div class="mf-wrap"><button class="mf-trigger" data-col="justification" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="7"><div class="mf-wrap"><button class="mf-trigger" data-col="description" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="8"><div class="mf-wrap"><button class="mf-trigger" data-col="work_name" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="9"><div class="mf-wrap"><button class="mf-trigger" data-col="dept" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="10"><div class="mf-wrap"><button class="mf-trigger" data-col="sector" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="11"><div class="mf-wrap"><button class="mf-trigger" data-col="executor" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="12"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="13"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="14"><div class="mf-wrap"><button class="mf-trigger" data-col="date_start" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="15"><div class="mf-wrap"><button class="mf-trigger" data-col="date_end" onclick="toggleMf(this)">▼</button></div></th>
-  <th data-col-idx="16"></th>
+  <th id="th-desc" data-sort="description" data-col-idx="7"><div class="th-inner">обозначение<button class="mf-trigger mf-icon" data-col="description" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="desc"></div></div></th>
+  <th id="th-wname" data-sort="work_name" data-col-idx="8"><div class="th-inner">наименование<button class="mf-trigger mf-icon" data-col="work_name" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wname"></div></div></th>
+  <th id="th-spds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="spds"></div></div></th>
+  <th id="th-spde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="spde"></div></div></th>
+  <th id="th-ppds" data-sort="date_start" data-col-idx="14"><div class="th-inner">Начало<button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="ppds"></div></div></th>
+  <th id="th-ppde" data-sort="date_end" data-col-idx="15"><div class="th-inner">Окончание<button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="ppde"></div></div></th>
 </tr>
 </thead>
 <tbody id="taskBody"></tbody>

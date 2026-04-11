@@ -478,7 +478,6 @@ class TaskCreateView(WriterRequiredJsonMixin, View):
             try:
                 _set_date_fields(work, d)
             except ValueError as exc:
-                work.delete()
                 return JsonResponse({"error": str(exc)}, status=400)
 
             # Если deadline не задан — подставляем date_end

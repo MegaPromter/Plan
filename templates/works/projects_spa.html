@@ -101,6 +101,73 @@
   background: rgba(59,130,246,0.1); color: var(--accent);
   font-size: 11px; font-weight: 500;
 }
+
+/* ── Переключатель вида ──────────────────────────────────────────────── */
+.up-view-switch {
+  display: flex; gap: 2px; background: var(--surface2, #f1f5f9); border-radius: 8px;
+  padding: 2px; width: fit-content;
+}
+.up-view-switch button {
+  border: none; background: transparent; padding: 5px 12px; border-radius: 6px;
+  font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.up-view-switch button.active {
+  background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.up-view-switch button:hover:not(.active) { color: var(--text); }
+
+/* ── Горизонтальный список проектов ──────────────────────────────────── */
+.projects-list { display: flex; flex-direction: column; gap: 6px; }
+.up-list-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.up-list-card:hover { border-color: var(--accent); box-shadow: 0 1px 4px rgba(37,99,235,.1); }
+.up-list-icon {
+  width: 36px; height: 36px; background: rgba(var(--accent-rgb, 37,99,235), .08);
+  color: var(--accent); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.up-list-info { flex: 1; min-width: 0; }
+.up-list-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-list-meta { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--muted); }
+.up-list-meta span { display: flex; align-items: center; gap: 3px; }
+.up-list-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.up-list-badges { display: flex; gap: 6px; }
+.up-list-badge {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  background: var(--surface2, #f1f5f9); padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+}
+.up-list-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.up-list-card:hover .up-list-actions { opacity: 1; }
+
+/* ── Таблица проектов ────────────────────────────────────────────────── */
+.projects-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.projects-table th {
+  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .04em; padding: 8px 12px; text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.projects-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  font-size: 13px; vertical-align: middle;
+}
+.projects-table tbody tr { cursor: pointer; transition: background .1s; }
+.projects-table tbody tr:hover { background: rgba(var(--accent-rgb, 37,99,235), .04); }
+.projects-table .upt-name { font-weight: 600; font-size: 14px; }
+.projects-table .upt-count { text-align: center; }
+.projects-table .upt-actions { opacity: 0; transition: opacity .15s; display: flex; gap: 4px; }
+.projects-table tbody tr:hover .upt-actions { opacity: 1; }
+.projects-table .upt-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.projects-table .upt-badge-blue { background: rgba(var(--accent-rgb, 37,99,235), .08); color: var(--accent); }
+.projects-table .upt-badge-muted { background: var(--surface2, #f1f5f9); color: var(--muted); }
 </style>
 {% endblock %}
 
@@ -109,12 +176,18 @@
 {% csrf_token %}
 
 <!-- Заголовок страницы -->
-<div class="page-header">
-  <h1>Управление проектами</h1>
+<div class="page-header" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  <h1 style="margin:0;">Управление проектами</h1>
+  <!-- Переключатель вида: карточки / список / таблица -->
+  <div class="up-view-switch" id="upViewSwitch">
+    <button data-view="grid" onclick="upSwitchView('grid')" title="Карточки"><i class="fas fa-th-large"></i></button>
+    <button data-view="list" onclick="upSwitchView('list')" title="Список"><i class="fas fa-bars"></i></button>
+    <button data-view="table" onclick="upSwitchView('table')" title="Таблица"><i class="fas fa-table"></i></button>
+  </div>
 </div>
 
-<!-- Сетка карточек проектов: заполняется из renderProjects() -->
-<div id="projectsGrid" class="projects-grid">
+<!-- Контейнер проектов: заполняется из renderProjects() -->
+<div id="projectsGrid">
   <!-- Содержимое заполняется JavaScript -->
 </div>
 {% endblock %}
@@ -133,6 +206,9 @@ const IS_ADMIN  = {% if request.user|is_admin_role %}true{% else %}false{% endif
 // Локальный массив проектов
 let projects = [];
 
+// Текущий вид: grid | list | table (из localStorage)
+let _upView = localStorage.getItem('up_view') || 'grid';
+
 /* ── Загрузка списка проектов ────────────────────────────────────────────── */
 async function loadProjects() {
   // GET /api/projects/ — возвращает список с вложенными products и pp_count
@@ -140,12 +216,52 @@ async function loadProjects() {
   if (!data._error) projects = Array.isArray(data) ? data : [];
 }
 
-/* ── Отрисовка сетки карточек ────────────────────────────────────────────── */
+// Переключает вид и перерисовывает
+function upSwitchView(view) {
+  _upView = view;
+  localStorage.setItem('up_view', view);
+  document.querySelectorAll('#upViewSwitch button').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  renderProjects();
+}
+
+// Кнопки действий (edit/products/delete) — переиспользуется во всех видах
+function _upActionBtns(p) {
+  if (!IS_ADMIN) return '';
+  return `
+    <button class="pc-btn" onclick="event.stopPropagation(); openEditProjectModal(${p.id})" title="Редактировать">
+      <i class="fas fa-pen"></i>
+    </button>
+    <button class="pc-btn" onclick="event.stopPropagation(); openProductsModal(${p.id})" title="Изделия">
+      <i class="fas fa-cubes"></i>
+    </button>
+    <button class="pc-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id})" title="Удалить">
+      <i class="fas fa-trash"></i>
+    </button>`;
+}
+
+// Тэги изделий (для карточек и списка)
+function _upProductTags(p) {
+  if (!p.products || !p.products.length) return '';
+  return `<div class="product-tags">${p.products.slice(0, 5).map(function(pr) {
+    return '<span class="product-tag"><i class="fas fa-cube"></i>' + escapeHtml(pr.code || pr.name) + '</span>';
+  }).join('')}${p.products.length > 5 ? '<span class="product-tag">+' + (p.products.length - 5) + '</span>' : ''}</div>`;
+}
+
+/* ── Отрисовка проектов в выбранном виде ─────────────────────────────────── */
 function renderProjects() {
-  const grid = document.getElementById('projectsGrid');
-  // Пустое состояние: нет проектов
+  const container = document.getElementById('projectsGrid');
+
+  // Активируем кнопку переключателя
+  document.querySelectorAll('#upViewSwitch button').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.view === _upView);
+  });
+
+  // Пустое состояние
   if (projects.length === 0) {
-    grid.innerHTML = `
+    container.className = 'projects-grid';
+    container.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
         <div class="empty-state-icon"><i class="fas fa-project-diagram"></i></div>
         <div class="empty-state-title">Проектов пока нет</div>
@@ -154,46 +270,77 @@ function renderProjects() {
     return;
   }
 
-  // Генерируем карточки для каждого проекта
-  grid.innerHTML = projects.map(p => {
-    // Тэги изделий: максимум 5 штук, остальные — счётчик «+N»
-    const productTags = p.products && p.products.length
-      ? `<div class="product-tags">${p.products.slice(0, 5).map(pr =>
-          `<span class="product-tag"><i class="fas fa-cube"></i>${escapeHtml(pr.code || pr.name)}</span>`
-        ).join('')}${p.products.length > 5 ? `<span class="product-tag">+${p.products.length - 5}</span>` : ''}</div>`
-      : '';
+  var onclick = function(p) { return 'onclick="openProjectMetrics(' + p.id + ')"'; };
 
-    // Кнопки действий на карточке — только для admin
-    const actionBtns = IS_ADMIN ? `
-      <div class="project-card-actions">
-        <button class="pc-btn" onclick="event.stopPropagation(); openEditProjectModal(${p.id})" title="Редактировать">
-          <i class="fas fa-pen"></i>
-        </button>
-        <button class="pc-btn" onclick="event.stopPropagation(); openProductsModal(${p.id})" title="Изделия">
-          <i class="fas fa-cubes"></i>
-        </button>
-        <button class="pc-btn danger" onclick="event.stopPropagation(); deleteProject(${p.id})" title="Удалить">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>` : '';
+  if (_upView === 'list') {
+    // ── Горизонтальный список ──
+    container.className = 'projects-list';
+    container.innerHTML = projects.map(function(p) {
+      return `
+        <div class="up-list-card" ${onclick(p)}>
+          <div class="up-list-icon"><i class="fas fa-project-diagram"></i></div>
+          <div class="up-list-info">
+            <div class="up-list-name">${escapeHtml(p.name_full)}</div>
+            <div class="up-list-meta">
+              ${p.name_short ? '<span><i class="fas fa-tag"></i> ' + escapeHtml(p.name_short) + '</span>' : ''}
+              <span><i class="fas fa-industry"></i> ${p.pp_count || 0} ПП</span>
+              <span><i class="fas fa-cube"></i> ${(p.products || []).length} изд.</span>
+              <span><i class="fas fa-layer-group"></i> ${p.stages_count || 0} этапов</span>
+            </div>
+          </div>
+          <div class="up-list-right">
+            ${_upProductTags(p)}
+            <div class="up-list-actions">${_upActionBtns(p)}</div>
+          </div>
+        </div>`;
+    }).join('');
 
-    return `
-      <div class="project-card" onclick="openProjectMetrics(${p.id})" style="cursor:pointer">
-        <!-- Краткое наименование (если задано) -->
-        ${p.name_short ? `<div class="project-card-short">${escapeHtml(p.name_short)}</div>` : ''}
-        <!-- Полное наименование проекта -->
-        <div class="project-card-title">${escapeHtml(p.name_full)}</div>
-        <!-- Тэги изделий проекта -->
-        ${productTags}
-        <!-- Мета-информация: количество ПП и изделий -->
-        <div class="project-card-meta">
-          <span><i class="fas fa-industry" style="margin-right:4px;"></i>${p.pp_count || 0} производственных планов</span>
-          ${p.products ? `<span><i class="fas fa-cube" style="margin-right:4px;"></i>${p.products.length} изделий</span>` : ''}
-          <span><i class="fas fa-layer-group" style="margin-right:4px;"></i>${p.stages_count || 0} этапов</span>
-        </div>
-        ${actionBtns}
-      </div>`;
-  }).join('');
+  } else if (_upView === 'table') {
+    // ── Таблица ──
+    container.className = '';
+    container.innerHTML = `
+      <table class="projects-table">
+        <thead><tr>
+          <th>Проект</th>
+          <th>Шифр</th>
+          <th class="upt-count">ПП</th>
+          <th class="upt-count">Изделия</th>
+          <th class="upt-count">Этапы</th>
+          ${IS_ADMIN ? '<th style="width:100px;"></th>' : ''}
+        </tr></thead>
+        <tbody>
+          ${projects.map(function(p) {
+            return `
+              <tr ${onclick(p)}>
+                <td class="upt-name">${escapeHtml(p.name_full)}</td>
+                <td>${p.name_short ? '<span class="upt-badge upt-badge-blue">' + escapeHtml(p.name_short) + '</span>' : '<span class="upt-badge upt-badge-muted">—</span>'}</td>
+                <td class="upt-count">${p.pp_count || 0}</td>
+                <td class="upt-count">${(p.products || []).length}</td>
+                <td class="upt-count">${p.stages_count || 0}</td>
+                ${IS_ADMIN ? '<td><div class="upt-actions">' + _upActionBtns(p) + '</div></td>' : ''}
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+  } else {
+    // ── Карточки (по умолчанию) ──
+    container.className = 'projects-grid';
+    container.innerHTML = projects.map(function(p) {
+      return `
+        <div class="project-card" ${onclick(p)} style="cursor:pointer">
+          ${p.name_short ? '<div class="project-card-short">' + escapeHtml(p.name_short) + '</div>' : ''}
+          <div class="project-card-title">${escapeHtml(p.name_full)}</div>
+          ${_upProductTags(p)}
+          <div class="project-card-meta">
+            <span><i class="fas fa-industry" style="margin-right:4px;"></i>${p.pp_count || 0} производственных планов</span>
+            ${p.products ? '<span><i class="fas fa-cube" style="margin-right:4px;"></i>' + p.products.length + ' изделий</span>' : ''}
+            <span><i class="fas fa-layer-group" style="margin-right:4px;"></i>${p.stages_count || 0} этапов</span>
+          </div>
+          ${IS_ADMIN ? '<div class="project-card-actions">' + _upActionBtns(p) + '</div>' : ''}
+        </div>`;
+    }).join('');
+  }
 }
 
 /* ── Модал метрик проекта (для всех пользователей) ──────────────────────── */

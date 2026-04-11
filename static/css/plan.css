@@ -61,6 +61,13 @@
   display:inline-flex; align-items:center; }
 .cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
 .cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+/* Точка «сегодня» под текущим месяцем (как в календарях) */
+.cal-month.today { position:relative; }
+.cal-month.today::after {
+  content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:var(--accent);
+}
+.cal-month.today.active::after { background:#fff; }
 .cal-clear { font-size:13px; color:var(--muted); cursor:pointer; text-decoration:underline; }
 .cal-clear:hover { color:var(--accent); }
 
@@ -92,7 +99,8 @@ thead th {
 /* Sticky top: точные значения устанавливает inline JS после загрузки */
 thead tr:nth-child(1) th { top: 0; z-index: 12; }
 thead tr:nth-child(2) th { top: 0; z-index: 11; }
-thead tr.filter-row th   { top: 0; z-index: 10; }
+/* filter-row скрыта — фильтры встроены в заголовки как иконки-воронки */
+thead tr.filter-row { display:none; }
 .th-inner { padding:10px 8px; font-size:12px; font-weight:700; color:var(--th-color);
   letter-spacing:0.05em; text-transform:uppercase;
   display:flex; align-items:center; justify-content:center; gap:4px; min-width:80px; user-select:none; position:relative; }
@@ -499,21 +507,21 @@ tr.pp-locked .pp-lock-badge {
 .filter-mode-toggle input[type=checkbox] { accent-color:var(--accent); cursor:pointer; }
 .filter-mode-toggle label { cursor:pointer; user-select:none; }
 
-/* ── Блок «Суммарная трудоёмкость» в тулбаре ─────────────────────────── */
-.plan-summary { display:flex; align-items:center; gap:10px; margin-left:auto;
-  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-md);
-  padding:8px 16px; flex-shrink:0; }
-.plan-summary-label { font-size:15px; color:var(--muted); text-transform:uppercase;
-  letter-spacing:0.06em; font-weight:600; white-space:nowrap; }
-.plan-summary-value { font-size:26px; font-weight:700; color:var(--accent);
-  font-family:var(--mono); white-space:nowrap; }
-.plan-summary-sub { font-size:14px; color:var(--muted); white-space:nowrap; line-height:1.4; }
-.plan-summary-sep { width:1px; height:36px; background:var(--border); flex-shrink:0; }
-.plan-summary-value.load-ok    { color:var(--success); }
-.plan-summary-value.load-warn  { color:var(--warning, #e6a200); }
-.plan-summary-value.load-over  { color:var(--danger); }
+/* ── Суммарная трудоёмкость (бейджи) — позиционирование в тулбаре ──── */
+.plan-summary.badge-row { margin-left:auto; flex-shrink:0;
+  background:none; border:none; padding:0; }
 
-/* ── Строка фильтров под заголовками колонок ──────────────────────────── */
+/* ── Иконка фильтра в заголовке колонки ──────────────────────────────── */
+button.mf-trigger.mf-icon {
+  width:auto; padding:2px 4px; background:none; border:none; color:var(--muted);
+  font-size:13px; cursor:pointer; opacity:0.55; transition:opacity .15s, color .15s;
+  position:relative; flex-shrink:0; margin-left:3px;
+}
+button.mf-trigger.mf-icon:hover { opacity:1; color:var(--accent); }
+button.mf-trigger.mf-icon.active { opacity:1; color:var(--accent); }
+button.mf-trigger.mf-icon::after { display:none; }
+
+/* ── Строка фильтров под заголовками колонок (скрыта, legacy) ─────────── */
 .filter-row th { padding:4px 4px 6px; background:color-mix(in srgb, var(--th-bg), var(--border) 20%); border-bottom:1px solid var(--border); }
 .col-filter { width:100%; padding:4px 6px; background:var(--surface2); border:1px solid var(--border);
   border-radius:var(--radius-xs); color:var(--text); font-family:var(--font); font-size:15px; outline:none;
@@ -648,6 +656,7 @@ tr.pp-locked .pp-lock-badge {
 .view-tabs .sp-overdue.active { background:var(--danger); color:#fff; }
 .view-tabs .sp-inwork { background:rgba(var(--warning-rgb),0.08); color:var(--warning); }
 .view-tabs .sp-inwork.active { background:var(--warning); color:#fff; }
+
 .view-tabs .status-bar-mini { width:600px; height:16px; }
 .status-bar-wrap { flex:1; min-width:200px; max-width:400px; }
 

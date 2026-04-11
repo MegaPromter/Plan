@@ -237,11 +237,21 @@ function _spRestoreFiltersFromUrl() {
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────
+// Подсвечивает чип текущего месяца точкой (класс .today)
+function _spMarkTodayMonth() {
+  var now = new Date();
+  var curYear = now.getFullYear(), curMonth = now.getMonth() + 1;
+  document.querySelectorAll(".cal-month").forEach(function(el) {
+    el.classList.toggle("today", selectedYear === curYear && parseInt(el.dataset.m) === curMonth);
+  });
+}
+
 function changeYear(d) {
   selectedYear += d;
   showAll = false;
   localStorage.setItem("plan_year", selectedYear);
   document.getElementById("yearDisplay").textContent = selectedYear;
+  _spMarkTodayMonth();
   _spSyncFiltersToUrl();
   loadTasks();
 }
@@ -321,13 +331,13 @@ function _syncDeptFilter() {
     mfSelections['dept'] = new Set(spSelectedDepts);
     colFilters['mf_dept'] = new Set(spSelectedDepts);
     if (btn) {
-      btn.textContent = spSelectedDepts.size === 1 ? [...spSelectedDepts][0] : spSelectedDepts.size + ' отд.';
+      if (!btn.classList.contains('mf-icon')) btn.textContent = spSelectedDepts.size === 1 ? [...spSelectedDepts][0] : spSelectedDepts.size + ' отд.';
       btn.classList.add('active');
     }
   } else {
     delete colFilters['mf_dept'];
     mfSelections['dept'] = new Set();
-    if (btn) { btn.textContent = MF_DEFAULTS['dept'] || '▼'; btn.classList.remove('active'); }
+    if (btn) { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['dept'] || '▼'; btn.classList.remove('active'); }
   }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').classList.toggle('visible', hasFilters);
@@ -363,6 +373,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   _spRestoreFiltersFromUrl();
 
   document.getElementById("yearDisplay").textContent = selectedYear;
+  _spMarkTodayMonth();
   if (selectedMonth) {
     const el = document.querySelector(`.cal-month[data-m="${selectedMonth}"]`);
     if (el) el.classList.add("active");
@@ -1010,7 +1021,7 @@ function filterByExecutor(name) {
   mfSelections["executor"] = sel;
   colFilters["mf_executor"] = sel;
   document.querySelectorAll(".mf-trigger[data-col='executor']").forEach(btn => {
-    btn.textContent = name;
+    if (!btn.classList.contains('mf-icon')) btn.textContent = name;
     btn.classList.add("active");
   });
   document.getElementById("filtersActiveBadge").classList.add("visible");
@@ -1222,9 +1233,11 @@ function updatePlanSummary() {
     ? `${selectedYear}-${String(selectedMonth).padStart(2,"0")}`
     : null;
 
-  // Считаем по отфильтрованному массиву (не по DOM)
+  // Трудоёмкость и сотрудники считаются без статус-фильтра,
+  // чтобы переключение чипов «Выполнено/Просрочено/В работе» не меняло итоги
+  const baseData = _spTasksWithoutStatusFilter();
   const executorSet = new Set();
-  _spFiltered.forEach(t => {
+  baseData.forEach(t => {
     const ph = t.plan_hours_all || {};
     if (monthKey) {
       total += parseFloat(ph[monthKey] || 0);
@@ -1242,51 +1255,51 @@ function updatePlanSummary() {
     }
   });
 
-  document.getElementById("planSummaryValue").textContent =
-    total > 0 ? total.toLocaleString("ru-RU") + " ч" : "0 ч";
+  // ── Бейдж: трудоёмкость ──
+  var laborText = total > 0 ? total.toLocaleString("ru-RU") + " ч" : "0 ч";
+  document.getElementById("planSummaryValue").innerHTML =
+    '<i class="fas fa-clock"></i> ' + laborText;
 
-  // MONTHS_SHORT — в utils.js
+  // ── Бейдж: период ──
   let periodLabel;
   if (monthKey) { periodLabel = `${MONTHS_SHORT[selectedMonth]} ${selectedYear}`; }
   else if (showAll) { periodLabel = "Все периоды"; }
   else { periodLabel = `Год ${selectedYear}`; }
   const filtered = _spFiltered.length;
-  document.getElementById("planSummaryPeriod").textContent =
-    `${periodLabel} · ${filtered} задач`;
+  document.getElementById("planSummaryPeriod").innerHTML =
+    '<i class="fas fa-calendar"></i> ' + periodLabel + ' · ' + filtered + ' задач';
 
-  // ── Сотрудники ──
+  // ── Бейдж: сотрудники ──
   const staffCount = executorSet.size;
-  document.getElementById("planSummaryStaff").textContent = staffCount > 0 ? staffCount : "—";
-  // Название выбранного подразделения
-  const deptNames = spSelectedDepts.size > 0 ? [...spSelectedDepts].join(", ") : "Все отделы";
-  document.getElementById("planSummaryDept").textContent = deptNames;
+  document.getElementById("planSummaryStaff").innerHTML =
+    '<i class="fas fa-users"></i> ' + (staffCount > 0 ? staffCount + ' сотр.' : '—');
 
-  // ── Загрузка (%) ──
+  // ── Бейдж: отдел ──
+  const deptNames = spSelectedDepts.size > 0 ? [...spSelectedDepts].join(", ") : "Все отделы";
+  document.getElementById("planSummaryDept").innerHTML =
+    '<i class="fas fa-building"></i> ' + deptNames;
+
+  // ── Бейдж: загрузка (%) ──
   const calYear = selectedYear || new Date().getFullYear();
   const calArr = _spCalCache[calYear] || [];
   let capacity = 0;
   if (staffCount > 0 && calArr.length > 0) {
     if (monthKey && selectedMonth) {
-      // Один месяц: сотрудники × норма часов
       const ce = calArr.find(function(c) { return c.month === selectedMonth; });
       capacity = staffCount * (ce ? ce.hours_norm : 160);
     } else {
-      // Весь год (или «все периоды»): сотрудники × сумма норм за 12 месяцев
       const yearNorm = calArr.reduce(function(s, c) { return s + (c.hours_norm || 0); }, 0);
       capacity = staffCount * yearNorm;
     }
   }
   const loadEl = document.getElementById("planSummaryLoad");
-  const capInfoEl = document.getElementById("planSummaryCapInfo");
   if (capacity > 0) {
     const pct = Math.round(total / capacity * 100);
-    loadEl.textContent = pct + "%";
-    loadEl.className = "plan-summary-value " + (pct <= 85 ? "load-ok" : pct <= 100 ? "load-warn" : "load-over");
-    capInfoEl.textContent = "Мощность: " + capacity.toLocaleString("ru-RU") + " ч";
+    loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> ' + pct + '%';
+    loadEl.className = "stat-badge sb-load" + (pct <= 85 ? "" : pct <= 100 ? " load-warn" : " load-over");
   } else {
-    loadEl.textContent = "—";
-    loadEl.className = "plan-summary-value";
-    capInfoEl.textContent = "Нет данных";
+    loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> —';
+    loadEl.className = "stat-badge sb-load";
   }
 }
 
@@ -1441,14 +1454,15 @@ function toggleMf(btn) {
 
 function applyMfFilter(col, btn) {
   const sel = mfSelections[col] || new Set();
+  const isIcon = btn.classList.contains('mf-icon');
   const def = MF_DEFAULTS[col] || "▼";
   if (sel.size === 0) {
     delete colFilters["mf_" + col];
-    btn.textContent = def;
+    if (!isIcon) btn.textContent = def;
     btn.classList.remove("active");
   } else {
     colFilters["mf_" + col] = sel;
-    btn.textContent = sel.size === 1 ? [...sel][0] : `${sel.size} выбрано`;
+    if (!isIcon) btn.textContent = sel.size === 1 ? [...sel][0] : `${sel.size} выбрано`;
     btn.classList.add("active");
   }
   // Синхронизация dept-чипов при изменении мультифильтра dept
@@ -1461,7 +1475,7 @@ function applyMfFilter(col, btn) {
       mfSelections['sector'] = new Set();
       delete colFilters['mf_sector'];
       const sectorBtn = document.querySelector('.mf-trigger[data-col="sector"]');
-      if (sectorBtn) { sectorBtn.textContent = MF_DEFAULTS['sector'] || '▼'; sectorBtn.classList.remove('active'); }
+      if (sectorBtn) { if (!sectorBtn.classList.contains('mf-icon')) sectorBtn.textContent = MF_DEFAULTS['sector'] || '▼'; sectorBtn.classList.remove('active'); }
     }
   }
   const hasFilters = Object.keys(colFilters).length > 0;
@@ -1481,7 +1495,7 @@ function initMfTriggers() {
     const col = btn.dataset.col;
     const sel = mfSelections[col];
     if (!sel || sel.size === 0) {
-      btn.textContent = MF_DEFAULTS[col] || "▼";
+      if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS[col] || "▼";
       btn.classList.remove("active");
     }
   });
@@ -1519,8 +1533,8 @@ function _spInitSort() {
         th.style.cursor = 'pointer';
         th.style.userSelect = 'none';
         th.addEventListener('click', function(e) {
-            // Не сортируем если кликнули на resize-handle или mf-trigger
-            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger')) return;
+            // Не сортируем если кликнули на resize-handle или mf-trigger/mf-icon
+            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger') || e.target.closest('.mf-trigger')) return;
             toggleSort(_spSortState, th.getAttribute('data-sort'));
             renderSortIndicators(thead, _spSortState);
             renderTable();
@@ -1558,7 +1572,7 @@ function clearAllColFilters() {
   });
   Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
   document.querySelectorAll(".mf-trigger").forEach(btn => {
-    btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼";
+    if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼";
     btn.classList.remove("active");
   });
   if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
@@ -2755,7 +2769,8 @@ function openNewTaskModal(taskType, prefill) {
 function openEditTaskModal(t) {
   editingTaskId = t.id;
   _editingTaskOriginal = t;
-  newTaskExecutorsList = t.executors_list || [];
+  // Копия, чтобы не мутировать исходный объект при отмене
+  newTaskExecutorsList = (t.executors_list || []).map(function(ex) { return Object.assign({}, ex); });
   pendingTaskType = t.task_type;
   const cls = (t.task_type || "").toLowerCase().split(" ")[0];
   document.getElementById("newTaskTypeBadgeWrap").innerHTML =
@@ -3114,7 +3129,7 @@ async function submitNewTask() {
     colFilters = {};
     document.querySelectorAll(".col-filter").forEach(inp => { inp.value = ""; inp.classList.remove("active"); inp.nextElementSibling.classList.remove("visible"); });
     Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
-    document.querySelectorAll(".mf-trigger").forEach(btn => { btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼"; btn.classList.remove("active"); });
+    document.querySelectorAll(".mf-trigger").forEach(btn => { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS[btn.dataset.col] || "▼"; btn.classList.remove("active"); });
     if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
     document.getElementById("filtersActiveBadge").classList.remove("visible");
     spSelectedDepts = new Set(); _saveSPDepts();
