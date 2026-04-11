@@ -569,13 +569,13 @@ tr.row-pinned td:first-child::after {
   font-family:var(--mono); white-space:nowrap;
 }
 .stat-badge i { font-size:11px; }
-.stat-badge.sb-labor  { background:rgba(var(--accent-rgb),.08); color:var(--accent); }
-.stat-badge.sb-period { background:var(--surface2); color:var(--text2); font-family:inherit; font-weight:500; }
-.stat-badge.sb-staff  { background:rgba(139,92,246,.08); color:#7c3aed; }
-.stat-badge.sb-dept   { background:var(--surface2); color:var(--muted); font-family:inherit; }
-.stat-badge.sb-load          { background:rgba(var(--success-rgb),.08); color:var(--success); }
-.stat-badge.sb-load.load-warn { background:rgba(var(--warning-rgb),.1); color:var(--warning); }
-.stat-badge.sb-load.load-over { background:rgba(var(--danger-rgb),.1); color:var(--danger); }
+.stat-badge.sb-labor  { background:rgba(var(--accent-rgb),.08); color:var(--accent); --tip-bg:var(--accent); }
+.stat-badge.sb-period { background:var(--surface2); color:var(--text2); --tip-bg:var(--text2); font-family:inherit; font-weight:500; }
+.stat-badge.sb-staff  { background:rgba(139,92,246,.08); color:#7c3aed; --tip-bg:#7c3aed; }
+.stat-badge.sb-dept   { background:var(--surface2); color:var(--muted); --tip-bg:var(--muted); font-family:inherit; }
+.stat-badge.sb-load          { background:rgba(var(--success-rgb),.08); color:var(--success); --tip-bg:var(--success); }
+.stat-badge.sb-load.load-warn { background:rgba(var(--warning-rgb),.1); color:var(--warning); --tip-bg:var(--warning); }
+.stat-badge.sb-load.load-over { background:rgba(var(--danger-rgb),.1); color:var(--danger); --tip-bg:var(--danger); }
 
 /* ── Переключатель темы ──────────────────────────────────────────── */
 .theme-toggle {
@@ -805,6 +805,39 @@ tr.row-pinned td:first-child::after {
 [data-tip]:hover::after {
   opacity: 1;
   transform: translateX(-50%) scale(1);
+}
+
+/* Стилизованные тултипы для бейджей — наследуют цвет элемента, показ снизу */
+.stat-badge[data-tip]::after {
+  background: var(--tip-bg, var(--nav-bg, #1e293b));
+  color: #fff;
+  font-family: var(--sans, system-ui, sans-serif);
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  letter-spacing: .01em;
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+/* Статус-пилюли — показ снизу */
+.status-pills .sp[data-tip]::after {
+  font-family: var(--sans, system-ui, sans-serif);
+  font-weight: 500;
+  font-size: 11px;
+  border-radius: 8px;
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+/* Вкладки и кнопки тулбара — тултип снизу */
+.seg-group .seg-btn[data-tip]::after,
+.pp-view-tab[data-tip]::after,
+.topbar-btn[data-tip]::after,
+.btn[data-tip]::after,
+.cal-clear[data-tip]::after,
+.pp-cal-clear[data-tip]::after {
+  bottom: auto;
+  top: calc(100% + 6px);
 }
 
 /* ── Fade-in анимация для виджетов ─────────────────────────────── */

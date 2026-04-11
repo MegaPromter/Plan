@@ -18,7 +18,7 @@
 <div id="landingActions">
   <!-- Кнопка создания плана доступна только администраторам -->
   {% if request.user|is_admin_role %}
-  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">
+  <button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()" data-tip="Создать новый ПП-проект">
     <i class="fas fa-plus" aria-hidden="true"></i> Создать новый производственный план
   </button>
   {% endif %}
@@ -30,12 +30,12 @@
     <i class="fas fa-arrow-left" aria-hidden="true"></i> Все планы
   </a>
   <!-- Синхронизация данных ПП → модуль план/отчёт (для всех) -->
-  <button class="btn btn-secondary btn-sm" onclick="syncToTasks()">
+  <button class="btn btn-secondary btn-sm" onclick="syncToTasks()" data-tip="Перенести задачи ПП → план/отчёт">
     <i class="fas fa-sync-alt" aria-hidden="true"></i> Синхронизировать с СП
   </button>
   {% if request.user|is_writer %}
   <!-- Добавить новую задачу через модальное окно -->
-  <button class="btn btn-primary btn-sm" onclick="openAddRowModal()">
+  <button class="btn btn-primary btn-sm" onclick="openAddRowModal()" data-tip="Создать новую задачу в ПП">
     <i class="fas fa-plus" aria-hidden="true"></i> Добавить задачу
   </button>
   <button class="btn btn-outline btn-sm" id="ppBulkModeBtn" onclick="ppToggleBulkMode()" title="Массовое выделение">
@@ -44,7 +44,7 @@
   {% endif %}
   <!-- Песочница -->
   {% if request.user|is_writer %}
-  <button class="btn btn-outline btn-sm" id="sandboxToggleBtn" onclick="toggleSandboxMode()">
+  <button class="btn btn-outline btn-sm" id="sandboxToggleBtn" onclick="toggleSandboxMode()" data-tip="Режим черновика с согласованием">
     <i class="fas fa-flask" aria-hidden="true"></i> <span id="sandboxToggleLabel">Песочница</span>
   </button>
   {% endif %}
@@ -138,13 +138,13 @@
       <span class="pp-cal-month" data-m="9" onclick="ppSelectMonth(9)">Сен</span><span class="pp-cal-month" data-m="10" onclick="ppSelectMonth(10)">Окт</span>
       <span class="pp-cal-month" data-m="11" onclick="ppSelectMonth(11)">Ноя</span><span class="pp-cal-month" data-m="12" onclick="ppSelectMonth(12)">Дек</span>
     </div>
-    <span class="pp-cal-clear" onclick="ppClearPeriod()">Показать все</span>
+    <span class="pp-cal-clear" onclick="ppClearPeriod()" data-tip="Сбросить фильтр периода">Показать все</span>
     <div class="plan-summary badge-row">
-      <span class="stat-badge sb-labor" id="ppSummaryValue"><i class="fas fa-clock"></i> —</span>
-      <span class="stat-badge sb-period" id="ppSummaryPeriod"><i class="fas fa-calendar"></i> —</span>
-      <span class="stat-badge sb-staff" id="ppSummaryStaff"><i class="fas fa-users"></i> —</span>
-      <span class="stat-badge sb-load" id="ppSummaryLoad"><i class="fas fa-tachometer-alt"></i> —</span>
-      <span class="stat-badge sb-dept" id="ppSummaryDept"><i class="fas fa-building"></i> —</span>
+      <span class="stat-badge sb-labor" id="ppSummaryValue" data-tip="Трудоёмкость (часы)"><i class="fas fa-clock"></i> —</span>
+      <span class="stat-badge sb-period" id="ppSummaryPeriod" data-tip="Период и кол-во задач"><i class="fas fa-calendar"></i> —</span>
+      <span class="stat-badge sb-staff" id="ppSummaryStaff" data-tip="Уникальных исполнителей"><i class="fas fa-users"></i> —</span>
+      <span class="stat-badge sb-load" id="ppSummaryLoad" data-tip="Загрузка (план / норма)"><i class="fas fa-tachometer-alt"></i> —</span>
+      <span class="stat-badge sb-dept" id="ppSummaryDept" data-tip="Выбранные отделы"><i class="fas fa-building"></i> —</span>
     </div>
   </div>
 
@@ -156,20 +156,20 @@
 
   <!-- Переключатель вида + статус-панель + density в одной строке -->
   <div class="pp-view-tabs" id="ppViewTabs">
-    <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')">📋 Таблица</button>
-    <button class="pp-view-tab" data-view="gantt" onclick="ppSwitchView('gantt')">📊 Диаграмма Ганта</button>
+    <button class="pp-view-tab active" data-view="table" onclick="ppSwitchView('table')" data-tip="Табличный вид">📋 Таблица</button>
+    <button class="pp-view-tab" data-view="gantt" onclick="ppSwitchView('gantt')" data-tip="Диаграмма Ганта">📊 Диаграмма Ганта</button>
     <!-- Статус-панель -->
     <div class="status-pills" id="ppStatusPanel" style="display:none;">
-      <button class="sp sp-all active" onclick="ppFilterByStatus('all')">
+      <button class="sp sp-all active" onclick="ppFilterByStatus('all')" data-tip="Все задачи">
         Все <span class="num" id="ppCountAll">0</span>
       </button>
-      <button class="sp sp-done" onclick="ppFilterByStatus('done')">
+      <button class="sp sp-done" onclick="ppFilterByStatus('done')" data-tip="Выполненные (есть отчёт)">
         ✓ <span class="num" id="ppCountDone">0</span>
       </button>
-      <button class="sp sp-overdue" onclick="ppFilterByStatus('overdue')">
+      <button class="sp sp-overdue" onclick="ppFilterByStatus('overdue')" data-tip="Просроченные задачи">
         ⚠ <span class="num" id="ppCountOverdue">0</span>
       </button>
-      <button class="sp sp-inwork" onclick="ppFilterByStatus('inwork')">
+      <button class="sp sp-inwork" onclick="ppFilterByStatus('inwork')" data-tip="В работе">
         ⟳ <span class="num" id="ppCountInWork">0</span>
       </button>
     </div>
