@@ -849,8 +849,8 @@ tr.row-pinned td:first-child::after {
 }
 tbody tr:hover > .td-actions-hover > .row-actions { opacity:1; pointer-events:auto; }
 tbody tr:hover > .td-actions-hover::after {
-  content:''; position:absolute; right:0; top:0; bottom:0; width:170px;
-  background:linear-gradient(90deg, transparent, var(--surface) 25%);
+  content:''; position:absolute; right:0; top:0; bottom:0; width:100%;
+  max-width:170px; background:linear-gradient(90deg, transparent, var(--surface) 40%);
   pointer-events:none;
 }
 .row-action-btn {
