@@ -94,9 +94,6 @@ function loadDashboard() {
       });
     }
 
-    // Виджет «Ближайшие дедлайны»
-    renderDeadlines(data.upcoming_deadlines || []);
-
     // П.8: Auto-sync уведомлений
     fetch('/api/notifications/sync/', {method: 'POST', headers: {'X-CSRFToken': getCSRFToken()}}).catch(function(){});
   })
@@ -107,35 +104,6 @@ function loadDashboard() {
   });
 }
 
-/* ── Виджет «Ближайшие дедлайны» ─────────────────────────────── */
-function renderDeadlines(items) {
-  var el = document.getElementById('dashDeadlines');
-  if (!el) return;
-  if (!items || items.length === 0) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">' +
-      '<i class="fas fa-check-circle" style="font-size:24px;color:var(--success);margin-bottom:8px;display:block;"></i>' +
-      'Нет дедлайнов в ближайшие 7 дней</div>';
-    return;
-  }
-  var html = '<div class="dash-deadlines">';
-  items.forEach(function(t) {
-    var urgency = t.days_left <= 1 ? 'urgent' : (t.days_left <= 3 ? 'soon' : 'normal');
-    var daysText = t.days_left === 0 ? 'сегодня' : (t.days_left === 1 ? 'завтра' : t.days_left + ' дн.');
-    var dateFormatted = t.date_end ? new Date(t.date_end).toLocaleDateString('ru-RU', {day:'numeric', month:'short'}) : '';
-    html += '<a class="dash-deadline-item ' + urgency + '" href="/works/plan/" title="Открыть в плане">' +
-      '<div class="dash-deadline-days"><span class="dash-deadline-num">' + (t.days_left <= 0 ? '!' : t.days_left) + '</span>' +
-      '<span class="dash-deadline-label">' + daysText + '</span></div>' +
-      '<div class="dash-deadline-info">' +
-      '<div class="dash-deadline-name">' + esc(t.work_name || 'Работа #' + t.id) + '</div>' +
-      '<div class="dash-deadline-meta">' + esc(t.executor || '—') +
-      (t.project ? ' · ' + esc(t.project) : '') +
-      ' · ' + dateFormatted + '</div>' +
-      '</div>' +
-      '</a>';
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
 
 /* ── CSRF token ─────────────────────────────────────────────────── */
 function getCSRFToken() {

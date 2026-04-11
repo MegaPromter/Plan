@@ -491,6 +491,7 @@ async function loadTasks() {
   }
 }
 
+// Подсветка строки при переходе с дашборда (?highlight=<task_id>)
 // Фоновая дозагрузка оставшихся строк порциями
 async function _spBgLoadRemaining(baseUrl, offset) {
   while (true) {
