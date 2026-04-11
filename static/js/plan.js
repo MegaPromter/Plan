@@ -420,6 +420,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   initFilterMode();
   _spInitSort();
   runMonthCheckIfNeeded();
+  // Drag-and-drop сортировка строк (перетаскивание за ⋮⋮ ручку)
+  if (typeof initDragSort === 'function') {
+    initDragSort('#mainTable', {
+      onReorder: function(order) {
+        // Обновляем нумерацию строк после перетаскивания
+        order.forEach(function(item) {
+          var numTd = item.el.querySelector('td[data-col-idx="0"]');
+          if (numTd) numTd.textContent = item.index + 1;
+        });
+      }
+    });
+  }
   // Ошибки планирования проверяются только по запросу пользователя (кнопка)
 });
 
@@ -1817,6 +1829,7 @@ function makeRow(t, num) {
   // Создаём строку и привязываем ID задачи
   const tr = document.createElement("tr");
   tr.dataset.id = t.id;
+  tr.dataset.draggable = "true";
   // Подсветка строки по статусу
   const _st = _spGetStatus(t);
   if (_st === 'done') tr.classList.add('row-done');
@@ -2180,40 +2193,51 @@ function makeRow(t, num) {
   ppDeTd.textContent = _fmtD(t.pp_date_end);
   tr.appendChild(ppDeTd);
 
-  // ── Колонка «Действия» — кнопки в зависимости от роли ──
-  // Writer: ✏️ редактировать, 📄 отчёт, 🔗 зависимости, ✕ удалить
-  // User:   📄 отчёт, 🔗 зависимости (только просмотр)
+  // ── Колонка «Действия» — hover иконки ──
+  // При наведении на строку справа появляются иконки-кнопки
   const actTd = document.createElement("td");
-  actTd.className = "actions-cell";
+  actTd.className = "actions-cell td-actions-hover";
   actTd.dataset.label = "Действия";
   actTd.dataset.colIdx = "16";
   actTd.style.display = "table-cell";
-  // Кнопка «Редактировать» — открывает полный модал редактирования задачи
-  // Для ПП-записей: частичное редактирование (иконка 🔒 ✏️)
-  const editBtn = document.createElement("button");
-  editBtn.className = "btn-edit-row"; editBtn.textContent = isFromPP ? "🔒 ✏️" : "✏️";
-  editBtn.title = isFromPP ? "Редактирование (частичное): задача из Производственного плана" : "Редактировать";
-  editBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); openEditTaskModal(t); });
-  // Кнопка «Отчёт» — открывает модал отчётных документов (для всех ролей)
-  const repBtn = document.createElement("button");
-  repBtn.className = "btn-report" + (t.has_reports ? " has-report" : ""); repBtn.textContent = "📄 Отчёт";
-  repBtn.onclick = () => openReportModal(t);
-  // Кнопка «Удалить» — удаляет задачу с подтверждением
-  const delBtn = document.createElement("button");
-  delBtn.className = "btn-del"; delBtn.textContent = "✕";
-  delBtn.onclick = () => deleteTask(t.id, tr);
-  // Кнопка «Зависимости» — открывает модал связей (для всех ролей)
-  const depsBtn = document.createElement("button");
-  depsBtn.className = "btn-deps"; depsBtn.textContent = "🔗";
-  depsBtn.title = "Зависимости";
-  depsBtn.onclick = () => openDepsModal(t);
-  // ✏️ и ✕ — только если пользователь может редактировать эту строку (свой отдел/сектор)
-  // 📄 и 🔗 — для всех (read-only операции)
+
   const rowEditable = _canModify(t.dept, t.sector);
-  if (rowEditable) actTd.appendChild(editBtn);
-  actTd.appendChild(repBtn);
-  actTd.appendChild(depsBtn);
-  if (rowEditable) actTd.appendChild(delBtn);
+  const actWrap = document.createElement("div");
+  actWrap.className = "row-actions";
+
+  if (rowEditable) {
+    const editBtn = document.createElement("button");
+    editBtn.className = "row-action-btn" + (isFromPP ? " btn-locked" : "");
+    editBtn.innerHTML = isFromPP ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-pen"></i>';
+    editBtn.dataset.tip = isFromPP ? "Частичное редактирование (из ПП)" : "Редактировать";
+    editBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); openEditTaskModal(t); });
+    actWrap.appendChild(editBtn);
+  }
+
+  const repBtn = document.createElement("button");
+  repBtn.className = "row-action-btn btn-report" + (t.has_reports ? " has-report" : "");
+  repBtn.innerHTML = '<i class="fas fa-clipboard-check"></i>';
+  repBtn.dataset.tip = "Отчёт";
+  repBtn.onclick = () => openReportModal(t);
+  actWrap.appendChild(repBtn);
+
+  const depsBtn = document.createElement("button");
+  depsBtn.className = "row-action-btn btn-deps";
+  depsBtn.innerHTML = '<i class="fas fa-link"></i>';
+  depsBtn.dataset.tip = "Зависимости";
+  depsBtn.onclick = () => openDepsModal(t);
+  actWrap.appendChild(depsBtn);
+
+  if (rowEditable) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "row-action-btn btn-delete";
+    delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    delBtn.dataset.tip = "Удалить";
+    delBtn.onclick = () => deleteTask(t.id, tr);
+    actWrap.appendChild(delBtn);
+  }
+
+  actTd.appendChild(actWrap);
   tr.appendChild(actTd);
   return tr;
 }

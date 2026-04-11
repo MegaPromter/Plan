@@ -21,7 +21,7 @@
 <!-- Переменные дизайн-системы (должны загружаться первыми) -->
 <link rel="stylesheet" href="{% static 'css/variables.css' %}?v=5">
 <!-- Базовые стили (извлечены из inline <style>) -->
-<link rel="stylesheet" href="{% static 'css/base.css' %}?v=8">
+<link rel="stylesheet" href="{% static 'css/base.css' %}?v=9">
 <!-- Стили сайдбара -->
 <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=6">
 <!-- Таблицы и компоненты -->
@@ -97,6 +97,15 @@
         <a href="{% url 'accounts:stub' 'analytics-reports' %}"><i class="fas fa-file-alt"></i> Отчёт</a>
         <a href="{% url 'accounts:stub' 'delegation' %}"><i class="fas fa-people-arrows"></i> Делегирование</a>
         <div class="ud-sep"></div>
+        <div class="ud-theme-row" id="themeToggle">
+          <span class="ud-theme-label"><i class="fas fa-palette"></i> Тема</span>
+          <div class="theme-toggle">
+            <button data-theme="light" title="Светлая">☀️</button>
+            <button data-theme="twilight" title="Сумерки">🌤️</button>
+            <button data-theme="dark" title="Тёмная">🌙</button>
+            <button data-theme="system" title="Авто">🖥️</button>
+          </div>
+        </div>
         <a href="{% url 'accounts:profile' %}"><i class="fas fa-cog"></i> Настройки</a>
         <a href="#" id="restartTourLink"><i class="fas fa-graduation-cap"></i> Пройти обзор</a>
         <div class="ud-sep"></div>

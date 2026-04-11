@@ -840,6 +840,42 @@ tr.row-pinned td:first-child::after {
   top: calc(100% + 6px);
 }
 
+/* ── Hover-действия на строках таблицы ─────────────────────────── */
+.td-actions-hover { position:relative; }
+.row-actions {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  display:flex; gap:2px; opacity:0; pointer-events:none;
+  transition:opacity .15s; z-index:10;
+}
+tbody tr:hover > .td-actions-hover > .row-actions { opacity:1; pointer-events:auto; }
+tbody tr:hover > .td-actions-hover::after {
+  content:''; position:absolute; right:0; top:0; bottom:0; width:170px;
+  background:linear-gradient(90deg, transparent, var(--surface) 25%);
+  pointer-events:none;
+}
+.row-action-btn {
+  width:30px; height:30px; border:none; border-radius:6px;
+  background:var(--surface); color:var(--text2); font-size:13px;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 3px rgba(0,0,0,.1); transition:all .12s;
+}
+.row-action-btn:hover { background:var(--accent); color:#fff; transform:scale(1.1); }
+.row-action-btn.btn-report:hover { background:var(--success); }
+.row-action-btn.btn-report.has-report { background:rgba(34,197,94,.15); color:#16a34a; box-shadow:0 0 0 1px rgba(22,163,74,.3); }
+.row-action-btn.btn-report.has-report:hover { background:var(--success); color:#fff; }
+.row-action-btn.btn-deps:hover { background:#7c3aed; }
+.row-action-btn.btn-delete:hover { background:var(--danger); }
+.row-action-btn.btn-locked { color:var(--warning); }
+.row-action-btn.btn-locked:hover { background:var(--warning); color:#fff; }
+.row-action-btn[data-tip] { position:relative; }
+.row-action-btn[data-tip]::after {
+  content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%;
+  transform:translateX(-50%) scale(.9); background:var(--text); color:#fff;
+  padding:3px 8px; border-radius:6px; font-size:11px; font-weight:500;
+  white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s, transform .12s;
+}
+.row-action-btn[data-tip]:hover::after { opacity:1; transform:translateX(-50%) scale(1); }
+
 /* ── Fade-in анимация для виджетов ─────────────────────────────── */
 .fade-in {
   animation: fadeUp 0.35s ease backwards;

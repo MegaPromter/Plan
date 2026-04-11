@@ -385,6 +385,13 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius
 .base-user-dropdown a:hover { background:var(--surface2); }
 .base-user-dropdown .ud-sep { height:1px; background:var(--border); margin:2px 0; }
 .base-user-dropdown .ud-danger { color:var(--danger); }
+.ud-theme-row { display:flex; align-items:center; justify-content:space-between; padding:6px 16px; }
+.ud-theme-label { font-size:14px; color:var(--text2); display:flex; align-items:center; gap:8px; }
+.ud-theme-row .theme-toggle { display:flex; gap:2px; background:var(--surface2); border-radius:var(--radius-sm); padding:2px; }
+.ud-theme-row .theme-toggle button { width:28px; height:28px; border:none; border-radius:var(--radius-sm);
+  background:transparent; cursor:pointer; font-size:14px; transition:background .12s; }
+.ud-theme-row .theme-toggle button:hover { background:var(--border); }
+.ud-theme-row .theme-toggle button.active { background:var(--surface); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
 /* ── Кастомные скроллбары ──────────────────────────────────────────── */
 /* Тонкие, скруглённые, accent при hover */

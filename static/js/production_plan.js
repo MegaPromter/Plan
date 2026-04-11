@@ -1147,6 +1147,7 @@ function _ppAppendBatch(count) {
     const row = _ppFiltered[idx];
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
+    tr.dataset.draggable = "true";
     // Подсветка строки по статусу
     const _st = _ppGetStatus(row);
     if (_st === 'done') tr.classList.add('row-done');
@@ -1212,14 +1213,14 @@ function _ppAppendBatch(count) {
       }
     }
 
-    // Последний столбец: кнопки действий
-    const pc = row.predecessors_count || 0;
-    html += '<td data-col-idx="18" data-label="Действия" style="text-align:center;white-space:nowrap;">';
-    html += `<span class="dep-badge action-dep${pc === 0 ? ' zero' : ''}" style="cursor:pointer;margin-right:4px;" onclick="openPPDepsModal(${row.id})" title="Зависимости">🔗</span>`;
+    // Последний столбец: hover-действия
+    html += '<td data-col-idx="18" data-label="Действия" class="td-actions-hover">';
+    html += '<div class="row-actions">';
+    html += `<button class="row-action-btn btn-deps" data-tip="Зависимости" onclick="openPPDepsModal(${row.id})"><i class="fas fa-link"></i></button>`;
     if (rowEditable) {
-      html += `<button class="btn-delete" data-id="${row.id}" title="Удалить"><i class="fas fa-times"></i></button>`;
+      html += `<button class="row-action-btn btn-delete" data-tip="Удалить" data-id="${row.id}"><i class="fas fa-trash"></i></button>`;
     }
-    html += '</td>';
+    html += '</div></td>';
 
     tr.innerHTML = html;
     tbody.appendChild(tr);
@@ -2637,6 +2638,17 @@ window.addEventListener('popstate', async () => {
 (async function init() {
   initViewModeToggle('#ppViewModeToggle', '.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.pp_view_mode) || 'full');
   _ppInitSort();
+  // Drag-and-drop сортировка строк ПП
+  if (typeof initDragSort === 'function') {
+    initDragSort('#ppTable', {
+      onReorder: function(order) {
+        order.forEach(function(item) {
+          var numTd = item.el.querySelector('td[data-col-idx="0"]');
+          if (numTd) numTd.textContent = item.index + 1;
+        });
+      }
+    });
+  }
   // Параллельно загружаем справочники и список ПП-проектов
   await Promise.all([loadDirs(), loadProjects()]);
 

@@ -774,6 +774,35 @@ class DashboardAPIView(APIView):
             result["kpi"] = personal["kpi"]
             result["months"] = personal["months"]
 
+        # Ближайшие дедлайны (7 дней) — для виджета на дашборде
+        from datetime import timedelta
+
+        deadline_end = today + timedelta(days=7)
+        vis = get_visibility_filter(request.user)
+        deadline_qs = (
+            Work.objects.filter(vis)
+            .filter(show_in_plan=True, date_end__gte=today, date_end__lte=deadline_end)
+            .exclude(Exists(WorkReport.objects.filter(work_id=OuterRef("pk"))))
+            .select_related("executor", "pp_project__up_project")
+            .order_by("date_end")[:20]
+        )
+        result["upcoming_deadlines"] = [
+            {
+                "id": w.id,
+                "work_name": w.work_name or "",
+                "task_type": w.task_type or "",
+                "executor": w.executor.short_name if w.executor else "",
+                "date_end": str(w.date_end) if w.date_end else "",
+                "project": (
+                    w.pp_project.up_project.name
+                    if w.pp_project and w.pp_project.up_project
+                    else ""
+                ),
+                "days_left": (w.date_end - today).days if w.date_end else 0,
+            }
+            for w in deadline_qs
+        ]
+
         response = Response(result)
         response["Cache-Control"] = "private, max-age=10"
         return response

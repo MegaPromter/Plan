@@ -12,7 +12,7 @@
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=8">
 <link rel="stylesheet" href="{% static 'css/reports.css' %}?v=3">
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=4">
 {% endblock %}
 
 {% block content %}
@@ -66,6 +66,17 @@
       <div class="dash-widget-body" id="dashTeam"></div>
     </div>
 
+    <!-- Ближайшие дедлайны (7 дней) -->
+    <div class="dash-widget" data-widget="deadlines" style="grid-column:1/-1;">
+      <div class="dash-widget-header">
+        <span><i class="fas fa-clock" style="color:var(--warning);margin-right:6px;"></i>Ближайшие дедлайны</span>
+        <button class="dash-widget-toggle" onclick="toggleWidgetVisibility(this)" title="Скрыть/показать"><i class="fas fa-eye"></i></button>
+      </div>
+      <div class="dash-widget-body" id="dashDeadlines">
+        <div style="padding:20px;text-align:center;color:var(--muted)">Загрузка...</div>
+      </div>
+    </div>
+
     <!-- Задачи текущего месяца (свёрнуто, подгрузка при раскрытии) -->
     <div class="dash-widget" data-widget="tasks" data-collapsed="true" data-loaded="false" style="grid-column:1/-1;">
       <div class="dash-widget-header" onclick="dashToggleWidget(this)" style="cursor:pointer;">
@@ -102,5 +113,5 @@
   "role": "{{ role|escapejs }}",
   "isWriter": {% if is_writer %}true{% else %}false{% endif %}
 }</script>
-<script src="{% static 'js/dashboard.js' %}?v=23"></script>
+<script src="{% static 'js/dashboard.js' %}?v=24"></script>
 {% endblock %}
