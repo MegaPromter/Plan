@@ -593,6 +593,12 @@ class AlignDatesView(APIView):
         for dep in successors:
             succ = dep.successor
 
+            # PP-only задачи (не видны в СП) — пропускаем выравнивание,
+            # но продолжаем рекурсию к их последователям
+            if succ.show_in_pp and not succ.show_in_plan:
+                aligned.extend(self._cascade_align(request, succ.id, visited))
+                continue
+
             all_pred_deps = TaskDependency.objects.filter(
                 successor_id=succ.id,
             ).select_related("predecessor")

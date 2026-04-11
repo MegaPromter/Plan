@@ -4375,37 +4375,6 @@ function _updateDepsBadge(taskId, delta) {
   }
 }
 
-// Клиентская проверка конфликтов дат (информативный текст, не блокирующая)
-function _checkDateConflict(preds) {
-  if (!currentDepsTask) return;
-  const t = currentDepsTask;
-  const txt = document.getElementById('depsAlignText');
-  // Показать кнопки выравнивания
-  document.querySelectorAll('#depsAlignBar button').forEach(b => b.style.display = '');
-  if (!t.date_start) { txt.textContent = '⚠ Даты можно выровнять по зависимостям'; txt.style.color = 'var(--danger)'; return; }
-  // Определить ожидаемую дату начала (клиентская оценка для информативного текста)
-  let expectedStart = null;
-  preds.forEach(d => {
-    let refDate;
-    if (d.dep_type === 'FS' || d.dep_type === 'FF') refDate = d.date_end;
-    else refDate = d.date_start;
-    if (!refDate) return;
-    const ref = new Date(refDate);
-    ref.setDate(ref.getDate() + (d.lag_days || 0));
-    if (!expectedStart || ref > expectedStart) expectedStart = ref;
-  });
-  if (!expectedStart) return;
-  const actual = new Date(t.date_start);
-  const diffDays = Math.round((actual - expectedStart) / 86400000);
-  if (diffDays < 0) {
-    txt.textContent = `⚠ Задача начинается на ${Math.abs(diffDays)} дн. раньше расчётной даты`;
-    txt.style.color = 'var(--danger)';
-  } else {
-    txt.textContent = '⚠ Даты можно выровнять по зависимостям';
-    txt.style.color = 'var(--warning)';
-  }
-}
-
 // ── VIEW TABS — переключение между табличным видом и диаграммой Ганта ─────
 let currentView = 'table';                           // Текущий вид: 'table' или 'gantt'
 let ganttLoaded = false;                             // Флаг: библиотека dhtmlxGantt загружена
