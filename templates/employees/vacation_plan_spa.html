@@ -970,6 +970,7 @@ function openAddVacationModal() {
 
   // Debounced-обработчик: показывает варианты при вводе минимум 1 символа
   execInput.addEventListener('input', debounce(() => {
+    execInput.dataset.employeeId = '';  // сброс при ручном вводе
     const q = execInput.value.trim().toLowerCase();
     if (q.length < 1) { acDropdown.style.display = 'none'; return; }
     // Фильтруем сотрудников по введённой строке (максимум 15 вариантов)
@@ -979,13 +980,14 @@ function openAddVacationModal() {
     if (matches.length === 0) { acDropdown.style.display = 'none'; return; }
     // Генерируем HTML вариантов
     acDropdown.innerHTML = matches.map(e =>
-      `<div class="ac-option" data-value="${escapeHtml(e.value)}">${escapeHtml(e.value)}${e.dept ? '<span class="ac-option-dept">' + escapeHtml(e.dept) + '</span>' : ''}</div>`
+      `<div class="ac-option" data-value="${escapeHtml(e.value)}" data-id="${e.id || ''}">${escapeHtml(e.value)}${e.dept ? '<span class="ac-option-dept">' + escapeHtml(e.dept) + '</span>' : ''}</div>`
     ).join('');
     acDropdown.style.display = 'block';
-    // Клик по варианту подставляет значение в поле
+    // Клик по варианту подставляет значение и запоминает id
     acDropdown.querySelectorAll('.ac-option').forEach(opt => {
       opt.addEventListener('click', () => {
         execInput.value = opt.dataset.value;
+        execInput.dataset.employeeId = opt.dataset.id || '';
         acDropdown.style.display = 'none';
       });
     });
@@ -1032,6 +1034,7 @@ function openAddVacationModal() {
 
   async function doCreate() {
     const executor = execInput.value.trim();
+    const employeeId = execInput.dataset.employeeId || '';
     const date_start = dateStartInput.value;
     const date_end = dateEndInput.value;
     const vac_type = modal.dialog.querySelector('#vacType').value;
@@ -1043,10 +1046,12 @@ function openAddVacationModal() {
     if (date_start > date_end) { showToast('Дата окончания раньше даты начала', 'error'); return; }
 
     createBtn.disabled = true;
-    // POST /api/vacations/create/
+    // POST /api/vacations/create/ — передаём employee_id если выбран из автокомплита
+    const body = { executor, date_start, date_end, vac_type, notes };
+    if (employeeId) body.employee_id = Number(employeeId);
     const resp = await fetchJson('/api/vacations/create/', {
       method: 'POST',
-      body: JSON.stringify({ executor, date_start, date_end, vac_type, notes }),
+      body: JSON.stringify(body),
     });
     if (!resp._error) {
       modal.close();
