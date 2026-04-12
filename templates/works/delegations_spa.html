@@ -59,23 +59,28 @@
         <h3>Новое делегирование</h3>
         <button class="modal-close" onclick="delegState.closeCreate()">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body deleg-form">
         <div class="form-group">
           <label>Получатель</label>
           <select id="newDelegateId"></select>
         </div>
         <div class="form-group">
-          <label>Тип области</label>
+          <label>Область (определяется ролью)</label>
           <select id="newScopeType" disabled></select>
-          <p class="deleg-hint">Определяется вашей ролью</p>
         </div>
         <div class="form-group">
           <label>Значение области</label>
           <input type="text" id="newScopeValue" readonly>
         </div>
-        <div class="form-group">
-          <label>Действует до</label>
-          <input type="date" id="newValidUntil" class="cell-edit">
+        <div class="deleg-date-row">
+          <div class="form-group">
+            <label>С</label>
+            <input type="date" id="newValidFrom" class="cell-edit">
+          </div>
+          <div class="form-group">
+            <label>По</label>
+            <input type="date" id="newValidUntil" class="cell-edit">
+          </div>
         </div>
         <div class="form-group">
           <label class="deleg-toggle-row">
@@ -197,6 +202,9 @@
       }).catch(function() { /* ignored */ });
     },
     openCreate: function() {
+      var today = new Date().toISOString().slice(0, 10);
+      var fromEl = document.getElementById('newValidFrom');
+      if (fromEl && !fromEl.value) fromEl.value = today;
       document.getElementById('createModal').classList.add('open');
       document.getElementById('createError').style.display = 'none';
     },

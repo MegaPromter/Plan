@@ -88,21 +88,32 @@
 }
 
 /* Форма создания */
-.form-group {
+.deleg-form .form-group {
   margin-bottom: 16px;
 }
 
-.form-group label {
+.deleg-form .form-group > label {
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
   font-size: 13px;
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-primary, #1f2937);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.form-group select,
-.form-group input[type='text'],
-.form-group input[type='date'] {
+.deleg-date-row {
+  display: flex;
+  gap: 12px;
+}
+
+.deleg-date-row .form-group {
+  flex: 1;
+}
+
+.deleg-form .form-group select,
+.deleg-form .form-group input[type='text'],
+.deleg-form .form-group input[type='date'] {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border, #d1d5db);
@@ -112,8 +123,8 @@
   color: var(--text-primary, #1f2937);
 }
 
-.form-group input[readonly],
-.form-group select[disabled] {
+.deleg-form .form-group input[readonly],
+.deleg-form .form-group select[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
 }
