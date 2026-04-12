@@ -41,7 +41,8 @@
     sel.parentNode.insertBefore(wrap, sel);
     wrap.appendChild(sel);
 
-    sel.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:0;height:0;overflow:hidden;';
+    sel.style.cssText =
+      'position:absolute;opacity:0;pointer-events:none;width:0;height:0;overflow:hidden;';
     sel.tabIndex = -1;
 
     var trigger = document.createElement('button');
@@ -83,14 +84,24 @@
     var valDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
     var idxDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
     Object.defineProperty(sel, 'value', {
-      get: function () { return valDesc.get.call(this); },
-      set: function (v) { valDesc.set.call(this, v); updateTriggerText(trigger, sel); },
-      configurable: true
+      get: function () {
+        return valDesc.get.call(this);
+      },
+      set: function (v) {
+        valDesc.set.call(this, v);
+        updateTriggerText(trigger, sel);
+      },
+      configurable: true,
     });
     Object.defineProperty(sel, 'selectedIndex', {
-      get: function () { return idxDesc.get.call(this); },
-      set: function (v) { idxDesc.set.call(this, v); updateTriggerText(trigger, sel); },
-      configurable: true
+      get: function () {
+        return idxDesc.get.call(this);
+      },
+      set: function (v) {
+        idxDesc.set.call(this, v);
+        updateTriggerText(trigger, sel);
+      },
+      configurable: true,
     });
 
     return wrap;
@@ -235,7 +246,9 @@
     }
 
     if (searchInput) {
-      searchInput.addEventListener('input', function () { render(searchInput.value); });
+      searchInput.addEventListener('input', function () {
+        render(searchInput.value);
+      });
       searchInput.addEventListener('keydown', handleKeyNav);
     }
 
@@ -293,12 +306,16 @@
 
     // Scroll parent listener — привязан к wrap, а не к модулю
     wrap._scrollParent = _findScrollParent(wrap);
-    wrap._scrollHandler = function () { closeDropdown(wrap); };
+    wrap._scrollHandler = function () {
+      closeDropdown(wrap);
+    };
     wrap._scrollParent.addEventListener('scroll', wrap._scrollHandler, { passive: true });
 
     var search = menu.querySelector('.cd-search');
     if (search) {
-      requestAnimationFrame(function () { search.focus(); });
+      requestAnimationFrame(function () {
+        search.focus();
+      });
     }
   }
 
@@ -389,5 +406,4 @@
   window.destroyCustomDropdown = destroyCustomDropdown;
   window.refreshCustomDropdown = refreshCustomDropdown;
   window.closeOpenDropdown = closeOpenDropdown;
-
 })();

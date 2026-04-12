@@ -4,6 +4,7 @@ Deploy script for managesystems.ru (Timeweb Cloud server).
 Connects via SSH and sets up the full Django stack:
   nginx -> gunicorn -> Django -> PostgreSQL
 """
+
 import io
 import sys
 import time

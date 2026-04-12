@@ -86,7 +86,7 @@
         order.push({
           id: row.dataset.id || row.dataset.pk || '',
           index: i,
-          el: row
+          el: row,
         });
       });
       if (opts.onReorder) opts.onReorder(order);
@@ -98,17 +98,18 @@
       var payload = order.map(function (item) {
         return { id: item.id, position: item.index };
       });
-      var csrfEl = document.querySelector('[name=csrfmiddlewaretoken]') ||
-                   document.querySelector('meta[name="csrf-token"]');
-      var csrfToken = csrfEl ? (csrfEl.value || csrfEl.content || '') : '';
+      var csrfEl =
+        document.querySelector('[name=csrfmiddlewaretoken]') ||
+        document.querySelector('meta[name="csrf-token"]');
+      var csrfToken = csrfEl ? csrfEl.value || csrfEl.content || '' : '';
 
       fetch(opts.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRFToken': csrfToken,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       }).catch(function (err) {
         console.warn('[drag-sort] Failed to save order:', err);
       });
@@ -122,7 +123,10 @@
         return;
       }
       var row = handle.closest('tr[data-draggable="true"]');
-      if (!row) { e.preventDefault(); return; }
+      if (!row) {
+        e.preventDefault();
+        return;
+      }
 
       dragEl = row;
       rowHeight = row.offsetHeight;
@@ -226,8 +230,10 @@
       refresh: injectHandles,
       destroy: function () {
         observer.disconnect();
-        tbody.querySelectorAll(handleSel).forEach(function (h) { h.remove(); });
-      }
+        tbody.querySelectorAll(handleSel).forEach(function (h) {
+          h.remove();
+        });
+      },
     };
   };
 })();

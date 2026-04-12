@@ -4,16 +4,37 @@
 
 /* ── Дропдаун статистики ПП ────────────────────────────────────────── */
 .pp-stats-dropdown {
-  display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:9999;
-  min-width:320px; background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius-md); box-shadow:0 6px 24px rgba(0,0,0,0.15); padding:14px 16px;
-  font-size:13px; color:var(--text);
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 9999;
+  min-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text);
 }
-.pp-stats-dropdown.open { display:block; }
-.pp-stats-row { display:flex; justify-content:space-between; padding:5px 0; }
-.pp-stats-row + .pp-stats-row { border-top:1px solid var(--border); }
-.pp-stats-label { color:var(--text2); }
-.pp-stats-val { font-weight:600; }
+.pp-stats-dropdown.open {
+  display: block;
+}
+.pp-stats-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+.pp-stats-row + .pp-stats-row {
+  border-top: 1px solid var(--border);
+}
+.pp-stats-label {
+  color: var(--text2);
+}
+.pp-stats-val {
+  font-weight: 600;
+}
 
 /* ── Сетка карточек ПП-проектов на лендинге ────────────────────────── */
 .pp-projects-grid {
@@ -24,18 +45,19 @@
 .pp-project-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-top: 3px solid; border-image: var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
+  border-top: 3px solid;
+  border-image: var(--accent-gradient, linear-gradient(#2563eb, #7c3aed)) 1;
   border-radius: var(--radius-lg);
   padding: 20px;
   cursor: pointer;
   transition: all 0.25s ease;
   position: relative;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 .pp-project-card:hover {
   border-color: var(--accent);
   transform: translateY(-3px);
-  box-shadow: var(--shadow-lg, 0 4px 16px rgba(59,130,246,0.15));
+  box-shadow: var(--shadow-lg, 0 4px 16px rgba(59, 130, 246, 0.15));
 }
 .pp-project-card-name {
   font-size: 16px;
@@ -57,9 +79,13 @@
   pointer-events: none;
   transition: opacity 0.15s;
 }
-.pp-project-card:hover .pp-project-card-actions { opacity: 1; pointer-events: auto; }
+.pp-project-card:hover .pp-project-card-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
 .pp-card-btn {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--muted);
@@ -71,82 +97,204 @@
   font-size: 12px;
   transition: all 0.15s;
 }
-.pp-card-btn:hover { border-color: var(--accent); color: var(--accent); }
-.pp-card-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.pp-card-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pp-card-btn.danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 
 /* ── Переключатель вида лендинга ──────────────────────────────────── */
 .pp-landing-view-switch {
-  display: flex; gap: 2px; background: var(--surface2, #f1f5f9); border-radius: 8px;
-  padding: 2px; width: fit-content; margin-bottom: 12px;
+  display: flex;
+  gap: 2px;
+  background: var(--surface2, #f1f5f9);
+  border-radius: 8px;
+  padding: 2px;
+  width: fit-content;
+  margin-bottom: 12px;
 }
 .pp-landing-view-switch button {
-  border: none; background: transparent; padding: 5px 12px; border-radius: 6px;
-  font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer;
-  transition: all .15s; display: flex; align-items: center; gap: 5px;
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .pp-landing-view-switch button.active {
-  background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
-.pp-landing-view-switch button:hover:not(.active) { color: var(--text); }
+.pp-landing-view-switch button:hover:not(.active) {
+  color: var(--text);
+}
 
 /* ── Горизонтальный список ПП-проектов ───────────────────────────── */
-.pp-projects-list { display: flex; flex-direction: column; gap: 6px; }
+.pp-projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .pp-list-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 8px;
-  cursor: pointer; transition: border-color .15s, box-shadow .15s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
-.pp-list-card:hover { border-color: var(--accent); box-shadow: 0 1px 4px rgba(37,99,235,.1); }
+.pp-list-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.1);
+}
 .pp-list-icon {
-  width: 36px; height: 36px; background: rgba(var(--accent-rgb, 37,99,235), .08);
-  color: var(--accent); border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: rgba(var(--accent-rgb, 37, 99, 235), 0.08);
+  color: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
 }
-.pp-list-info { flex: 1; min-width: 0; }
-.pp-list-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pp-list-meta { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--muted); }
-.pp-list-meta span { display: flex; align-items: center; gap: 3px; }
-.pp-list-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.pp-list-info {
+  flex: 1;
+  min-width: 0;
+}
+.pp-list-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp-list-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pp-list-meta span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.pp-list-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .pp-list-count {
-  font-size: 13px; font-weight: 600; color: var(--muted);
-  background: var(--surface2, #f1f5f9); padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface2, #f1f5f9);
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
-.pp-list-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
-.pp-list-card:hover .pp-list-actions { opacity: 1; }
+.pp-list-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pp-list-card:hover .pp-list-actions {
+  opacity: 1;
+}
 
 /* ── Таблица ПП-проектов ─────────────────────────────────────────── */
-.pp-projects-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.pp-projects-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
 .pp-projects-table th {
-  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
-  letter-spacing: .04em; padding: 8px 12px; text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  text-align: left;
   border-bottom: 2px solid var(--border);
 }
 .pp-projects-table td {
-  padding: 10px 12px; border-bottom: 1px solid var(--border);
-  font-size: 13px; vertical-align: middle;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  vertical-align: middle;
 }
-.pp-projects-table tbody tr { cursor: pointer; transition: background .1s; }
-.pp-projects-table tbody tr:hover { background: rgba(var(--accent-rgb, 37,99,235), .04); }
-.pp-projects-table .ppt-name { font-weight: 600; font-size: 14px; }
-.pp-projects-table .ppt-count { text-align: center; }
-.pp-projects-table .ppt-actions { opacity: 0; transition: opacity .15s; display: flex; gap: 4px; }
-.pp-projects-table tbody tr:hover .ppt-actions { opacity: 1; }
+.pp-projects-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.pp-projects-table tbody tr:hover {
+  background: rgba(var(--accent-rgb, 37, 99, 235), 0.04);
+}
+.pp-projects-table .ppt-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.pp-projects-table .ppt-count {
+  text-align: center;
+}
+.pp-projects-table .ppt-actions {
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  gap: 4px;
+}
+.pp-projects-table tbody tr:hover .ppt-actions {
+  opacity: 1;
+}
 .pp-projects-table .ppt-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
 }
-.pp-projects-table .ppt-badge-blue { background: rgba(var(--accent-rgb, 37,99,235), .08); color: var(--accent); }
-.pp-projects-table .ppt-badge-green { background: rgba(34,197,94,.08); color: var(--success, #22c55e); }
-.pp-projects-table .ppt-badge-muted { background: var(--surface2, #f1f5f9); color: var(--muted); }
+.pp-projects-table .ppt-badge-blue {
+  background: rgba(var(--accent-rgb, 37, 99, 235), 0.08);
+  color: var(--accent);
+}
+.pp-projects-table .ppt-badge-green {
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--success, #22c55e);
+}
+.pp-projects-table .ppt-badge-muted {
+  background: var(--surface2, #f1f5f9);
+  color: var(--muted);
+}
 
 /* ── Таблица производственного плана ───────────────────────────────── */
 .pp-table-wrap {
   overflow: auto;
   max-height: calc(100vh - 140px);
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
   border: 1px solid var(--border2);
   position: relative;
   z-index: 1;
@@ -174,24 +322,57 @@
   text-align: center;
 }
 /* top для sticky thead пересчитывается JS (_fixStickyHeaderTops) при смене режима */
-.pp-table thead tr:first-child th  { top: 0; }
-.pp-table thead tr:nth-child(2) th { top: 0; }
+.pp-table thead tr:first-child th {
+  top: 0;
+}
+.pp-table thead tr:nth-child(2) th {
+  top: 0;
+}
 /* filter-row скрыта — фильтры встроены в заголовки как иконки-воронки */
-.pp-table thead tr.filter-row { display:none; }
+.pp-table thead tr.filter-row {
+  display: none;
+}
 
 /* ── Иконка фильтра в заголовке ПП ─────────────────────────────────── */
 .pp-table button.mf-trigger.mf-icon {
-  width:auto; padding:2px 4px; background:none; border:none; color:var(--muted);
-  font-size:13px; cursor:pointer; opacity:0.55; transition:opacity .15s, color .15s;
-  position:relative; flex-shrink:0; margin-left:3px;
+  width: auto;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 3px;
 }
-.pp-table button.mf-trigger.mf-icon:hover { opacity:1; color:var(--accent); }
-.pp-table button.mf-trigger.mf-icon.active { opacity:1; color:var(--accent); }
-.pp-table button.mf-trigger.mf-icon::after { display:none; }
-.pp-table tbody tr { transition: background 0.12s; }
-.pp-table tbody tr:nth-child(even) { background: var(--row-even); }
-.pp-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
-.pp-table tbody tr:hover { background: var(--row-hover) !important; }
+.pp-table button.mf-trigger.mf-icon:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+.pp-table button.mf-trigger.mf-icon.active {
+  opacity: 1;
+  color: var(--accent);
+}
+.pp-table button.mf-trigger.mf-icon::after {
+  display: none;
+}
+.pp-table tbody tr {
+  transition: background 0.12s;
+}
+.pp-table tbody tr:nth-child(even) {
+  background: var(--row-even);
+}
+.pp-table tbody tr:nth-child(odd) {
+  background: var(--row-odd);
+}
+.pp-table tbody tr:hover {
+  background: var(--row-hover) !important;
+}
 .pp-table td {
   border-right: 1px solid var(--border2);
   border-bottom: 1px solid var(--border2);
@@ -208,57 +389,193 @@
   background: var(--row-num-bg);
   font-variant-numeric: tabular-nums;
   border-right: 2px solid var(--border2);
-  position: sticky; left: 0; z-index: 2;
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
-.pp-table thead th:first-child { position:sticky; left:0; z-index:13; }
+.pp-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 13;
+}
 
 /* .cell-edit, .cell-num — в tables.css */
 
 /* .btn-delete — в tables.css; pp-специфичный hover: */
-.pp-table tbody tr:hover .btn-delete { opacity: 1; }
+.pp-table tbody tr:hover .btn-delete {
+  opacity: 1;
+}
 
 /* .deps-* — в components.css */
 
 /* ── Панель периода (год + месяцы) ─────────────────────────────────── */
-.pp-period-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
-.pp-period-bar .plan-summary.badge-row { margin-left:auto; flex-shrink:0; }
-.pp-cal-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
-.pp-cal-block { display:flex; align-items:center; gap:6px; }
-.pp-cal-nav { width:32px; height:32px; border-radius:var(--radius-xs); border:1px solid var(--border);
-  background:transparent; color:var(--text2); cursor:pointer;
-  display:flex; align-items:center; justify-content:center; font-size:15px; transition:all 0.15s; }
-.pp-cal-nav:hover { border-color:var(--accent); color:var(--accent); }
-.pp-cal-display { min-width:60px; text-align:center; font-size:14px; font-weight:600;
-  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px 10px; color:var(--text); }
-.pp-cal-months { display:flex; gap:4px; flex-wrap:wrap; }
-.pp-cal-month { padding:6px 12px; border-radius:var(--radius-xs); font-size:13px; cursor:pointer; min-height:32px;
-  border:1px solid transparent; color:var(--text2); transition:all 0.15s; }
-.pp-cal-month:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.pp-cal-month.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-.pp-cal-month.today { position:relative; }
-.pp-cal-month.today::after {
-  content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
-  width:4px; height:4px; border-radius:50%; background:var(--accent);
+.pp-period-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
 }
-.pp-cal-month.today.active::after { background:#fff; }
-.pp-cal-clear { font-size:12px; color:var(--muted); cursor:pointer; text-decoration:underline; }
-.pp-cal-clear:hover { color:var(--accent); }
+.pp-period-bar .plan-summary.badge-row {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.pp-cal-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.pp-cal-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pp-cal-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: all 0.15s;
+}
+.pp-cal-nav:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pp-cal-display {
+  min-width: 60px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  color: var(--text);
+}
+.pp-cal-months {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.pp-cal-month {
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 32px;
+  border: 1px solid transparent;
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.pp-cal-month:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.pp-cal-month.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.pp-cal-month.today {
+  position: relative;
+}
+.pp-cal-month.today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.pp-cal-month.today.active::after {
+  background: #fff;
+}
+.pp-cal-clear {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.pp-cal-clear:hover {
+  color: var(--accent);
+}
 
 /* ── Чипы отделов ──────────────────────────────────────────────────── */
-.pp-dept-bar { width:100%; display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-.pp-dept-chip { padding:6px 12px; border-radius:var(--radius-xs); font-size:13px; cursor:pointer; min-height:32px;
-  border:1px solid transparent; color:var(--text2); transition:all 0.15s; white-space:nowrap; }
-.pp-dept-chip:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
-.pp-dept-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.pp-dept-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.pp-dept-chip {
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 32px;
+  border: 1px solid transparent;
+  color: var(--text2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.pp-dept-chip:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.pp-dept-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
 
 /* ── Табы Таблица / Гант ───────────────────────────────────────────── */
-.pp-view-tabs { display:flex; align-items:center; gap:8px; margin-bottom:0; padding:6px 12px; border-bottom:1px solid var(--border); }
-.pp-view-tab { padding:8px 20px; font-size:14px; font-weight:500; color:var(--text2); cursor:pointer; border:none;
-  background:transparent; border-bottom:3px solid transparent; font-family:var(--font); transition:all 0.15s; }
-.pp-view-tab:hover { color:var(--text); background:var(--surface2); }
-.pp-view-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.pp-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.pp-view-tab {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+.pp-view-tab:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.pp-view-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 /* gantt-scale-btn, gantt-filter-btn — в components.css */
-#ppGanttContainer { height:calc(100vh - 200px); }
+#ppGanttContainer {
+  height: calc(100vh - 200px);
+}
 
 /* ── Строка фильтров ───────────────────────────────────────────────── */
 .filter-row th {
@@ -269,30 +586,51 @@
 }
 
 /* ── Ручка для изменения ширины столбца ────────────────────────────── */
-th { position: relative; }
+th {
+  position: relative;
+}
 th .resize-handle {
   position: absolute;
-  right: 0; top: 0; bottom: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   width: 5px;
   cursor: col-resize;
   background: transparent;
   z-index: 20;
 }
 th .resize-handle:hover,
-th .resize-handle.resizing { background: var(--accent); opacity: 0.5; }
-th.resizing { background: rgba(59,130,246,0.2) !important; }
+th .resize-handle.resizing {
+  background: var(--accent);
+  opacity: 0.5;
+}
+th.resizing {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
 
 /* .cell-error — в tables.css */
 
 /* ── Панель статусов (ПП) — используются общие .status-pills / .sp из components.css ── */
 
 /* ── Подсветка строк по статусу ────────────────────────────────────── */
-.pp-table tbody tr.row-done:not(.row-pinned)    { background:rgba(34,197,94,0.15) !important; }
-.pp-table tbody tr.row-overdue:not(.row-pinned) { background:rgba(var(--danger-rgb),0.14) !important; }
-.pp-table tbody tr.row-inwork:not(.row-pinned)  { background:rgba(234,179,8,0.10) !important; }
-.pp-table tbody tr.row-done:not(.row-pinned):hover    { background:rgba(34,197,94,0.25) !important; }
-.pp-table tbody tr.row-overdue:not(.row-pinned):hover { background:rgba(var(--danger-rgb),0.24) !important; }
-.pp-table tbody tr.row-inwork:not(.row-pinned):hover  { background:rgba(234,179,8,0.18) !important; }
+.pp-table tbody tr.row-done:not(.row-pinned) {
+  background: rgba(34, 197, 94, 0.15) !important;
+}
+.pp-table tbody tr.row-overdue:not(.row-pinned) {
+  background: rgba(var(--danger-rgb), 0.14) !important;
+}
+.pp-table tbody tr.row-inwork:not(.row-pinned) {
+  background: rgba(234, 179, 8, 0.1) !important;
+}
+.pp-table tbody tr.row-done:not(.row-pinned):hover {
+  background: rgba(34, 197, 94, 0.25) !important;
+}
+.pp-table tbody tr.row-overdue:not(.row-pinned):hover {
+  background: rgba(var(--danger-rgb), 0.24) !important;
+}
+.pp-table tbody tr.row-inwork:not(.row-pinned):hover {
+  background: rgba(234, 179, 8, 0.18) !important;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Песочница (Sandbox / Changeset)
@@ -300,281 +638,429 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 
 /* ── Баннер песочницы ──────────────────────────────────────────────── */
 .sandbox-banner {
-  display:flex; align-items:center; gap:12px;
-  padding:12px 18px;
-  background:linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
-  border:none;
-  border-radius:var(--radius-md);
-  margin-bottom:12px;
-  font-size:14px;
-  font-weight:500;
-  color:#fff;
-  box-shadow:0 4px 16px rgba(124,58,237,0.35);
-  position:relative;
-  overflow:hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+  position: relative;
+  overflow: hidden;
 }
 .sandbox-banner::before {
-  content:'';
-  position:absolute; inset:0;
-  background:repeating-linear-gradient(
-    -45deg, transparent, transparent 10px,
-    rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.05) 10px,
+    rgba(255, 255, 255, 0.05) 20px
   );
-  pointer-events:none;
+  pointer-events: none;
 }
-.sandbox-banner > i { color:#fff; font-size:20px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2)); }
-.sandbox-banner .btn { border-color:rgba(255,255,255,0.3); color:#fff; }
-.sandbox-banner .btn:hover { background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.5); }
-.sandbox-banner .btn.btn-primary { background:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.4); }
-.sandbox-banner .btn.btn-success { background:rgba(34,197,94,0.7); border-color:rgba(34,197,94,0.9); }
-.sandbox-banner .btn.btn-danger  { background:rgba(var(--danger-rgb),0.7); border-color:rgba(var(--danger-rgb),0.9); }
+.sandbox-banner > i {
+  color: #fff;
+  font-size: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+.sandbox-banner .btn {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+.sandbox-banner .btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.sandbox-banner .btn.btn-primary {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.sandbox-banner .btn.btn-success {
+  background: rgba(34, 197, 94, 0.7);
+  border-color: rgba(34, 197, 94, 0.9);
+}
+.sandbox-banner .btn.btn-danger {
+  background: rgba(var(--danger-rgb), 0.7);
+  border-color: rgba(var(--danger-rgb), 0.9);
+}
 .sandbox-badge {
-  display:inline-flex; align-items:center;
-  padding:3px 10px; border-radius:var(--radius-md);
-  font-size:11px; font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:0.03em;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-.sandbox-badge.draft    { background:rgba(255,255,255,0.2); color:#fff; }
-.sandbox-badge.review   { background:rgba(59,130,246,0.8); color:#fff; }
-.sandbox-badge.approved { background:rgba(34,197,94,0.8); color:#fff; }
-.sandbox-badge.rejected { background:rgba(var(--danger-rgb),0.8); color:#fff; }
+.sandbox-badge.draft {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.sandbox-badge.review {
+  background: rgba(59, 130, 246, 0.8);
+  color: #fff;
+}
+.sandbox-badge.approved {
+  background: rgba(34, 197, 94, 0.8);
+  color: #fff;
+}
+.sandbox-badge.rejected {
+  background: rgba(var(--danger-rgb), 0.8);
+  color: #fff;
+}
 
 /* ── Кнопка песочницы активна ──────────────────────────────────────── */
 #sandboxToggleBtn.active {
-  background:#8b5cf6;
-  border-color:#7c3aed;
-  color:#fff;
-  box-shadow:0 2px 8px rgba(139,92,246,0.4);
-  animation:sandboxBtnPulse 2s ease-in-out infinite;
+  background: #8b5cf6;
+  border-color: #7c3aed;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  animation: sandboxBtnPulse 2s ease-in-out infinite;
 }
 @keyframes sandboxBtnPulse {
-  0%, 100% { box-shadow:0 2px 8px rgba(139,92,246,0.4); }
-  50%      { box-shadow:0 2px 16px rgba(139,92,246,0.7); }
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(139, 92, 246, 0.7);
+  }
 }
 
 /* ── Фиолетовая полоса на topbar в режиме песочницы ────────────────── */
 .sandbox-topbar-indicator {
-  display:none;
-  position:fixed; top:0; left:0; right:0; height:3px;
-  background:linear-gradient(90deg, #7c3aed 0%, #a78bfa 50%, #7c3aed 100%);
-  background-size:200% 100%;
-  animation:sandboxTopbarSlide 3s linear infinite;
-  z-index:999;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 50%, #7c3aed 100%);
+  background-size: 200% 100%;
+  animation: sandboxTopbarSlide 3s linear infinite;
+  z-index: 999;
 }
-.sandbox-topbar-indicator.active { display:block; }
+.sandbox-topbar-indicator.active {
+  display: block;
+}
 @keyframes sandboxTopbarSlide {
-  0%   { background-position:200% 0; }
-  100% { background-position:-200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ── Рамка таблицы в режиме песочницы ─────────────────────────────── */
 .sandbox-active .pp-table-wrap {
-  outline:3px solid #8b5cf6;
-  outline-offset:2px;
-  border-radius:var(--radius-md);
-  box-shadow:0 0 20px rgba(139,92,246,0.2);
-  animation:sandboxGlow 3s ease-in-out infinite;
-  position:relative;
+  outline: 3px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+  animation: sandboxGlow 3s ease-in-out infinite;
+  position: relative;
 }
 @keyframes sandboxGlow {
-  0%, 100% { box-shadow:0 0 20px rgba(139,92,246,0.15); }
-  50%      { box-shadow:0 0 30px rgba(139,92,246,0.30); }
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+  }
 }
 .sandbox-active .pp-table thead th {
-  background:linear-gradient(180deg, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.06) 100%) !important;
-  color:#5b21b6;
+  background: linear-gradient(
+    180deg,
+    rgba(139, 92, 246, 0.18) 0%,
+    rgba(139, 92, 246, 0.06) 100%
+  ) !important;
+  color: #5b21b6;
 }
 
 /* ── Водяной знак «ПЕСОЧНИЦА» по диагонали поверх таблицы ─────────── */
 .sandbox-active .pp-table-wrap::after {
-  content:'ПЕСОЧНИЦА';
-  position:absolute;
-  top:50%; left:50%;
-  transform:translate(-50%,-50%) rotate(-25deg);
-  font-size:80px; font-weight:900;
-  letter-spacing:12px;
-  text-transform:uppercase;
-  color:rgba(139,92,246,0.06);
-  pointer-events:none;
-  z-index:1;
-  white-space:nowrap;
-  user-select:none;
+  content: 'ПЕСОЧНИЦА';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  font-size: 80px;
+  font-weight: 900;
+  letter-spacing: 12px;
+  text-transform: uppercase;
+  color: rgba(139, 92, 246, 0.06);
+  pointer-events: none;
+  z-index: 1;
+  white-space: nowrap;
+  user-select: none;
 }
 
 /* ── Лейбл «Песочница» в углу таблицы ────────────────────────────── */
 .sandbox-table-label {
-  display:none;
-  position:sticky; left:0; top:0; z-index:14;
-  background:#7c3aed; color:#fff;
-  padding:4px 14px; border-radius:0 0 var(--radius-md) 0;
-  font-size:11px; font-weight:700; letter-spacing:.05em;
-  text-transform:uppercase;
-  box-shadow:2px 2px 8px rgba(124,58,237,0.3);
+  display: none;
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 14;
+  background: #7c3aed;
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 0 0 var(--radius-md) 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 2px 2px 8px rgba(124, 58, 237, 0.3);
 }
-.sandbox-active .sandbox-table-label { display:inline-block; }
+.sandbox-active .sandbox-table-label {
+  display: inline-block;
+}
 
 /* ── Строки sandbox в таблице ─────────────────────────────────────── */
 .pp-table tbody tr.sandbox-create {
-  border-left:5px solid #22c55e;
-  background:rgba(34,197,94,0.15) !important;
+  border-left: 5px solid #22c55e;
+  background: rgba(34, 197, 94, 0.15) !important;
   animation: sandboxFadeIn 0.4s ease;
 }
-.pp-table tbody tr.sandbox-create:hover { background:rgba(34,197,94,0.25) !important; }
+.pp-table tbody tr.sandbox-create:hover {
+  background: rgba(34, 197, 94, 0.25) !important;
+}
 .pp-table tbody tr.sandbox-create td {
-  color:var(--text);
-  font-style:italic;
+  color: var(--text);
+  font-style: italic;
 }
 .pp-table tbody tr.sandbox-create td:first-child {
-  background:rgba(34,197,94,0.2) !important;
-  font-style:normal;
+  background: rgba(34, 197, 94, 0.2) !important;
+  font-style: normal;
 }
 @keyframes sandboxFadeIn {
-  from { opacity:0; transform:translateY(-8px); }
-  to   { opacity:1; transform:translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pp-table tbody tr.sandbox-update {
-  border-left:5px solid #eab308;
-  background:rgba(234,179,8,0.12) !important;
+  border-left: 5px solid #eab308;
+  background: rgba(234, 179, 8, 0.12) !important;
 }
-.pp-table tbody tr.sandbox-update:hover { background:rgba(234,179,8,0.20) !important; }
+.pp-table tbody tr.sandbox-update:hover {
+  background: rgba(234, 179, 8, 0.2) !important;
+}
 
 .pp-table tbody tr.sandbox-delete {
-  border-left:5px solid #ef4444;
-  background:rgba(var(--danger-rgb),0.10) !important;
-  opacity:0.5;
+  border-left: 5px solid #ef4444;
+  background: rgba(var(--danger-rgb), 0.1) !important;
+  opacity: 0.5;
 }
-.pp-table tbody tr.sandbox-delete td { text-decoration:line-through; }
-.pp-table tbody tr.sandbox-delete:hover { background:rgba(var(--danger-rgb),0.16) !important; }
+.pp-table tbody tr.sandbox-delete td {
+  text-decoration: line-through;
+}
+.pp-table tbody tr.sandbox-delete:hover {
+  background: rgba(var(--danger-rgb), 0.16) !important;
+}
 
 .sandbox-cell-changed {
-  background:rgba(234,179,8,0.25) !important;
-  position:relative;
-  box-shadow:inset 0 0 0 2px #eab308;
-  border-radius:2px;
+  background: rgba(234, 179, 8, 0.25) !important;
+  position: relative;
+  box-shadow: inset 0 0 0 2px #eab308;
+  border-radius: 2px;
 }
 .sandbox-cell-changed::after {
-  content:'✏';
-  position:absolute;
-  top:-2px; right:1px;
-  font-size:9px;
-  line-height:1;
-  z-index:3;
-  pointer-events:none;
+  content: '✏';
+  position: absolute;
+  top: -2px;
+  right: 1px;
+  font-size: 9px;
+  line-height: 1;
+  z-index: 3;
+  pointer-events: none;
 }
 /* Подсветка input внутри изменённой ячейки */
 .sandbox-cell-changed input,
 .sandbox-cell-changed select {
-  background:rgba(234,179,8,0.12) !important;
-  border-color:#eab308 !important;
+  background: rgba(234, 179, 8, 0.12) !important;
+  border-color: #eab308 !important;
 }
 
 /* ── Бейдж действия на строке ─────────────────────────────────────── */
 .sandbox-action-badge {
-  display:inline-flex; align-items:center; gap:3px;
-  padding:2px 8px; border-radius:var(--radius-md);
-  font-size:10px; font-weight:700;
-  text-transform:uppercase;
-  margin-left:4px;
-  white-space:nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 4px;
+  white-space: nowrap;
 }
-.sandbox-action-badge.create { background:#22c55e; color:#fff; }
-.sandbox-action-badge.update { background:#eab308; color:#fff; }
-.sandbox-action-badge.delete { background:#ef4444; color:#fff; }
+.sandbox-action-badge.create {
+  background: #22c55e;
+  color: #fff;
+}
+.sandbox-action-badge.update {
+  background: #eab308;
+  color: #fff;
+}
+.sandbox-action-badge.delete {
+  background: #ef4444;
+  color: #fff;
+}
 
 /* ── Список наборов ───────────────────────────────────────────────── */
 .cs-list-item {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
-  border:1px solid var(--border);
-  border-radius:var(--radius-md);
-  margin-bottom:6px;
-  cursor:pointer;
-  transition:background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.cs-list-item:hover { background:var(--hover); }
-.cs-list-item .cs-title { flex:1; font-weight:500; }
-.cs-list-item .cs-meta { font-size:11px; color:var(--muted); }
+.cs-list-item:hover {
+  background: var(--hover);
+}
+.cs-list-item .cs-title {
+  flex: 1;
+  font-weight: 500;
+}
+.cs-list-item .cs-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
 .cs-list-item .cs-count {
-  display:inline-flex; align-items:center; justify-content:center;
-  min-width:22px; height:22px; border-radius:var(--radius-lg);
-  background:rgba(139,92,246,0.12); color:#8b5cf6;
-  font-size:11px; font-weight:600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: var(--radius-lg);
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* ── Diff-таблица ─────────────────────────────────────────────────── */
 .diff-section {
-  border:1px solid var(--border);
-  border-radius:var(--radius-md);
-  margin-bottom:12px;
-  overflow:hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  overflow: hidden;
 }
 .diff-section-header {
-  display:flex; align-items:center; gap:8px;
-  padding:8px 12px;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  font-size:13px; font-weight:600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
 }
 .diff-field-row {
-  display:flex; align-items:center;
-  padding:6px 12px;
-  font-size:13px;
-  border-bottom:1px solid var(--border-light, var(--border));
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-light, var(--border));
 }
-.diff-field-row:last-child { border-bottom:none; }
-.diff-field-name { width:160px; color:var(--muted); font-weight:500; }
+.diff-field-row:last-child {
+  border-bottom: none;
+}
+.diff-field-name {
+  width: 160px;
+  color: var(--muted);
+  font-weight: 500;
+}
 .diff-field-old {
-  flex:1; padding:3px 8px; border-radius:var(--radius-xs);
-  background:rgba(var(--danger-rgb),0.08); color:var(--danger);
-  text-decoration:line-through;
+  flex: 1;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(var(--danger-rgb), 0.08);
+  color: var(--danger);
+  text-decoration: line-through;
 }
 .diff-field-new {
-  flex:1; padding:3px 8px; border-radius:var(--radius-xs); margin-left:8px;
-  background:rgba(34,197,94,0.08); color:var(--success);
+  flex: 1;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  margin-left: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--success);
 }
 .diff-field-conflict {
-  flex:none; padding:2px 6px; border-radius:var(--radius-xs);
-  background:rgba(var(--danger-rgb),0.15); color:var(--danger);
-  font-size:11px; font-weight:600;
-  margin-left:6px;
+  flex: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(var(--danger-rgb), 0.15);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
 }
 .diff-summary {
-  display:flex; gap:16px;
-  padding:12px 16px;
-  background:var(--surface);
-  border-radius:var(--radius-md);
-  margin-bottom:12px;
-  font-size:13px;
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  font-size: 13px;
 }
-.diff-summary-item { display:flex; align-items:center; gap:4px; }
-.diff-summary-count { font-weight:700; font-size:15px; }
+.diff-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.diff-summary-count {
+  font-weight: 700;
+  font-size: 15px;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Режимы отображения столбцов (compact / normal / full)
    ══════════════════════════════════════════════════════════════════════ */
 
 /* Normal: скрываем код строки, наряд-заказ, № этапа, № работы */
-.pp-view-normal [data-col-idx="1"],
-.pp-view-normal [data-col-idx="2"],
-.pp-view-normal [data-col-idx="3"],
-.pp-view-normal [data-col-idx="4"] {
+.pp-view-normal [data-col-idx='1'],
+.pp-view-normal [data-col-idx='2'],
+.pp-view-normal [data-col-idx='3'],
+.pp-view-normal [data-col-idx='4'] {
   display: none !important;
 }
 
 /* Compact: скрываем всё из normal + Ф.А4, Норматив, Коэфф, Труд., Подразделение */
-.pp-view-compact [data-col-idx="1"],
-.pp-view-compact [data-col-idx="2"],
-.pp-view-compact [data-col-idx="3"],
-.pp-view-compact [data-col-idx="4"],
-.pp-view-compact [data-col-idx="9"],
-.pp-view-compact [data-col-idx="10"],
-.pp-view-compact [data-col-idx="11"],
-.pp-view-compact [data-col-idx="12"],
-.pp-view-compact [data-col-idx="13"],
-.pp-view-compact [data-col-idx="14"],
-.pp-view-compact [data-col-group="labor"] {
+.pp-view-compact [data-col-idx='1'],
+.pp-view-compact [data-col-idx='2'],
+.pp-view-compact [data-col-idx='3'],
+.pp-view-compact [data-col-idx='4'],
+.pp-view-compact [data-col-idx='9'],
+.pp-view-compact [data-col-idx='10'],
+.pp-view-compact [data-col-idx='11'],
+.pp-view-compact [data-col-idx='12'],
+.pp-view-compact [data-col-idx='13'],
+.pp-view-compact [data-col-idx='14'],
+.pp-view-compact [data-col-group='labor'] {
   display: none !important;
 }
 
@@ -584,7 +1070,16 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
    Responsive: PP-specific mobile overrides
    ══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .pp-table-wrap { max-height:none; overflow:visible; }
-  .pp-table { min-width:auto; table-layout:auto; }
-  .status-pills { flex-wrap:wrap; gap:4px; }
+  .pp-table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+  .pp-table {
+    min-width: auto;
+    table-layout: auto;
+  }
+  .status-pills {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
 }

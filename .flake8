@@ -10,4 +10,7 @@ exclude =
     node_modules,
     ntc_simulator,
     docs,
-    scripts
+    scripts,
+    venv,
+    venv311,
+    deploy_timeweb.py

@@ -2,13 +2,13 @@
 'use strict';
 
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
-const API  = '/api/enterprise';
+const API = '/api/enterprise';
 
 // ── Состояние ────────────────────────────────────────────────────────────
-let portfolioData  = [];
-let projectsList   = []; // для селектов ГГ/Сквозной
-let currentGG      = null;
-let currentCross   = null;
+let portfolioData = [];
+let projectsList = []; // для селектов ГГ/Сквозной
+let currentGG = null;
+let currentCross = null;
 
 // ── Утилиты ──────────────────────────────────────────────────────────────
 
@@ -33,9 +33,9 @@ function fetchJSON(url, opts) {
     },
     credentials: 'same-origin',
   };
-  return fetch(url, { ...defaults, ...opts }).then(r => {
+  return fetch(url, { ...defaults, ...opts }).then((r) => {
     // При HTTP-ошибке (4xx/5xx) — парсим JSON тела и отклоняем промис
-    if (!r.ok) return r.json().then(d => Promise.reject(d));
+    if (!r.ok) return r.json().then((d) => Promise.reject(d));
     return r.json();
   });
 }
@@ -69,15 +69,16 @@ function closeModal(id) {
  * пересборки option-элементов.
  */
 function populateChiefSelects() {
-  ['createProjectChief', 'editProjectChief'].forEach(selId => {
+  ['createProjectChief', 'editProjectChief'].forEach((selId) => {
     const sel = document.getElementById(selId);
     if (!sel) return;
     // Запоминаем текущее выбранное значение перед пересборкой
     const cur = sel.value;
-    sel.innerHTML = '<option value="">—</option>' +
-      (typeof EMPLOYEES !== 'undefined' ? EMPLOYEES : []).map(e =>
-        `<option value="${e.id}">${escapeHtml(e.name)}</option>`
-      ).join('');
+    sel.innerHTML =
+      '<option value="">—</option>' +
+      (typeof EMPLOYEES !== 'undefined' ? EMPLOYEES : [])
+        .map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`)
+        .join('');
     // Восстанавливаем ранее выбранный вариант
     if (cur) sel.value = cur;
   });
@@ -87,19 +88,19 @@ function populateChiefSelects() {
 
 const STATUS_LABELS = {
   prospective: 'Перспективный',
-  approved:    'Утверждён',
-  active:      'Активный',
-  suspended:   'Приостановлен',
-  deferred:    'Отложен',
-  closed:      'Закрыт',
-  cancelled:   'Отменён',
+  approved: 'Утверждён',
+  active: 'Активный',
+  suspended: 'Приостановлен',
+  deferred: 'Отложен',
+  closed: 'Закрыт',
+  cancelled: 'Отменён',
 };
 
 const PRIORITY_LABELS = {
   critical: 'Критический',
-  high:     'Высокий',
-  medium:   'Средний',
-  low:      'Низкий',
+  high: 'Высокий',
+  medium: 'Средний',
+  low: 'Низкий',
 };
 
 function statusBadge(status) {
@@ -117,7 +118,7 @@ function priorityBadge(cat) {
 
 function initTabs() {
   const tabs = document.querySelectorAll('.ent-tab');
-  tabs.forEach(tab => {
+  tabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       switchToTab(tab.dataset.tab);
     });
@@ -126,14 +127,17 @@ function initTabs() {
 
 function switchToTab(target) {
   const tabs = document.querySelectorAll('.ent-tab');
-  tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  tabs.forEach((t) => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
   const activeTab = document.querySelector(`.ent-tab[data-tab="${target}"]`);
   if (activeTab) {
     activeTab.classList.add('active');
     activeTab.setAttribute('aria-selected', 'true');
   }
 
-  document.querySelectorAll('.ent-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.ent-panel').forEach((p) => (p.style.display = 'none'));
   const panel = document.getElementById('panel-' + target);
   if (panel) panel.style.display = '';
 
@@ -142,7 +146,7 @@ function switchToTab(target) {
   if (target === 'scenarios') loadScenarios();
 
   // Сохраняем в hash
-  _saveHashState({tab: target});
+  _saveHashState({ tab: target });
 }
 
 // ── Состояние в URL hash ────────────────────────────────────────────────
@@ -150,7 +154,7 @@ function switchToTab(target) {
 function _parseHash() {
   const h = location.hash.replace('#', '');
   const params = {};
-  h.split('&').forEach(part => {
+  h.split('&').forEach((part) => {
     const [k, v] = part.split('=');
     if (k) params[k] = decodeURIComponent(v || '');
   });
@@ -166,7 +170,11 @@ function _saveHashState(updates) {
   }
   history.replaceState(null, '', '#' + parts.join('&'));
   // Дублируем в localStorage для восстановления при повторном визите
-  try { localStorage.setItem('ent_last_state', JSON.stringify(params)); } catch(e) {}
+  try {
+    localStorage.setItem('ent_last_state', JSON.stringify(params));
+  } catch (e) {
+    /* ignored */
+  }
 }
 
 function _restoreFromHash() {
@@ -176,7 +184,9 @@ function _restoreFromHash() {
     try {
       const saved = JSON.parse(localStorage.getItem('ent_last_state') || '{}');
       if (saved.tab) params = saved;
-    } catch(e) {}
+    } catch (e) {
+      /* ignored */
+    }
   }
   const tab = params.tab || 'portfolio';
   switchToTab(tab);
@@ -188,7 +198,7 @@ function _restoreFromHash() {
       document.getElementById('ggProjectSelect').value = pid;
       const btn = document.getElementById('ggProjectBtn');
       if (btn) {
-        const proj = projectsList.find(p => String(p.id) === String(pid));
+        const proj = projectsList.find((p) => String(p.id) === String(pid));
         if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
       }
       loadGG(pid);
@@ -196,7 +206,7 @@ function _restoreFromHash() {
       document.getElementById('crossProjectSelect').value = pid;
       const btn = document.getElementById('crossProjectBtn');
       if (btn) {
-        const proj = projectsList.find(p => String(p.id) === String(pid));
+        const proj = projectsList.find((p) => String(p.id) === String(pid));
         if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
       }
       loadCross(pid);
@@ -204,7 +214,7 @@ function _restoreFromHash() {
       document.getElementById('capacityProjectSelect').value = pid;
       const btn = document.getElementById('capacityProjectBtn');
       if (btn) {
-        const proj = projectsList.find(p => String(p.id) === String(pid));
+        const proj = projectsList.find((p) => String(p.id) === String(pid));
         if (proj) btn.textContent = proj.name_short || proj.name_full || proj.code;
       }
       loadCapacity();
@@ -224,7 +234,7 @@ let pfMfFilters = {};
 
 function pfGetValues(col) {
   const vals = new Set();
-  portfolioData.forEach(p => {
+  portfolioData.forEach((p) => {
     let v = '';
     if (col === 'name') v = p.name_full || p.name_short || '';
     else if (col === 'code') v = p.code || '';
@@ -238,9 +248,11 @@ function pfGetValues(col) {
 
 const _pfMf = createMultiFilter({
   getValues: pfGetValues,
-  onApply: function(col, btn, sel) {
+  onApply: function (col, btn, sel) {
     if (sel.size === 0) {
-      delete pfMfFilters[col]; btn.textContent = '▼'; btn.classList.remove('active');
+      delete pfMfFilters[col];
+      btn.textContent = '▼';
+      btn.classList.remove('active');
     } else {
       pfMfFilters[col] = sel;
       btn.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' выбрано';
@@ -248,15 +260,18 @@ const _pfMf = createMultiFilter({
     }
     pfUpdateBadge();
     renderPortfolio();
-  }
+  },
 });
-function pfToggleMf(btn) { _pfMf.toggle(btn); }
+function pfToggleMf(btn) {
+  _pfMf.toggle(btn);
+}
 
 function pfClearAll() {
   pfMfFilters = {};
   _pfMf.setSelections({});
-  document.querySelectorAll('#portfolioTable .mf-trigger').forEach(b => {
-    b.textContent = '▼'; b.classList.remove('active');
+  document.querySelectorAll('#portfolioTable .mf-trigger').forEach((b) => {
+    b.textContent = '▼';
+    b.classList.remove('active');
   });
   pfUpdateBadge();
   renderPortfolio();
@@ -277,7 +292,8 @@ function pfGetSortVal(p, col) {
   if (col === 'status') return STATUS_LABELS[p.status] || p.status || '';
   if (col === 'priority') {
     // Сначала по категории (critical=0..low=3), потом по номеру
-    const cat = PRIORITY_ORDER[p.priority_category] != null ? PRIORITY_ORDER[p.priority_category] : 99;
+    const cat =
+      PRIORITY_ORDER[p.priority_category] != null ? PRIORITY_ORDER[p.priority_category] : 99;
     const num = p.priority_number != null ? p.priority_number : 9999;
     return cat * 10000 + num;
   }
@@ -291,10 +307,10 @@ function pfGetSortVal(p, col) {
 function _pfInitSort() {
   const thead = document.querySelector('#portfolioTable thead');
   if (!thead) return;
-  thead.querySelectorAll('th[data-sort]').forEach(th => {
+  thead.querySelectorAll('th[data-sort]').forEach((th) => {
     th.style.cursor = 'pointer';
     th.style.userSelect = 'none';
-    th.addEventListener('click', e => {
+    th.addEventListener('click', (e) => {
       if (e.target.classList.contains('mf-trigger')) return;
       toggleSort(_pfSortState, th.getAttribute('data-sort'));
       renderSortIndicators(thead, _pfSortState);
@@ -306,7 +322,7 @@ function _pfInitSort() {
 
 // ── Фильтрация ──────────────────────────────────────────────────────────
 function pfApplyFilters() {
-  return portfolioData.filter(p => {
+  return portfolioData.filter((p) => {
     for (const [col, sel] of Object.entries(pfMfFilters)) {
       if (!sel || sel.size === 0) continue;
       let v = '';
@@ -323,17 +339,19 @@ function pfApplyFilters() {
 
 // ── Загрузка и рендер ───────────────────────────────────────────────────
 function loadPortfolio() {
-  fetchJSON(`${API}/portfolio/`).then(data => {
-    portfolioData = data.projects || [];
-    projectsList  = portfolioData;
-    renderPortfolio();
-    populateProjectSelects();
-    // Восстанавливаем вкладку и проект из URL hash
-    if (!loadPortfolio._restored) {
-      loadPortfolio._restored = true;
-      _restoreFromHash();
-    }
-  }).catch(e => console.error('loadPortfolio:', e));
+  fetchJSON(`${API}/portfolio/`)
+    .then((data) => {
+      portfolioData = data.projects || [];
+      projectsList = portfolioData;
+      renderPortfolio();
+      populateProjectSelects();
+      // Восстанавливаем вкладку и проект из URL hash
+      if (!loadPortfolio._restored) {
+        loadPortfolio._restored = true;
+        _restoreFromHash();
+      }
+    })
+    .catch((e) => console.error('loadPortfolio:', e));
 }
 
 function renderPortfolio() {
@@ -350,13 +368,14 @@ function renderPortfolio() {
   }
   empty.style.display = 'none';
 
-  body.innerHTML = filtered.map((p, i) => {
-    const chief = p.chief_designer ? escapeHtml(p.chief_designer.name) : '—';
-    const prNum = p.priority_number != null ? p.priority_number : '';
-    const actions = IS_WRITER
-      ? `<button class="btn btn-ghost btn-sm" onclick="openEditProject(${p.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
-      : '';
-    return `<tr>
+  body.innerHTML = filtered
+    .map((p, i) => {
+      const chief = p.chief_designer ? escapeHtml(p.chief_designer.name) : '—';
+      const prNum = p.priority_number != null ? p.priority_number : '';
+      const actions = IS_WRITER
+        ? `<button class="btn btn-ghost btn-sm" onclick="openEditProject(${p.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
+        : '';
+      return `<tr>
       <td>${i + 1}</td>
       <td>${escapeHtml(p.name_full || p.name_short)}</td>
       <td>${escapeHtml(p.code)}</td>
@@ -368,11 +387,12 @@ function renderPortfolio() {
       <td>${p.labor_total ? p.labor_total.toLocaleString('ru-RU') : '—'}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function openEditProject(id) {
-  const p = portfolioData.find(x => x.id === id);
+  const p = portfolioData.find((x) => x.id === id);
   if (!p) return;
   document.getElementById('editProjectId').value = id;
   document.getElementById('editProjectChief').value = p.chief_designer ? p.chief_designer.id : '';
@@ -392,8 +412,11 @@ function saveProjectEnterprise() {
     chief_designer_id: chiefVal ? parseInt(chiefVal) : null,
   };
   fetchJSON(`${API}/portfolio/${id}/`, { method: 'PUT', body: JSON.stringify(body) })
-    .then(() => { closeModal('projectEditModal'); loadPortfolio(); })
-    .catch(e => alert(e.error || 'Ошибка сохранения'));
+    .then(() => {
+      closeModal('projectEditModal');
+      loadPortfolio();
+    })
+    .catch((e) => alert(e.error || 'Ошибка сохранения'));
 }
 
 // ── Создание проекта ─────────────────────────────────────────────────────
@@ -422,26 +445,30 @@ function saveNewProject() {
   fetchJSON('/api/projects/create/', {
     method: 'POST',
     body: JSON.stringify({ name_full: nameFull, name_short: nameShort, code: code }),
-  }).then(proj => {
-    // 2) Сразу выставляем enterprise-поля (статус, приоритет, ГК)
-    const status = document.getElementById('createProjectStatus').value;
-    const priority = document.getElementById('createProjectPriority').value || null;
-    const priorityNum = parseInt(document.getElementById('createProjectPriorityNum').value) || null;
-    const chiefVal = document.getElementById('createProjectChief').value;
+  })
+    .then((proj) => {
+      // 2) Сразу выставляем enterprise-поля (статус, приоритет, ГК)
+      const status = document.getElementById('createProjectStatus').value;
+      const priority = document.getElementById('createProjectPriority').value || null;
+      const priorityNum =
+        parseInt(document.getElementById('createProjectPriorityNum').value) || null;
+      const chiefVal = document.getElementById('createProjectChief').value;
 
-    return fetchJSON(`${API}/portfolio/${proj.id}/`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        status: status,
-        priority_category: priority,
-        priority_number: priorityNum,
-        chief_designer_id: chiefVal ? parseInt(chiefVal) : null,
-      }),
-    });
-  }).then(() => {
-    closeModal('projectCreateModal');
-    loadPortfolio();
-  }).catch(e => alert(e.error || 'Ошибка создания проекта'));
+      return fetchJSON(`${API}/portfolio/${proj.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: status,
+          priority_category: priority,
+          priority_number: priorityNum,
+          chief_designer_id: chiefVal ? parseInt(chiefVal) : null,
+        }),
+      });
+    })
+    .then(() => {
+      closeModal('projectCreateModal');
+      loadPortfolio();
+    })
+    .catch((e) => alert(e.error || 'Ошибка создания проекта'));
 }
 
 // Фильтры + сортировка портфеля
@@ -455,15 +482,15 @@ function initPortfolioFilters() {
 
 // ── Project Picker (модалка выбора проекта) ─────────────────────────────
 
-let _pickerTarget = null;  // 'gg' | 'cross' | 'capacity'
+let _pickerTarget = null; // 'gg' | 'cross' | 'capacity'
 let _pickerSortCol = 'priority';
 let _pickerSortDir = 'asc';
 
 const PICKER_BTN_MAP = {
-  gg:       { btn: 'ggProjectBtn',       input: 'ggProjectSelect',    empty: 'Выберите проект...' },
-  cross:    { btn: 'crossProjectBtn',    input: 'crossProjectSelect', empty: 'Выберите проект...' },
-  capacity:  { btn: 'capacityProjectBtn',  input: 'capacityProject',   empty: 'Все проекты' },
-  scenarios: { btn: 'scenarioProjectBtn',  input: 'scenarioProject',   empty: 'Все проекты' },
+  gg: { btn: 'ggProjectBtn', input: 'ggProjectSelect', empty: 'Выберите проект...' },
+  cross: { btn: 'crossProjectBtn', input: 'crossProjectSelect', empty: 'Выберите проект...' },
+  capacity: { btn: 'capacityProjectBtn', input: 'capacityProject', empty: 'Все проекты' },
+  scenarios: { btn: 'scenarioProjectBtn', input: 'scenarioProject', empty: 'Все проекты' },
 };
 
 function openProjectPicker(target) {
@@ -480,36 +507,61 @@ function closeProjectPicker() {
 
 function pickerSort(col) {
   if (_pickerSortCol === col) _pickerSortDir = _pickerSortDir === 'asc' ? 'desc' : 'asc';
-  else { _pickerSortCol = col; _pickerSortDir = 'asc'; }
+  else {
+    _pickerSortCol = col;
+    _pickerSortDir = 'asc';
+  }
   renderPickerTable();
 }
 
 function renderPickerTable() {
   const q = (document.getElementById('pickerSearch').value || '').toLowerCase();
-  const curVal = PICKER_BTN_MAP[_pickerTarget] ? document.getElementById(PICKER_BTN_MAP[_pickerTarget].input).value : '';
+  const curVal = PICKER_BTN_MAP[_pickerTarget]
+    ? document.getElementById(PICKER_BTN_MAP[_pickerTarget].input).value
+    : '';
 
-  let list = portfolioData.filter(p => {
+  let list = portfolioData.filter((p) => {
     if (!q) return true;
-    const text = ((p.name_short || '') + ' ' + (p.name_full || '') + ' ' + (p.code || '') +
-      ' ' + (STATUS_LABELS[p.status] || '') + ' ' + (PRIORITY_LABELS[p.priority_category] || '')).toLowerCase();
+    const text = (
+      (p.name_short || '') +
+      ' ' +
+      (p.name_full || '') +
+      ' ' +
+      (p.code || '') +
+      ' ' +
+      (STATUS_LABELS[p.status] || '') +
+      ' ' +
+      (PRIORITY_LABELS[p.priority_category] || '')
+    ).toLowerCase();
     return text.indexOf(q) !== -1;
   });
 
   // Сортировка
   list.sort((a, b) => {
     let va, vb;
-    if (_pickerSortCol === 'num') { va = a.priority_number || 9999; vb = b.priority_number || 9999; }
-    else if (_pickerSortCol === 'name') { va = (a.name_short || a.name_full || '').toLowerCase(); vb = (b.name_short || b.name_full || '').toLowerCase(); }
-    else if (_pickerSortCol === 'code') { va = (a.code || '').toLowerCase(); vb = (b.code || '').toLowerCase(); }
-    else if (_pickerSortCol === 'status') { va = STATUS_LABELS[a.status] || ''; vb = STATUS_LABELS[b.status] || ''; }
-    else if (_pickerSortCol === 'priority') { va = PRIORITY_ORDER[a.priority_category] ?? 99; vb = PRIORITY_ORDER[b.priority_category] ?? 99; }
+    if (_pickerSortCol === 'num') {
+      va = a.priority_number || 9999;
+      vb = b.priority_number || 9999;
+    } else if (_pickerSortCol === 'name') {
+      va = (a.name_short || a.name_full || '').toLowerCase();
+      vb = (b.name_short || b.name_full || '').toLowerCase();
+    } else if (_pickerSortCol === 'code') {
+      va = (a.code || '').toLowerCase();
+      vb = (b.code || '').toLowerCase();
+    } else if (_pickerSortCol === 'status') {
+      va = STATUS_LABELS[a.status] || '';
+      vb = STATUS_LABELS[b.status] || '';
+    } else if (_pickerSortCol === 'priority') {
+      va = PRIORITY_ORDER[a.priority_category] ?? 99;
+      vb = PRIORITY_ORDER[b.priority_category] ?? 99;
+    }
     if (va < vb) return _pickerSortDir === 'asc' ? -1 : 1;
     if (va > vb) return _pickerSortDir === 'asc' ? 1 : -1;
     return 0;
   });
 
   // Стрелки сортировки
-  ['num','name','code','status','priority'].forEach(c => {
+  ['num', 'name', 'code', 'status', 'priority'].forEach((c) => {
     const el = document.getElementById('ps-' + c);
     if (el) el.textContent = _pickerSortCol === c ? (_pickerSortDir === 'asc' ? '▲' : '▼') : '';
   });
@@ -522,40 +574,45 @@ function renderPickerTable() {
     emptyEl.style.display = '';
   } else {
     emptyEl.style.display = 'none';
-    body.innerHTML = list.map((p, i) => {
-      const sel = String(p.id) === String(curVal) ? ' picker-selected' : '';
-      const name = escapeHtml(p.name_short || p.name_full);
-      const code = escapeHtml(p.code || '');
-      return `<tr class="${sel}" onclick="selectPickerProject(${p.id})">
+    body.innerHTML = list
+      .map((p, i) => {
+        const sel = String(p.id) === String(curVal) ? ' picker-selected' : '';
+        const name = escapeHtml(p.name_short || p.name_full);
+        const code = escapeHtml(p.code || '');
+        return `<tr class="${sel}" onclick="selectPickerProject(${p.id})">
         <td>${i + 1}</td>
         <td><strong>${name}</strong></td>
         <td style="color:var(--muted)">${code}</td>
         <td>${statusBadge(p.status)}</td>
         <td>${priorityBadge(p.priority_category)}</td>
       </tr>`;
-    }).join('');
+      })
+      .join('');
   }
 
-  document.getElementById('pickerCount').textContent = 'Найдено: ' + list.length + ' из ' + portfolioData.length;
+  document.getElementById('pickerCount').textContent =
+    'Найдено: ' + list.length + ' из ' + portfolioData.length;
 }
 
 function selectPickerProject(id) {
   const cfg = PICKER_BTN_MAP[_pickerTarget];
   if (!cfg) return;
 
-  const p = portfolioData.find(x => x.id === id);
+  const p = portfolioData.find((x) => x.id === id);
   const input = document.getElementById(cfg.input);
   const btn = document.getElementById(cfg.btn);
 
   input.value = id;
-  const label = p ? (escapeHtml(p.name_short || p.name_full) + ' (' + escapeHtml(p.code) + ')') : cfg.empty;
+  const label = p
+    ? escapeHtml(p.name_short || p.name_full) + ' (' + escapeHtml(p.code) + ')'
+    : cfg.empty;
   btn.querySelector('.picker-label').innerHTML = label;
   btn.classList.toggle('has-value', !!p);
 
   closeProjectPicker();
 
   // Сохраняем в hash и загружаем данные
-  _saveHashState({project: id});
+  _saveHashState({ project: id });
   if (_pickerTarget === 'gg') loadGG(id);
   else if (_pickerTarget === 'cross') loadCross(id);
   else if (_pickerTarget === 'capacity') loadCapacity();
@@ -584,10 +641,11 @@ function populateProjectSelects() {
   Object.entries(PICKER_BTN_MAP).forEach(([target, cfg]) => {
     const input = document.getElementById(cfg.input);
     if (!input || !input.value) return;
-    const p = portfolioData.find(x => String(x.id) === String(input.value));
+    const p = portfolioData.find((x) => String(x.id) === String(input.value));
     const btn = document.getElementById(cfg.btn);
     if (p && btn) {
-      btn.querySelector('.picker-label').innerHTML = escapeHtml(p.name_short || p.name_full) + ' (' + escapeHtml(p.code) + ')';
+      btn.querySelector('.picker-label').innerHTML =
+        escapeHtml(p.name_short || p.name_full) + ' (' + escapeHtml(p.code) + ')';
       btn.classList.add('has-value');
     }
   });
@@ -602,20 +660,25 @@ function initGG() {
 }
 
 function loadGG(projectId) {
-  fetchJSON(`${API}/gg/${projectId}/`).then(data => {
-    currentGG = data.schedule;
-    renderGG();
-  }).catch(e => console.error('loadGG:', e));
+  fetchJSON(`${API}/gg/${projectId}/`)
+    .then((data) => {
+      currentGG = data.schedule;
+      renderGG();
+    })
+    .catch((e) => console.error('loadGG:', e));
 }
 
 function renderGG() {
-  const emptyEl   = document.getElementById('ggEmpty');
-  const viewEl    = document.getElementById('ggScheduleView');
+  const emptyEl = document.getElementById('ggEmpty');
+  const viewEl = document.getElementById('ggScheduleView');
   const actionsEl = document.getElementById('ggActions');
 
   if (!currentGG) {
-    emptyEl.innerHTML = '<i class="fas fa-stream"></i><p>ГГ не создан. </p>' +
-      (IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="createGG()"><i class="fas fa-plus"></i> Создать ГГ</button>' : '');
+    emptyEl.innerHTML =
+      '<i class="fas fa-stream"></i><p>ГГ не создан. </p>' +
+      (IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="createGG()"><i class="fas fa-plus"></i> Создать ГГ</button>'
+        : '');
     emptyEl.style.display = '';
     viewEl.style.display = 'none';
     actionsEl.innerHTML = '';
@@ -633,12 +696,14 @@ function renderGG() {
 
   // Пункты
   const stagesBody = document.getElementById('ggStagesBody');
-  stagesBody.innerHTML = (currentGG.stages || []).map(s => {
-    const actions = IS_WRITER
-      ? `<button class="btn btn-ghost btn-sm" onclick="openEditGGStage(${s.id})" title="Редактировать"><i class="fas fa-pen"></i></button>` +
-        `<button class="btn btn-ghost btn-sm" onclick="deleteGGStage(${s.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
-    return `<tr>
+  stagesBody.innerHTML =
+    (currentGG.stages || [])
+      .map((s) => {
+        const actions = IS_WRITER
+          ? `<button class="btn btn-ghost btn-sm" onclick="openEditGGStage(${s.id})" title="Редактировать"><i class="fas fa-pen"></i></button>` +
+            `<button class="btn btn-ghost btn-sm" onclick="deleteGGStage(${s.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+          : '';
+        return `<tr>
       <td>${s.order}</td>
       <td>${escapeHtml(s.name)}</td>
       <td>${s.date_start || '—'}</td>
@@ -646,22 +711,26 @@ function renderGG() {
       <td>${s.labor != null ? s.labor : '—'}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
+      })
+      .join('') || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Вехи
   const msBody = document.getElementById('ggMilestonesBody');
-  msBody.innerHTML = (currentGG.milestones || []).map(m => {
-    const stageName = currentGG.stages.find(s => s.id === m.stage_id);
-    const actions = IS_WRITER
-      ? `<button class="btn btn-ghost btn-sm" onclick="deleteGGMilestone(${m.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
-    return `<tr>
+  msBody.innerHTML =
+    (currentGG.milestones || [])
+      .map((m) => {
+        const stageName = currentGG.stages.find((s) => s.id === m.stage_id);
+        const actions = IS_WRITER
+          ? `<button class="btn btn-ghost btn-sm" onclick="deleteGGMilestone(${m.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+          : '';
+        return `<tr>
       <td>${escapeHtml(m.name)}</td>
       <td>${m.date || '—'}</td>
       <td>${stageName ? escapeHtml(stageName.name) : '—'}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="4" class="text-center text-muted">Нет вех</td></tr>';
+      })
+      .join('') || '<tr><td colspan="4" class="text-center text-muted">Нет вех</td></tr>';
 
   // Если активен вид Ганта — обновляем диаграмму
   if (ggCurrentView === 'gantt' && ggGanttLoaded) {
@@ -674,7 +743,7 @@ function createGG() {
   if (!pid) return;
   fetchJSON(`${API}/gg/${pid}/`, { method: 'POST', body: JSON.stringify({}) })
     .then(() => loadGG(pid))
-    .catch(e => alert(e.error || 'Ошибка'));
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function addGGStage() {
@@ -689,7 +758,7 @@ function addGGStage() {
 }
 
 function openEditGGStage(id) {
-  const s = (currentGG.stages || []).find(x => x.id === id);
+  const s = (currentGG.stages || []).find((x) => x.id === id);
   if (!s) return;
   document.getElementById('ggStageModalTitle').textContent = 'Редактирование пункта';
   document.getElementById('ggStageId').value = id;
@@ -704,7 +773,10 @@ function openEditGGStage(id) {
 function saveGGStage() {
   const stageId = document.getElementById('ggStageId').value;
   const name = document.getElementById('ggStageName').value.trim();
-  if (!name) { alert('Название обязательно'); return; }
+  if (!name) {
+    alert('Название обязательно');
+    return;
+  }
   const body = { name: name };
   const ds = document.getElementById('ggStageDateStart').value;
   const de = document.getElementById('ggStageDateEnd').value;
@@ -720,8 +792,11 @@ function saveGGStage() {
   const method = stageId ? 'PUT' : 'POST';
 
   fetchJSON(url, { method: method, body: JSON.stringify(body) })
-    .then(() => { closeModal('ggStageModal'); loadGG(pid); })
-    .catch(e => alert(e.error || 'Ошибка сохранения'));
+    .then(() => {
+      closeModal('ggStageModal');
+      loadGG(pid);
+    })
+    .catch((e) => alert(e.error || 'Ошибка сохранения'));
 }
 
 function addGGMilestone() {
@@ -731,27 +806,31 @@ function addGGMilestone() {
   fetchJSON(`${API}/gg/${pid}/milestones/`, {
     method: 'POST',
     body: JSON.stringify({ name }),
-  }).then(() => loadGG(pid)).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => loadGG(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function deleteGGStage(id) {
   if (!confirm('Удалить пункт?')) return;
   const pid = document.getElementById('ggProjectSelect').value;
   fetchJSON(`${API}/gg_stages/${id}/`, { method: 'DELETE' })
-    .then(() => loadGG(pid)).catch(e => alert(e.error || 'Ошибка'));
+    .then(() => loadGG(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function deleteGGMilestone(id) {
   if (!confirm('Удалить веху?')) return;
   const pid = document.getElementById('ggProjectSelect').value;
   fetchJSON(`${API}/gg_milestones/${id}/`, { method: 'DELETE' })
-    .then(() => loadGG(pid)).catch(e => alert(e.error || 'Ошибка'));
+    .then(() => loadGG(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 // ── Переключатель Таблица / Гант ──────────────────────────────────────────
 
-let ggGanttLoaded = false;   // библиотека загружена
-let ggGanttInited = false;   // gantt.init() вызван
+let ggGanttLoaded = false; // библиотека загружена
+let ggGanttInited = false; // gantt.init() вызван
 let ggCurrentView = 'table'; // table | gantt
 
 function switchGGView(view) {
@@ -807,9 +886,21 @@ function setupGGGantt() {
   const savedCols = ganttLoadColWidths(_GG_COL_KEY, _GG_COL_DEFAULTS);
   gantt.config.grid_width = savedCols.grid;
   gantt.config.columns = [
-    { name: "text", label: "Название", width: savedCols.text, tree: true, resize: true },
-    { name: "start_date", label: "Начало", align: "center", width: savedCols.start_date, resize: true },
-    { name: "end_date", label: "Окончание", align: "center", width: savedCols.end_date, resize: true },
+    { name: 'text', label: 'Название', width: savedCols.text, tree: true, resize: true },
+    {
+      name: 'start_date',
+      label: 'Начало',
+      align: 'center',
+      width: savedCols.start_date,
+      resize: true,
+    },
+    {
+      name: 'end_date',
+      label: 'Окончание',
+      align: 'center',
+      width: savedCols.end_date,
+      resize: true,
+    },
   ];
 
   // Интерактивный режим для writers
@@ -821,13 +912,13 @@ function setupGGGantt() {
   gantt.config.show_links = true;
 
   ganttRestoreScale('gg_gantt_scale');
-  gantt.init("ggGanttContainer");
+  gantt.init('ggGanttContainer');
 
   // Resize колонок
-  gantt.attachEvent("onGanttRender", () => ganttInjectResizers('ggGanttContainer', _GG_COL_KEY));
+  gantt.attachEvent('onGanttRender', () => ganttInjectResizers('ggGanttContainer', _GG_COL_KEY));
 
   // Drag → сохранение дат на сервере
-  gantt.attachEvent("onAfterTaskDrag", function(id) {
+  gantt.attachEvent('onAfterTaskDrag', function (id) {
     const task = gantt.getTask(id);
     if (!task || !task.server_id) return;
     const startStr = ganttFormatDate(task.start_date);
@@ -840,18 +931,24 @@ function setupGGGantt() {
     fetchJSON(url, { method: 'PUT', body: JSON.stringify(body) })
       .then(() => {
         if (isMilestone) {
-          const m = (currentGG.milestones || []).find(x => x.id === task.server_id);
+          const m = (currentGG.milestones || []).find((x) => x.id === task.server_id);
           if (m) m.date = startStr;
         } else {
-          const s = (currentGG.stages || []).find(x => x.id === task.server_id);
-          if (s) { s.date_start = startStr; s.date_end = endStr; }
+          const s = (currentGG.stages || []).find((x) => x.id === task.server_id);
+          if (s) {
+            s.date_start = startStr;
+            s.date_end = endStr;
+          }
         }
       })
-      .catch(e => { alert(e.error || 'Ошибка сохранения'); renderGGGantt(); });
+      .catch((e) => {
+        alert(e.error || 'Ошибка сохранения');
+        renderGGGantt();
+      });
   });
 
   // Двойной клик → модалка редактирования
-  gantt.attachEvent("onBeforeLightbox", function(id) {
+  gantt.attachEvent('onBeforeLightbox', function (id) {
     const task = gantt.getTask(id);
     if (task && task.server_id && task.type !== gantt.config.types.milestone) {
       openEditGGStage(task.server_id);
@@ -875,9 +972,9 @@ function renderGGGantt() {
   const links = [];
 
   // Пункты (stages) → задачи Ганта
-  (currentGG.stages || []).forEach(s => {
+  (currentGG.stages || []).forEach((s) => {
     if (!s.date_start || !s.date_end) return; // пропускаем без дат
-    const isParent = (currentGG.stages || []).some(c => c.parent_stage_id === s.id);
+    const isParent = (currentGG.stages || []).some((c) => c.parent_stage_id === s.id);
     tasks.push({
       id: 'stage_' + s.id,
       server_id: s.id,
@@ -891,7 +988,7 @@ function renderGGGantt() {
   });
 
   // Вехи → milestone-тип
-  (currentGG.milestones || []).forEach(m => {
+  (currentGG.milestones || []).forEach((m) => {
     if (!m.date) return;
     tasks.push({
       id: 'ms_' + m.id,
@@ -906,7 +1003,7 @@ function renderGGGantt() {
 
   // Зависимости → links
   const depTypeMap = { FS: '0', SS: '1', FF: '2', SF: '3' };
-  (currentGG.dependencies || []).forEach(d => {
+  (currentGG.dependencies || []).forEach((d) => {
     links.push({
       id: 'dep_' + d.id,
       source: 'stage_' + d.predecessor_id,
@@ -933,18 +1030,20 @@ function initCross() {
 }
 
 function loadCross(projectId) {
-  fetchJSON(`${API}/cross/${projectId}/`).then(data => {
-    currentCross = data.schedule;
-    // Заголовок с названием проекта
-    const proj = portfolioData.find(p => p.id === +projectId);
-    const titleEl = document.getElementById('crossTitle');
-    if (titleEl) {
-      titleEl.textContent = proj
-        ? 'Сквозной график по проекту ' + (proj.name_short || proj.name_full)
-        : 'Сквозной график';
-    }
-    renderCross();
-  }).catch(e => console.error('loadCross:', e));
+  fetchJSON(`${API}/cross/${projectId}/`)
+    .then((data) => {
+      currentCross = data.schedule;
+      // Заголовок с названием проекта
+      const proj = portfolioData.find((p) => p.id === +projectId);
+      const titleEl = document.getElementById('crossTitle');
+      if (titleEl) {
+        titleEl.textContent = proj
+          ? 'Сквозной график по проекту ' + (proj.name_short || proj.name_full)
+          : 'Сквозной график';
+      }
+      renderCross();
+    })
+    .catch((e) => console.error('loadCross:', e));
 }
 
 const EDIT_OWNER_LABELS = { cross: 'Сквозной', pp: 'ПП', locked: 'Заблокирован' };
@@ -955,7 +1054,8 @@ function onCrossSettingChange() {
   const btn = document.getElementById('crossSettingsApply');
   if (!modeEl || !granEl || !btn) return;
 
-  const changed = modeEl.value !== currentCross.edit_owner || granEl.value !== currentCross.granularity;
+  const changed =
+    modeEl.value !== currentCross.edit_owner || granEl.value !== currentCross.granularity;
   btn.style.display = changed ? '' : 'none';
 
   // Обновляем цвет селекта режима
@@ -985,23 +1085,28 @@ function applyCrossSettings() {
   fetchJSON(`${API}/cross/${pid}/`, {
     method: 'PUT',
     body: JSON.stringify(body),
-  }).then(() => {
-    if (body.edit_owner) currentCross.edit_owner = body.edit_owner;
-    if (body.granularity) currentCross.granularity = body.granularity;
-    renderCross();
-    showToast('Настройки сохранены', 'success');
-  }).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => {
+      if (body.edit_owner) currentCross.edit_owner = body.edit_owner;
+      if (body.granularity) currentCross.granularity = body.granularity;
+      renderCross();
+      showToast('Настройки сохранены', 'success');
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function renderCross() {
-  const emptyEl   = document.getElementById('crossEmpty');
-  const viewEl    = document.getElementById('crossScheduleView');
+  const emptyEl = document.getElementById('crossEmpty');
+  const viewEl = document.getElementById('crossScheduleView');
   const actionsEl = document.getElementById('crossActions');
-  const metaEl    = document.getElementById('crossMeta');
+  const metaEl = document.getElementById('crossMeta');
 
   if (!currentCross) {
-    emptyEl.innerHTML = '<i class="fas fa-project-diagram"></i><p>Сквозной график не создан.</p>' +
-      (IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="createCross()"><i class="fas fa-plus"></i> Создать</button>' : '');
+    emptyEl.innerHTML =
+      '<i class="fas fa-project-diagram"></i><p>Сквозной график не создан.</p>' +
+      (IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="createCross()"><i class="fas fa-plus"></i> Создать</button>'
+        : '');
     emptyEl.style.display = '';
     viewEl.style.display = 'none';
     actionsEl.innerHTML = '';
@@ -1027,7 +1132,9 @@ function renderCross() {
          <option value="whole"${gran === 'whole' ? ' selected' : ''}>Весь график</option>
          <option value="per_dept"${gran === 'per_dept' ? ' selected' : ''}>По отделам</option>
        </select>`
-    : (gran === 'whole' ? 'Весь график' : 'По отделам');
+    : gran === 'whole'
+      ? 'Весь график'
+      : 'По отделам';
 
   metaEl.innerHTML = `
     <div class="ent-meta-item"><span class="ent-meta-label">Версия:</span>
@@ -1039,11 +1146,12 @@ function renderCross() {
   `;
 
   // Кнопки
-  actionsEl.innerHTML = IS_WRITER && eo !== 'locked'
-    ? '<button class="btn btn-primary btn-sm" onclick="addCrossStage()"><i class="fas fa-plus"></i> Этап</button>' +
-      '<button class="btn btn-outline btn-sm" onclick="addCrossMilestone()"><i class="fas fa-flag"></i> Веха</button>' +
-      '<button class="btn btn-outline btn-sm" onclick="createBaseline()"><i class="fas fa-camera"></i> Снимок</button>'
-    : '';
+  actionsEl.innerHTML =
+    IS_WRITER && eo !== 'locked'
+      ? '<button class="btn btn-primary btn-sm" onclick="addCrossStage()"><i class="fas fa-plus"></i> Этап</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="addCrossMilestone()"><i class="fas fa-flag"></i> Веха</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="createBaseline()"><i class="fas fa-camera"></i> Снимок</button>'
+      : '';
 
   // Пункты (из ГГ) + этапы (вложенные) + работы
   const canAssign = IS_WRITER && eo === 'cross';
@@ -1051,10 +1159,10 @@ function renderCross() {
 
   // Пункты: is_item=true (parent_item_id === null)
   // Этапы: is_item=false (parent_item_id !== null)
-  const ggItems = stages.filter(s => s.is_item);
-  const subStages = stages.filter(s => !s.is_item);
+  const ggItems = stages.filter((s) => s.is_item);
+  const subStages = stages.filter((s) => !s.is_item);
   const subByParent = {};
-  subStages.forEach(s => {
+  subStages.forEach((s) => {
     const pid = s.parent_item_id;
     if (!subByParent[pid]) subByParent[pid] = [];
     subByParent[pid].push(s);
@@ -1065,11 +1173,12 @@ function renderCross() {
 
   // Вспомогательная: строки работ для этапа
   function _workRows(stageId, works) {
-    return works.map(w => {
-      const unlink = canAssign
-        ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${stageId}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
-        : '';
-      return `<tr class="cross-lv2" data-stage="${stageId}" style="display:none;">
+    return works
+      .map((w) => {
+        const unlink = canAssign
+          ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="unlinkWork(${stageId}, ${w.id})" title="Отвязать"><i class="fas fa-unlink"></i></button>`
+          : '';
+        return `<tr class="cross-lv2" data-stage="${stageId}" style="display:none;">
         <td>${escapeHtml(w.name)}</td>
         <td>${w.date_start || '—'}</td>
         <td>${w.date_end || '—'}</td>
@@ -1077,12 +1186,15 @@ function renderCross() {
         <td>${escapeHtml(w.department)}</td>
         <td>${unlink}</td>
       </tr>`;
-    }).join('');
+      })
+      .join('');
   }
 
-  ggItems.forEach(item => {
+  ggItems.forEach((item) => {
     const itemNum = item.order;
-    const totalWorks = (item.works_count || 0) + (subByParent[item.id] || []).reduce((s, sub) => s + (sub.works_count || 0), 0);
+    const totalWorks =
+      (item.works_count || 0) +
+      (subByParent[item.id] || []).reduce((s, sub) => s + (sub.works_count || 0), 0);
     const assignBtn = canAssign
       ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openAssignWorks(${item.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
       : '';
@@ -1105,14 +1217,16 @@ function renderCross() {
       const subNum = itemNum + '.' + (idx + 1);
       const swc = sub.works_count || 0;
       const sBadge = swc > 0 ? `<span class="cross-works-badge">${swc}</span>` : '';
-      const sToggleClick = swc > 0 ? `onclick="toggleCrossStageWorks(${sub.id})" style="cursor:pointer;"` : '';
+      const sToggleClick =
+        swc > 0 ? `onclick="toggleCrossStageWorks(${sub.id})" style="cursor:pointer;"` : '';
       const sChevron = swc > 0 ? '<i class="fas fa-chevron-right cross-chevron"></i> ' : '';
       const sAssignBtn = canAssign
         ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openAssignWorks(${sub.id})" title="Привязать работы"><i class="fas fa-link"></i></button>`
         : '';
-      const editBtn = IS_WRITER && eo !== 'locked'
-        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
-        : '';
+      const editBtn =
+        IS_WRITER && eo !== 'locked'
+          ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditCrossStage(${sub.id})" title="Редактировать"><i class="fas fa-pen"></i></button>`
+          : '';
 
       rowsHtml += `<tr class="cross-lv1" ${sToggleClick}>
         <td>${sChevron}${subNum}. ${escapeHtml(sub.name)} ${sBadge}</td>
@@ -1126,7 +1240,8 @@ function renderCross() {
     });
   });
 
-  tableBody.innerHTML = rowsHtml || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
+  tableBody.innerHTML =
+    rowsHtml || '<tr><td colspan="6" class="text-center text-muted">Нет пунктов</td></tr>';
 
   // Неназначенные работы ПП
   const unassigned = currentCross.unassigned_works || [];
@@ -1142,14 +1257,18 @@ function renderCross() {
         <div class="ent-section-title">Неназначенные работы ПП <span class="cross-works-badge">${unassigned.length}</span></div>
         <table class="cross-table">
           <thead><tr><th>Название</th><th style="width:110px;">Начало</th><th style="width:110px;">Окончание</th><th style="width:80px;">Труд.</th><th style="width:100px;">Отдел</th><th style="width:60px;"></th></tr></thead>
-          <tbody>${unassigned.map(w => `<tr class="cross-lv2">
+          <tbody>${unassigned
+            .map(
+              (w) => `<tr class="cross-lv2">
             <td>${escapeHtml(w.name)}</td>
             <td>${w.date_start || '—'}</td>
             <td>${w.date_end || '—'}</td>
             <td>${w.labor != null ? w.labor : '—'}</td>
             <td>${escapeHtml(w.department)}</td>
             <td></td>
-          </tr>`).join('')}</tbody>
+          </tr>`,
+            )
+            .join('')}</tbody>
         </table>
       </div>`;
   } else if (unassignedEl) {
@@ -1158,26 +1277,30 @@ function renderCross() {
 
   // Вехи
   const msBody = document.getElementById('crossMilestonesBody');
-  msBody.innerHTML = (currentCross.milestones || []).map(m => {
-    const linked = (currentCross.stages || []).find(s => s.id === m.cross_stage_id);
-    // Для вехи показываем пункт: если linked — gg_stage_id, ищем пункт
-    let itemName = '—';
-    if (linked) {
-      const parent = linked.gg_stage_id
-        ? ggItems.find(g => g.id === linked.gg_stage_id)
-        : linked;
-      itemName = parent ? escapeHtml(parent.name) : escapeHtml(linked.name);
-    }
-    const actions = IS_WRITER && eo !== 'locked'
-      ? `<button class="btn btn-ghost btn-sm" onclick="deleteCrossMilestone(${m.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
-    return `<tr>
+  msBody.innerHTML =
+    (currentCross.milestones || [])
+      .map((m) => {
+        const linked = (currentCross.stages || []).find((s) => s.id === m.cross_stage_id);
+        // Для вехи показываем пункт: если linked — gg_stage_id, ищем пункт
+        let itemName = '—';
+        if (linked) {
+          const parent = linked.gg_stage_id
+            ? ggItems.find((g) => g.id === linked.gg_stage_id)
+            : linked;
+          itemName = parent ? escapeHtml(parent.name) : escapeHtml(linked.name);
+        }
+        const actions =
+          IS_WRITER && eo !== 'locked'
+            ? `<button class="btn btn-ghost btn-sm" onclick="deleteCrossMilestone(${m.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+            : '';
+        return `<tr>
       <td>${escapeHtml(m.name)}</td>
       <td>${m.date || '—'}</td>
       <td>${itemName}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="4" class="text-center text-muted">Нет вех</td></tr>';
+      })
+      .join('') || '<tr><td colspan="4" class="text-center text-muted">Нет вех</td></tr>';
 }
 
 // ── Работы в этапах сквозного графика ────────────────────────────────────
@@ -1186,7 +1309,7 @@ function toggleCrossStageWorks(stageId) {
   const workRows = document.querySelectorAll(`tr.cross-lv2[data-stage="${stageId}"]`);
   if (!workRows.length) return;
   const visible = workRows[0].style.display !== 'none';
-  workRows.forEach(r => r.style.display = visible ? 'none' : '');
+  workRows.forEach((r) => (r.style.display = visible ? 'none' : ''));
 
   const first = workRows[0];
   const parentRow = first.previousElementSibling;
@@ -1198,16 +1321,16 @@ function toggleCrossStageWorks(stageId) {
 }
 
 function crossExpandAll() {
-  document.querySelectorAll('.cross-lv2').forEach(r => r.style.display = '');
-  document.querySelectorAll('.cross-chevron').forEach(ch => {
+  document.querySelectorAll('.cross-lv2').forEach((r) => (r.style.display = ''));
+  document.querySelectorAll('.cross-chevron').forEach((ch) => {
     ch.classList.remove('fa-chevron-right');
     ch.classList.add('fa-chevron-down');
   });
 }
 
 function crossCollapseAll() {
-  document.querySelectorAll('.cross-lv2').forEach(r => r.style.display = 'none');
-  document.querySelectorAll('.cross-chevron').forEach(ch => {
+  document.querySelectorAll('.cross-lv2').forEach((r) => (r.style.display = 'none'));
+  document.querySelectorAll('.cross-chevron').forEach((ch) => {
     ch.classList.remove('fa-chevron-down');
     ch.classList.add('fa-chevron-right');
   });
@@ -1227,16 +1350,20 @@ function openAssignWorks(stageId) {
     modal.className = 'modal-overlay';
     document.body.appendChild(modal);
     let _bDown = null;
-    modal.addEventListener('mousedown', e => { _bDown = e.target; });
-    modal.addEventListener('click', e => {
+    modal.addEventListener('mousedown', (e) => {
+      _bDown = e.target;
+    });
+    modal.addEventListener('click', (e) => {
       if (e.target === modal && _bDown === modal) modal.classList.remove('open');
     });
   }
 
-  const stage = (currentCross.stages || []).find(s => s.id === stageId);
+  const stage = (currentCross.stages || []).find((s) => s.id === stageId);
   const stageName = stage ? escapeHtml(stage.name) : stageId;
 
-  const rows = unassigned.map(w => `<tr>
+  const rows = unassigned
+    .map(
+      (w) => `<tr>
     <td><input type="checkbox" class="assign-work-cb" data-id="${w.id}"></td>
     <td class="text-muted">${escapeHtml(w.row_code)}</td>
     <td>${escapeHtml(w.name)}</td>
@@ -1244,7 +1371,9 @@ function openAssignWorks(stageId) {
     <td>${w.date_end || '—'}</td>
     <td>${w.labor != null ? w.labor : '—'}</td>
     <td>${escapeHtml(w.executor)}</td>
-  </tr>`).join('');
+  </tr>`,
+    )
+    .join('');
 
   modal.innerHTML = `
     <div class="modal" style="max-width:800px;">
@@ -1272,17 +1401,22 @@ function openAssignWorks(stageId) {
 
 function doAssignWorks(stageId) {
   const cbs = document.querySelectorAll('.assign-work-cb:checked');
-  const ids = [...cbs].map(c => +c.dataset.id);
-  if (!ids.length) { showToast('Выберите работы', 'warning'); return; }
+  const ids = [...cbs].map((c) => +c.dataset.id);
+  if (!ids.length) {
+    showToast('Выберите работы', 'warning');
+    return;
+  }
 
   fetchJSON(`${API}/cross_stages/${stageId}/works/`, {
     method: 'POST',
     body: JSON.stringify({ work_ids: ids }),
-  }).then(() => {
-    document.getElementById('assignWorksModal').classList.remove('open');
-    showToast(`Привязано работ: ${ids.length}`, 'success');
-    loadCross(selectedProjectId);
-  }).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => {
+      document.getElementById('assignWorksModal').classList.remove('open');
+      showToast(`Привязано работ: ${ids.length}`, 'success');
+      loadCross(selectedProjectId);
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function unlinkWork(stageId, workId) {
@@ -1290,10 +1424,12 @@ function unlinkWork(stageId, workId) {
   fetchJSON(`${API}/cross_stages/${stageId}/works/`, {
     method: 'DELETE',
     body: JSON.stringify({ work_ids: [workId] }),
-  }).then(() => {
-    showToast('Работа отвязана', 'success');
-    loadCross(selectedProjectId);
-  }).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => {
+      showToast('Работа отвязана', 'success');
+      loadCross(selectedProjectId);
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function createCross() {
@@ -1302,7 +1438,9 @@ function createCross() {
   fetchJSON(`${API}/cross/${pid}/`, {
     method: 'POST',
     body: JSON.stringify({ from_gg: true }),
-  }).then(() => loadCross(pid)).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => loadCross(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function addCrossStage() {
@@ -1314,15 +1452,16 @@ function addCrossStage() {
 
   // Заполнить дропдаун пунктами (is_item = true)
   const sel = document.getElementById('crossStageGGItem');
-  const items = (currentCross.stages || []).filter(s => s.is_item);
-  sel.innerHTML = '<option value="">— Выберите пункт —</option>' +
-    items.map(s => `<option value="${s.id}">${s.order}. ${escapeHtml(s.name)}</option>`).join('');
+  const items = (currentCross.stages || []).filter((s) => s.is_item);
+  sel.innerHTML =
+    '<option value="">— Выберите пункт —</option>' +
+    items.map((s) => `<option value="${s.id}">${s.order}. ${escapeHtml(s.name)}</option>`).join('');
 
   openModal('crossStageModal');
 }
 
 function openEditCrossStage(id) {
-  const s = (currentCross.stages || []).find(x => x.id === id);
+  const s = (currentCross.stages || []).find((x) => x.id === id);
   if (!s) return;
   document.getElementById('crossStageModalTitle').textContent = 'Редактирование этапа';
   document.getElementById('crossStageId').value = id;
@@ -1331,9 +1470,15 @@ function openEditCrossStage(id) {
   document.getElementById('crossStageDateEnd').value = s.date_end || '';
 
   const sel = document.getElementById('crossStageGGItem');
-  const items = (currentCross.stages || []).filter(x => x.is_item);
-  sel.innerHTML = '<option value="">— Выберите пункт —</option>' +
-    items.map(x => `<option value="${x.id}"${x.id === s.parent_item_id ? ' selected' : ''}>${x.order}. ${escapeHtml(x.name)}</option>`).join('');
+  const items = (currentCross.stages || []).filter((x) => x.is_item);
+  sel.innerHTML =
+    '<option value="">— Выберите пункт —</option>' +
+    items
+      .map(
+        (x) =>
+          `<option value="${x.id}"${x.id === s.parent_item_id ? ' selected' : ''}>${x.order}. ${escapeHtml(x.name)}</option>`,
+      )
+      .join('');
 
   openModal('crossStageModal');
 }
@@ -1341,10 +1486,16 @@ function openEditCrossStage(id) {
 function saveCrossStage() {
   const stageId = document.getElementById('crossStageId').value;
   const name = document.getElementById('crossStageName').value.trim();
-  if (!name) { alert('Название обязательно'); return; }
+  if (!name) {
+    alert('Название обязательно');
+    return;
+  }
 
   const parentItemId = document.getElementById('crossStageGGItem').value;
-  if (!parentItemId) { alert('Выберите пункт'); return; }
+  if (!parentItemId) {
+    alert('Выберите пункт');
+    return;
+  }
 
   const body = { name, parent_item_id: +parentItemId };
   const ds = document.getElementById('crossStageDateStart').value;
@@ -1357,8 +1508,11 @@ function saveCrossStage() {
   const method = stageId ? 'PUT' : 'POST';
 
   fetchJSON(url, { method, body: JSON.stringify(body) })
-    .then(() => { closeModal('crossStageModal'); loadCross(pid); })
-    .catch(e => alert(e.error || 'Ошибка сохранения'));
+    .then(() => {
+      closeModal('crossStageModal');
+      loadCross(pid);
+    })
+    .catch((e) => alert(e.error || 'Ошибка сохранения'));
 }
 
 function addCrossMilestone() {
@@ -1368,21 +1522,25 @@ function addCrossMilestone() {
   fetchJSON(`${API}/cross/${pid}/milestones/`, {
     method: 'POST',
     body: JSON.stringify({ name }),
-  }).then(() => loadCross(pid)).catch(e => alert(e.error || 'Ошибка'));
+  })
+    .then(() => loadCross(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function deleteCrossStage(id) {
   if (!confirm('Удалить этап?')) return;
   const pid = document.getElementById('crossProjectSelect').value;
   fetchJSON(`${API}/cross_stages/${id}/`, { method: 'DELETE' })
-    .then(() => loadCross(pid)).catch(e => alert(e.error || 'Ошибка'));
+    .then(() => loadCross(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function deleteCrossMilestone(id) {
   if (!confirm('Удалить веху?')) return;
   const pid = document.getElementById('crossProjectSelect').value;
   fetchJSON(`${API}/cross_milestones/${id}/`, { method: 'DELETE' })
-    .then(() => loadCross(pid)).catch(e => alert(e.error || 'Ошибка'));
+    .then(() => loadCross(pid))
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function createBaseline() {
@@ -1396,8 +1554,10 @@ function createBaseline() {
     modal.className = 'modal-overlay';
     document.body.appendChild(modal);
     let _down = null;
-    modal.addEventListener('mousedown', e => { _down = e.target; });
-    modal.addEventListener('click', e => {
+    modal.addEventListener('mousedown', (e) => {
+      _down = e.target;
+    });
+    modal.addEventListener('click', (e) => {
       if (e.target === modal && _down === modal) modal.classList.remove('open');
     });
   }
@@ -1430,15 +1590,17 @@ function createBaseline() {
     fetchJSON(`${API}/cross/${pid}/baselines/`, {
       method: 'POST',
       body: JSON.stringify({ comment }),
-    }).then(data => {
-      modal.classList.remove('open');
-      showToast(`Снимок v${data.baseline.version} создан`, 'success');
-      loadCross(pid);
-    }).catch(e => {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-camera"></i> Создать';
-      alert(e.error || 'Ошибка');
-    });
+    })
+      .then((data) => {
+        modal.classList.remove('open');
+        showToast(`Снимок v${data.baseline.version} создан`, 'success');
+        loadCross(pid);
+      })
+      .catch((e) => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-camera"></i> Создать';
+        alert(e.error || 'Ошибка');
+      });
   });
 }
 
@@ -1450,10 +1612,12 @@ function openBaselineList() {
   const pid = document.getElementById('crossProjectSelect').value;
   if (!pid) return;
 
-  fetchJSON(`${API}/cross/${pid}/baselines/`).then(data => {
-    baselinesCache = data.baselines || [];
-    renderBaselineModal();
-  }).catch(e => alert(e.error || 'Ошибка'));
+  fetchJSON(`${API}/cross/${pid}/baselines/`)
+    .then((data) => {
+      baselinesCache = data.baselines || [];
+      renderBaselineModal();
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function renderBaselineModal() {
@@ -1465,16 +1629,25 @@ function renderBaselineModal() {
     document.body.appendChild(modal);
     // Закрытие по клику на overlay
     let _bDown = null;
-    modal.addEventListener('mousedown', e => { _bDown = e.target; });
-    modal.addEventListener('click', e => {
+    modal.addEventListener('mousedown', (e) => {
+      _bDown = e.target;
+    });
+    modal.addEventListener('click', (e) => {
       if (e.target === modal && _bDown === modal) modal.classList.remove('open');
     });
   }
 
   const rows = baselinesCache.length
-    ? baselinesCache.map(b => {
-        const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
-        return `<tr>
+    ? baselinesCache
+        .map((b) => {
+          const date = new Date(b.created_at).toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          return `<tr>
           <td><label class="baseline-check"><input type="checkbox" class="bl-compare-cb" data-id="${b.id}" data-version="${b.version}" onchange="onBaselineCheckChange()"><span></span></label></td>
           <td><strong>v${b.version}</strong></td>
           <td>${date}</td>
@@ -1486,14 +1659,16 @@ function renderBaselineModal() {
             ${IS_WRITER ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteBaseline(${b.id})" title="Удалить"><i class="fas fa-trash"></i></button>` : ''}
           </td>
         </tr>`;
-      }).join('')
+        })
+        .join('')
     : '<tr><td colspan="6" class="text-center text-muted">Нет снимков</td></tr>';
 
-  const compareBtn = baselinesCache.length >= 2
-    ? `<button id="blCompareBtn" class="btn btn-outline btn-sm" onclick="compareTwoBaselines()" disabled>
+  const compareBtn =
+    baselinesCache.length >= 2
+      ? `<button id="blCompareBtn" class="btn btn-outline btn-sm" onclick="compareTwoBaselines()" disabled>
          <i class="fas fa-columns"></i> Сравнить выбранные
        </button>`
-    : '';
+      : '';
 
   modal.innerHTML = `
     <div class="modal" style="max-width:780px;">
@@ -1519,38 +1694,52 @@ function renderBaselineModal() {
 // ── Просмотр снимка ─────────────────────────────────────────────────────
 
 function viewBaseline(id) {
-  fetchJSON(`${API}/baselines/${id}/`).then(data => {
-    const b = data.baseline;
-    renderBaselineView(b);
-  }).catch(e => alert(e.error || 'Ошибка'));
+  fetchJSON(`${API}/baselines/${id}/`)
+    .then((data) => {
+      const b = data.baseline;
+      renderBaselineView(b);
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 function renderBaselineView(b) {
   // Ищем запись со state этапов/вех
-  const stateEntry = (b.entries || []).find(e => e.data && e.data._type === 'schedule_state');
-  const stages = stateEntry ? (stateEntry.data.stages || []) : [];
-  const milestones = stateEntry ? (stateEntry.data.milestones || []) : [];
+  const stateEntry = (b.entries || []).find((e) => e.data && e.data._type === 'schedule_state');
+  const stages = stateEntry ? stateEntry.data.stages || [] : [];
+  const milestones = stateEntry ? stateEntry.data.milestones || [] : [];
 
-  const date = new Date(b.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const date = new Date(b.created_at).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const stageRows = stages.length
-    ? stages.map(s => `<tr>
+    ? stages
+        .map(
+          (s) => `<tr>
         <td>${s.order}</td>
         <td>${escapeHtml(s.name)}</td>
         <td>${s.date_start || '—'}</td>
         <td>${s.date_end || '—'}</td>
-      </tr>`).join('')
+      </tr>`,
+        )
+        .join('')
     : '<tr><td colspan="4" class="text-center text-muted">Нет этапов</td></tr>';
 
   const msRows = milestones.length
-    ? milestones.map(m => {
-        const stage = stages.find(s => s.id === m.cross_stage_id);
-        return `<tr>
+    ? milestones
+        .map((m) => {
+          const stage = stages.find((s) => s.id === m.cross_stage_id);
+          return `<tr>
           <td>${escapeHtml(m.name)}</td>
           <td>${m.date || '—'}</td>
           <td>${stage ? escapeHtml(stage.name) : '—'}</td>
         </tr>`;
-      }).join('')
+        })
+        .join('')
     : '<tr><td colspan="3" class="text-center text-muted">Нет вех</td></tr>';
 
   let modal = document.getElementById('baselineModal');
@@ -1599,9 +1788,10 @@ function onBaselineCheckChange() {
   const checked = document.querySelectorAll('.bl-compare-cb:checked');
   btn.disabled = checked.length !== 2;
   if (hint) {
-    hint.textContent = checked.length === 2
-      ? `v${checked[0].dataset.version} ↔ v${checked[1].dataset.version}`
-      : 'Выберите 2 снимка для сравнения';
+    hint.textContent =
+      checked.length === 2
+        ? `v${checked[0].dataset.version} ↔ v${checked[1].dataset.version}`
+        : 'Выберите 2 снимка для сравнения';
   }
 }
 
@@ -1614,12 +1804,11 @@ function compareTwoBaselines() {
   const idA = +cbs[0].dataset.id;
   const idB = +cbs[1].dataset.id;
 
-  Promise.all([
-    fetchJSON(`${API}/baselines/${idA}/`),
-    fetchJSON(`${API}/baselines/${idB}/`),
-  ]).then(([dataA, dataB]) => {
-    renderBaselineComparison(dataA.baseline, dataB.baseline);
-  }).catch(e => alert(e.error || 'Ошибка'));
+  Promise.all([fetchJSON(`${API}/baselines/${idA}/`), fetchJSON(`${API}/baselines/${idB}/`)])
+    .then(([dataA, dataB]) => {
+      renderBaselineComparison(dataA.baseline, dataB.baseline);
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 // ── Сравнение снимка с текущим ──────────────────────────────────────────
@@ -1627,22 +1816,26 @@ function compareTwoBaselines() {
 function compareBaselineWithCurrent(id, version) {
   if (!currentCross) return;
 
-  fetchJSON(`${API}/baselines/${id}/`).then(data => {
-    // Создаём «виртуальный» правый снимок из текущего состояния
-    const currentAsBaseline = {
-      version: currentCross.version,
-      created_at: new Date().toISOString(),
-      created_by: '',
-      entries: [{
-        data: {
-          _type: 'schedule_state',
-          stages: currentCross.stages || [],
-          milestones: currentCross.milestones || [],
-        }
-      }],
-    };
-    renderBaselineComparison(data.baseline, currentAsBaseline, true);
-  }).catch(e => alert(e.error || 'Ошибка'));
+  fetchJSON(`${API}/baselines/${id}/`)
+    .then((data) => {
+      // Создаём «виртуальный» правый снимок из текущего состояния
+      const currentAsBaseline = {
+        version: currentCross.version,
+        created_at: new Date().toISOString(),
+        created_by: '',
+        entries: [
+          {
+            data: {
+              _type: 'schedule_state',
+              stages: currentCross.stages || [],
+              milestones: currentCross.milestones || [],
+            },
+          },
+        ],
+      };
+      renderBaselineComparison(data.baseline, currentAsBaseline, true);
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 /**
@@ -1652,72 +1845,84 @@ function compareBaselineWithCurrent(id, version) {
  * @param {boolean} rightIsCurrent — true если right = текущее состояние
  */
 function renderBaselineComparison(left, right, rightIsCurrent) {
-  const leftEntry = (left.entries || []).find(e => e.data && e.data._type === 'schedule_state');
-  const rightEntry = (right.entries || []).find(e => e.data && e.data._type === 'schedule_state');
-  const leftStages = leftEntry ? (leftEntry.data.stages || []) : [];
-  const rightStages = rightEntry ? (rightEntry.data.stages || []) : [];
+  const leftEntry = (left.entries || []).find((e) => e.data && e.data._type === 'schedule_state');
+  const rightEntry = (right.entries || []).find((e) => e.data && e.data._type === 'schedule_state');
+  const leftStages = leftEntry ? leftEntry.data.stages || [] : [];
+  const rightStages = rightEntry ? rightEntry.data.stages || [] : [];
 
   // Строим map по order для сопоставления
   const leftMap = {};
-  leftStages.forEach(s => { leftMap[s.order] = s; });
+  leftStages.forEach((s) => {
+    leftMap[s.order] = s;
+  });
   const rightMap = {};
-  rightStages.forEach(s => { rightMap[s.order] = s; });
+  rightStages.forEach((s) => {
+    rightMap[s.order] = s;
+  });
 
   // Собираем все orders
-  const allOrders = [...new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])].sort((a, b) => a - b);
+  const allOrders = [...new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])].sort(
+    (a, b) => a - b,
+  );
 
-  const rows = allOrders.map(order => {
-    const l = leftMap[order];
-    const r = rightMap[order];
+  const rows = allOrders
+    .map((order) => {
+      const l = leftMap[order];
+      const r = rightMap[order];
 
-    if (!l && r) {
-      return `<tr class="baseline-added">
+      if (!l && r) {
+        return `<tr class="baseline-added">
         <td>${r.order}</td>
         <td>${escapeHtml(r.name)}</td>
         <td>—</td><td>—</td>
         <td>${r.date_start || '—'}</td><td>${r.date_end || '—'}</td>
         <td><span class="baseline-badge baseline-badge--added">Добавлен</span></td>
       </tr>`;
-    }
-    if (l && !r) {
-      return `<tr class="baseline-removed">
+      }
+      if (l && !r) {
+        return `<tr class="baseline-removed">
         <td>${l.order}</td>
         <td>${escapeHtml(l.name)}</td>
         <td>${l.date_start || '—'}</td><td>${l.date_end || '—'}</td>
         <td>—</td><td>—</td>
         <td><span class="baseline-badge baseline-badge--removed">Удалён</span></td>
       </tr>`;
-    }
+      }
 
-    const changes = [];
-    if (l.name !== r.name) changes.push('название');
-    if (l.date_start !== r.date_start) changes.push('начало');
-    if (l.date_end !== r.date_end) changes.push('окончание');
+      const changes = [];
+      if (l.name !== r.name) changes.push('название');
+      if (l.date_start !== r.date_start) changes.push('начало');
+      if (l.date_end !== r.date_end) changes.push('окончание');
 
-    const cls = changes.length ? 'baseline-changed' : '';
-    const badge = changes.length
-      ? `<span class="baseline-badge baseline-badge--changed">${escapeHtml(changes.join(', '))}</span>`
-      : '<span class="baseline-badge baseline-badge--same">Без изменений</span>';
+      const cls = changes.length ? 'baseline-changed' : '';
+      const badge = changes.length
+        ? `<span class="baseline-badge baseline-badge--changed">${escapeHtml(changes.join(', '))}</span>`
+        : '<span class="baseline-badge baseline-badge--same">Без изменений</span>';
 
-    const startCls = l.date_start !== r.date_start ? ' class="baseline-diff"' : '';
-    const endCls = l.date_end !== r.date_end ? ' class="baseline-diff"' : '';
+      const startCls = l.date_start !== r.date_start ? ' class="baseline-diff"' : '';
+      const endCls = l.date_end !== r.date_end ? ' class="baseline-diff"' : '';
 
-    return `<tr class="${cls}">
+      return `<tr class="${cls}">
       <td>${r.order}</td>
       <td>${escapeHtml(r.name)}</td>
       <td>${l.date_start || '—'}</td><td>${l.date_end || '—'}</td>
       <td${startCls}>${r.date_start || '—'}</td><td${endCls}>${r.date_end || '—'}</td>
       <td>${badge}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
-  const leftDate = new Date(left.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
-  const rightLabel = rightIsCurrent
-    ? `Текущий (v${right.version})`
-    : `v${right.version}`;
+  const leftDate = new Date(left.created_at).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const rightLabel = rightIsCurrent ? `Текущий (v${right.version})` : `v${right.version}`;
   const rightDate = rightIsCurrent
     ? ''
-    : ` — ${new Date(right.created_at).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}`;
+    : ` — ${new Date(right.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
 
   let modal = document.getElementById('baselineModal');
   modal.innerHTML = `
@@ -1757,10 +1962,12 @@ function renderBaselineComparison(left, right, rightIsCurrent) {
 
 function deleteBaseline(id) {
   if (!confirm('Удалить снимок?')) return;
-  fetchJSON(`${API}/baselines/${id}/`, { method: 'DELETE' }).then(() => {
-    showToast('Снимок удалён', 'success');
-    openBaselineList();
-  }).catch(e => alert(e.error || 'Ошибка'));
+  fetchJSON(`${API}/baselines/${id}/`, { method: 'DELETE' })
+    .then(() => {
+      showToast('Снимок удалён', 'success');
+      openBaselineList();
+    })
+    .catch((e) => alert(e.error || 'Ошибка'));
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1784,11 +1991,13 @@ function loadCapacity() {
   let url = `${API}/capacity/?year=${year}&mode=${mode}`;
   if (projectId) url += `&project_id=${projectId}`;
 
-  fetchJSON(url).then(data => {
-    _capData = data;
-    _renderCapChips(data.centers || []);
-    _renderCapAll();
-  }).catch(e => console.error('loadCapacity:', e));
+  fetchJSON(url)
+    .then((data) => {
+      _capData = data;
+      _renderCapChips(data.centers || []);
+      _renderCapAll();
+    })
+    .catch((e) => console.error('loadCapacity:', e));
 }
 
 function _capSetFilter(centerId) {
@@ -1798,11 +2007,18 @@ function _capSetFilter(centerId) {
 
 function _renderCapChips(centers) {
   const el = document.getElementById('capCenterChips');
-  if (!centers.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<button class="cap-chip ${!_capFilterCenter ? 'active' : ''}" onclick="_capSetFilter(null)">Все</button>` +
-    centers.map(c =>
-      `<button class="cap-chip ${_capFilterCenter === c.center_id ? 'active' : ''}" onclick="_capSetFilter(${c.center_id})">${escapeHtml(c.center_name)}</button>`
-    ).join('');
+  if (!centers.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML =
+    `<button class="cap-chip ${!_capFilterCenter ? 'active' : ''}" onclick="_capSetFilter(null)">Все</button>` +
+    centers
+      .map(
+        (c) =>
+          `<button class="cap-chip ${_capFilterCenter === c.center_id ? 'active' : ''}" onclick="_capSetFilter(${c.center_id})">${escapeHtml(c.center_name)}</button>`,
+      )
+      .join('');
 }
 
 function _renderCapAll() {
@@ -1811,7 +2027,7 @@ function _renderCapAll() {
 
   // Фильтрация
   const filtered = _capFilterCenter
-    ? centers.filter(c => c.center_id === _capFilterCenter)
+    ? centers.filter((c) => c.center_id === _capFilterCenter)
     : centers;
   const showNoCenter = !_capFilterCenter;
 
@@ -1824,12 +2040,12 @@ function _renderCapAll() {
 }
 
 function _renderCapKpi(centers, noCenterDepts) {
-  const allDepts = centers.flatMap(c => c.departments).concat(noCenterDepts);
+  const allDepts = centers.flatMap((c) => c.departments).concat(noCenterDepts);
   const totalHead = allDepts.reduce((s, d) => s + d.headcount, 0);
   const totalCap = allDepts.reduce((s, d) => s + d.capacity_hours, 0);
   const totalDem = allDepts.reduce((s, d) => s + d.demand_hours, 0);
-  const avgPct = totalCap > 0 ? (totalDem / totalCap * 100) : 0;
-  const overloaded = allDepts.filter(d => d.level === 'overload').length;
+  const avgPct = totalCap > 0 ? (totalDem / totalCap) * 100 : 0;
+  const overloaded = allDepts.filter((d) => d.level === 'overload').length;
   const lvl = avgPct < 60 ? 'low' : avgPct < 80 ? 'normal' : avgPct <= 100 ? 'high' : 'overload';
 
   document.getElementById('capKpiRow').innerHTML = `
@@ -1849,25 +2065,45 @@ function _capacityBar(d) {
   </div>`;
 }
 
-const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTH_NAMES = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+];
 
 function _deptRows(departments) {
-  return departments.map(d => `<tr class="cap-dept-row" onclick="showDeptDrill(${d.department_id})" style="cursor:pointer;" title="Помесячная детализация">
+  return departments
+    .map(
+      (
+        d,
+      ) => `<tr class="cap-dept-row" onclick="showDeptDrill(${d.department_id})" style="cursor:pointer;" title="Помесячная детализация">
     <td>${escapeHtml(d.department_name)}</td>
     <td>${d.headcount}</td>
     <td>${d.capacity_hours.toLocaleString('ru-RU')}</td>
     <td>${d.demand_hours.toLocaleString('ru-RU')}</td>
     <td>${_capacityBar(d)}</td>
     <td>${levelLabel(d.level)}</td>
-  </tr>`).join('');
+  </tr>`,
+    )
+    .join('');
 }
 
 let _drillChart = null;
 
 function showDeptDrill(deptId) {
-  const allDepts = (_capData.centers || []).flatMap(c => c.departments)
+  const allDepts = (_capData.centers || [])
+    .flatMap((c) => c.departments)
     .concat(_capData.no_center_departments || []);
-  const dept = allDepts.find(d => d.department_id === deptId);
+  const dept = allDepts.find((d) => d.department_id === deptId);
   if (!dept || !dept.monthly) return;
 
   let modal = document.getElementById('capDrillModal');
@@ -1879,18 +2115,21 @@ function showDeptDrill(deptId) {
   }
 
   const balance = dept.capacity_hours - dept.demand_hours;
-  const balanceStr = balance >= 0
-    ? `<span style="color:var(--success)">+${balance.toLocaleString('ru-RU')} ч</span>`
-    : `<span style="color:var(--danger)">${balance.toLocaleString('ru-RU')} ч</span>`;
+  const balanceStr =
+    balance >= 0
+      ? `<span style="color:var(--success)">+${balance.toLocaleString('ru-RU')} ч</span>`
+      : `<span style="color:var(--danger)">${balance.toLocaleString('ru-RU')} ч</span>`;
 
-  const monthRows = dept.monthly.map(m => {
-    const balM = m.balance;
-    const balStr = balM >= 0
-      ? `<span style="color:var(--success)">+${balM.toLocaleString('ru-RU')}</span>`
-      : `<span style="color:var(--danger);font-weight:600">${balM.toLocaleString('ru-RU')}</span>`;
-    const rowClass = m.level === 'overload' ? 'cap-month-over' : '';
-    const barW = Math.min(m.loading_pct, 150);
-    return `<tr class="${rowClass}">
+  const monthRows = dept.monthly
+    .map((m) => {
+      const balM = m.balance;
+      const balStr =
+        balM >= 0
+          ? `<span style="color:var(--success)">+${balM.toLocaleString('ru-RU')}</span>`
+          : `<span style="color:var(--danger);font-weight:600">${balM.toLocaleString('ru-RU')}</span>`;
+      const rowClass = m.level === 'overload' ? 'cap-month-over' : '';
+      const barW = Math.min(m.loading_pct, 150);
+      return `<tr class="${rowClass}">
       <td style="text-align:left;font-weight:500;">${MONTH_NAMES[m.month - 1]}</td>
       <td>${m.capacity.toLocaleString('ru-RU')}</td>
       <td>${m.demand.toLocaleString('ru-RU')}</td>
@@ -1900,7 +2139,8 @@ function showDeptDrill(deptId) {
       </div></td>
       <td>${balStr}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   modal.innerHTML = `
     <div class="modal-dialog" style="max-width:950px;">
@@ -1968,14 +2208,17 @@ function _renderDrillChart() {
   const monthly = modal?._drillMonthly;
   if (!monthly) return;
 
-  if (_drillChart) { _drillChart.destroy(); _drillChart = null; }
+  if (_drillChart) {
+    _drillChart.destroy();
+    _drillChart = null;
+  }
 
   const ctx = document.getElementById('drillChartCanvas');
   if (!ctx) return;
 
-  const labels = monthly.map(m => MONTH_NAMES[m.month - 1].slice(0, 3));
-  const demands = monthly.map(m => m.demand);
-  const capacities = monthly.map(m => m.capacity);
+  const labels = monthly.map((m) => MONTH_NAMES[m.month - 1].slice(0, 3));
+  const demands = monthly.map((m) => m.demand);
+  const capacities = monthly.map((m) => m.capacity);
 
   _drillChart = new Chart(ctx, {
     type: 'bar',
@@ -2013,14 +2256,14 @@ function _renderDrillChart() {
         legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 13 } } },
         tooltip: {
           callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ru-RU')} ч`,
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ru-RU')} ч`,
           },
         },
       },
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { callback: v => v.toLocaleString('ru-RU') },
+          ticks: { callback: (v) => v.toLocaleString('ru-RU') },
           title: { display: true, text: 'Часы', font: { size: 12 } },
         },
         x: { grid: { display: false } },
@@ -2033,7 +2276,7 @@ function renderCapacity(centers, noCenterDepts) {
   const container = document.getElementById('capacityCardsContainer');
   let html = '';
 
-  centers.forEach(c => {
+  centers.forEach((c) => {
     const deptCount = c.departments.length;
     html += `<div class="cap-card">
       <div class="cap-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -2096,9 +2339,9 @@ function renderCapacity(centers, noCenterDepts) {
 
 function levelLabel(level) {
   const m = {
-    low:      '<span style="color:#9ca3af">Недозагрузка</span>',
-    normal:   '<span style="color:#16a34a">Норма</span>',
-    high:     '<span style="color:#ca8a04">Повышенная</span>',
+    low: '<span style="color:#9ca3af">Недозагрузка</span>',
+    normal: '<span style="color:#16a34a">Норма</span>',
+    high: '<span style="color:#ca8a04">Повышенная</span>',
     overload: '<span style="color:#dc2626;font-weight:600">Перегрузка</span>',
   };
   return m[level] || escapeHtml(level);
@@ -2134,9 +2377,12 @@ const SCENARIO_STATUS_LABELS = {
 };
 
 function _scenarioStatusBadge(status) {
-  const cls = status === 'active' ? 'status--active'
-    : status === 'archived' ? 'status--closed'
-    : 'status--draft';
+  const cls =
+    status === 'active'
+      ? 'status--active'
+      : status === 'archived'
+        ? 'status--closed'
+        : 'status--draft';
   return `<span class="scenario-status ${cls}">${SCENARIO_STATUS_LABELS[status] || status}</span>`;
 }
 
@@ -2147,10 +2393,12 @@ function loadScenarios() {
   const projId = document.getElementById('scenarioProject')?.value;
   if (projId) params.set('project_id', projId);
 
-  fetchJSON(`${API}/scenarios/?${params}`).then(data => {
-    _scenariosList = data.scenarios || [];
-    renderScenarioList();
-  }).catch(e => showToast(e.error || 'Ошибка загрузки сценариев', 'danger'));
+  fetchJSON(`${API}/scenarios/?${params}`)
+    .then((data) => {
+      _scenariosList = data.scenarios || [];
+      renderScenarioList();
+    })
+    .catch((e) => showToast(e.error || 'Ошибка загрузки сценариев', 'danger'));
 }
 
 function renderScenarioList() {
@@ -2159,16 +2407,19 @@ function renderScenarioList() {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нет сценариев</td></tr>';
     return;
   }
-  tbody.innerHTML = _scenariosList.map(s => {
-    const projName = s.project_id
-      ? (projectsList.find(p => p.id === s.project_id)?.name_short || projectsList.find(p => p.id === s.project_id)?.name_full || '—')
-      : '—';
-    const updated = s.updated_at ? s.updated_at.substring(0, 10) : '';
-    const actions = IS_WRITER
-      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openScenarioEdit(${s.id})" title="Редактировать"><i class="fas fa-pen"></i></button>
+  tbody.innerHTML = _scenariosList
+    .map((s) => {
+      const projName = s.project_id
+        ? projectsList.find((p) => p.id === s.project_id)?.name_short ||
+          projectsList.find((p) => p.id === s.project_id)?.name_full ||
+          '—'
+        : '—';
+      const updated = s.updated_at ? s.updated_at.substring(0, 10) : '';
+      const actions = IS_WRITER
+        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openScenarioEdit(${s.id})" title="Редактировать"><i class="fas fa-pen"></i></button>
          <button class="btn btn-ghost btn-sm btn-danger-text" onclick="event.stopPropagation(); deleteScenario(${s.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
-    return `<tr style="cursor:pointer;" onclick="openScenarioDetail(${s.id})">
+        : '';
+      return `<tr style="cursor:pointer;" onclick="openScenarioDetail(${s.id})">
       <td style="text-align:left; font-weight:600;">${escapeHtml(s.name)}</td>
       <td>${escapeHtml(projName)}</td>
       <td>${_scenarioStatusBadge(s.status)}</td>
@@ -2176,7 +2427,8 @@ function renderScenarioList() {
       <td>${updated}</td>
       <td>${actions}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function openScenarioCreate() {
@@ -2189,7 +2441,7 @@ function openScenarioCreate() {
 }
 
 function openScenarioEdit(id) {
-  const s = _scenariosList.find(x => x.id === id);
+  const s = _scenariosList.find((x) => x.id === id);
   if (!s) return;
   document.getElementById('scenarioModalTitle').textContent = 'Редактировать сценарий';
   document.getElementById('scenarioEditId').value = id;
@@ -2202,16 +2454,23 @@ function openScenarioEdit(id) {
 
 function _fillScenarioProjectSelect(selectedId) {
   const sel = document.getElementById('scenarioProjectSelect');
-  sel.innerHTML = '<option value="">— без проекта —</option>' +
-    projectsList.map(p =>
-      `<option value="${p.id}"${String(p.id) === String(selectedId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`
-    ).join('');
+  sel.innerHTML =
+    '<option value="">— без проекта —</option>' +
+    projectsList
+      .map(
+        (p) =>
+          `<option value="${p.id}"${String(p.id) === String(selectedId) ? ' selected' : ''}>${escapeHtml(p.name_short || p.name_full)}</option>`,
+      )
+      .join('');
 }
 
 function saveScenario() {
   const id = document.getElementById('scenarioEditId').value;
   const name = document.getElementById('scenarioName').value.trim();
-  if (!name) { showToast('Укажите название', 'warning'); return; }
+  if (!name) {
+    showToast('Укажите название', 'warning');
+    return;
+  }
 
   const body = { name };
   const projVal = document.getElementById('scenarioProjectSelect').value;
@@ -2221,28 +2480,34 @@ function saveScenario() {
   const url = id ? `${API}/scenarios/${id}/` : `${API}/scenarios/`;
   const method = id ? 'PUT' : 'POST';
 
-  fetchJSON(url, { method, body: JSON.stringify(body) }).then(() => {
-    closeModal('scenarioModal');
-    loadScenarios();
-    showToast(id ? 'Сценарий обновлён' : 'Сценарий создан', 'success');
-  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+  fetchJSON(url, { method, body: JSON.stringify(body) })
+    .then(() => {
+      closeModal('scenarioModal');
+      loadScenarios();
+      showToast(id ? 'Сценарий обновлён' : 'Сценарий создан', 'success');
+    })
+    .catch((e) => showToast(e.error || 'Ошибка', 'danger'));
 }
 
 function deleteScenario(id) {
   if (!confirm('Удалить сценарий?')) return;
-  fetchJSON(`${API}/scenarios/${id}/`, { method: 'DELETE' }).then(() => {
-    loadScenarios();
-    showToast('Сценарий удалён', 'success');
-  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+  fetchJSON(`${API}/scenarios/${id}/`, { method: 'DELETE' })
+    .then(() => {
+      loadScenarios();
+      showToast('Сценарий удалён', 'success');
+    })
+    .catch((e) => showToast(e.error || 'Ошибка', 'danger'));
 }
 
 function openScenarioDetail(id) {
-  fetchJSON(`${API}/scenarios/${id}/`).then(data => {
-    _currentScenario = data.scenario;
-    renderScenarioDetail();
-    document.getElementById('scenarioListView').style.display = 'none';
-    document.getElementById('scenarioDetailView').style.display = '';
-  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+  fetchJSON(`${API}/scenarios/${id}/`)
+    .then((data) => {
+      _currentScenario = data.scenario;
+      renderScenarioDetail();
+      document.getElementById('scenarioListView').style.display = 'none';
+      document.getElementById('scenarioDetailView').style.display = '';
+    })
+    .catch((e) => showToast(e.error || 'Ошибка', 'danger'));
 }
 
 function closeScenarioDetail() {
@@ -2259,7 +2524,9 @@ function renderScenarioDetail() {
   document.getElementById('scenarioDetailStatus').innerHTML = _scenarioStatusBadge(s.status);
 
   const projName = s.project_id
-    ? (projectsList.find(p => p.id === s.project_id)?.name_short || projectsList.find(p => p.id === s.project_id)?.name_full || '—')
+    ? projectsList.find((p) => p.id === s.project_id)?.name_short ||
+      projectsList.find((p) => p.id === s.project_id)?.name_full ||
+      '—'
     : '—';
 
   document.getElementById('scenarioDetailMeta').innerHTML = `
@@ -2272,16 +2539,18 @@ function renderScenarioDetail() {
   const entries = s.entries || [];
   const tbody = document.getElementById('scenarioEntriesBody');
   if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нет записей. Добавьте работы для моделирования.</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center text-muted">Нет записей. Добавьте работы для моделирования.</td></tr>';
     return;
   }
-  tbody.innerHTML = entries.map(e => {
-    const d = e.data || {};
-    const name = d.name || (e.work_id ? `Работа #${e.work_id}` : '(без названия)');
-    const deleteBtn = IS_WRITER
-      ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteScenarioEntry(${s.id}, ${e.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
-      : '';
-    return `<tr>
+  tbody.innerHTML = entries
+    .map((e) => {
+      const d = e.data || {};
+      const name = d.name || (e.work_id ? `Работа #${e.work_id}` : '(без названия)');
+      const deleteBtn = IS_WRITER
+        ? `<button class="btn btn-ghost btn-sm btn-danger-text" onclick="deleteScenarioEntry(${s.id}, ${e.id})" title="Удалить"><i class="fas fa-trash"></i></button>`
+        : '';
+      return `<tr>
       <td style="text-align:left;">${escapeHtml(name)}</td>
       <td>${escapeHtml(d.department || '—')}</td>
       <td>${d.labor != null ? d.labor : '—'}</td>
@@ -2289,7 +2558,8 @@ function renderScenarioDetail() {
       <td>${d.date_end || '—'}</td>
       <td>${deleteBtn}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function openScenarioEntryCreate() {
@@ -2304,7 +2574,10 @@ function openScenarioEntryCreate() {
 function saveScenarioEntry() {
   if (!_currentScenario) return;
   const name = document.getElementById('entryWorkName').value.trim();
-  if (!name) { showToast('Укажите название работы', 'warning'); return; }
+  if (!name) {
+    showToast('Укажите название работы', 'warning');
+    return;
+  }
 
   const data = { name };
   const dept = document.getElementById('entryDept').value.trim();
@@ -2319,11 +2592,13 @@ function saveScenarioEntry() {
   fetchJSON(`${API}/scenarios/${_currentScenario.id}/entries/`, {
     method: 'POST',
     body: JSON.stringify({ data }),
-  }).then(() => {
-    closeModal('scenarioEntryModal');
-    openScenarioDetail(_currentScenario.id);
-    showToast('Запись добавлена', 'success');
-  }).catch(e => showToast(e.error || 'Ошибка', 'danger'));
+  })
+    .then(() => {
+      closeModal('scenarioEntryModal');
+      openScenarioDetail(_currentScenario.id);
+      showToast('Запись добавлена', 'success');
+    })
+    .catch((e) => showToast(e.error || 'Ошибка', 'danger'));
 }
 
 function deleteScenarioEntry(scenarioId, entryId) {

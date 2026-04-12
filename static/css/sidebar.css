@@ -5,242 +5,536 @@
 
 /* ── Основной контейнер сайдбара ──────────────────────────────────── */
 .sidebar {
-  position:fixed; top:0; left:0; width:260px; height:100vh;
-  background:var(--nav-bg); border-right:1px solid var(--nav-border);
-  display:flex; flex-direction:column; z-index:100; transition:width 0.25s ease, transform 0.3s ease;
-  font-size:14px; font-family:var(--font);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--nav-bg);
+  border-right: 1px solid var(--nav-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition:
+    width 0.25s ease,
+    transform 0.3s ease;
+  font-size: 14px;
+  font-family: var(--font);
 }
-.sidebar.collapsed { width:60px; overflow:visible; }
+.sidebar.collapsed {
+  width: 60px;
+  overflow: visible;
+}
 
 /* ── Icon-only collapsed mode ──────────────────────────────────────── */
 .sidebar.collapsed .sidebar-header {
-  padding:12px 0;
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 .sidebar.collapsed .sidebar-header .logo-text,
-.sidebar.collapsed .sidebar-header span[style] { display:none !important; }
-.sidebar.collapsed .ms-brand-text { display:none; }
+.sidebar.collapsed .sidebar-header span[style] {
+  display: none !important;
+}
+.sidebar.collapsed .ms-brand-text {
+  display: none;
+}
 /* Прячем SVG-призму в collapsed — не влезает в 60px */
-.sidebar.collapsed .ms-logo .prism-svg { display:none; }
+.sidebar.collapsed .ms-logo .prism-svg {
+  display: none;
+}
 .sidebar.collapsed .ms-logo {
-  justify-content:center;
-  width:60px;
-  gap:0;
+  justify-content: center;
+  width: 60px;
+  gap: 0;
 }
 /* Показываем компактную замену: буква «MS» */
 .sidebar.collapsed .ms-logo::before {
-  content:'П';
-  display:flex; align-items:center; justify-content:center;
-  width:36px; height:36px;
-  background:var(--accent-gradient, var(--accent));
-  border-radius:var(--radius-md); color:#fff;
-  font-weight:800; font-size:13px; letter-spacing:-0.5px;
-  box-shadow:0 2px 8px rgba(37,99,235,0.3);
-  flex-shrink:0;
+  content: 'П';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--accent-gradient, var(--accent));
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  flex-shrink: 0;
 }
-.sidebar:not(.collapsed) .ms-logo::before { display:none; }
-.sidebar.collapsed .nav-section-title { display:none; }
+.sidebar:not(.collapsed) .ms-logo::before {
+  display: none;
+}
+.sidebar.collapsed .nav-section-title {
+  display: none;
+}
 .sidebar.collapsed .nav-item span,
-.sidebar.collapsed .nav-section-btn span { display:none; }
-.sidebar.collapsed .nav-chevron { display:none; }
-.sidebar.collapsed .nav-item { justify-content:center; padding:12px 0; position:relative; border-left:none; border-image:none; }
-.sidebar.collapsed .nav-section-btn { justify-content:center; padding:12px 0; border-left:none; border-image:none; }
+.sidebar.collapsed .nav-section-btn span {
+  display: none;
+}
+.sidebar.collapsed .nav-chevron {
+  display: none;
+}
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+  position: relative;
+  border-left: none;
+  border-image: none;
+}
+.sidebar.collapsed .nav-section-btn {
+  justify-content: center;
+  padding: 12px 0;
+  border-left: none;
+  border-image: none;
+}
 .sidebar.collapsed .nav-item i,
-.sidebar.collapsed .nav-section-btn i { margin:0; font-size:17px; }
+.sidebar.collapsed .nav-section-btn i {
+  margin: 0;
+  font-size: 17px;
+}
 
 /* Активный пункт в collapsed — яркая иконка + подложка вместо border-left */
 .sidebar.collapsed .nav-item.active,
 .sidebar.collapsed .nav-section-btn.active {
-  background:transparent; border-left:none; border-image:none;
+  background: transparent;
+  border-left: none;
+  border-image: none;
 }
 .sidebar.collapsed .nav-item.active i,
 .sidebar.collapsed .nav-section-btn.active i {
-  color:#fff;
-  background:linear-gradient(135deg, #2563eb, #7c3aed);
-  width:38px; height:38px;
-  display:flex; align-items:center; justify-content:center;
-  border-radius:var(--radius-lg);
-  box-shadow: 0 2px 8px rgba(37,99,235,0.4), 0 0 16px rgba(124,58,237,0.15);
-  font-size:17px;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 2px 8px rgba(37, 99, 235, 0.4),
+    0 0 16px rgba(124, 58, 237, 0.15);
+  font-size: 17px;
   transition: all 0.2s ease;
 }
-.sidebar.collapsed .nav-dropdown-menu { display:none !important; }
-.sidebar.collapsed .sidebar-footer { padding:8px 0; }
-.sidebar.collapsed .user-card { flex-direction:column; gap:4px; padding:8px 4px; }
+.sidebar.collapsed .nav-dropdown-menu {
+  display: none !important;
+}
+.sidebar.collapsed .sidebar-footer {
+  padding: 8px 0;
+}
+.sidebar.collapsed .user-card {
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+}
 .sidebar.collapsed .user-info,
-.sidebar.collapsed .logout-btn span { display:none; }
-.sidebar.collapsed .user-avatar { margin:0 auto; }
+.sidebar.collapsed .logout-btn span {
+  display: none;
+}
+.sidebar.collapsed .user-avatar {
+  margin: 0 auto;
+}
 
 /* Tooltip on hover for collapsed items */
 .sidebar.collapsed .nav-item:hover::after,
 .sidebar.collapsed .nav-section-btn:hover::after {
   content: attr(title);
-  position:absolute; left:100%; top:50%; transform:translateY(-50%);
-  background:var(--nav-bg); color:#fff; padding:6px 12px; border-radius:var(--radius-sm);
-  font-size:13px; white-space:nowrap; z-index:1000;
-  box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none;
-  margin-left:8px;
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--nav-bg);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  margin-left: 8px;
 }
 
 /* Divider in collapsed mode */
-.sidebar.collapsed hr { margin:4px 8px; }
+.sidebar.collapsed hr {
+  margin: 4px 8px;
+}
 
 /* ── Шапка с логотипом ────────────────────────────────────────────── */
-.sidebar-header { padding:20px; border-bottom:1px solid var(--nav-border); }
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--nav-border);
+}
 .sidebar-logo {
-  display:flex; align-items:center; gap:12px;
-  font-size:18px; font-weight:700; color:#fff; text-decoration:none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
 }
 .sidebar-logo-icon {
-  width:36px; height:36px; background:var(--accent-gradient, var(--accent)); border-radius:var(--radius-md);
-  display:flex; align-items:center; justify-content:center; font-size:18px;
-  box-shadow:0 2px 8px rgba(37,99,235,0.3);
+  width: 36px;
+  height: 36px;
+  background: var(--accent-gradient, var(--accent));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 /* ── Зона навигации (прокручиваемая) ──────────────────────────────── */
 .sidebar-nav {
-  flex:1; padding:16px 12px; overflow-y:auto; scrollbar-gutter:stable;
-  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.15) transparent;
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
-.sidebar-nav::-webkit-scrollbar { width:6px; }
-.sidebar-nav::-webkit-scrollbar-track { background:transparent; }
-.sidebar-nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
-.sidebar-nav::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.3); }
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
 
 /* ── Секции и заголовки ───────────────────────────────────────────── */
-.nav-section { margin-bottom:24px; padding-top:12px; border-top:1px solid var(--nav-border); }
-.nav-section:first-child { border-top:none; padding-top:0; }
+.nav-section {
+  margin-bottom: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--nav-border);
+}
+.nav-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
 .nav-section-title {
-  font-size:11px; font-weight:600; color:var(--nav-text);
-  text-transform:uppercase; letter-spacing:.08em; padding:0 12px; margin-bottom:8px;
-  color:var(--nav-text2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--nav-text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 12px;
+  margin-bottom: 8px;
+  color: var(--nav-text2);
 }
 
 /* ── Пункт меню ───────────────────────────────────────────────────── */
 .nav-item {
-  display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:var(--radius-md);
-  color:var(--nav-text); text-decoration:none; font-size:14px; font-weight:500;
-  transition:all 0.15s ease; margin-bottom:2px; border-left:3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: var(--nav-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  margin-bottom: 2px;
+  border-left: 3px solid transparent;
 }
-.nav-item:hover { background:var(--nav-hover-bg); color:var(--nav-text2); }
+.nav-item:hover {
+  background: var(--nav-hover-bg);
+  color: var(--nav-text2);
+}
 .nav-item.active {
-  background:rgba(37,99,235,0.10); color:#fff;
-  border-left:3px solid var(--accent);
-  border-image:var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
-  transition:all 0.2s ease;
+  background: rgba(37, 99, 235, 0.1);
+  color: #fff;
+  border-left: 3px solid var(--accent);
+  border-image: var(--accent-gradient, linear-gradient(#2563eb, #7c3aed)) 1;
+  transition: all 0.2s ease;
 }
 
 /* ── Иконки пунктов ───────────────────────────────────────────────── */
 .nav-item i,
 .nav-section-btn i {
-  min-width:20px; width:20px; flex-shrink:0; text-align:center;
-  font-size:15px; opacity:0.7;
-  transition:opacity 0.15s ease, color 0.15s ease;
+  min-width: 20px;
+  width: 20px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 15px;
+  opacity: 0.7;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 .nav-item:hover i,
-.nav-section-btn:hover i { opacity:1; }
+.nav-section-btn:hover i {
+  opacity: 1;
+}
 .nav-item.active i,
 .nav-section-btn.active i {
-  opacity:1; color:var(--accent, #60a5fa);
-  filter:drop-shadow(0 0 4px rgba(96,165,250,0.4));
+  opacity: 1;
+  color: var(--accent, #60a5fa);
+  filter: drop-shadow(0 0 4px rgba(96, 165, 250, 0.4));
 }
 
 /* ── Пункт-заголовок секции ───────────────────────────────────────── */
-.nav-section-btn { font-size:13px; font-weight:600; color:var(--nav-text); }
-.nav-section-btn:hover { background:var(--nav-hover-bg); color:var(--nav-text2); }
+.nav-section-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nav-text);
+}
+.nav-section-btn:hover {
+  background: var(--nav-hover-bg);
+  color: var(--nav-text2);
+}
 .nav-section-btn.active {
-  background:rgba(37,99,235,0.10); color:#fff;
-  border-left:3px solid var(--accent);
-  border-image:var(--accent-gradient, linear-gradient(#2563eb,#7c3aed)) 1;
-  transition:all 0.2s ease;
+  background: rgba(37, 99, 235, 0.1);
+  color: #fff;
+  border-left: 3px solid var(--accent);
+  border-image: var(--accent-gradient, linear-gradient(#2563eb, #7c3aed)) 1;
+  transition: all 0.2s ease;
 }
 
 /* ── Кнопка-заглушка (не-админ, «Управление проектами») ─────────── */
 .nav-btn-disabled {
-  width:100%; text-align:left; background:none; cursor:pointer;
-  opacity:0.5;
+  width: 100%;
+  text-align: left;
+  background: none;
+  cursor: pointer;
+  opacity: 0.5;
 }
 
 /* ── Toast-уведомление сайдбара ────────────────────────────────── */
 .sidebar-toast {
-  position:fixed; z-index:500;
-  background:#1e293b; color:#e2e8f0; padding:8px 14px; border-radius:var(--radius-sm);
-  font-size:13px; font-family:var(--font); box-shadow:0 4px 12px rgba(0,0,0,0.3);
-  opacity:0; transition:opacity 0.2s; pointer-events:none; white-space:nowrap;
+  position: fixed;
+  z-index: 500;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
 }
-.sidebar-toast.show { opacity:1; transform:translateY(0); }
+.sidebar-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 /* ── Вложенный пункт (подраздел) ──────────────────────────────────── */
-.nav-subitem { padding-left:28px; font-size:13px; }
+.nav-subitem {
+  padding-left: 28px;
+  font-size: 13px;
+}
 
 /* ── Дропдауны ────────────────────────────────────────────────────── */
-.nav-dropdown { margin-bottom:4px; }
-.nav-dropdown-toggle {
-  width:100%; background:none; border:none; border-left:3px solid transparent;
-  cursor:pointer; font-family:var(--font); justify-content:flex-start;
+.nav-dropdown {
+  margin-bottom: 4px;
 }
-.nav-chevron { margin-left:auto !important; width:auto !important; min-width:auto !important; font-size:11px !important; transition:transform 0.2s; }
-.nav-dropdown-toggle.open .nav-chevron { transform:rotate(180deg); }
-.nav-dropdown-menu { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
-.nav-dropdown-menu.open { max-height:300px; }
+.nav-dropdown-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  font-family: var(--font);
+  justify-content: flex-start;
+}
+.nav-chevron {
+  margin-left: auto !important;
+  width: auto !important;
+  min-width: auto !important;
+  font-size: 11px !important;
+  transition: transform 0.2s;
+}
+.nav-dropdown-toggle.open .nav-chevron {
+  transform: rotate(180deg);
+}
+.nav-dropdown-menu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.nav-dropdown-menu.open {
+  max-height: 300px;
+}
 
 /* ── Подвал сайдбара (карточка пользователя) ──────────────────────── */
-.sidebar-footer { padding:16px; border-top:1px solid var(--nav-border); }
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--nav-border);
+}
 .user-card {
-  display:flex; align-items:center; gap:12px; padding:12px;
-  background:rgba(255,255,255,0.06); border-radius:var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
 }
 .user-avatar {
-  width:40px; height:40px; background:var(--accent-gradient, var(--accent)); border-radius:var(--radius-md);
-  display:flex; align-items:center; justify-content:center;
-  font-weight:600; font-size:16px; flex-shrink:0; color:#fff;
-  box-shadow:0 2px 8px rgba(37,99,235,0.25);
+  width: 40px;
+  height: 40px;
+  background: var(--accent-gradient, var(--accent));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
-.user-info { flex:1; min-width:0; }
-.user-name { font-weight:600; font-size:14px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.user-role { font-size:12px; color:var(--nav-text); }
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-role {
+  font-size: 12px;
+  color: var(--nav-text);
+}
 .logout-btn {
-  width:36px; height:36px; border:none; background:transparent;
-  color:var(--nav-text); border-radius:var(--radius-md); cursor:pointer; transition:all 0.15s;
-  display:flex; align-items:center; justify-content:center; text-decoration:none;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--nav-text);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
-.logout-btn:hover { background:rgba(var(--danger-rgb),0.15); color:#f87171; }
+.logout-btn:hover {
+  background: rgba(var(--danger-rgb), 0.15);
+  color: #f87171;
+}
 
 /* ── Кнопка сворачивания/разворачивания ───────────────────────────── */
 .sidebar-toggle {
-  width:36px; height:36px; border:none; background:rgba(255,255,255,0.08);
-  color:var(--nav-text2); border-radius:var(--radius-md); cursor:pointer; font-size:16px;
-  display:flex; align-items:center; justify-content:center; transition:background 0.15s;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--nav-text2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
-.sidebar-toggle:hover { background:rgba(255,255,255,0.14); color:#fff; }
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
 
 /* ── Оверлей за сайдбаром (мобильные) ─────────────────────────────── */
-.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99; }
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 99;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Логотип ПРИЗМА — 3D-призма (SVG)
    ══════════════════════════════════════════════════════════════════════ */
-.ms-logo { display:flex; align-items:center; gap:12px; }
-.ms-logo-lg { flex-direction:column; gap:16px; }
+.ms-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ms-logo-lg {
+  flex-direction: column;
+  gap: 16px;
+}
 
 /* Текст бренда */
-.ms-brand-text { line-height:1.2; }
-.ms-brand-title { font-weight:600; letter-spacing:2px; color:#e8e6dd; }
-.ms-ru { color:#5dcaa5; font-weight:700; }
-.ms-brand-sub { font-size:7px; color:#666; letter-spacing:3px; margin-top:2px; }
+.ms-brand-text {
+  line-height: 1.2;
+}
+.ms-brand-title {
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #e8e6dd;
+}
+.ms-ru {
+  color: #5dcaa5;
+  font-weight: 700;
+}
+.ms-brand-sub {
+  font-size: 7px;
+  color: #666;
+  letter-spacing: 3px;
+  margin-top: 2px;
+}
 
 /* Размер: маленький (сайдбар) */
-.ms-logo-sm .ms-brand-title { font-size:11px; letter-spacing:1.5px; }
-.ms-logo-sm .ms-prizm-name { font-size:24px; letter-spacing:5px; font-weight:700; }
-.ms-logo-sm .ms-brand-sub { display:none; }
+.ms-logo-sm .ms-brand-title {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+.ms-logo-sm .ms-prizm-name {
+  font-size: 24px;
+  letter-spacing: 5px;
+  font-weight: 700;
+}
+.ms-logo-sm .ms-brand-sub {
+  display: none;
+}
 
 /* Размер: средний */
-.ms-logo-md .ms-brand-title { font-size:16px; }
-.ms-logo-md .ms-brand-sub { font-size:7px; }
+.ms-logo-md .ms-brand-title {
+  font-size: 16px;
+}
+.ms-logo-md .ms-brand-sub {
+  font-size: 7px;
+}
 
 /* Размер: большой (страница логина) */
-.ms-logo-lg .ms-brand-title { font-size:30px; letter-spacing:4px; }
-.ms-logo-lg .ms-prizm-name-lg { font-size:42px; letter-spacing:8px; font-weight:800; }
-.ms-logo-lg .ms-brand-sub { font-size:12px; letter-spacing:4px; margin-top:8px; opacity:0.6; }
-.ms-logo-lg .ms-brand-text { text-align:center; }
+.ms-logo-lg .ms-brand-title {
+  font-size: 30px;
+  letter-spacing: 4px;
+}
+.ms-logo-lg .ms-prizm-name-lg {
+  font-size: 42px;
+  letter-spacing: 8px;
+  font-weight: 800;
+}
+.ms-logo-lg .ms-brand-sub {
+  font-size: 12px;
+  letter-spacing: 4px;
+  margin-top: 8px;
+  opacity: 0.6;
+}
+.ms-logo-lg .ms-brand-text {
+  text-align: center;
+}

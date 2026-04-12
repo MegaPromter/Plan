@@ -8,22 +8,31 @@
   position: relative;
   z-index: 1;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md, 0 1px 6px rgba(0,0,0,0.07));
+  box-shadow: var(--shadow-md, 0 1px 6px rgba(0, 0, 0, 0.07));
   border: 1px solid var(--border2);
   scrollbar-width: thin;
   scrollbar-color: var(--border2) transparent;
 }
 
 /* Скроллбар таблицы — заметнее при hover */
-.data-table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
-.data-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.data-table-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.data-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
 .data-table-wrap::-webkit-scrollbar-thumb {
   background: var(--border2);
   border-radius: var(--radius-xs);
   transition: background 0.2s;
 }
-.data-table-wrap:hover::-webkit-scrollbar-thumb { background: var(--muted); }
-.data-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+.data-table-wrap:hover::-webkit-scrollbar-thumb {
+  background: var(--muted);
+}
+.data-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--text2);
+}
 
 /* ── Общая таблица ───────────────────────────────────────────────── */
 .data-table {
@@ -35,7 +44,9 @@
 }
 
 /* Заголовки */
-.data-table thead { box-shadow: var(--shadow-sticky, 0 4px 12px rgba(0,0,0,0.08)); }
+.data-table thead {
+  box-shadow: var(--shadow-sticky, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
 .data-table thead th {
   position: sticky;
   top: 0;
@@ -64,9 +75,18 @@
 }
 
 /* Чередование строк */
-.data-table tbody tr:nth-child(even) { background: var(--row-even); }
-.data-table tbody tr:nth-child(odd)  { background: var(--row-odd); }
-.data-table tbody tr { transition: background 0.12s, box-shadow 0.12s; position:relative; }
+.data-table tbody tr:nth-child(even) {
+  background: var(--row-even);
+}
+.data-table tbody tr:nth-child(odd) {
+  background: var(--row-odd);
+}
+.data-table tbody tr {
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
+  position: relative;
+}
 .data-table tbody tr:hover {
   background: var(--row-hover) !important;
   box-shadow: inset 3px 0 0 var(--accent);
@@ -89,7 +109,10 @@
 }
 
 /* Числовые ячейки */
-.cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+.cell-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Строка фильтров */
 .data-table .filter-row th {
@@ -99,7 +122,7 @@
 }
 
 /* Инпуты/селекты внутри filter-row */
-.data-table .filter-row input[type="text"],
+.data-table .filter-row input[type='text'],
 .data-table .filter-row select {
   width: 100%;
   padding: 3px 5px;
@@ -114,16 +137,28 @@
 
 /* Последняя колонка — без правой рамки */
 .data-table th:last-child,
-.data-table td:last-child { border-right: none; }
+.data-table td:last-child {
+  border-right: none;
+}
 
 /* ── Единообразие шрифтов внутри таблиц ──────────────────────────── */
 /* КОРНЕВОЕ ПРАВИЛО: ВСЕ input/select/textarea/button внутри ЛЮБОЙ
    ячейки таблицы наследуют font от td. Гарантирует единый шрифт
    во всех таблицах приложения (ПП, СП, ЖИ, модалки и т.д.). */
-td input, td input[type], td input[type="text"], td input[type="date"],
-td input[type="number"], td input[type="email"], td input[type="url"],
-td select, td textarea, td button,
-th input, th input[type], th select, th button {
+td input,
+td input[type],
+td input[type='text'],
+td input[type='date'],
+td input[type='number'],
+td input[type='email'],
+td input[type='url'],
+td select,
+td textarea,
+td button,
+th input,
+th input[type],
+th select,
+th button {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
@@ -148,12 +183,12 @@ th input, th input[type], th select, th button {
   box-sizing: border-box;
 }
 /* Date input — достаточная ширина чтобы стрелки навигации не обрезались */
-input[type="date"].cell-edit {
+input[type='date'].cell-edit {
   overflow: visible;
   min-width: 130px;
 }
 .cell-edit:focus {
-  background: rgba(59,130,246,0.06);
+  background: rgba(59, 130, 246, 0.06);
   border-radius: 3px;
 }
 .cell-edit:focus-visible {
@@ -165,7 +200,9 @@ select.cell-edit {
   color: var(--text) !important;
   cursor: pointer;
 }
-select.cell-edit:focus { background: rgba(59,130,246,0.06) !important; }
+select.cell-edit:focus {
+  background: rgba(59, 130, 246, 0.06) !important;
+}
 select.cell-edit option {
   background-color: var(--surface2) !important;
   color: var(--text) !important;
@@ -178,33 +215,65 @@ select.cell-edit option {
   animation: pulse-error 1s ease-in-out 2;
 }
 @keyframes pulse-error {
-  0%,100% { outline-color: var(--danger); }
-  50% { outline-color: rgba(var(--danger-rgb), 0.4); }
+  0%,
+  100% {
+    outline-color: var(--danger);
+  }
+  50% {
+    outline-color: rgba(var(--danger-rgb), 0.4);
+  }
 }
 
 /* ── Flash-подсветка при сохранении ──────────────────────────────── */
 @keyframes cellFlashOk {
-  0%   { background-color: rgba(var(--success-rgb), 0.25); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(var(--success-rgb), 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 @keyframes cellFlashError {
-  0%, 30% { background-color: rgba(var(--danger-rgb), 0.20); }
-  100%    { background-color: transparent; }
+  0%,
+  30% {
+    background-color: rgba(var(--danger-rgb), 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
-.cell-flash-ok    { animation: cellFlashOk 0.8s ease-out; }
-.cell-flash-error { animation: cellFlashError 1s ease-out; }
+.cell-flash-ok {
+  animation: cellFlashOk 0.8s ease-out;
+}
+.cell-flash-error {
+  animation: cellFlashError 1s ease-out;
+}
 
 /* ── Анимация появления строки ───────────────────────────────────── */
 @keyframes rowSlideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.row-enter { animation: rowSlideIn 0.3s ease-out; }
+.row-enter {
+  animation: rowSlideIn 0.3s ease-out;
+}
 
 /* ── Анимация удаления строки ────────────────────────────────────── */
 @keyframes rowFadeOut {
-  from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(30px); }
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
 }
 .row-exit {
   animation: rowFadeOut 0.3s ease-in forwards;
@@ -212,8 +281,12 @@ select.cell-edit option {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cell-flash-ok, .cell-flash-error,
-  .row-enter, .row-exit { animation: none !important; }
+  .cell-flash-ok,
+  .cell-flash-error,
+  .row-enter,
+  .row-exit {
+    animation: none !important;
+  }
 }
 
 /* ── Кастомный dropdown (замена нативного select) ───────────────── */
@@ -242,7 +315,9 @@ select.cell-edit option {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
   box-sizing: border-box;
 }
 .cd-trigger:hover {
@@ -291,7 +366,9 @@ select.cell-edit option {
   padding: 4px;
   overscroll-behavior: contain;
 }
-.cd-wrap.open .cd-menu { display: block; }
+.cd-wrap.open .cd-menu {
+  display: block;
+}
 
 /* Поле поиска */
 .cd-search {
@@ -312,7 +389,9 @@ select.cell-edit option {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
-.cd-search::placeholder { color: var(--muted); }
+.cd-search::placeholder {
+  color: var(--muted);
+}
 
 /* Пункт меню */
 .cd-item {
@@ -359,77 +438,114 @@ select.cell-edit option {
 }
 
 /* Скроллбар в списке */
-.cd-menu::-webkit-scrollbar { width: 5px; }
-.cd-menu::-webkit-scrollbar-track { background: transparent; }
+.cd-menu::-webkit-scrollbar {
+  width: 5px;
+}
+.cd-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
 .cd-menu::-webkit-scrollbar-thumb {
   background: var(--border2);
   border-radius: 3px;
 }
-.cd-menu::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.cd-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
 
 /* Анимация появления */
 @keyframes cdSlideIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.cd-menu { animation: cdSlideIn 0.15s ease-out; }
+.cd-menu {
+  animation: cdSlideIn 0.15s ease-out;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .cd-menu { animation: none !important; }
+  .cd-menu {
+    animation: none !important;
+  }
 }
 
 /* ── Table Action Buttons ────────────────────────────────────────── */
 /* Общее правило: все кнопки действий в ячейках таблиц получают
    увеличенную зону клика (32×32), flex-центрирование, скруглённые углы,
    плавный hover и тултип через нативный title.                      */
-.data-table td .btn-icon,   .pp-table td .btn-icon,
-.data-table td .btn-action, .pp-table td .btn-action,
-.data-table td .ji-btn,     .pp-table td .ji-btn,
-.data-table td .r-save,     .pp-table td .r-save,
-.data-table td .r-del,      .pp-table td .r-del,
-.data-table td .btn-delete, .pp-table td .btn-delete,
-.data-table td button[title], .pp-table td button[title] {
+.data-table td .btn-icon,
+.pp-table td .btn-icon,
+.data-table td .btn-action,
+.pp-table td .btn-action,
+.data-table td .ji-btn,
+.pp-table td .ji-btn,
+.data-table td .r-save,
+.pp-table td .r-save,
+.data-table td .r-del,
+.pp-table td .r-del,
+.data-table td .btn-delete,
+.pp-table td .btn-delete,
+.data-table td button[title],
+.pp-table td button[title] {
   min-width: 32px;
   min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
   position: relative;
 }
 /* Hover — акцентная подсветка */
-.data-table td .btn-icon:hover,   .pp-table td .btn-icon:hover,
-.data-table td .btn-action:hover, .pp-table td .btn-action:hover,
-.data-table td .ji-btn:hover,     .pp-table td .ji-btn:hover,
-.data-table td .r-save:hover,     .pp-table td .r-save:hover,
-.data-table td button[title]:hover, .pp-table td button[title]:hover {
-  background: rgba(var(--accent-rgb, 37,99,235), 0.10);
+.data-table td .btn-icon:hover,
+.pp-table td .btn-icon:hover,
+.data-table td .btn-action:hover,
+.pp-table td .btn-action:hover,
+.data-table td .ji-btn:hover,
+.pp-table td .ji-btn:hover,
+.data-table td .r-save:hover,
+.pp-table td .r-save:hover,
+.data-table td button[title]:hover,
+.pp-table td button[title]:hover {
+  background: rgba(var(--accent-rgb, 37, 99, 235), 0.1);
   color: var(--accent);
   transform: scale(1.08);
 }
 /* Delete / danger button hover — красный */
-.data-table td .btn-icon.btn-danger:hover, .pp-table td .btn-icon.btn-danger:hover,
-.data-table td .btn-delete:hover,          .pp-table td .btn-delete:hover,
-.data-table td .r-del:hover,               .pp-table td .r-del:hover,
-.data-table td .ji-btn-del:hover,          .pp-table td .ji-btn-del:hover,
-.data-table td button[title*="Удалить"]:hover, .pp-table td button[title*="Удалить"]:hover,
-.data-table td button[title*="удалить"]:hover, .pp-table td button[title*="удалить"]:hover {
-  background: rgba(var(--danger-rgb, 220,38,38), 0.12);
+.data-table td .btn-icon.btn-danger:hover,
+.pp-table td .btn-icon.btn-danger:hover,
+.data-table td .btn-delete:hover,
+.pp-table td .btn-delete:hover,
+.data-table td .r-del:hover,
+.pp-table td .r-del:hover,
+.data-table td .ji-btn-del:hover,
+.pp-table td .ji-btn-del:hover,
+.data-table td button[title*='Удалить']:hover,
+.pp-table td button[title*='Удалить']:hover,
+.data-table td button[title*='удалить']:hover,
+.pp-table td button[title*='удалить']:hover {
+  background: rgba(var(--danger-rgb, 220, 38, 38), 0.12);
   color: var(--danger, #ef4444);
   transform: scale(1.08);
 }
 /* Кнопка погашения (ЖИ) — жёлтый hover */
 .data-table td .ji-btn-close:hover,
 .pp-table td .ji-btn-close:hover {
-  background: rgba(234,179,8, 0.12);
+  background: rgba(234, 179, 8, 0.12);
   color: #92400e;
   transform: scale(1.08);
 }
 /* Кнопка сохранения — зелёный hover */
 .data-table td .r-save:hover,
 .pp-table td .r-save:hover {
-  background: rgba(var(--success-rgb, 34,197,94), 0.15);
+  background: rgba(var(--success-rgb, 34, 197, 94), 0.15);
   color: #fff;
   transform: scale(1.08);
 }
@@ -442,7 +558,10 @@ select.cell-edit option {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 .pp-card-btn:hover {
   transform: scale(1.08);
@@ -451,15 +570,22 @@ select.cell-edit option {
 /* ── Resize-ручки колонок ────────────────────────────────────────── */
 th .resize-handle {
   position: absolute;
-  right: 0; top: 0; bottom: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   width: 5px;
   cursor: col-resize;
   background: transparent;
   z-index: 20;
 }
 th .resize-handle:hover,
-th .resize-handle.resizing { background: var(--accent); opacity: 0.5; }
-th.resizing { background: rgba(59,130,246,0.2) !important; }
+th .resize-handle.resizing {
+  background: var(--accent);
+  opacity: 0.5;
+}
+th.resizing {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
 
 /* ── Кнопка удаления в строке ────────────────────────────────────── */
 .btn-delete {
@@ -473,8 +599,13 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   transition: all 0.15s;
   opacity: 0.55;
 }
-.data-table tbody tr:hover .btn-delete { opacity: 1; }
-.btn-delete:hover { background: rgba(239,68,68,0.12); opacity: 1; }
+.data-table tbody tr:hover .btn-delete {
+  opacity: 1;
+}
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.12);
+  opacity: 1;
+}
 
 /* ── Scroll-спиннер (подгрузка батчей) ───────────────────────────── */
 .scroll-spinner {
@@ -486,43 +617,89 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 .scroll-spinner i {
   animation: spin 0.7s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    SKELETON-загрузка
    ══════════════════════════════════════════════════════════════════════ */
 @keyframes shimmer {
-  0%   { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
+  0% {
+    background-position: -600px 0;
+  }
+  100% {
+    background-position: 600px 0;
+  }
 }
 
 .skeleton {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--border) 25%,
     color-mix(in srgb, var(--border), var(--surface) 50%) 37%,
-    var(--border) 63%);
+    var(--border) 63%
+  );
   background-size: 1200px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   border-radius: var(--radius-sm);
   display: inline-block;
 }
 
-.sk-text     { height: 14px; width: 100%; }
-.sk-text-sm  { height: 14px; width: 55%; }
-.sk-text-md  { height: 14px; width: 75%; }
-.sk-text-num { height: 14px; width: 36px; margin-left: auto; }
-.sk-badge    { height: 22px; width: 76px; border-radius: var(--radius-lg); }
-.sk-id       { height: 14px; width: 20px; }
+.sk-text {
+  height: 14px;
+  width: 100%;
+}
+.sk-text-sm {
+  height: 14px;
+  width: 55%;
+}
+.sk-text-md {
+  height: 14px;
+  width: 75%;
+}
+.sk-text-num {
+  height: 14px;
+  width: 36px;
+  margin-left: auto;
+}
+.sk-badge {
+  height: 22px;
+  width: 76px;
+  border-radius: var(--radius-lg);
+}
+.sk-id {
+  height: 14px;
+  width: 20px;
+}
 
 /* Волна — задержка для каждой строки */
-.data-table tbody tr:nth-child(1) .skeleton { animation-delay: 0s; }
-.data-table tbody tr:nth-child(2) .skeleton { animation-delay: 0.08s; }
-.data-table tbody tr:nth-child(3) .skeleton { animation-delay: 0.16s; }
-.data-table tbody tr:nth-child(4) .skeleton { animation-delay: 0.24s; }
-.data-table tbody tr:nth-child(5) .skeleton { animation-delay: 0.32s; }
-.data-table tbody tr:nth-child(6) .skeleton { animation-delay: 0.40s; }
-.data-table tbody tr:nth-child(7) .skeleton { animation-delay: 0.48s; }
-.data-table tbody tr:nth-child(8) .skeleton { animation-delay: 0.56s; }
+.data-table tbody tr:nth-child(1) .skeleton {
+  animation-delay: 0s;
+}
+.data-table tbody tr:nth-child(2) .skeleton {
+  animation-delay: 0.08s;
+}
+.data-table tbody tr:nth-child(3) .skeleton {
+  animation-delay: 0.16s;
+}
+.data-table tbody tr:nth-child(4) .skeleton {
+  animation-delay: 0.24s;
+}
+.data-table tbody tr:nth-child(5) .skeleton {
+  animation-delay: 0.32s;
+}
+.data-table tbody tr:nth-child(6) .skeleton {
+  animation-delay: 0.4s;
+}
+.data-table tbody tr:nth-child(7) .skeleton {
+  animation-delay: 0.48s;
+}
+.data-table tbody tr:nth-child(8) .skeleton {
+  animation-delay: 0.56s;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    STICKY первая колонка (при горизонтальном скролле)
@@ -533,7 +710,9 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   left: 0;
   z-index: 2;
 }
-.sticky-first-col thead th:first-child { z-index: 52; }
+.sticky-first-col thead th:first-child {
+  z-index: 52;
+}
 
 /* Тень-разделитель */
 .sticky-first-col th:first-child::after,
@@ -544,7 +723,7 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   right: -6px;
   bottom: 0;
   width: 6px;
-  background: linear-gradient(to right, rgba(0,0,0,0.06), transparent);
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.06), transparent);
   pointer-events: none;
 }
 
@@ -560,10 +739,20 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   border-left: 2px solid var(--border);
   overflow: visible !important;
 }
-.sticky-actions thead th.col-actions { z-index: 4; background: var(--th-bg); }
-.sticky-actions .filter-row th.col-actions { z-index: 5; background: var(--th-bg); }
-.sticky-actions tbody tr:nth-child(even) td.col-actions { background: var(--row-even); }
-.sticky-actions tbody tr:hover td.col-actions { background: var(--row-hover) !important; }
+.sticky-actions thead th.col-actions {
+  z-index: 4;
+  background: var(--th-bg);
+}
+.sticky-actions .filter-row th.col-actions {
+  z-index: 5;
+  background: var(--th-bg);
+}
+.sticky-actions tbody tr:nth-child(even) td.col-actions {
+  background: var(--row-even);
+}
+.sticky-actions tbody tr:hover td.col-actions {
+  background: var(--row-hover) !important;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Bulk-actions панель
@@ -581,8 +770,12 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   color: var(--accent2);
   animation: fadeSlideIn 0.2s ease;
 }
-.bulk-bar.visible { display: flex; }
-.bulk-bar .bulk-count { font-weight: 600; }
+.bulk-bar.visible {
+  display: flex;
+}
+.bulk-bar .bulk-count {
+  font-weight: 600;
+}
 .bulk-bar .bulk-btn {
   padding: 5px 14px;
   border-radius: var(--radius-sm);
@@ -595,12 +788,18 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
   font-family: var(--font);
   transition: all 0.15s;
 }
-.bulk-bar .bulk-btn:hover { background: var(--accent); color: #fff; }
+.bulk-bar .bulk-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
 .bulk-bar .bulk-btn.danger {
   border-color: var(--danger);
   color: var(--danger);
 }
-.bulk-bar .bulk-btn.danger:hover { background: var(--danger); color: #fff; }
+.bulk-bar .bulk-btn.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
 .bulk-bar .bulk-close {
   margin-left: auto;
   background: none;
@@ -611,13 +810,21 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
 }
 
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-spinner i, .skeleton,
-  .cell-error, .bulk-bar {
+  .scroll-spinner i,
+  .skeleton,
+  .cell-error,
+  .bulk-bar {
     animation: none !important;
     transition: none !important;
   }
@@ -628,89 +835,127 @@ th.resizing { background: rgba(59,130,246,0.2) !important; }
    ══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   /* Hide table header on mobile */
-  .data-table thead { display:none; }
+  .data-table thead {
+    display: none;
+  }
 
   .data-table tbody tr {
-    display:block;
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius-md);
-    margin-bottom:12px;
-    padding:12px;
-    box-shadow:var(--shadow-sm);
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
   }
 
   .data-table tbody td {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:6px 0;
-    border:none;
-    border-bottom:1px solid var(--border);
-    font-size:14px;
-    text-align:left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    text-align: left;
   }
-  .data-table tbody td:last-child { border-bottom:none; }
+  .data-table tbody td:last-child {
+    border-bottom: none;
+  }
 
   /* Show field label from data-label attribute */
   .data-table tbody td::before {
     content: attr(data-label);
-    font-weight:600;
-    color:var(--muted);
-    font-size:12px;
-    letter-spacing:0.03em;
-    flex-shrink:0;
-    margin-right:12px;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+    margin-right: 12px;
   }
 
   /* PP table specific */
-  .pp-table thead { display:none; }
+  .pp-table thead {
+    display: none;
+  }
   .pp-table tbody tr {
-    display:block;
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius-md);
-    margin-bottom:12px;
-    padding:12px;
-    box-shadow:var(--shadow-sm);
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
   }
   .pp-table tbody td {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:6px 0;
-    border:none;
-    border-bottom:1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
   }
-  .pp-table tbody td:last-child { border-bottom:none; }
+  .pp-table tbody td:last-child {
+    border-bottom: none;
+  }
   .pp-table tbody td::before {
     content: attr(data-label);
-    font-weight:600; color:var(--muted); font-size:11px;
-    flex-shrink:0; margin-right:8px;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 11px;
+    flex-shrink: 0;
+    margin-right: 8px;
   }
-  .pp-table tbody td:first-child::before { content:'#'; }
+  .pp-table tbody td:first-child::before {
+    content: '#';
+  }
 
   /* Hide resize handles on mobile */
-  .resize-handle { display:none !important; }
+  .resize-handle {
+    display: none !important;
+  }
 
   /* Stack filter bars vertically */
-  .pp-period-bar { flex-direction:column; align-items:flex-start; }
-  .pp-dept-bar { flex-wrap:wrap; }
-  .pp-cal-months { flex-wrap:wrap; }
+  .pp-period-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pp-dept-bar {
+    flex-wrap: wrap;
+  }
+  .pp-cal-months {
+    flex-wrap: wrap;
+  }
 
   /* Sidebar full overlay on mobile */
-  .sidebar { transform:translateX(-100%); }
-  .sidebar.mobile-open { transform:translateX(0); }
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
 
   /* Topbar responsive */
-  .topbar { padding:0 12px; gap:8px; }
-  .cmd-k-hint-text { display:none; }
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .cmd-k-hint-text {
+    display: none;
+  }
 
   /* Bulk bar responsive */
-  .bulk-bar { padding:10px 16px; gap:10px; }
+  .bulk-bar {
+    padding: 10px 16px;
+    gap: 10px;
+  }
 }
 
 @media (max-width: 480px) {
-  .page-content { padding:12px; }
-  .pp-projects-grid { grid-template-columns:1fr; }
+  .page-content {
+    padding: 12px;
+  }
+  .pp-projects-grid {
+    grid-template-columns: 1fr;
+  }
 }

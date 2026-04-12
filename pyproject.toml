@@ -6,6 +6,19 @@
 line-length = 88
 # Целевая версия Python — black не будет использовать синтаксис новее
 target-version = ["py311"]
+# Папки, которые black не проверяет
+extend-exclude = '''
+/(
+    venv
+  | venv311
+  | node_modules
+  | migrations
+  | static
+  | ntc_simulator
+  | scripts
+  | docs
+)/
+'''
 
 [tool.isort]
 # Профиль "black" — isort форматирует импорты совместимо с black
@@ -14,6 +27,8 @@ profile = "black"
 # known_first_party — твои модули. isort группирует импорты:
 # 1) stdlib (os, sys)  2) third-party (django)  3) first-party (apps, config)
 known_first_party = ["apps", "config"]
+# Папки, которые isort не проверяет
+skip_glob = ["venv/*", "venv311/*", "node_modules/*", "migrations/*", "static/*", "ntc_simulator/*", "scripts/*", "docs/*"]
 
 [tool.flake8]
 # flake8 пока не поддерживает pyproject.toml нативно,

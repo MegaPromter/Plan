@@ -9,18 +9,23 @@ var CURRENT_YEAR = _cfg.current_year || new Date().getFullYear();
 
 /* ── Константы ─────────────────────────────────────────────────────────────── */
 // MONTHS_FULL, MONTHS_SHORT — в utils.js (1-based: MONTHS_FULL[1] = "Январь")
-var WEEKDAYS = ['пн','вт','ср','чт','пт','сб','вс'];
+var WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 
 var STATUS_COLORS = {
-  plan:   { bg: '#ede9fe', color: '#6d28d9', bar: 'linear-gradient(135deg,#8b5cf6,#a78bfa)' },
+  plan: { bg: '#ede9fe', color: '#6d28d9', bar: 'linear-gradient(135deg,#8b5cf6,#a78bfa)' },
   active: { bg: '#dbeafe', color: '#1d4ed8', bar: 'linear-gradient(135deg,#2563eb,#60a5fa)' },
-  done:   { bg: '#e2e8f0', color: '#475569', bar: 'linear-gradient(135deg,#64748b,#94a3b8)' },
+  done: { bg: '#e2e8f0', color: '#475569', bar: 'linear-gradient(135deg,#64748b,#94a3b8)' },
   cancel: { bg: '#fee2e2', color: '#b91c1c', bar: 'linear-gradient(135deg,#ef4444,#f87171)' },
 };
-var STATUS_LABELS = { plan: 'Запланирована', active: 'В процессе', done: 'Завершена', cancel: 'Отменена' };
+var STATUS_LABELS = {
+  plan: 'Запланирована',
+  active: 'В процессе',
+  done: 'Завершена',
+  cancel: 'Отменена',
+};
 
 /* ── Состояние ─────────────────────────────────────────────────────────────── */
-var allTripEmployees = [];  // [{id, value, dept}] — загружается из /api/directories/
+var allTripEmployees = []; // [{id, value, dept}] — загружается из /api/directories/
 var trips = [];
 var holidays = {};
 var curYear = CURRENT_YEAR;
@@ -32,8 +37,12 @@ var statusFilter = '';
 var searchFilter = '';
 
 /* ── Хелперы ───────────────────────────────────────────────────────────────── */
-function pad2(n) { return String(n).padStart(2, '0'); }
-function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+function daysInMonth(y, m) {
+  return new Date(y, m, 0).getDate();
+}
 function isWeekend(y, m, d) {
   var dow = new Date(y, m - 1, d).getDay();
   return dow === 0 || dow === 6;
@@ -66,7 +75,9 @@ async function loadHolidays() {
     var resp = await fetch('/api/holidays/?year=' + curYear);
     var data = await resp.json();
     holidays = {};
-    (data || []).forEach(function(h) { holidays[h.date] = h.name; });
+    (data || []).forEach(function (h) {
+      holidays[h.date] = h.name;
+    });
   } catch (e) {
     holidays = {};
   }
@@ -89,8 +100,12 @@ function render() {
 }
 
 function updateStats() {
-  var active = trips.filter(function(t) { return t.status !== 'cancel'; });
-  var totalDays = active.reduce(function(s, t) { return s + (t.duration_days || 0); }, 0);
+  var active = trips.filter(function (t) {
+    return t.status !== 'cancel';
+  });
+  var totalDays = active.reduce(function (s, t) {
+    return s + (t.duration_days || 0);
+  }, 0);
   var el = document.getElementById('tripStats');
   if (el) el.textContent = active.length + ' командир. · ' + totalDays + ' чел.-дн.';
 }
@@ -106,23 +121,36 @@ function renderGantt() {
   var empTrips = {}; // executor -> [trip, ...]
   var empOrder = [];
 
-  trips.forEach(function(t) {
+  trips.forEach(function (t) {
     if (t.status === 'cancel') return; // скрываем отменённые в Gantt
     var ts = new Date(t.date_start);
     var te = new Date(t.date_end);
     if (te < monthStart || ts > monthEnd) return;
-    var key = t.executor || ('emp_' + t.employee_id);
-    if (!empTrips[key]) { empTrips[key] = []; empOrder.push(key); }
+    var key = t.executor || 'emp_' + t.employee_id;
+    if (!empTrips[key]) {
+      empTrips[key] = [];
+      empOrder.push(key);
+    }
     empTrips[key].push(t);
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = emptyStateHtml({icon:'fas fa-plane-slash', title:'Нет командировок в ' + MONTHS_FULL[curMonth] + ' ' + curYear, desc:'Добавьте командировку, чтобы она отобразилась на графике', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>' : ''});
+    container.innerHTML = emptyStateHtml({
+      icon: 'fas fa-plane-slash',
+      title: 'Нет командировок в ' + MONTHS_FULL[curMonth] + ' ' + curYear,
+      desc: 'Добавьте командировку, чтобы она отобразилась на графике',
+      action: IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>'
+        : '',
+    });
     return;
   }
 
   var cols = dim + 1; // name + days
-  var html = '<div class="gantt-wrap"><div class="gantt-grid" style="grid-template-columns:180px repeat(' + dim + ',1fr)">';
+  var html =
+    '<div class="gantt-wrap"><div class="gantt-grid" style="grid-template-columns:180px repeat(' +
+    dim +
+    ',1fr)">';
 
   // Header row
   html += '<div class="g-hdr" style="text-align:left;padding-left:12px">Сотрудник</div>';
@@ -132,16 +160,21 @@ function renderGantt() {
   }
 
   // Employee rows
-  empOrder.forEach(function(key) {
+  empOrder.forEach(function (key) {
     var rowTrips = empTrips[key];
     var first = rowTrips[0];
-    html += '<div class="g-name"><span class="g-name-text">' + esc(first.executor || '?') + '</span><span class="g-dept">' + esc(first.dept || '') + '</span></div>';
+    html +=
+      '<div class="g-name"><span class="g-name-text">' +
+      esc(first.executor || '?') +
+      '</span><span class="g-dept">' +
+      esc(first.dept || '') +
+      '</span></div>';
     for (var d = 1; d <= dim; d++) {
       var nw = isNonWorking(curYear, curMonth, d);
       html += '<div class="g-cell' + (nw ? ' g-we' : '') + '"';
 
       // Check if any trip starts on this day
-      rowTrips.forEach(function(t) {
+      rowTrips.forEach(function (t) {
         var ts = new Date(t.date_start);
         var te = new Date(t.date_end);
         var startDay = ts < monthStart ? 1 : ts.getDate();
@@ -150,7 +183,20 @@ function renderGantt() {
           var span = endDay - startDay + 1;
           var sc = STATUS_COLORS[t.status] || STATUS_COLORS.plan;
           html += ' style="position:relative">';
-          html += '<div class="g-bar" style="width:calc(' + (span * 100) + '% + ' + (span - 1) + 'px);background:' + sc.bar + '" title="' + esc(t.location) + ' · ' + t.date_start + ' — ' + t.date_end + '"';
+          html +=
+            '<div class="g-bar" style="width:calc(' +
+            span * 100 +
+            '% + ' +
+            (span - 1) +
+            'px);background:' +
+            sc.bar +
+            '" title="' +
+            esc(t.location) +
+            ' · ' +
+            t.date_start +
+            ' — ' +
+            t.date_end +
+            '"';
           if (IS_WRITER) html += ' onclick="openEditTripModal(' + t.id + ')"';
           html += '>' + (span >= 3 ? esc(t.location.substring(0, 15)) : '') + '</div>';
           return;
@@ -173,8 +219,8 @@ function renderMatrix() {
   // Группируем по сотрудникам
   var empMap = {}; // executor -> {trips, dept, employee_id}
   var empOrder = [];
-  trips.forEach(function(t) {
-    var key = t.executor || ('emp_' + t.employee_id);
+  trips.forEach(function (t) {
+    var key = t.executor || 'emp_' + t.employee_id;
     if (!empMap[key]) {
       empMap[key] = { trips: [], dept: t.dept, employee_id: t.employee_id, name: t.executor };
       empOrder.push(key);
@@ -183,7 +229,14 @@ function renderMatrix() {
   });
 
   if (empOrder.length === 0) {
-    container.innerHTML = emptyStateHtml({icon:'fas fa-plane-slash', title:'Нет командировок в ' + curYear, desc:'Добавьте командировку, чтобы она отобразилась в матрице', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>' : ''});
+    container.innerHTML = emptyStateHtml({
+      icon: 'fas fa-plane-slash',
+      title: 'Нет командировок в ' + curYear,
+      desc: 'Добавьте командировку, чтобы она отобразилась в матрице',
+      action: IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="openAddTripModal()"><i class="fas fa-plus"></i> Новая командировка</button>'
+        : '',
+    });
     return;
   }
 
@@ -194,25 +247,44 @@ function renderMatrix() {
 
   var monthTotals = new Array(13).fill(0); // [0..12], 0=unused
 
-  empOrder.forEach(function(key) {
+  empOrder.forEach(function (key) {
     var emp = empMap[key];
-    var initials = (emp.name || '??').split(' ').map(function(w) { return w[0] || ''; }).join('').substring(0, 2).toUpperCase();
-    html += '<tr><td class="td-emp"><div class="emp-cell"><div class="emp-ava">' + esc(initials) + '</div><div><div class="emp-name">' + esc(emp.name || '?') + '</div><div class="emp-dept">' + esc(emp.dept || '') + '</div></div></div></td>';
+    var initials = (emp.name || '??')
+      .split(' ')
+      .map(function (w) {
+        return w[0] || '';
+      })
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+    html +=
+      '<tr><td class="td-emp"><div class="emp-cell"><div class="emp-ava">' +
+      esc(initials) +
+      '</div><div><div class="emp-name">' +
+      esc(emp.name || '?') +
+      '</div><div class="emp-dept">' +
+      esc(emp.dept || '') +
+      '</div></div></div></td>';
 
     var yearTotal = 0;
 
     for (var m = 1; m <= 12; m++) {
-      var monthTrips = emp.trips.filter(function(t) {
+      var monthTrips = emp.trips.filter(function (t) {
         var ts = new Date(t.date_start);
         var te = new Date(t.date_end);
-        return ts.getMonth() + 1 <= m && te.getMonth() + 1 >= m && ts.getFullYear() <= curYear && te.getFullYear() >= curYear;
+        return (
+          ts.getMonth() + 1 <= m &&
+          te.getMonth() + 1 >= m &&
+          ts.getFullYear() <= curYear &&
+          te.getFullYear() >= curYear
+        );
       });
 
       if (monthTrips.length === 0) {
         html += '<td></td>';
       } else {
         html += '<td>';
-        monthTrips.forEach(function(t) {
+        monthTrips.forEach(function (t) {
           // Считаем дни в этом месяце
           var mStart = new Date(curYear, m - 1, 1);
           var mEnd = new Date(curYear, m, 0);
@@ -225,7 +297,14 @@ function renderMatrix() {
 
           var sc = STATUS_COLORS[t.status] || STATUS_COLORS.plan;
           var cls = 'trip-chip chip-' + t.status;
-          html += '<span class="' + cls + '" title="' + esc(t.location) + ' · ' + STATUS_LABELS[t.status] + '"';
+          html +=
+            '<span class="' +
+            cls +
+            '" title="' +
+            esc(t.location) +
+            ' · ' +
+            STATUS_LABELS[t.status] +
+            '"';
           if (IS_WRITER) html += ' onclick="openEditTripModal(' + t.id + ')"';
           html += '>' + days + 'д</span> ';
 
@@ -242,9 +321,11 @@ function renderMatrix() {
   });
 
   // Итого
-  var grandTotal = monthTotals.reduce(function(s, v) { return s + v; }, 0);
+  var grandTotal = monthTotals.reduce(function (s, v) {
+    return s + v;
+  }, 0);
   html += '<tr class="row-total"><td>Итого (чел.-дн.)</td>';
-  for (var m = 1; m <= 12; m++) html += '<td>' + (monthTotals[m] || '') + '</td>';
+  for (let m = 1; m <= 12; m++) html += '<td>' + (monthTotals[m] || '') + '</td>';
   html += '<td class="td-total">' + grandTotal + '</td></tr>';
 
   html += '</tbody></table></div>';
@@ -254,7 +335,7 @@ function renderMatrix() {
 /* ── Переключение вида ─────────────────────────────────────────────────────── */
 function switchView(view) {
   curView = view;
-  document.querySelectorAll('.view-tab').forEach(function(el) {
+  document.querySelectorAll('.view-tab').forEach(function (el) {
     el.classList.toggle('active', el.dataset.view === view);
   });
   render();
@@ -266,14 +347,23 @@ function buildMonthBar() {
   if (!bar) return;
   var html = '';
   for (var m = 1; m <= 12; m++) {
-    html += '<button class="month-btn' + (m === curMonth ? ' active' : '') + '" data-month="' + m + '" onclick="selectMonth(' + m + ')">' + MONTHS_SHORT[m] + '</button>';
+    html +=
+      '<button class="month-btn' +
+      (m === curMonth ? ' active' : '') +
+      '" data-month="' +
+      m +
+      '" onclick="selectMonth(' +
+      m +
+      ')">' +
+      MONTHS_SHORT[m] +
+      '</button>';
   }
   bar.innerHTML = html;
 }
 
 function selectMonth(m) {
   curMonth = m;
-  document.querySelectorAll('.month-btn').forEach(function(el) {
+  document.querySelectorAll('.month-btn').forEach(function (el) {
     el.classList.toggle('active', parseInt(el.dataset.month) === m);
   });
   render();
@@ -297,7 +387,7 @@ function applyStatusFilter() {
 var _searchTimeout;
 function applySearch() {
   clearTimeout(_searchTimeout);
-  _searchTimeout = setTimeout(function() {
+  _searchTimeout = setTimeout(function () {
     searchFilter = document.getElementById('searchInput').value.trim();
     loadTrips();
   }, 300);
@@ -317,7 +407,9 @@ function openAddTripModal() {
 }
 
 function openEditTripModal(id) {
-  var t = trips.find(function(x) { return x.id === id; });
+  var t = trips.find(function (x) {
+    return x.id === id;
+  });
   if (!t) return;
   editingId = id;
   document.getElementById('tripModalTitle').textContent = 'Редактировать командировку';
@@ -354,8 +446,15 @@ async function saveTrip() {
     return;
   }
 
-  var body = { executor: executor, location: location, purpose: purpose,
-               date_start: dateStart, date_end: dateEnd, status: status, notes: notes };
+  var body = {
+    executor: executor,
+    location: location,
+    purpose: purpose,
+    date_start: dateStart,
+    date_end: dateEnd,
+    status: status,
+    notes: notes,
+  };
 
   var btn = document.getElementById('tripSaveBtn');
   btn.disabled = true;
@@ -413,7 +512,7 @@ async function deleteTrip() {
 }
 
 /* ── Инициализация ─────────────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   buildMonthBar();
   loadHolidays().then(loadTrips);
   // Экспорт
@@ -421,18 +520,22 @@ document.addEventListener('DOMContentLoaded', function() {
     buildExportDropdown('exportBtnContainer', {
       pageName: 'Командировки',
       columns: [
-        { key: 'executor',    header: 'Сотрудник',     width: 160 },
-        { key: 'dept',        header: 'Отдел',         width: 60  },
-        { key: 'location',    header: 'Место',         width: 200 },
-        { key: 'purpose',     header: 'Цель',          width: 200 },
-        { key: 'date_start',  header: 'Дата начала',   width: 100 },
-        { key: 'date_end',    header: 'Дата окончания', width: 100 },
-        { key: 'duration_days', header: 'Дней',        width: 60  },
-        { key: 'status_display', header: 'Статус',     width: 100 },
-        { key: 'notes',       header: 'Примечания',    width: 200 },
+        { key: 'executor', header: 'Сотрудник', width: 160 },
+        { key: 'dept', header: 'Отдел', width: 60 },
+        { key: 'location', header: 'Место', width: 200 },
+        { key: 'purpose', header: 'Цель', width: 200 },
+        { key: 'date_start', header: 'Дата начала', width: 100 },
+        { key: 'date_end', header: 'Дата окончания', width: 100 },
+        { key: 'duration_days', header: 'Дней', width: 60 },
+        { key: 'status_display', header: 'Статус', width: 100 },
+        { key: 'notes', header: 'Примечания', width: 200 },
       ],
-      getAllData: function() { return trips; },
-      getFilteredData: function() { return trips; },
+      getAllData: function () {
+        return trips;
+      },
+      getFilteredData: function () {
+        return trips;
+      },
     });
   }
 });
@@ -443,14 +546,16 @@ async function loadTripEmployees() {
   try {
     var resp = await fetch('/api/directories/');
     var data = await resp.json();
-    allTripEmployees = (data.employees || []).map(function(e) {
+    allTripEmployees = (data.employees || []).map(function (e) {
       return { id: e.id, value: e.value, dept: e.dept };
     });
-  } catch(e) { console.warn('Не удалось загрузить сотрудников', e); }
+  } catch (e) {
+    console.warn('Не удалось загрузить сотрудников', e);
+  }
 }
 
 function openTripOverlapsModal() {
-  loadTripEmployees().then(function() {
+  loadTripEmployees().then(function () {
     openOverlapsModal({
       context: 'trips',
       employees: allTripEmployees,

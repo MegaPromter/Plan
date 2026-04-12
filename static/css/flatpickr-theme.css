@@ -7,7 +7,9 @@
 /* ── Контейнер календаря ─────────────────────────────────────────── */
 .flatpickr-calendar {
   border-radius: 12px !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06) !important;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06) !important;
   border: 1px solid color-mix(in srgb, var(--border), transparent 30%) !important;
   font-family: var(--font, inherit) !important;
   overflow: visible;
@@ -22,8 +24,14 @@
   animation: fpFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes fpFadeIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── Навигация (месяц/год + стрелки) ────────────────────────────── */
@@ -65,7 +73,9 @@
 .flatpickr-months .flatpickr-next-month {
   padding: 6px !important;
   border-radius: 8px;
-  transition: background 0.15s, transform 0.15s;
+  transition:
+    background 0.15s,
+    transform 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,7 +84,7 @@
 }
 .flatpickr-months .flatpickr-prev-month:hover,
 .flatpickr-months .flatpickr-next-month:hover {
-  background: rgba(var(--accent-rgb, 59,130,246), 0.1);
+  background: rgba(var(--accent-rgb, 59, 130, 246), 0.1);
   transform: scale(1.1);
 }
 .flatpickr-months .flatpickr-prev-month svg,
@@ -125,8 +135,8 @@ span.flatpickr-weekday {
 
 /* Hover */
 .flatpickr-day:hover {
-  background: rgba(var(--accent-rgb, 59,130,246), 0.08) !important;
-  border-color: rgba(var(--accent-rgb, 59,130,246), 0.2) !important;
+  background: rgba(var(--accent-rgb, 59, 130, 246), 0.08) !important;
+  border-color: rgba(var(--accent-rgb, 59, 130, 246), 0.2) !important;
   color: var(--accent) !important;
   transform: scale(1.05);
 }
@@ -136,7 +146,7 @@ span.flatpickr-weekday {
   border-color: var(--accent) !important;
   color: var(--accent) !important;
   font-weight: 700;
-  background: rgba(var(--accent-rgb, 59,130,246), 0.06) !important;
+  background: rgba(var(--accent-rgb, 59, 130, 246), 0.06) !important;
 }
 .flatpickr-day.today:hover {
   background: var(--accent) !important;
@@ -151,7 +161,7 @@ span.flatpickr-weekday {
   border-color: var(--accent) !important;
   color: #fff !important;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(var(--accent-rgb, 59,130,246), 0.35);
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb, 59, 130, 246), 0.35);
   transform: scale(1.05);
 }
 
@@ -182,7 +192,9 @@ span.flatpickr-weekday {
 
 /* ── Reduced motion ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .flatpickr-calendar.animate.open { animation: none !important; }
+  .flatpickr-calendar.animate.open {
+    animation: none !important;
+  }
   .flatpickr-day,
   .flatpickr-months .flatpickr-prev-month,
   .flatpickr-months .flatpickr-next-month {

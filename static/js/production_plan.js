@@ -25,13 +25,13 @@ const _ppCfg = JSON.parse(document.getElementById('pp-config').textContent);
 /** @type {boolean} */
 const IS_WRITER = _ppCfg.isWriter;
 /** @type {boolean} */
-const IS_ADMIN  = _ppCfg.isAdmin;
+const IS_ADMIN = _ppCfg.isAdmin;
 /** @type {string} */
-const USER_ROLE     = _ppCfg.userRole;
+const USER_ROLE = _ppCfg.userRole;
 /** @type {string} */
-const USER_DEPT     = _ppCfg.userDept;
+const USER_DEPT = _ppCfg.userDept;
 /** @type {string} */
-const USER_SECTOR   = _ppCfg.userSector;
+const USER_SECTOR = _ppCfg.userSector;
 /** @type {string} */
 const USER_SECTOR_NAME = _ppCfg.userSectorName;
 /** @type {string} */
@@ -54,12 +54,12 @@ function _ppReplaceSelect(oldSel, newHtml) {
 }
 
 // Delegated focus/blur for active row highlight
-document.addEventListener('focusin', function(e) {
+document.addEventListener('focusin', function (e) {
   if (e.target.closest && e.target.closest('.data-table td')) setActiveRow(e.target);
 });
-document.addEventListener('focusout', function(e) {
+document.addEventListener('focusout', function (e) {
   if (e.target.closest && e.target.closest('.data-table td')) {
-    setTimeout(function() {
+    setTimeout(function () {
       var active = document.activeElement;
       if (!active || !active.closest || !active.closest('.data-table td')) clearActiveRow();
     }, 50);
@@ -108,28 +108,65 @@ let dirs = {};
 
 // Список полей колонок ПП-таблицы (в порядке отображения)
 const PP_COLUMNS = [
-  'row_code', 'work_order', 'stage_num', 'work_num',
-  'work_designation', 'work_name',
-  'date_start', 'date_end', 'sheets_a4', 'norm', 'coeff', 'labor',
-  'center', 'dept', 'sector_head', 'executor', 'task_type'
+  'row_code',
+  'work_order',
+  'stage_num',
+  'work_num',
+  'work_designation',
+  'work_name',
+  'date_start',
+  'date_end',
+  'sheets_a4',
+  'norm',
+  'coeff',
+  'labor',
+  'center',
+  'dept',
+  'sector_head',
+  'executor',
+  'task_type',
 ];
 
 // Метки колонок для мобильного card-layout (data-label)
 const PP_COL_LABELS = {
-  row_code:'Код строки', work_order:'Наряд-заказ', stage_num:'№ этапа',
-  work_num:'№ работы', work_designation:'Обозначение',
-  work_name:'Наименование', date_start:'Начало', date_end:'Окончание', sheets_a4:'Ф, А4',
-  norm:'Норматив', coeff:'Коэфф', labor:'Трудоёмкость',
-  center:'Подразделение', dept:'Отдел', sector_head:'Сектор',
-  executor:'Разработчик', task_type:'Тип задачи'
+  row_code: 'Код строки',
+  work_order: 'Наряд-заказ',
+  stage_num: '№ этапа',
+  work_num: '№ работы',
+  work_designation: 'Обозначение',
+  work_name: 'Наименование',
+  date_start: 'Начало',
+  date_end: 'Окончание',
+  sheets_a4: 'Ф, А4',
+  norm: 'Норматив',
+  coeff: 'Коэфф',
+  labor: 'Трудоёмкость',
+  center: 'Подразделение',
+  dept: 'Отдел',
+  sector_head: 'Сектор',
+  executor: 'Разработчик',
+  task_type: 'Тип задачи',
 };
 
 // Маппинг колонки → индекс для data-col-idx (режимы отображения)
 const PP_COL_IDX = {
-  row_code:1, work_order:2, stage_num:3, work_num:4,
-  work_designation:5, work_name:6, date_start:7, date_end:8,
-  sheets_a4:9, norm:10, coeff:11, labor:12,
-  center:13, dept:14, sector_head:15, executor:16, task_type:17
+  row_code: 1,
+  work_order: 2,
+  stage_num: 3,
+  work_num: 4,
+  work_designation: 5,
+  work_name: 6,
+  date_start: 7,
+  date_end: 8,
+  sheets_a4: 9,
+  norm: 10,
+  coeff: 11,
+  labor: 12,
+  center: 13,
+  dept: 14,
+  sector_head: 15,
+  executor: 16,
+  task_type: 17,
 };
 
 // Этапы ПП текущего проекта (загружается при openProject)
@@ -141,7 +178,7 @@ let _ppStatusFilter = 'all';
 /* ── Статус-панель (компактные pills) ─────────────────────────────────── */
 function _ppGetStatus(row) {
   if (row.has_reports) return 'done';
-  if (row.is_overdue)  return 'overdue';
+  if (row.is_overdue) return 'overdue';
   return 'inwork';
 }
 
@@ -160,9 +197,9 @@ function _ppGetStatus(row) {
  */
 function _ppRowsWithoutStatusFilter() {
   if (Object.keys(colFilters).length === 0) return rows;
-  return rows.filter(function(r) {
+  return rows.filter(function (r) {
     for (var col in colFilters) {
-      if (!colFilters.hasOwnProperty(col)) continue;
+      if (!Object.prototype.hasOwnProperty.call(colFilters, col)) continue;
       var val = colFilters[col];
       if (col.startsWith('mf_')) {
         var field = col.slice(3); // убираем префикс "mf_"
@@ -171,7 +208,7 @@ function _ppRowsWithoutStatusFilter() {
             // Даты хранятся как "YYYY-MM-DD", в мультифильтре они по месяцу "YYYY-MM"
             var cellVal = (r[field] || '').slice(0, 7);
             if (!val.has(cellVal)) return false;
-          } else if (field === 'pp_stage' || (field === 'stage_num')) {
+          } else if (field === 'pp_stage' || field === 'stage_num') {
             // Этапы ПП: фильтруем по читаемому имени, а не ID
             if (!val.has(r.pp_stage_name || '')) return false;
           } else {
@@ -193,8 +230,10 @@ function ppUpdateStatusPanel() {
   panel.style.display = '';
 
   var filtered = _ppRowsWithoutStatusFilter();
-  var done = 0, overdue = 0, inwork = 0;
-  filtered.forEach(function(item) {
+  var done = 0,
+    overdue = 0,
+    inwork = 0;
+  filtered.forEach(function (item) {
     var s = _ppGetStatus(item);
     if (s === 'done') done++;
     else if (s === 'overdue') overdue++;
@@ -203,12 +242,16 @@ function ppUpdateStatusPanel() {
   var total = filtered.length;
 
   var el;
-  el = document.getElementById('ppCountAll'); if (el) el.textContent = total;
-  el = document.getElementById('ppCountDone'); if (el) el.textContent = done;
-  el = document.getElementById('ppCountOverdue'); if (el) el.textContent = overdue;
-  el = document.getElementById('ppCountInWork'); if (el) el.textContent = inwork;
+  el = document.getElementById('ppCountAll');
+  if (el) el.textContent = total;
+  el = document.getElementById('ppCountDone');
+  if (el) el.textContent = done;
+  el = document.getElementById('ppCountOverdue');
+  if (el) el.textContent = overdue;
+  el = document.getElementById('ppCountInWork');
+  if (el) el.textContent = inwork;
 
-  panel.querySelectorAll('.sp').forEach(function(btn) {
+  panel.querySelectorAll('.sp').forEach(function (btn) {
     var cls = btn.className.match(/sp-(all|done|overdue|inwork)/);
     var btnStatus = cls ? cls[1] : 'all';
     btn.classList.toggle('active', btnStatus === _ppStatusFilter);
@@ -216,7 +259,7 @@ function ppUpdateStatusPanel() {
 }
 
 function ppFilterByStatus(status) {
-  _ppStatusFilter = (_ppStatusFilter === status) ? 'all' : status;
+  _ppStatusFilter = _ppStatusFilter === status ? 'all' : status;
   ppUpdateStatusPanel();
   renderPPTable();
 }
@@ -255,13 +298,13 @@ async function loadDirs() {
 // Загружает список ПП-проектов текущего пользователя
 async function loadProjects() {
   const data = await fetchJson('/api/pp_projects/');
-  if (!data._error) projects = Array.isArray(data) ? data : (data.results || []);
+  if (!data._error) projects = Array.isArray(data) ? data : data.results || [];
 }
 
 // Размер порции для прогрессивной загрузки с сервера
 var PP_FETCH_CHUNK = 200;
-var _ppBgLoading = false;  // фоновая дозагрузка идёт
-var _ppScope = 'role';     // текущий scope: 'role' (по роли) или 'all' (все строки)
+var _ppBgLoading = false; // фоновая дозагрузка идёт
+var _ppScope = 'role'; // текущий scope: 'role' (по роли) или 'all' (все строки)
 
 // Загружает строки производственного плана для конкретного проекта.
 // scope: 'role' — только строки по роли пользователя, 'all' — все строки проекта.
@@ -271,13 +314,16 @@ async function loadPPRows(projectId, scope) {
   _ppScope = scope || 'role';
 
   // Загружаем первую порцию
-  var url = '/api/production_plan/?project_id=' + projectId
-          + '&limit=' + PP_FETCH_CHUNK + '&offset=0';
+  var url =
+    '/api/production_plan/?project_id=' + projectId + '&limit=' + PP_FETCH_CHUNK + '&offset=0';
   if (_ppScope === 'all') url += '&scope=all';
   var resp = await fetch(url);
-  if (!resp.ok) { rows = []; return; }
+  if (!resp.ok) {
+    rows = [];
+    return;
+  }
   var data = await resp.json();
-  rows = Array.isArray(data) ? data : (data.results || []);
+  rows = Array.isArray(data) ? data : data.results || [];
   rows.reverse();
 
   var hasMore = resp.headers.get('X-Has-More') === 'true';
@@ -292,11 +338,19 @@ async function loadPPRows(projectId, scope) {
 // Фоновая дозагрузка оставшихся строк порциями
 async function _ppBgLoadRemaining(projectId, offset) {
   while (true) {
-    var url = '/api/production_plan/?project_id=' + projectId
-            + '&limit=' + PP_FETCH_CHUNK + '&offset=' + offset;
+    // eslint-disable-line no-constant-condition
+    var url =
+      '/api/production_plan/?project_id=' +
+      projectId +
+      '&limit=' +
+      PP_FETCH_CHUNK +
+      '&offset=' +
+      offset;
     if (_ppScope === 'all') url += '&scope=all';
     var resp;
-    try { resp = await fetch(url); } catch(e) {
+    try {
+      resp = await fetch(url);
+    } catch (e) {
       console.warn('Фоновая загрузка ПП: ошибка сети', e);
       showToast('Загружены не все данные — проверьте соединение', 'warning');
       break;
@@ -308,7 +362,7 @@ async function _ppBgLoadRemaining(projectId, offset) {
     }
 
     var batch = await resp.json();
-    batch = Array.isArray(batch) ? batch : (batch.results || []);
+    batch = Array.isArray(batch) ? batch : batch.results || [];
     if (batch.length === 0) break;
 
     // Вставляем в начало (reverse: новые строки вверху)
@@ -318,8 +372,12 @@ async function _ppBgLoadRemaining(projectId, offset) {
 
     // Перерисовываем таблицу, но не если пользователь редактирует ячейку
     var _activeEl = document.activeElement;
-    var _isEditing = _activeEl && (_activeEl.tagName === 'INPUT' || _activeEl.tagName === 'TEXTAREA' || _activeEl.tagName === 'SELECT')
-      && _activeEl.closest('.pp-table');
+    var _isEditing =
+      _activeEl &&
+      (_activeEl.tagName === 'INPUT' ||
+        _activeEl.tagName === 'TEXTAREA' ||
+        _activeEl.tagName === 'SELECT') &&
+      _activeEl.closest('.pp-table');
     if (!_isEditing) renderPPTable();
 
     var hasMore = resp.headers.get('X-Has-More') === 'true';
@@ -363,7 +421,10 @@ function showLanding() {
 
   // Сбрасываем счётчики строк
   const cp = document.getElementById('ppRowsCounterPlain');
-  if (cp) { cp.textContent = ''; cp.style.display = 'none'; }
+  if (cp) {
+    cp.textContent = '';
+    cp.style.display = 'none';
+  }
 
   // Скрываем панель периода
   ppSelectedMonth = null;
@@ -387,7 +448,7 @@ function ppSwitchLandingView(view) {
   _ppLandingView = view;
   localStorage.setItem('pp_landing_view', view);
   // Обновляем активную кнопку
-  document.querySelectorAll('#ppViewSwitch button').forEach(b => {
+  document.querySelectorAll('#ppViewSwitch button').forEach((b) => {
     b.classList.toggle('active', b.dataset.view === view);
   });
   renderProjects();
@@ -410,23 +471,35 @@ function renderProjects() {
   const container = document.getElementById('projectsGrid');
 
   // Активируем кнопку переключателя
-  document.querySelectorAll('#ppViewSwitch button').forEach(b => {
+  document.querySelectorAll('#ppViewSwitch button').forEach((b) => {
     b.classList.toggle('active', b.dataset.view === _ppLandingView);
   });
 
   // Пустое состояние
   if (projects.length === 0) {
     container.className = 'pp-projects-grid';
-    container.innerHTML = '<div style="grid-column:1/-1;">' + emptyStateHtml({icon:'fas fa-industry', title:'Производственных планов пока нет', desc:'Создайте первый план, чтобы начать управлять производством', action: IS_ADMIN ? '<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button>' : ''}) + '</div>';
+    container.innerHTML =
+      '<div style="grid-column:1/-1;">' +
+      emptyStateHtml({
+        icon: 'fas fa-industry',
+        title: 'Производственных планов пока нет',
+        desc: 'Создайте первый план, чтобы начать управлять производством',
+        action: IS_ADMIN
+          ? '<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()"><i class="fas fa-plus"></i> Создать план</button>'
+          : '',
+      }) +
+      '</div>';
     return;
   }
 
-  const onclick = p => `onclick="openProject(${p.id}, '${escapeJs(p.name || '')}')"`;
+  const onclick = (p) => `onclick="openProject(${p.id}, '${escapeJs(p.name || '')}')"`;
 
   if (_ppLandingView === 'list') {
     // ── Горизонтальный список ──
     container.className = 'pp-projects-list';
-    container.innerHTML = projects.map(p => `
+    container.innerHTML = projects
+      .map(
+        (p) => `
       <div class="pp-list-card" ${onclick(p)}>
         <div class="pp-list-icon"><i class="fas fa-industry"></i></div>
         <div class="pp-list-info">
@@ -442,8 +515,9 @@ function renderProjects() {
           <div class="pp-list-actions">${_ppCardActions(p)}</div>
         </div>
       </div>
-    `).join('');
-
+    `,
+      )
+      .join('');
   } else if (_ppLandingView === 'table') {
     // ── Таблица ──
     container.className = '';
@@ -457,7 +531,9 @@ function renderProjects() {
           ${IS_ADMIN ? '<th style="width:70px;"></th>' : ''}
         </tr></thead>
         <tbody>
-          ${projects.map(p => `
+          ${projects
+            .map(
+              (p) => `
             <tr ${onclick(p)}>
               <td class="ppt-name">${escapeHtml(p.name || 'Без названия')}</td>
               <td>${p.up_project_name ? `<span class="ppt-badge ppt-badge-blue"><i class="fas fa-project-diagram"></i> ${escapeHtml(p.up_project_name)}</span>` : '<span class="ppt-badge ppt-badge-muted">—</span>'}</td>
@@ -465,14 +541,17 @@ function renderProjects() {
               <td class="ppt-count">${p.row_count || 0}</td>
               ${IS_ADMIN ? `<td><div class="ppt-actions">${_ppCardActions(p)}</div></td>` : ''}
             </tr>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </tbody>
       </table>`;
-
   } else {
     // ── Карточки (по умолчанию) ──
     container.className = 'pp-projects-grid';
-    container.innerHTML = projects.map(p => `
+    container.innerHTML = projects
+      .map(
+        (p) => `
       <div class="pp-project-card" ${onclick(p)}>
         ${p.up_project_name ? `<div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:2px;"><i class="fas fa-project-diagram" style="margin-right:3px;"></i>${escapeHtml(p.up_project_name)}</div>` : ''}
         ${p.up_product_name ? `<div style="font-size:11px;color:var(--success,#22c55e);font-weight:500;margin-bottom:4px;"><i class="fas fa-cog" style="margin-right:3px;"></i>${escapeHtml(p.up_product_name)}</div>` : ''}
@@ -482,7 +561,9 @@ function renderProjects() {
         </div>
         ${IS_ADMIN ? `<div class="pp-project-card-actions">${_ppCardActions(p)}</div>` : ''}
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 }
 
@@ -505,12 +586,16 @@ async function openCreateProjectModal() {
 
   // Опции для привязки к проекту УП
   const upOptions = upProjects.length
-    ? upProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name_full || p.name_short)}</option>`).join('')
+    ? upProjects
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.name_full || p.name_short)}</option>`)
+        .join('')
     : '';
 
   // Опции для открытия существующего ПП-плана из списка
   const existingOptions = projects.length
-    ? projects.map(p => `<option value="${p.id}">${escapeHtml(p.name || 'Без названия')}</option>`).join('')
+    ? projects
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.name || 'Без названия')}</option>`)
+        .join('')
     : '';
 
   // Открываем модальное окно через modal.js
@@ -518,7 +603,9 @@ async function openCreateProjectModal() {
     title: 'Производственный план',
     width: '480px',
     body: `
-      ${projects.length ? `
+      ${
+        projects.length
+          ? `
       <!-- Секция открытия существующего плана (если список не пуст) -->
       <div class="modal-form-group">
         <label>Открыть существующий план</label>
@@ -528,9 +615,13 @@ async function openCreateProjectModal() {
         </select>
       </div>
       <div style="text-align:center;color:var(--muted);font-size:13px;margin:12px 0;">— или —</div>
-      ` : ''}
+      `
+          : ''
+      }
       <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Создать новый план</div>
-      ${upProjects.length ? `
+      ${
+        upProjects.length
+          ? `
       <!-- Привязка к проекту УП -->
       <div class="modal-form-group">
         <label>Проект (из модуля УП)</label>
@@ -545,7 +636,9 @@ async function openCreateProjectModal() {
         <select id="newPlanUpProduct">
           <option value="">— весь проект —</option>
         </select>
-      </div>` : ''}
+      </div>`
+          : ''
+      }
       <!-- Поле названия плана (авто-заполняется при выборе УП-проекта) -->
       <div class="modal-form-group">
         <label>Название плана</label>
@@ -558,19 +651,19 @@ async function openCreateProjectModal() {
   });
 
   // Ссылки на элементы модального окна
-  const nameInput    = modal.dialog.querySelector('#newProjectName');
-  const createBtn    = modal.dialog.querySelector('#createProjectBtn');
-  const existingSel  = modal.dialog.querySelector('#existingProjectSel');
-  const openBtn      = modal.dialog.querySelector('#openExistingBtn');
-  const upSel        = modal.dialog.querySelector('#newPlanUpProject');
+  const nameInput = modal.dialog.querySelector('#newProjectName');
+  const createBtn = modal.dialog.querySelector('#createProjectBtn');
+  const existingSel = modal.dialog.querySelector('#existingProjectSel');
+  const openBtn = modal.dialog.querySelector('#openExistingBtn');
+  const upSel = modal.dialog.querySelector('#newPlanUpProject');
   const productGroup = modal.dialog.querySelector('#newPlanProductGroup');
-  const productSel   = modal.dialog.querySelector('#newPlanUpProduct');
+  const productSel = modal.dialog.querySelector('#newPlanUpProduct');
 
   // При выборе проекта УП: автозаполнить название и показать изделия (если есть)
   if (upSel) {
     upSel.addEventListener('change', () => {
       const upId = upSel.value;
-      const upProj = upId ? upProjects.find(p => String(p.id) === String(upId)) : null;
+      const upProj = upId ? upProjects.find((p) => String(p.id) === String(upId)) : null;
 
       // Авто-название по проекту (без изделия)
       nameInput.value = buildPPName(upProj, null);
@@ -580,8 +673,14 @@ async function openCreateProjectModal() {
         const products = upProj && upProj.products ? upProj.products : [];
         if (products.length > 0) {
           // Заполнить список изделий
-          productSel.innerHTML = '<option value="">— весь проект —</option>'
-            + products.map(pr => `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`).join('');
+          productSel.innerHTML =
+            '<option value="">— весь проект —</option>' +
+            products
+              .map(
+                (pr) =>
+                  `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`,
+              )
+              .join('');
           productGroup.style.display = '';
         } else {
           // Скрыть список изделий если у проекта нет изделий
@@ -594,7 +693,10 @@ async function openCreateProjectModal() {
       if (productSel) {
         productSel.onchange = () => {
           const prodId = productSel.value;
-          const prod = prodId && upProj ? (upProj.products || []).find(pr => String(pr.id) === String(prodId)) : null;
+          const prod =
+            prodId && upProj
+              ? (upProj.products || []).find((pr) => String(pr.id) === String(prodId))
+              : null;
           nameInput.value = buildPPName(upProj, prod);
         };
       }
@@ -606,9 +708,15 @@ async function openCreateProjectModal() {
     openBtn.addEventListener('click', () => {
       const id = existingSel.value;
       // Обязательно выбрать из списка
-      if (!id) { existingSel.style.borderColor = 'var(--danger)'; return; }
-      const proj = projects.find(p => String(p.id) === String(id));
-      if (proj) { modal.close(); openProject(proj.id, proj.name); }
+      if (!id) {
+        existingSel.style.borderColor = 'var(--danger)';
+        return;
+      }
+      const proj = projects.find((p) => String(p.id) === String(id));
+      if (proj) {
+        modal.close();
+        openProject(proj.id, proj.name);
+      }
     });
   }
 
@@ -616,11 +724,14 @@ async function openCreateProjectModal() {
   async function doCreate() {
     const name = nameInput.value.trim();
     // Название обязательно
-    if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
+    if (!name) {
+      nameInput.style.borderColor = 'var(--danger)';
+      return;
+    }
     createBtn.disabled = true;
     // Опциональная привязка к УП-проекту и изделию
-    const up_project_id = upSel ? (upSel.value || null) : null;
-    const up_product_id = productSel ? (productSel.value || null) : null;
+    const up_project_id = upSel ? upSel.value || null : null;
+    const up_product_id = productSel ? productSel.value || null : null;
     // POST /api/pp_projects/create/
     const resp = await fetchJson('/api/pp_projects/create/', {
       method: 'POST',
@@ -638,7 +749,9 @@ async function openCreateProjectModal() {
 
   // Кнопка «Создать» и Enter в поле имени
   createBtn.addEventListener('click', doCreate);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doCreate(); });
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doCreate();
+  });
   // Кнопка «Отмена»
   modal.dialog.querySelector('.modal-cancel').addEventListener('click', () => modal.close());
 }
@@ -647,16 +760,24 @@ async function openCreateProjectModal() {
 async function editProjectName(id, currentName, currentUpProjectId, currentUpProductId) {
   await loadUpProjects();
   // Строим список опций с предвыбором текущего УП-проекта
-  const upOptions = upProjects.map(p =>
-    `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_full || p.name_short)}</option>`
-  ).join('');
+  const upOptions = upProjects
+    .map(
+      (p) =>
+        `<option value="${p.id}"${String(p.id) === String(currentUpProjectId) ? ' selected' : ''}>${escapeHtml(p.name_full || p.name_short)}</option>`,
+    )
+    .join('');
 
   // Получаем изделия текущего проекта УП для предзаполнения
-  const curUpProj = currentUpProjectId ? upProjects.find(p => String(p.id) === String(currentUpProjectId)) : null;
+  const curUpProj = currentUpProjectId
+    ? upProjects.find((p) => String(p.id) === String(currentUpProjectId))
+    : null;
   const curProducts = curUpProj && curUpProj.products ? curUpProj.products : [];
-  const productOptions = curProducts.map(pr =>
-    `<option value="${pr.id}"${String(pr.id) === String(currentUpProductId) ? ' selected' : ''}>${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`
-  ).join('');
+  const productOptions = curProducts
+    .map(
+      (pr) =>
+        `<option value="${pr.id}"${String(pr.id) === String(currentUpProductId) ? ' selected' : ''}>${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`,
+    )
+    .join('');
 
   const modal = openModal({
     title: 'Редактировать производственный план',
@@ -667,7 +788,9 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
         <label>Название плана</label>
         <input type="text" id="editProjectName" value="${escapeHtml(currentName)}" autofocus>
       </div>
-      ${upProjects.length ? `
+      ${
+        upProjects.length
+          ? `
       <!-- Привязка к проекту УП -->
       <div class="modal-form-group">
         <label>Привязать к проекту (УП)</label>
@@ -683,27 +806,35 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
           <option value="">— весь проект —</option>
           ${productOptions}
         </select>
-      </div>` : ''}`,
+      </div>`
+          : ''
+      }`,
     footer: `
       <button class="btn btn-outline modal-cancel">Отмена</button>
       <button class="btn btn-primary" id="saveProjectBtn">Сохранить</button>`,
   });
 
-  const nameInput    = modal.dialog.querySelector('#editProjectName');
-  const upSel        = modal.dialog.querySelector('#editUpProject');
+  const nameInput = modal.dialog.querySelector('#editProjectName');
+  const upSel = modal.dialog.querySelector('#editUpProject');
   const productGroup = modal.dialog.querySelector('#editProductGroup');
-  const productSel   = modal.dialog.querySelector('#editUpProduct');
-  const saveBtn      = modal.dialog.querySelector('#saveProjectBtn');
+  const productSel = modal.dialog.querySelector('#editUpProduct');
+  const saveBtn = modal.dialog.querySelector('#saveProjectBtn');
 
   // При смене УП-проекта: обновить список изделий
   if (upSel && productGroup && productSel) {
     upSel.addEventListener('change', () => {
       const upId = upSel.value;
-      const upProj = upId ? upProjects.find(p => String(p.id) === String(upId)) : null;
+      const upProj = upId ? upProjects.find((p) => String(p.id) === String(upId)) : null;
       const products = upProj && upProj.products ? upProj.products : [];
       if (products.length > 0) {
-        productSel.innerHTML = '<option value="">— весь проект —</option>'
-          + products.map(pr => `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`).join('');
+        productSel.innerHTML =
+          '<option value="">— весь проект —</option>' +
+          products
+            .map(
+              (pr) =>
+                `<option value="${pr.id}">${escapeHtml(pr.name)}${pr.code ? ' (' + escapeHtml(pr.code) + ')' : ''}</option>`,
+            )
+            .join('');
         productGroup.style.display = '';
       } else {
         productGroup.style.display = 'none';
@@ -715,11 +846,14 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
   // Сохранить изменения через PUT /api/pp_projects/<id>/
   async function doSave() {
     const name = nameInput.value.trim();
-    if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
+    if (!name) {
+      nameInput.style.borderColor = 'var(--danger)';
+      return;
+    }
     saveBtn.disabled = true;
     // undefined означает «не изменять» (если поля нет в форме)
-    const up_project_id = upSel ? (upSel.value || null) : undefined;
-    const up_product_id = productSel ? (productSel.value || null) : undefined;
+    const up_project_id = upSel ? upSel.value || null : undefined;
+    const up_product_id = productSel ? productSel.value || null : undefined;
     const body = { name };
     if (up_project_id !== undefined) body.up_project_id = up_project_id;
     if (up_product_id !== undefined) body.up_product_id = up_product_id;
@@ -742,10 +876,7 @@ async function editProjectName(id, currentName, currentUpProjectId, currentUpPro
 
 // Удаляет ПП-план со всеми его строками после подтверждения
 async function deleteProject(id, name) {
-  const ok = await confirmDialog(
-    `Удалить проект "${name}" и все его строки?`,
-    'Удаление проекта'
-  );
+  const ok = await confirmDialog(`Удалить проект "${name}" и все его строки?`, 'Удаление проекта');
   if (!ok) return;
   // DELETE /api/pp_projects/<id>/
   const resp = await fetchJson(`/api/pp_projects/${id}/`, { method: 'DELETE' });
@@ -777,15 +908,21 @@ async function openProject(id, name) {
   void _pv.offsetWidth;
   _pv.classList.add('spa-fade-in');
   // Обновляем хлебные крошки: Главная / Производственный план / [Имя проекта]
-  const projObj = projects.find(p => String(p.id) === String(id));
+  const projObj = projects.find((p) => String(p.id) === String(id));
   let headerTitle = name;
   if (projObj && projObj.up_project_name) {
     headerTitle = name + ' (проект: ' + projObj.up_project_name + ')';
   }
   updateBreadcrumbs([
-    {label: 'Главная', url: '/'},
-    {label: 'Производственный план', url: '#', onclick: function() { goToLanding(); }},
-    {label: headerTitle}
+    { label: 'Главная', url: '/' },
+    {
+      label: 'Производственный план',
+      url: '#',
+      onclick: function () {
+        goToLanding();
+      },
+    },
+    { label: headerTitle },
   ]);
 
   // Показываем skeleton-загрузку в таблице
@@ -797,10 +934,14 @@ async function openProject(id, name) {
     loadPPRows(id),
     upId
       ? fetch('/api/projects/' + upId + '/stages/')
-          .then(r => r.ok ? r.json() : [])
-          .then(data => { _ppStages = data; })
-          .catch(() => { _ppStages = []; })
-      : Promise.resolve(_ppStages = []),
+          .then((r) => (r.ok ? r.json() : []))
+          .then((data) => {
+            _ppStages = data;
+          })
+          .catch(() => {
+            _ppStages = [];
+          })
+      : Promise.resolve((_ppStages = [])),
   ]);
 
   // Восстанавливаем фильтры из URL (год, месяц, отдел) — для расшаренных ссылок
@@ -826,7 +967,10 @@ async function openProject(id, name) {
     colFilters['mf_dept'] = new Set([USER_DEPT]);
     // Обновляем кнопку фильтра
     const deptBtn = document.querySelector('.mf-trigger[data-col="dept"]');
-    if (deptBtn) { deptBtn.textContent = USER_DEPT; deptBtn.classList.add('active'); }
+    if (deptBtn) {
+      deptBtn.textContent = USER_DEPT;
+      deptBtn.classList.add('active');
+    }
     document.getElementById('filtersActiveBadge').style.display = 'inline';
   }
 
@@ -852,54 +996,58 @@ function buildSelectHtml(col, row) {
 
   if (col === 'dept') {
     // В ПП все отделы доступны для просмотра и выбора
-    (dirs.dept || []).forEach(d => {
+    (dirs.dept || []).forEach((d) => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === val ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
   } else if (col === 'center') {
     // В ПП все НТЦ доступны для выбора
     const centerVal = val || USER_CENTER;
-    (dirs.center || []).forEach(d => {
+    (dirs.center || []).forEach((d) => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === centerVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
   } else if (col === 'executor') {
     // Исполнитель: фильтрация по сектору (если выбран), иначе по отделу
-    const deptFilter   = row['dept'] || '';
+    const deptFilter = row['dept'] || '';
     const sectorFilter = row['sector_head'] || '';
     const allEmps = dirs.employees || [];
     let filtered;
     if (sectorFilter) {
       // Если выбран сектор — показываем только сотрудников этого сектора
-      filtered = allEmps.filter(e => e.sector === sectorFilter);
+      filtered = allEmps.filter((e) => e.sector === sectorFilter);
     } else if (deptFilter) {
       // Иначе — все сотрудники отдела
-      filtered = allEmps.filter(e => e.dept === deptFilter);
+      filtered = allEmps.filter((e) => e.dept === deptFilter);
     } else {
       filtered = allEmps;
     }
     // Если текущее значение не в отфильтрованном списке — добавляем его как фантомную опцию
-    if (val && !filtered.find(e => e.value === val)) {
+    if (val && !filtered.find((e) => e.value === val)) {
       options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
     }
-    filtered.forEach(e => {
+    filtered.forEach((e) => {
       options += `<option value="${escapeHtml(e.value)}"${e.value === val ? ' selected' : ''}>${escapeHtml(e.value)}</option>`;
     });
   } else if (col === 'sector_head') {
     // Сектор: фильтрация по выбранному отделу
     const deptVal = row['dept'] || '';
-    const deptEntry = (dirs.dept || []).find(d => d.value === deptVal);
+    const deptEntry = (dirs.dept || []).find((d) => d.value === deptVal);
     const allHeads = dirs.sector_head || [];
-    const filtered = deptEntry ? allHeads.filter(h => h.parent_id === deptEntry.id) : allHeads;
+    const filtered = deptEntry ? allHeads.filter((h) => h.parent_id === deptEntry.id) : allHeads;
     // Фантомная опция если текущее значение не найдено в отфильтрованном списке
-    if (val && !filtered.find(h => h.value === val)) {
+    if (val && !filtered.find((h) => h.value === val)) {
       // Ищем ФИО нач. сектора среди всех секторов
-      const anyMatch = allHeads.find(h => h.value === val);
+      const anyMatch = allHeads.find((h) => h.value === val);
       options += `<option value="${escapeHtml(val)}" selected>${escapeHtml(val)}</option>`;
     }
-    filtered.forEach(h => {
+    filtered.forEach((h) => {
       // Начальник сектора видит все сектора своего отдела,
       // но чужой сектор — disabled (только для просмотра)
-      const isOwnSector = IS_ADMIN || USER_ROLE === 'dept_head' || USER_ROLE === 'dept_deputy'
-                          || !USER_SECTOR || h.value === USER_SECTOR;
+      const isOwnSector =
+        IS_ADMIN ||
+        USER_ROLE === 'dept_head' ||
+        USER_ROLE === 'dept_deputy' ||
+        !USER_SECTOR ||
+        h.value === USER_SECTOR;
       const disabledAttr = isOwnSector ? '' : ' disabled style="color:var(--muted)"';
       // Текст опции: только код сектора (ФИО выводится серым под select'ом)
       options += `<option value="${escapeHtml(h.value)}"${h.value === val ? ' selected' : ''}${disabledAttr}>${escapeHtml(h.value)}</option>`;
@@ -908,15 +1056,15 @@ function buildSelectHtml(col, row) {
     // Тип задачи: значение по умолчанию «Выпуск нового документа»
     const taskVal = val || 'Выпуск нового документа';
     const taskTypes = dirs.task_type || [];
-    taskTypes.forEach(d => {
+    taskTypes.forEach((d) => {
       options += `<option value="${escapeHtml(d.value)}"${d.value === taskVal ? ' selected' : ''}>${escapeHtml(d.value)}</option>`;
     });
   } else if (col === 'pp_stage') {
     // Этап ПП: дропдаун из _ppStages
     const stId = row.pp_stage_id || '';
     options = '<option value="">--</option>';
-    _ppStages.forEach(s => {
-      const label = s.stage_number ? (s.stage_number + '. ' + s.name) : s.name;
+    _ppStages.forEach((s) => {
+      const label = s.stage_number ? s.stage_number + '. ' + s.name : s.name;
       options += `<option value="${s.id}"${String(s.id) === String(stId) ? ' selected' : ''}>${escapeHtml(label)}</option>`;
     });
     return `<select class="cell-edit" data-col="pp_stage" data-id="${row.id}">${options}</select>`;
@@ -939,7 +1087,11 @@ function _ppMoveFocus(current, forward) {
   // Перебираем соседние td, пока не найдём ячейку с .cell-edit
   while (nextTd) {
     const el = nextTd.querySelector('.cell-edit');
-    if (el) { el.focus(); if (el.tagName !== 'SELECT') el.select(); return; }
+    if (el) {
+      el.focus();
+      if (el.tagName !== 'SELECT') el.select();
+      return;
+    }
     nextTd = forward ? nextTd.nextElementSibling : nextTd.previousElementSibling;
   }
   // Если в текущей строке не нашлось — переходим в соседнюю строку
@@ -960,14 +1112,14 @@ function _ppAttachDelegatedListeners(tbody) {
   _ppDelegationAttached = true;
 
   // change — сохранение ячейки (input/select с .cell-edit)
-  tbody.addEventListener('change', function(e) {
+  tbody.addEventListener('change', function (e) {
     if (e.target.matches('.cell-edit')) {
       handleCellChange(e);
     }
   });
 
   // keydown — Tab-навигация между ячейками
-  tbody.addEventListener('keydown', function(e) {
+  tbody.addEventListener('keydown', function (e) {
     if (e.key === 'Tab' && e.target.matches('.cell-edit')) {
       e.preventDefault();
       handleCellChange({ target: e.target });
@@ -976,17 +1128,22 @@ function _ppAttachDelegatedListeners(tbody) {
   });
 
   // click — кнопка удаления строки
-  tbody.addEventListener('click', async function(e) {
+  tbody.addEventListener('click', async function (e) {
     const btn = e.target.closest('.btn-delete');
     if (!btn) return;
     const id = btn.getAttribute('data-id');
     // ── Перехват для песочницы ──
     if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
-      const ok = await confirmDialog('Отметить строку на удаление в песочнице?', 'Удаление (песочница)');
+      const ok = await confirmDialog(
+        'Отметить строку на удаление в песочнице?',
+        'Удаление (песочница)',
+      );
       if (!ok) return;
       try {
         await addSandboxItem('delete', id, {});
-      } catch(err) { /* toast уже показан */ }
+      } catch (err) {
+        /* toast уже показан */
+      }
       return;
     }
     const ok = await confirmDialog('Удалить эту строку?', 'Удаление');
@@ -994,8 +1151,8 @@ function _ppAttachDelegatedListeners(tbody) {
     const delTr = btn.closest('tr');
     const resp = await fetchJson('/api/production_plan/' + id + '/', { method: 'DELETE' });
     if (!resp._error) {
-      rows = rows.filter(r => String(r.id) !== String(id));
-      animateRowExit(delTr, function() {
+      rows = rows.filter((r) => String(r.id) !== String(id));
+      animateRowExit(delTr, function () {
         renderPPTable();
       });
       showToast('Строка удалена', 'success');
@@ -1008,13 +1165,16 @@ function renderPPTable() {
   const tbody = document.getElementById('ppTableBody');
   tbody.innerHTML = '';
   _ppRenderedCount = 0;
-  if (_ppScrollDispose) { _ppScrollDispose(); _ppScrollDispose = null; }
+  if (_ppScrollDispose) {
+    _ppScrollDispose();
+    _ppScrollDispose = null;
+  }
 
   // Обновляем панель статусов
   ppUpdateStatusPanel();
 
   // Применяем сортировку и активные колоночные фильтры к массиву строк
-  _ppFiltered = rows.filter(row => {
+  _ppFiltered = rows.filter((row) => {
     // Фильтр по статусу (прогресс-панель)
     if (_ppStatusFilter !== 'all' && _ppGetStatus(row) !== _ppStatusFilter) return false;
 
@@ -1023,11 +1183,14 @@ function renderPPTable() {
         // Мультифильтр: проверяем входит ли значение в выбранное множество
         const field = col.slice(3);
         if (val.size > 0) {
-            // Для date_end сравниваем по году-месяцу (первые 7 символов)
-            const cellVal = (field === 'date_end' || field === 'date_start')
+          // Для date_end сравниваем по году-месяцу (первые 7 символов)
+          const cellVal =
+            field === 'date_end' || field === 'date_start'
               ? (row[field] || '').slice(0, 7)
-              : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
-            if (!val.has(cellVal)) return false;
+              : field === 'pp_stage' || field === 'stage_num'
+                ? row.pp_stage_name || ''
+                : row[field] || '';
+          if (!val.has(cellVal)) return false;
         }
         continue;
       }
@@ -1040,14 +1203,14 @@ function renderPPTable() {
 
   // Сортировка
   if (_ppSortState.col) {
-    _ppFiltered = applySortToArray(_ppFiltered, _ppSortState, function(r, col) {
+    _ppFiltered = applySortToArray(_ppFiltered, _ppSortState, function (r, col) {
       return r[col] || '';
     });
   }
 
   // Закреплённая строка — всегда первая (pin сверху)
   if (_ppPinnedRowId) {
-    const pinIdx = _ppFiltered.findIndex(r => r.id === _ppPinnedRowId);
+    const pinIdx = _ppFiltered.findIndex((r) => r.id === _ppPinnedRowId);
     if (pinIdx > 0) {
       const [pinned] = _ppFiltered.splice(pinIdx, 1);
       _ppFiltered.unshift(pinned);
@@ -1071,12 +1234,28 @@ function renderPPTable() {
 
   // Пустое состояние: вообще нет работ
   if (rows.length === 0) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-industry', title:'Нет работ', desc:'Добавьте первую работу в производственный план', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить работу</button>' : '', colspan:20});
+    tbody.innerHTML = emptyStateHtml({
+      icon: 'fas fa-industry',
+      title: 'Нет работ',
+      desc: 'Добавьте первую работу в производственный план',
+      action: IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить работу</button>'
+        : '',
+      colspan: 20,
+    });
     return;
   }
   // Пустое состояние: нет строк после фильтрации
   if (_ppFiltered.length === 0) {
-    tbody.innerHTML = emptyStateHtml({icon:'fas fa-search', title:'Ничего не найдено', desc:'Попробуйте изменить фильтры или сбросить поиск', action: IS_WRITER ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>' : '', colspan:20});
+    tbody.innerHTML = emptyStateHtml({
+      icon: 'fas fa-search',
+      title: 'Ничего не найдено',
+      desc: 'Попробуйте изменить фильтры или сбросить поиск',
+      action: IS_WRITER
+        ? '<button class="btn btn-primary btn-sm" onclick="openAddRowModal()"><i class="fas fa-plus"></i> Добавить строку</button>'
+        : '',
+      colspan: 20,
+    });
     return;
   }
 
@@ -1095,15 +1274,15 @@ function renderPPTable() {
 function updatePpSummary() {
   var total = 0;
   var executorSet = new Set();
-  rows.forEach(function(r) {
+  rows.forEach(function (r) {
     var lab = parseFloat(r.labor);
     if (!isNaN(lab)) total += lab;
     if (r.executor) executorSet.add(r.executor);
   });
 
   // Трудоёмкость
-  document.getElementById("ppSummaryValue").innerHTML =
-    '<i class="fas fa-clock"></i> ' + (total > 0 ? total.toLocaleString("ru-RU") + ' ч' : '0 ч');
+  document.getElementById('ppSummaryValue').innerHTML =
+    '<i class="fas fa-clock"></i> ' + (total > 0 ? total.toLocaleString('ru-RU') + ' ч' : '0 ч');
 
   // Период
   var periodLabel;
@@ -1112,26 +1291,29 @@ function updatePpSummary() {
   } else {
     periodLabel = 'Год ' + ppSelectedYear;
   }
-  document.getElementById("ppSummaryPeriod").innerHTML =
+  document.getElementById('ppSummaryPeriod').innerHTML =
     '<i class="fas fa-calendar"></i> ' + periodLabel + ' · ' + _ppFiltered.length + ' работ';
 
   // Сотрудники
   var staffCount = executorSet.size;
-  document.getElementById("ppSummaryStaff").innerHTML =
+  document.getElementById('ppSummaryStaff').innerHTML =
     '<i class="fas fa-users"></i> ' + (staffCount > 0 ? staffCount + ' сотр.' : '—');
 
   // Отдел
-  var deptNames = ppSelectedDepts.size > 0 ? [...ppSelectedDepts].join(", ") : "Все отделы";
-  document.getElementById("ppSummaryDept").innerHTML =
+  var deptNames = ppSelectedDepts.size > 0 ? [...ppSelectedDepts].join(', ') : 'Все отделы';
+  document.getElementById('ppSummaryDept').innerHTML =
     '<i class="fas fa-building"></i> ' + deptNames;
 
   // Прогресс выполнения (% выполненных задач)
-  var doneCount = _ppFiltered.filter(function(r) { return _ppGetStatus(r) === 'done'; }).length;
+  var doneCount = _ppFiltered.filter(function (r) {
+    return _ppGetStatus(r) === 'done';
+  }).length;
   var totalCount = _ppFiltered.length;
-  var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
-  var loadEl = document.getElementById("ppSummaryLoad");
+  var pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  var loadEl = document.getElementById('ppSummaryLoad');
   loadEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + pct + '% выполнено';
-  loadEl.className = "stat-badge sb-load" + (pct >= 80 ? "" : pct >= 50 ? " load-warn" : " load-over");
+  loadEl.className =
+    'stat-badge sb-load' + (pct >= 80 ? '' : pct >= 50 ? ' load-warn' : ' load-over');
 }
 
 /* ── Добавление порции строк в таблицу ПП ─────────────────────────── */
@@ -1147,7 +1329,7 @@ function _ppAppendBatch(count) {
     const row = _ppFiltered[idx];
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
-    tr.dataset.draggable = "true";
+    tr.dataset.draggable = 'true';
     // Подсветка строки по статусу
     const _st = _ppGetStatus(row);
     if (_st === 'done') tr.classList.add('row-done');
@@ -1156,9 +1338,12 @@ function _ppAppendBatch(count) {
     // Закреплённая новая строка — зелёная пульсация 9с через CSS box-shadow на TD
     if (row.id === _ppPinnedRowId) {
       tr.classList.add('row-pinned');
-      setTimeout(function() {
+      setTimeout(function () {
         tr.classList.add('pin-fade');
-        setTimeout(function() { tr.classList.remove('row-pinned', 'pin-fade'); _ppPinnedRowId = null; }, 600);
+        setTimeout(function () {
+          tr.classList.remove('row-pinned', 'pin-fade');
+          _ppPinnedRowId = null;
+        }, 600);
       }, 9000);
     }
     // Первый столбец — порядковый номер (1-based)
@@ -1169,7 +1354,7 @@ function _ppAppendBatch(count) {
 
     // Для каждого поля колонки — определяем тип ячейки и строим HTML
     for (const col of PP_COLUMNS) {
-      const val = col === 'stage_num' ? (row.pp_stage_name || row[col] || '') : (row[col] || '');
+      const val = col === 'stage_num' ? row.pp_stage_name || row[col] || '' : row[col] || '';
       const lbl = PP_COL_LABELS[col] || col; // метка для мобильного card-layout
       const ci = PP_COL_IDX[col]; // индекс колонки для режимов отображения
       // Классификация типа ячейки
@@ -1178,14 +1363,20 @@ function _ppAppendBatch(count) {
       const isTextCol = ['work_name', 'work_designation'].includes(col);
       const isDateCol = col === 'date_start' || col === 'date_end';
 
-      if (!IS_WRITER || !rowEditable || col === 'row_code' || col === 'work_order' || col === 'work_num') {
+      if (
+        !IS_WRITER ||
+        !rowEditable ||
+        col === 'row_code' ||
+        col === 'work_order' ||
+        col === 'work_num'
+      ) {
         // Режим только для чтения: row_code, work_order, work_num — авто-генерация, read-only
         if (col === 'sector_head' && val) {
-          const sh = (dirs.sector_head || []).find(h => h.value === val);
-          const headName = sh ? (sh.head_name || '') : '';
+          const sh = (dirs.sector_head || []).find((h) => h.value === val);
+          const headName = sh ? sh.head_name || '' : '';
           html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;">${escapeHtml(val)}${headName ? `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else if (col === 'task_type' && val) {
-          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;text-align:center;">${taskTypeBadgeHtml(val, {short: true})}</td>`;
+          html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;text-align:center;">${taskTypeBadgeHtml(val, { short: true })}</td>`;
         } else {
           html += `<td data-col-idx="${ci}" data-label="${lbl}" style="padding:4px 6px;">${escapeHtml(val)}</td>`;
         }
@@ -1195,8 +1386,8 @@ function _ppAppendBatch(count) {
       } else if (isSelectCol) {
         // Выпадающий список с учётом роли пользователя
         if (col === 'sector_head' && val) {
-          const sh = (dirs.sector_head || []).find(h => h.value === val);
-          const headName = sh ? (sh.head_name || '') : '';
+          const sh = (dirs.sector_head || []).find((h) => h.value === val);
+          const headName = sh ? sh.head_name || '' : '';
           html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}${headName ? `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>` : ''}</td>`;
         } else {
           html += `<td data-col-idx="${ci}" data-label="${lbl}">${buildSelectHtml(col, row)}</td>`;
@@ -1229,7 +1420,7 @@ function _ppAppendBatch(count) {
   /* ── Инициализация _ppLastSaved для новых ячеек ──────────────────── */
   const allRows = tbody.querySelectorAll('tr');
   for (let r = startIdx; r < end && r < allRows.length; r++) {
-    allRows[r].querySelectorAll('.cell-edit').forEach(input => {
+    allRows[r].querySelectorAll('.cell-edit').forEach((input) => {
       input._ppLastSaved = input.value;
     });
   }
@@ -1246,15 +1437,22 @@ function _ppAppendBatch(count) {
   if (_ppRenderedCount < _ppFiltered.length) {
     const spinnerTr = document.createElement('tr');
     spinnerTr.id = 'ppScrollSpinner';
-    spinnerTr.innerHTML = '<td colspan="19" class="scroll-spinner"><i class="fas fa-spinner"></i> Загружено ' + _ppRenderedCount + ' из ' + _ppFiltered.length + '...</td>';
+    spinnerTr.innerHTML =
+      '<td colspan="19" class="scroll-spinner"><i class="fas fa-spinner"></i> Загружено ' +
+      _ppRenderedCount +
+      ' из ' +
+      _ppFiltered.length +
+      '...</td>';
     tbody.appendChild(spinnerTr);
   }
-
 }
 
 /* ── Слушатель прокрутки для ленивой подгрузки строк ПП ───────────── */
 function _ppAttachScrollListener() {
-  if (_ppScrollDispose) { _ppScrollDispose(); _ppScrollDispose = null; }
+  if (_ppScrollDispose) {
+    _ppScrollDispose();
+    _ppScrollDispose = null;
+  }
   if (_ppRenderedCount >= _ppFiltered.length) return;
 
   _ppScrollDispose = createScrollLoader(
@@ -1263,11 +1461,12 @@ function _ppAttachScrollListener() {
       if (_ppRenderedCount < _ppFiltered.length) {
         _ppAppendBatch(PP_CHUNK);
         if (_ppRenderedCount >= _ppFiltered.length && _ppScrollDispose) {
-          _ppScrollDispose(); _ppScrollDispose = null;
+          _ppScrollDispose();
+          _ppScrollDispose = null;
         }
       }
     },
-    200
+    200,
   );
 }
 
@@ -1276,7 +1475,9 @@ function _ppAttachScrollListener() {
 function cellOutline(td, color, ms) {
   if (!td) return;
   td.style.outline = '1px solid ' + color;
-  setTimeout(() => { td.style.outline = ''; }, ms);
+  setTimeout(() => {
+    td.style.outline = '';
+  }, ms);
 }
 
 /* ── Обработчик изменения ячейки (отправка PUT на сервер) ────────────── */
@@ -1296,28 +1497,31 @@ async function handleCellChange(e) {
     if (field === 'pp_stage') {
       // При смене этапа в новой строке — обновляем row_code и work_order из ЕТБД
       const tr = input.closest('tr');
-      const stg = _ppStages.find(s => String(s.id) === String(value));
+      const stg = _ppStages.find((s) => String(s.id) === String(value));
       const rcTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.row_code + '"]');
       const woTd = tr.querySelector('td[data-col-idx="' + PP_COL_IDX.work_order + '"]');
-      if (rcTd) rcTd.textContent = stg ? (stg.row_code || 'авто') : 'авто';
-      if (woTd) woTd.textContent = stg ? (stg.work_order || 'авто') : 'авто';
+      if (rcTd) rcTd.textContent = stg ? stg.row_code || 'авто' : 'авто';
+      if (woTd) woTd.textContent = stg ? stg.work_order || 'авто' : 'авто';
     }
     if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
       const tr = input.closest('tr');
-      let sheets = null, norm = null, coeff = null;
-      tr.querySelectorAll('input').forEach(inp => {
+      let sheets = null,
+        norm = null,
+        coeff = null;
+      tr.querySelectorAll('input').forEach((inp) => {
         const col = inp.getAttribute('data-col');
         const v = parseFloat(inp.value.replace(',', '.'));
         if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
-        if (col === 'norm'      && !isNaN(v)) norm  = v;
-        if (col === 'coeff'     && !isNaN(v)) coeff = v;
+        if (col === 'norm' && !isNaN(v)) norm = v;
+        if (col === 'coeff' && !isNaN(v)) coeff = v;
       });
       const laborInput = tr.querySelector('input[data-col="labor"]');
       if (laborInput) {
         // Рассчитываем трудоёмкость: листы × норматив × коэффициент (округлить до целого)
-        laborInput.value = (sheets !== null && norm !== null && coeff !== null)
-          ? +(sheets * norm * coeff).toFixed(2)
-          : '';
+        laborInput.value =
+          sheets !== null && norm !== null && coeff !== null
+            ? +(sheets * norm * coeff).toFixed(2)
+            : '';
       }
     }
     return;
@@ -1325,20 +1529,21 @@ async function handleCellChange(e) {
 
   // task_type обязателен: если очищен — сбросить к значению по умолчанию
   if (field === 'task_type' && !value.trim()) {
-    const defaultType = (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : '';
+    const defaultType = dirs.task_type && dirs.task_type.length ? dirs.task_type[0].value : '';
     input.value = defaultType;
     value = defaultType;
   }
 
   // При смене отдела: пересобираем список нач. секторов И исполнителей
   if (field === 'dept') {
-    const rowObj = rows.find(r => String(r.id) === String(id));
+    const rowObj = rows.find((r) => String(r.id) === String(id));
     if (rowObj) {
       rowObj.dept = value;
-      rowObj.sector_head = '';  // Сброс сектора при смене отдела
+      rowObj.sector_head = ''; // Сброс сектора при смене отдела
       // Отправляем сброс сектора на сервер
       fetchJson('/api/production_plan/' + id + '/?field=sector_head', {
-        method: 'PUT', body: JSON.stringify({ value: '' }),
+        method: 'PUT',
+        body: JSON.stringify({ value: '' }),
       });
       // Обновляем нач. секторов
       const headSel = input.closest('tr').querySelector('select[data-col="sector_head"]');
@@ -1359,20 +1564,22 @@ async function handleCellChange(e) {
 
   // При смене сектора: обновляем ФИО под селектом и пересобираем список исполнителей
   if (field === 'sector_head') {
-    const rowObj = rows.find(r => String(r.id) === String(id));
+    const rowObj = rows.find((r) => String(r.id) === String(id));
     if (rowObj) {
       rowObj.sector_head = value;
       // Обновляем div с ФИО начальника сектора
       const _shTd = input.closest('td');
       const headDiv = _shTd.querySelector('div.sh-name');
-      const sh = (dirs.sector_head || []).find(h => h.value === value);
-      const headName = sh ? (sh.head_name || '') : '';
+      const sh = (dirs.sector_head || []).find((h) => h.value === value);
+      const headName = sh ? sh.head_name || '' : '';
       if (headDiv) {
         headDiv.textContent = headName;
         headDiv.style.display = headName ? '' : 'none';
       } else if (headName) {
-        _shTd.insertAdjacentHTML('beforeend',
-          `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>`);
+        _shTd.insertAdjacentHTML(
+          'beforeend',
+          `<div class="sh-name" style="font-size:11px;color:var(--muted);margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(headName)}</div>`,
+        );
       }
       // Пересобираем исполнителей
       const execSel = input.closest('tr').querySelector('select[data-col="executor"]');
@@ -1392,8 +1599,10 @@ async function handleCellChange(e) {
     // Авто-расчёт трудоёмкости в sandbox
     if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
       const tr = input.closest('tr');
-      let sheets = null, norm = null, coeff = null;
-      tr.querySelectorAll('input').forEach(inp => {
+      let sheets = null,
+        norm = null,
+        coeff = null;
+      tr.querySelectorAll('input').forEach((inp) => {
         const col = inp.getAttribute('data-col');
         const v = parseFloat(inp.value.replace(',', '.'));
         if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
@@ -1443,15 +1652,15 @@ async function handleCellChange(e) {
   flashCell(td);
 
   // Обновляем данные в локальном массиве
-  const rowObj = rows.find(r => String(r.id) === String(id));
+  const rowObj = rows.find((r) => String(r.id) === String(id));
   if (rowObj) {
     if (field === 'pp_stage') {
       rowObj.pp_stage_id = value || null;
-      const cs = _ppStages.find(s => String(s.id) === String(value));
+      const cs = _ppStages.find((s) => String(s.id) === String(value));
       rowObj.pp_stage_name = cs ? cs.name : '';
       // Обновляем row_code и work_order из ЕТБД (PPStage)
-      rowObj.row_code = cs ? (cs.row_code || '') : '';
-      rowObj.work_order = cs ? (cs.work_order || '') : '';
+      rowObj.row_code = cs ? cs.row_code || '' : '';
+      rowObj.work_order = cs ? cs.work_order || '' : '';
       // Обновляем отображение в DOM
       const tr = input.closest('tr');
       if (tr) {
@@ -1469,9 +1678,11 @@ async function handleCellChange(e) {
   if (['sheets_a4', 'norm', 'coeff'].includes(field)) {
     try {
       const tr = input.closest('tr');
-      let sheets = null, norm = null, coeff = null;
+      let sheets = null,
+        norm = null,
+        coeff = null;
       // Читаем актуальные значения из DOM
-      tr.querySelectorAll('input').forEach(inp => {
+      tr.querySelectorAll('input').forEach((inp) => {
         const col = inp.getAttribute('data-col');
         const v = parseFloat(inp.value.replace(',', '.'));
         if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
@@ -1503,7 +1714,9 @@ async function handleCellChange(e) {
         cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
         flashCell(laborTd, 'error');
       }
-    } catch (e) { console.error('Ошибка пересчёта трудоёмкости:', e); }
+    } catch (e) {
+      console.error('Ошибка пересчёта трудоёмкости:', e);
+    }
   }
 }
 
@@ -1543,7 +1756,7 @@ function openAddRowModal() {
   if (USER_ROLE === 'sector_head' && USER_SECTOR) {
     const _heads = dirs.sector_head || [];
     // Ищем совпадение по коду или имени сектора
-    const _match = _heads.find(h => h.value === USER_SECTOR || h.value === USER_SECTOR_NAME);
+    const _match = _heads.find((h) => h.value === USER_SECTOR || h.value === USER_SECTOR_NAME);
     if (_match) _defaultSectorHead = _match.value;
     else if (USER_SECTOR_NAME) _defaultSectorHead = USER_SECTOR_NAME;
     else _defaultSectorHead = USER_SECTOR;
@@ -1551,15 +1764,32 @@ function openAddRowModal() {
 
   // Авто-заполнение НТЦ: для dept_head / dept_deputy / sector_head подставляем свой НТЦ
   // ntc_head / ntc_deputy / admin оставляем пустым (выбирают сами)
-  const _defaultCenter = (['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER)
-    ? USER_CENTER : '';
+  const _defaultCenter =
+    ['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER
+      ? USER_CENTER
+      : '';
 
   // Объект новой строки с дефолтными значениями из профиля пользователя
-  const newRow = { id: '_new_', row_code: '', work_order: '', stage_num: '',
-    work_num: '', work_designation: '', work_name: '',
-    date_end: '', sheets_a4: '', norm: '', coeff: '', labor: '',
-    center: _defaultCenter, dept: USER_DEPT || '', sector_head: _defaultSectorHead,
-    executor: '', task_type: (dirs.task_type && dirs.task_type.length) ? dirs.task_type[0].value : 'Выпуск нового документа' };
+  const newRow = {
+    id: '_new_',
+    row_code: '',
+    work_order: '',
+    stage_num: '',
+    work_num: '',
+    work_designation: '',
+    work_name: '',
+    date_end: '',
+    sheets_a4: '',
+    norm: '',
+    coeff: '',
+    labor: '',
+    center: _defaultCenter,
+    dept: USER_DEPT || '',
+    sector_head: _defaultSectorHead,
+    executor: '',
+    task_type:
+      dirs.task_type && dirs.task_type.length ? dirs.task_type[0].value : 'Выпуск нового документа',
+  };
 
   const tr = document.createElement('tr');
   tr.id = 'ppNewRow';
@@ -1579,8 +1809,8 @@ function openAddRowModal() {
     const ci = PP_COL_IDX[col];
     const isSelectCol = ['dept', 'center', 'executor', 'task_type', 'sector_head'].includes(col);
     const isPPStageCol = col === 'stage_num';
-    const isTextCol   = ['work_name', 'work_designation'].includes(col);
-    const isDateCol   = col === 'date_start' || col === 'date_end';
+    const isTextCol = ['work_name', 'work_designation'].includes(col);
+    const isDateCol = col === 'date_start' || col === 'date_end';
 
     if (col === 'row_code' || col === 'work_order' || col === 'work_num') {
       // row_code, work_order, work_num — авто-генерация, read-only
@@ -1625,35 +1855,41 @@ function openAddRowModal() {
   }
 
   // Зависимость: при смене отдела — обновить список нач. секторов И исполнителей
-  tr.querySelector('select[data-col="dept"]')?.addEventListener('change', function() {
+  tr.querySelector('select[data-col="dept"]')?.addEventListener('change', function () {
     newRow.dept = this.value;
-    newRow.sector_head = '';  // Сброс сектора при смене отдела
+    newRow.sector_head = ''; // Сброс сектора при смене отдела
     // Обновляем нач. секторов
     const tdSector = tr.querySelector('select[data-col="sector_head"]')?.closest('td');
     if (tdSector) {
       _replaceInTd(tdSector, buildSelectHtml('sector_head', newRow));
-      tdSector.querySelector('select').addEventListener('change', function() { newRow.sector_head = this.value; });
+      tdSector.querySelector('select').addEventListener('change', function () {
+        newRow.sector_head = this.value;
+      });
     }
     // Обновляем список исполнителей по новому отделу
     const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
     if (tdExec) {
       _replaceInTd(tdExec, buildSelectHtml('executor', newRow));
-      tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
+      tdExec.querySelector('select').addEventListener('change', function () {
+        newRow.executor = this.value;
+      });
     }
   });
 
   // Зависимость: при смене сектора — обновить список исполнителей
-  tr.querySelector('select[data-col="sector_head"]')?.addEventListener('change', function() {
+  tr.querySelector('select[data-col="sector_head"]')?.addEventListener('change', function () {
     newRow.sector_head = this.value;
     const tdExec = tr.querySelector('select[data-col="executor"]')?.closest('td');
     if (tdExec) {
       _replaceInTd(tdExec, buildSelectHtml('executor', newRow));
-      tdExec.querySelector('select').addEventListener('change', function() { newRow.executor = this.value; });
+      tdExec.querySelector('select').addEventListener('change', function () {
+        newRow.executor = this.value;
+      });
     }
   });
 
   // Зависимость: при смене НТЦ — ничего дополнительно (исполнители фильтруются по отделу/сектору)
-  tr.querySelector('select[data-col="center"]')?.addEventListener('change', function() {
+  tr.querySelector('select[data-col="center"]')?.addEventListener('change', function () {
     newRow.center = this.value;
   });
 
@@ -1661,24 +1897,30 @@ function openAddRowModal() {
   async function doSaveNewRow() {
     const body = { project_id: currentProjectId };
     // Читаем значения всех полей новой строки
-    tr.querySelectorAll('[data-id="_new_"]').forEach(inp => {
+    tr.querySelectorAll('[data-id="_new_"]').forEach((inp) => {
       body[inp.getAttribute('data-col')] = inp.value;
     });
 
     const saveBtn = document.getElementById('ppNewRowSave');
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '...'; }
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = '...';
+    }
 
     // ── Перехват для песочницы ──
     if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
       const fc = {};
-      tr.querySelectorAll('[data-id="_new_"]').forEach(inp => {
+      tr.querySelectorAll('[data-id="_new_"]').forEach((inp) => {
         const col = inp.getAttribute('data-col');
         const val = inp.value;
         if (val) fc[col] = val;
       });
       if (!fc.work_name) {
         showToast('Укажите наименование работы', 'warning');
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '✓';
+        }
         return;
       }
       try {
@@ -1687,23 +1929,29 @@ function openAddRowModal() {
         tr.remove();
         showToast('Новая строка добавлена в песочницу', 'success');
       } catch (err) {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '✓';
+        }
       }
       return;
     }
 
     let resp;
     try {
-    // POST /api/production_plan/create/
-    resp = await fetchJson('/api/production_plan/create/', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+      // POST /api/production_plan/create/
+      resp = await fetchJson('/api/production_plan/create/', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
     } catch (e) {
       console.error('Ошибка сохранения строки:', e);
       showToast('Ошибка сети', 'error');
       _addingRow = false;
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '✓';
+      }
       return;
     }
 
@@ -1713,7 +1961,7 @@ function openAddRowModal() {
       // Сбрасываем фильтры, чтобы новая запись была точно видна
       colFilters = {};
       mfSelections = {};
-      document.querySelectorAll('.mf-trigger.active').forEach(b => {
+      document.querySelectorAll('.mf-trigger.active').forEach((b) => {
         b.classList.remove('active');
         b.textContent = '▼';
       });
@@ -1722,14 +1970,15 @@ function openAddRowModal() {
       ppSelectedMonth = null;
       ppSelectedYear = new Date().getFullYear();
       document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
-      document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.pp-cal-month').forEach((el) => el.classList.remove('active'));
       // Сбрасываем фильтр отделов
       ppSelectedDepts = new Set();
       if (_ppDeptFilter) _ppDeptFilter.refresh();
-      if (currentProjectId) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
+      if (currentProjectId)
+        sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
       // Вставляем новую запись в начало rows напрямую (не зависим от лимита пагинации)
       if (resp.work) {
-        rows = rows.filter(r => r.id !== resp.work.id);
+        rows = rows.filter((r) => r.id !== resp.work.id);
         rows.unshift(resp.work);
       } else {
         await loadPPRows(currentProjectId, _ppScope);
@@ -1742,7 +1991,10 @@ function openAddRowModal() {
     } else {
       showToast(resp.error || 'Ошибка сохранения строки', 'error');
       _addingRow = false;
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓'; }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '✓';
+      }
     }
   }
 
@@ -1756,29 +2008,40 @@ function openAddRowModal() {
   });
 
   // Enter в любом поле — сохранить; Escape — отменить
-  tr.querySelectorAll('input').forEach(inp => {
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); doSaveNewRow(); }
-      if (e.key === 'Escape') { _addingRow = false; tr.remove(); }
+  tr.querySelectorAll('input').forEach((inp) => {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doSaveNewRow();
+      }
+      if (e.key === 'Escape') {
+        _addingRow = false;
+        tr.remove();
+      }
     });
   });
 
   // Авто-расчёт трудоёмкости при вводе sheets_a4 / norm / coeff в новой строке
-  tr.querySelectorAll('input[data-col="sheets_a4"], input[data-col="norm"], input[data-col="coeff"]').forEach(inp => {
+  tr.querySelectorAll(
+    'input[data-col="sheets_a4"], input[data-col="norm"], input[data-col="coeff"]',
+  ).forEach((inp) => {
     inp.addEventListener('input', () => {
-      let sheets = null, norm = null, coeff = null;
-      tr.querySelectorAll('input').forEach(i => {
+      let sheets = null,
+        norm = null,
+        coeff = null;
+      tr.querySelectorAll('input').forEach((i) => {
         const col = i.getAttribute('data-col');
         const v = parseFloat(i.value.replace(',', '.'));
         if (col === 'sheets_a4' && !isNaN(v)) sheets = v;
-        if (col === 'norm'      && !isNaN(v)) norm   = v;
-        if (col === 'coeff'     && !isNaN(v)) coeff  = v;
+        if (col === 'norm' && !isNaN(v)) norm = v;
+        if (col === 'coeff' && !isNaN(v)) coeff = v;
       });
       const laborInput = tr.querySelector('input[data-col="labor"]');
       if (laborInput) {
-        laborInput.value = (sheets !== null && norm !== null && coeff !== null)
-          ? +(sheets * norm * coeff).toFixed(2)
-          : '';
+        laborInput.value =
+          sheets !== null && norm !== null && coeff !== null
+            ? +(sheets * norm * coeff).toFixed(2)
+            : '';
       }
     });
   });
@@ -1790,11 +2053,12 @@ function _pmFillSelect(id, items, selectedVal) {
   var sel = document.getElementById(id);
   if (!sel) return;
   sel.innerHTML = '<option value="">--</option>';
-  (items || []).forEach(function(d) {
+  (items || []).forEach(function (d) {
     var v = d.value || d.id || '';
     var lbl = d.label || d.value || d.name || '';
     var s = String(v) === String(selectedVal) ? ' selected' : '';
-    sel.innerHTML += '<option value="' + escapeHtml(String(v)) + '"' + s + '>' + escapeHtml(lbl) + '</option>';
+    sel.innerHTML +=
+      '<option value="' + escapeHtml(String(v)) + '"' + s + '>' + escapeHtml(lbl) + '</option>';
   });
 }
 
@@ -1802,9 +2066,13 @@ function _pmFillExecutors(deptVal, sectorVal) {
   var allEmps = dirs.employees || [];
   var filtered;
   if (sectorVal) {
-    filtered = allEmps.filter(function(e) { return e.sector === sectorVal; });
+    filtered = allEmps.filter(function (e) {
+      return e.sector === sectorVal;
+    });
   } else if (deptVal) {
-    filtered = allEmps.filter(function(e) { return e.dept === deptVal; });
+    filtered = allEmps.filter(function (e) {
+      return e.dept === deptVal;
+    });
   } else {
     filtered = allEmps;
   }
@@ -1817,19 +2085,25 @@ function ppModalOpen() {
 
   // Дефолтные значения из профиля
   var defDept = USER_DEPT || '';
-  var defCenter = (['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER)
-    ? USER_CENTER : '';
-  var defSector = (USER_ROLE === 'sector_head' && USER_SECTOR_NAME) ? USER_SECTOR_NAME : '';
+  var defCenter =
+    ['dept_head', 'dept_deputy', 'sector_head'].includes(USER_ROLE) && USER_CENTER
+      ? USER_CENTER
+      : '';
+  var defSector = USER_ROLE === 'sector_head' && USER_SECTOR_NAME ? USER_SECTOR_NAME : '';
 
   // Заполняем select-поля
   _pmFillSelect('pm_dept', dirs.dept || [], defDept);
   _pmFillSelect('pm_center', dirs.center || [], defCenter);
 
   // Секторы — фильтрация по отделу
-  var deptEntry = (dirs.dept || []).find(function(d) { return d.value === defDept; });
+  var deptEntry = (dirs.dept || []).find(function (d) {
+    return d.value === defDept;
+  });
   var filteredSectors = deptEntry
-    ? (dirs.sector_head || []).filter(function(h) { return h.parent_id === deptEntry.id; })
-    : (dirs.sector_head || []);
+    ? (dirs.sector_head || []).filter(function (h) {
+        return h.parent_id === deptEntry.id;
+      })
+    : dirs.sector_head || [];
   _pmFillSelect('pm_sector_head', filteredSectors, defSector);
 
   // Исполнители
@@ -1841,45 +2115,66 @@ function ppModalOpen() {
   _pmFillSelect('pm_task_type', taskTypes, defType);
 
   // Этапы ПП
-  var stageItems = (_ppStages || []).map(function(s) { return {value: s.id, label: s.name}; });
+  var stageItems = (_ppStages || []).map(function (s) {
+    return { value: s.id, label: s.name };
+  });
   _pmFillSelect('pm_pp_stage', stageItems, '');
 
   // Очищаем текстовые и числовые поля
-  ['pm_work_name', 'pm_work_designation', 'pm_date_start', 'pm_date_end',
-   'pm_sheets_a4', 'pm_norm', 'pm_coeff', 'pm_labor'].forEach(function(id) {
+  [
+    'pm_work_name',
+    'pm_work_designation',
+    'pm_date_start',
+    'pm_date_end',
+    'pm_sheets_a4',
+    'pm_norm',
+    'pm_coeff',
+    'pm_labor',
+  ].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
 
   // Каскадные зависимости: отдел → сектор + исполнители
-  document.getElementById('pm_dept').onchange = function() {
+  document.getElementById('pm_dept').onchange = function () {
     var dv = this.value;
-    var de = (dirs.dept || []).find(function(d) { return d.value === dv; });
-    var fs = de ? (dirs.sector_head || []).filter(function(h) { return h.parent_id === de.id; }) : (dirs.sector_head || []);
+    var de = (dirs.dept || []).find(function (d) {
+      return d.value === dv;
+    });
+    var fs = de
+      ? (dirs.sector_head || []).filter(function (h) {
+          return h.parent_id === de.id;
+        })
+      : dirs.sector_head || [];
     _pmFillSelect('pm_sector_head', fs, '');
     _pmFillExecutors(dv, '');
   };
-  document.getElementById('pm_sector_head').onchange = function() {
+  document.getElementById('pm_sector_head').onchange = function () {
     _pmFillExecutors(document.getElementById('pm_dept').value, this.value);
   };
 
   // Авто-расчёт трудоёмкости
-  ['pm_sheets_a4', 'pm_norm', 'pm_coeff'].forEach(function(id) {
-    document.getElementById(id).oninput = function() {
+  ['pm_sheets_a4', 'pm_norm', 'pm_coeff'].forEach(function (id) {
+    document.getElementById(id).oninput = function () {
       var s = parseFloat(document.getElementById('pm_sheets_a4').value);
       var n = parseFloat(document.getElementById('pm_norm').value);
       var c = parseFloat(document.getElementById('pm_coeff').value);
       var lab = document.getElementById('pm_labor');
-      lab.value = (!isNaN(s) && !isNaN(n) && !isNaN(c)) ? +(s * n * c).toFixed(2) : '';
+      lab.value = !isNaN(s) && !isNaN(n) && !isNaN(c) ? +(s * n * c).toFixed(2) : '';
     };
   });
 
   // Активируем кнопку сохранения
   var btn = document.getElementById('pmSaveBtn');
-  if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Создать';
+  }
 
   modal.classList.add('open');
-  setTimeout(function() { document.getElementById('pm_work_name').focus(); }, 100);
+  setTimeout(function () {
+    document.getElementById('pm_work_name').focus();
+  }, 100);
 }
 
 async function ppModalSave() {
@@ -1892,11 +2187,19 @@ async function ppModalSave() {
 
   var body = { project_id: currentProjectId };
   var fields = {
-    work_name: 'pm_work_name', work_designation: 'pm_work_designation',
-    date_start: 'pm_date_start', date_end: 'pm_date_end',
-    sheets_a4: 'pm_sheets_a4', norm: 'pm_norm', coeff: 'pm_coeff', labor: 'pm_labor',
-    dept: 'pm_dept', center: 'pm_center', sector_head: 'pm_sector_head',
-    executor: 'pm_executor', task_type: 'pm_task_type'
+    work_name: 'pm_work_name',
+    work_designation: 'pm_work_designation',
+    date_start: 'pm_date_start',
+    date_end: 'pm_date_end',
+    sheets_a4: 'pm_sheets_a4',
+    norm: 'pm_norm',
+    coeff: 'pm_coeff',
+    labor: 'pm_labor',
+    dept: 'pm_dept',
+    center: 'pm_center',
+    sector_head: 'pm_sector_head',
+    executor: 'pm_executor',
+    task_type: 'pm_task_type',
   };
   for (var k in fields) {
     var el = document.getElementById(fields[k]);
@@ -1907,7 +2210,10 @@ async function ppModalSave() {
   if (stageEl && stageEl.value) body.pp_stage = stageEl.value;
 
   var btn = document.getElementById('pmSaveBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Сохранение...';
+  }
 
   // Песочница
   if (typeof sandboxMode !== 'undefined' && sandboxMode && currentChangesetId) {
@@ -1921,7 +2227,10 @@ async function ppModalSave() {
       closeModal('ppNewRowModal');
       showToast('Новая строка добавлена в песочницу', 'success');
     } catch (err) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Создать';
+      }
     }
     return;
   }
@@ -1936,7 +2245,7 @@ async function ppModalSave() {
       colFilters = {};
       // Вставляем новую строку в начало rows (если API вернул work)
       if (resp.work) {
-        rows = rows.filter(r => r.id !== resp.work.id);
+        rows = rows.filter((r) => r.id !== resp.work.id);
         rows.unshift(resp.work);
       } else {
         await loadPPRows(currentProjectId, _ppScope);
@@ -1948,12 +2257,18 @@ async function ppModalSave() {
       showToast('Работа добавлена', 'success');
     } else {
       showToast(resp._error || 'Ошибка', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Создать';
+      }
     }
   } catch (e) {
     console.error('Ошибка сохранения:', e);
     showToast('Ошибка сети', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Создать';
+    }
   }
 }
 
@@ -1961,14 +2276,17 @@ async function ppModalSave() {
 
 function togglePPStats() {
   const dd = document.getElementById('ppStatsDropdown');
-  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  if (dd.classList.contains('open')) {
+    dd.classList.remove('open');
+    return;
+  }
 
   // Считаем по всем строкам проекта (не фильтрованным)
   const executors = new Set();
   let totalLabor = 0;
   let doneLabor = 0;
 
-  rows.forEach(r => {
+  rows.forEach((r) => {
     if (r.executor) executors.add(r.executor);
     const lab = parseFloat(r.labor);
     if (!isNaN(lab)) {
@@ -1977,23 +2295,29 @@ function togglePPStats() {
     }
   });
 
-  const fmt = v => v % 1 === 0 ? v : v.toFixed(2);
+  const fmt = (v) => (v % 1 === 0 ? v : v.toFixed(2));
 
   dd.innerHTML =
     '<div class="pp-stats-row">' +
-      '<span class="pp-stats-label">Разработчиков</span>' +
-      '<span class="pp-stats-val">' + executors.size + '</span>' +
+    '<span class="pp-stats-label">Разработчиков</span>' +
+    '<span class="pp-stats-val">' +
+    executors.size +
+    '</span>' +
     '</div>' +
     '<div class="pp-stats-row">' +
-      '<span class="pp-stats-label">Трудоёмкость план / выполнено</span>' +
-      '<span class="pp-stats-val">' + fmt(totalLabor) + ' / ' + fmt(doneLabor) + '</span>' +
+    '<span class="pp-stats-label">Трудоёмкость план / выполнено</span>' +
+    '<span class="pp-stats-val">' +
+    fmt(totalLabor) +
+    ' / ' +
+    fmt(doneLabor) +
+    '</span>' +
     '</div>';
 
   dd.classList.add('open');
 }
 
 // Закрытие дропдауна статистики по клику вне
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const wrap = document.querySelector('.pp-stats-wrap');
   const dd = document.getElementById('ppStatsDropdown');
   if (wrap && dd && !wrap.contains(e.target)) dd.classList.remove('open');
@@ -2009,7 +2333,7 @@ async function syncToTasks() {
   }
   const ok = await confirmDialog(
     'Синхронизировать данные с модулем "План/отчёт"?',
-    'Синхронизация'
+    'Синхронизация',
   );
   if (!ok) return;
 
@@ -2018,7 +2342,7 @@ async function syncToTasks() {
   // center, sector_head — не у всех записей есть подразделение/сектор
   // task_type — сервер ставит дефолт «Выпуск нового документа»
   const optionalCols = new Set(['executor', 'center', 'sector_head', 'task_type']);
-  const requiredCols = PP_COLUMNS.filter(c => !optionalCols.has(c));
+  const requiredCols = PP_COLUMNS.filter((c) => !optionalCols.has(c));
 
   // Проверка «значение заполнено»: 0 — допустимое значение, пустая строка — нет
   function isFilled(v) {
@@ -2028,14 +2352,17 @@ async function syncToTasks() {
   }
 
   // Синхронизируем только отфильтрованные строки (видимые в таблице)
-  const filteredRows = rows.filter(row => {
+  const filteredRows = rows.filter((row) => {
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
         const field = col.slice(3);
         if (val.size > 0) {
-          const cellVal = (field === 'date_end')
-            ? (row[field] || '').slice(0, 7)
-            : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
+          const cellVal =
+            field === 'date_end'
+              ? (row[field] || '').slice(0, 7)
+              : field === 'pp_stage' || field === 'stage_num'
+                ? row.pp_stage_name || ''
+                : row[field] || '';
           if (!val.has(cellVal)) return false;
         }
         continue;
@@ -2047,7 +2374,7 @@ async function syncToTasks() {
   });
 
   // Сбрасываем предыдущие ошибки валидации
-  document.querySelectorAll('.cell-error').forEach(el => el.classList.remove('cell-error'));
+  document.querySelectorAll('.cell-error').forEach((el) => el.classList.remove('cell-error'));
 
   let hasErrors = false;
   let errorCount = 0;
@@ -2055,17 +2382,17 @@ async function syncToTasks() {
   // Проверяем каждую отфильтрованную строку на наличие обязательных полей
   for (const row of filteredRows) {
     // Пропускаем полностью пустые строки
-    const allEmpty = PP_COLUMNS.every(c => !isFilled(row[c]));
+    const allEmpty = PP_COLUMNS.every((c) => !isFilled(row[c]));
     if (allEmpty) continue;
 
-    const missingCols = requiredCols.filter(c => !isFilled(row[c]));
+    const missingCols = requiredCols.filter((c) => !isFilled(row[c]));
     if (missingCols.length > 0) {
       hasErrors = true;
       errorCount++;
       // Подсвечиваем незаполненные обязательные ячейки красным
       for (const col of missingCols) {
         const input = document.querySelector(
-          `#ppTableBody [data-col="${col}"][data-id="${row.id}"]`
+          `#ppTableBody [data-col="${col}"][data-id="${row.id}"]`,
         );
         if (input) {
           input.classList.add('cell-error');
@@ -2080,12 +2407,15 @@ async function syncToTasks() {
 
   // Если есть незаполненные обязательные поля — прерываем синхронизацию
   if (hasErrors) {
-    showToast('Обнаружены строки с незаполненными ячейками (выделены красным). Обязательны все поля, кроме: Исполнитель, Подразделение, Сектор, Тип задачи.', 'error');
+    showToast(
+      'Обнаружены строки с незаполненными ячейками (выделены красным). Обязательны все поля, кроме: Исполнитель, Подразделение, Сектор, Тип задачи.',
+      'error',
+    );
     return;
   }
 
   // Передаём серверу ids только отфильтрованных строк
-  const filteredIds = filteredRows.map(r => r.id);
+  const filteredIds = filteredRows.map((r) => r.id);
 
   // POST /api/production_plan/sync/ — запускаем перенос данных на сервере
   const resp = await fetchJson('/api/production_plan/sync/', {
@@ -2095,31 +2425,34 @@ async function syncToTasks() {
   if (!resp._error) {
     // Показываем сколько задач перенесено/обновлено
     const n = resp.synced || 0;
-    let msg = n > 0
-      ? `Синхронизировано записей: ${n}`
-      : 'Все записи уже синхронизированы';
+    let msg = n > 0 ? `Синхронизировано записей: ${n}` : 'Все записи уже синхронизированы';
     showToast(msg, 'success');
   }
 }
 
 /* ── Сортировка столбцов ─────────────────────────────────────────────── */
 var _ppSortState = { col: null, dir: 'asc' };
-var _ppPinnedRowId = null;  // id новой строки, закреплённой сверху
+var _ppPinnedRowId = null; // id новой строки, закреплённой сверху
 
 function _ppInitSort() {
-    var thead = document.querySelector('#ppTable thead');
-    if (!thead) return;
-    thead.querySelectorAll('th[data-sort]').forEach(function(th) {
-        th.style.cursor = 'pointer';
-        th.style.userSelect = 'none';
-        th.addEventListener('click', function(e) {
-            if (e.target.classList.contains('col-resize') || e.target.classList.contains('mf-trigger') || e.target.closest('.mf-trigger')) return;
-            toggleSort(_ppSortState, th.getAttribute('data-sort'));
-            renderSortIndicators(thead, _ppSortState);
-            renderPPTable();
-        });
+  var thead = document.querySelector('#ppTable thead');
+  if (!thead) return;
+  thead.querySelectorAll('th[data-sort]').forEach(function (th) {
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.addEventListener('click', function (e) {
+      if (
+        e.target.classList.contains('col-resize') ||
+        e.target.classList.contains('mf-trigger') ||
+        e.target.closest('.mf-trigger')
+      )
+        return;
+      toggleSort(_ppSortState, th.getAttribute('data-sort'));
+      renderSortIndicators(thead, _ppSortState);
+      renderPPTable();
     });
-    renderSortIndicators(thead, _ppSortState);
+  });
+  renderSortIndicators(thead, _ppSortState);
 }
 
 /* ── Мультифильтры по столбцам ───────────────────────────────────────── */
@@ -2133,7 +2466,9 @@ let activeMfDropdown = null;
 
 // Дефолтный текст кнопок-триггеров (треугольник ▼)
 const MF_DEFAULTS = {};
-PP_COLUMNS.forEach(c => { MF_DEFAULTS[c] = '\u25BC'; });
+PP_COLUMNS.forEach((c) => {
+  MF_DEFAULTS[c] = '\u25BC';
+});
 
 // ── PERIOD FILTER (год + месяц, клиентская фильтрация по date_end) ────────
 let ppSelectedYear = new Date().getFullYear();
@@ -2142,10 +2477,10 @@ let ppSelectedMonth = null; // null = все месяцы
 function initPPPeriodBar() {
   const bar = document.getElementById('ppPeriodBar');
   // Показываем панель периода если есть строки с датой
-  const hasDates = rows.some(r => r.date_end);
+  const hasDates = rows.some((r) => r.date_end);
   bar.style.display = hasDates ? '' : 'none';
   document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
-  document.querySelectorAll('.pp-cal-month').forEach(el => {
+  document.querySelectorAll('.pp-cal-month').forEach((el) => {
     el.classList.toggle('active', parseInt(el.dataset.m) === ppSelectedMonth);
   });
 }
@@ -2153,8 +2488,9 @@ function initPPPeriodBar() {
 // Подсвечивает чип текущего месяца точкой (класс .today)
 function _ppMarkTodayMonth() {
   var now = new Date();
-  var curYear = now.getFullYear(), curMonth = now.getMonth() + 1;
-  document.querySelectorAll('.pp-cal-month').forEach(function(el) {
+  var curYear = now.getFullYear(),
+    curMonth = now.getMonth() + 1;
+  document.querySelectorAll('.pp-cal-month').forEach(function (el) {
     el.classList.toggle('today', ppSelectedYear === curYear && parseInt(el.dataset.m) === curMonth);
   });
 }
@@ -2168,8 +2504,8 @@ function ppChangeYear(d) {
 }
 
 function ppSelectMonth(m) {
-  ppSelectedMonth = (ppSelectedMonth === m) ? null : m;
-  document.querySelectorAll('.pp-cal-month').forEach(el => {
+  ppSelectedMonth = ppSelectedMonth === m ? null : m;
+  document.querySelectorAll('.pp-cal-month').forEach((el) => {
     el.classList.toggle('active', parseInt(el.dataset.m) === ppSelectedMonth);
   });
   _applyPPPeriodFilter();
@@ -2180,13 +2516,16 @@ function ppClearPeriod() {
   ppSelectedMonth = null;
   ppSelectedYear = new Date().getFullYear();
   document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
-  document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.pp-cal-month').forEach((el) => el.classList.remove('active'));
   _ppMarkTodayMonth();
   // Убираем date_end фильтр из colFilters
   delete colFilters['mf_date_end'];
   mfSelections['date_end'] = new Set();
   const btn = document.querySelector('.mf-trigger[data-col="date_end"]');
-  if (btn) { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['date_end'] || '\u25BC'; btn.classList.remove('active'); }
+  if (btn) {
+    if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['date_end'] || '\u25BC';
+    btn.classList.remove('active');
+  }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
   renderPPTable();
@@ -2203,7 +2542,7 @@ function _applyPPPeriodFilter() {
   } else {
     // Все месяцы выбранного года — собираем ключи из данных
     const keys = new Set();
-    rows.forEach(r => {
+    rows.forEach((r) => {
       if (r.date_end && r.date_end.startsWith(yearStr)) keys.add(r.date_end.slice(0, 7));
     });
     if (keys.size > 0) {
@@ -2235,7 +2574,9 @@ let ppSelectedDepts = new Set();
 let _ppDeptFilter = null;
 
 function initPPDeptChips() {
-  const depts = [...new Set(rows.map(r => r.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+  const depts = [...new Set(rows.map((r) => r.dept).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'ru'),
+  );
   // Восстанавливаем выбор из текущего фильтра
   const currentDeptFilter = colFilters['mf_dept'];
   if (currentDeptFilter && currentDeptFilter.size > 0) {
@@ -2247,9 +2588,13 @@ function initPPDeptChips() {
     idPrefix: 'pp',
     multiSelect: true,
     depts: depts,
-    getSelection: function() { return ppSelectedDepts; },
-    setSelection: function(sel) { ppSelectedDepts = sel; },
-    onApply: function() {
+    getSelection: function () {
+      return ppSelectedDepts;
+    },
+    setSelection: function (sel) {
+      ppSelectedDepts = sel;
+    },
+    onApply: function () {
       _syncPPDeptFilter();
       // Если выбрано «Все» и данные загружены только по роли — дозагружаем
       if (ppSelectedDepts.size === 0 && _ppScope !== 'all') {
@@ -2259,7 +2604,7 @@ function initPPDeptChips() {
       renderPPTable();
       ppUpdateStatusPanel();
       _ppSyncFiltersToUrl();
-    }
+    },
   });
 }
 
@@ -2269,23 +2614,38 @@ function _syncPPDeptFilter() {
     mfSelections['dept'] = new Set(ppSelectedDepts);
     colFilters['mf_dept'] = new Set(ppSelectedDepts);
     if (btn) {
-      btn.textContent = ppSelectedDepts.size === 1 ? [...ppSelectedDepts][0] : ppSelectedDepts.size + ' отд.';
+      btn.textContent =
+        ppSelectedDepts.size === 1 ? [...ppSelectedDepts][0] : ppSelectedDepts.size + ' отд.';
       btn.classList.add('active');
     }
   } else {
     delete colFilters['mf_dept'];
     mfSelections['dept'] = new Set();
-    if (btn) { if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['dept'] || '\u25BC'; btn.classList.remove('active'); }
+    if (btn) {
+      if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS['dept'] || '\u25BC';
+      btn.classList.remove('active');
+    }
   }
   const hasFilters = Object.keys(colFilters).length > 0;
   document.getElementById('filtersActiveBadge').style.display = hasFilters ? 'inline' : 'none';
-  if (currentProjectId && ppSelectedDepts.size === 0) sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
+  if (currentProjectId && ppSelectedDepts.size === 0)
+    sessionStorage.setItem('pp_dept_filter_cleared_' + currentProjectId, '1');
 }
 
 // Названия месяцев для читабельного отображения дат в фильтре
 const MONTH_NAMES_RU = [
-  'Январь','Февраль','Март','Апрель','Май','Июнь',
-  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
 ];
 
 // Возвращает отсортированный массив уникальных значений столбца col из rows.
@@ -2299,22 +2659,30 @@ function getMfValues(col) {
     if (deptFilter && deptFilter.size > 0) {
       // Находим id выбранных отделов
       const deptIds = new Set();
-      (dirs.dept || []).forEach(d => { if (deptFilter.has(d.value)) deptIds.add(d.id); });
+      (dirs.dept || []).forEach((d) => {
+        if (deptFilter.has(d.value)) deptIds.add(d.id);
+      });
       // Берём только секторы, входящие в эти отделы (из справочника)
       const validSectors = new Set();
-      (dirs.sector_head || []).forEach(s => { if (deptIds.has(s.parent_id)) validSectors.add(s.value); });
-      sourceRows = rows.filter(r => validSectors.has(r[col]));
+      (dirs.sector_head || []).forEach((s) => {
+        if (deptIds.has(s.parent_id)) validSectors.add(s.value);
+      });
+      sourceRows = rows.filter((r) => validSectors.has(r[col]));
     }
   }
   if (col === 'date_end' || col === 'date_start') {
     // Дата: берём только год-месяц (первые 7 символов «YYYY-MM»)
-    sourceRows.forEach(r => {
+    sourceRows.forEach((r) => {
       if (r[col] && r[col].length >= 7) vals.add(r[col].slice(0, 7));
     });
-  } else if (col === 'pp_stage' || (col === 'stage_num')) {
-    sourceRows.forEach(r => { if (r.pp_stage_name) vals.add(r.pp_stage_name); });
+  } else if (col === 'pp_stage' || col === 'stage_num') {
+    sourceRows.forEach((r) => {
+      if (r.pp_stage_name) vals.add(r.pp_stage_name);
+    });
   } else {
-    sourceRows.forEach(r => { if (r[col]) vals.add(r[col]); });
+    sourceRows.forEach((r) => {
+      if (r[col]) vals.add(r[col]);
+    });
   }
   return [...vals].sort((a, b) => String(a).localeCompare(String(b), 'ru'));
 }
@@ -2345,15 +2713,15 @@ function buildMfDropdown(btn, col) {
   // Фильтрация опций при наборе текста (ищем и по коду, и по отображаемому тексту)
   searchInp.oninput = () => {
     const q = searchInp.value.toLowerCase();
-    drop.querySelectorAll('.mf-option').forEach(opt => {
+    drop.querySelectorAll('.mf-option').forEach((opt) => {
       const rawVal = opt.dataset.val.toLowerCase();
       let displayVal = rawVal;
       if (col === 'date_end') displayVal = formatYearMonth(opt.dataset.val).toLowerCase();
       else if (col === 'sector_head') {
-        const sh = (dirs.sector_head || []).find(h => h.value === opt.dataset.val);
+        const sh = (dirs.sector_head || []).find((h) => h.value === opt.dataset.val);
         if (sh && sh.head_name) displayVal = (opt.dataset.val + ' ' + sh.head_name).toLowerCase();
       }
-      opt.style.display = (rawVal.includes(q) || displayVal.includes(q)) ? '' : 'none';
+      opt.style.display = rawVal.includes(q) || displayVal.includes(q) ? '' : 'none';
     });
   };
   searchWrap.appendChild(searchInp);
@@ -2369,7 +2737,7 @@ function buildMfDropdown(btn, col) {
   selectAll.onclick = (e) => {
     e.stopPropagation();
     mfSelections[col] = new Set(vals);
-    drop.querySelectorAll('.mf-option input').forEach(cb => cb.checked = true);
+    drop.querySelectorAll('.mf-option input').forEach((cb) => (cb.checked = true));
     applyMfFilter(col, btn);
   };
   const clearMfBtn = document.createElement('button');
@@ -2379,7 +2747,7 @@ function buildMfDropdown(btn, col) {
   clearMfBtn.onclick = (e) => {
     e.stopPropagation();
     mfSelections[col] = new Set();
-    drop.querySelectorAll('.mf-option input').forEach(cb => cb.checked = false);
+    drop.querySelectorAll('.mf-option input').forEach((cb) => (cb.checked = false));
     applyMfFilter(col, btn);
   };
   actions.appendChild(selectAll);
@@ -2387,7 +2755,7 @@ function buildMfDropdown(btn, col) {
   drop.appendChild(actions);
 
   // Список опций с чекбоксами
-  vals.forEach(val => {
+  vals.forEach((val) => {
     const opt = document.createElement('div');
     opt.className = 'mf-option';
     opt.dataset.val = val;
@@ -2398,17 +2766,21 @@ function buildMfDropdown(btn, col) {
     const toggle = () => {
       cb.checked = !cb.checked;
       const sel = mfSelections[col] || new Set();
-      if (cb.checked) sel.add(val); else sel.delete(val);
+      if (cb.checked) sel.add(val);
+      else sel.delete(val);
       mfSelections[col] = sel;
       applyMfFilter(col, btn);
     };
     cb.onchange = () => {
       const sel = mfSelections[col] || new Set();
-      if (cb.checked) sel.add(val); else sel.delete(val);
+      if (cb.checked) sel.add(val);
+      else sel.delete(val);
       mfSelections[col] = sel;
       applyMfFilter(col, btn);
     };
-    opt.onclick = (e) => { if (e.target !== cb) toggle(); };
+    opt.onclick = (e) => {
+      if (e.target !== cb) toggle();
+    };
     opt.appendChild(cb);
     // Для date_end отображаем «Март 2026»
     let displayText = val;
@@ -2426,9 +2798,9 @@ function buildMfDropdown(btn, col) {
   const spaceBelow = window.innerHeight - rect.bottom;
   const spaceAbove = rect.top;
   if (spaceBelow < dropH && spaceAbove > spaceBelow) {
-    drop.style.top = (rect.top + window.scrollY - dropH - 2) + 'px';
+    drop.style.top = rect.top + window.scrollY - dropH - 2 + 'px';
   } else {
-    drop.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+    drop.style.top = rect.bottom + window.scrollY + 2 + 'px';
   }
   drop.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
   activeMfDropdown = drop;
@@ -2466,7 +2838,7 @@ function applyMfFilter(col, btn) {
     if (!isIcon) {
       if (sel.size === 1) {
         const singleVal = [...sel][0];
-        btn.textContent = (col === 'date_end') ? formatYearMonth(singleVal) : singleVal;
+        btn.textContent = col === 'date_end' ? formatYearMonth(singleVal) : singleVal;
       } else {
         btn.textContent = sel.size + ' выбрано';
       }
@@ -2479,7 +2851,7 @@ function applyMfFilter(col, btn) {
   // Синхронизируем панель периода если изменён date_end-фильтр через дропдаун
   if (col === 'date_end') {
     ppSelectedMonth = null;
-    document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.pp-cal-month').forEach((el) => el.classList.remove('active'));
     // Если выбран один месяц — подсветить в панели периода
     if (sel.size === 1) {
       const val = [...sel][0];
@@ -2506,19 +2878,24 @@ function applyMfFilter(col, btn) {
 // Сбрасывает все активные фильтры и перерисовывает таблицу
 function clearAllColFilters() {
   colFilters = {};
-  Object.keys(mfSelections).forEach(k => mfSelections[k] = new Set());
+  Object.keys(mfSelections).forEach((k) => (mfSelections[k] = new Set()));
   // Возвращаем все кнопки к дефолтному тексту и убираем active-класс
-  document.querySelectorAll('.mf-trigger').forEach(btn => {
-    if (!btn.classList.contains('mf-icon')) btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
+  document.querySelectorAll('.mf-trigger').forEach((btn) => {
+    if (!btn.classList.contains('mf-icon'))
+      btn.textContent = MF_DEFAULTS[btn.dataset.col] || '\u25BC';
     btn.classList.remove('active');
   });
-  if (activeMfDropdown) { activeMfDropdown.remove(); activeMfDropdown = null; activeMfBtn = null; }
+  if (activeMfDropdown) {
+    activeMfDropdown.remove();
+    activeMfDropdown = null;
+    activeMfBtn = null;
+  }
   document.getElementById('filtersActiveBadge').style.display = 'none';
   // Сбрасываем панель периода
   ppSelectedMonth = null;
   ppSelectedYear = new Date().getFullYear();
   document.getElementById('ppYearDisplay').textContent = ppSelectedYear;
-  document.querySelectorAll('.pp-cal-month').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.pp-cal-month').forEach((el) => el.classList.remove('active'));
   // Сбрасываем фильтр отделов
   ppSelectedDepts = new Set();
   if (_ppDeptFilter) _ppDeptFilter.refresh();
@@ -2528,24 +2905,33 @@ function clearAllColFilters() {
 }
 
 // Закрываем дропдаун при клике вне его (capture-фаза чтобы перехватить раньше других)
-document.addEventListener('click', (e) => {
-  if (activeMfDropdown && !activeMfDropdown.contains(e.target) && e.target !== activeMfBtn) {
-    activeMfDropdown.remove();
-    activeMfDropdown = null;
-    activeMfBtn = null;
-  }
-  // Закрываем dropdown отделов
-  const deptMenu = document.getElementById('ppDeptMenu');
-  const deptDropdown = document.getElementById('ppDeptDropdown');
-  if (deptMenu && deptMenu.classList.contains('open') && deptDropdown && !deptDropdown.contains(e.target)) {
-    deptMenu.classList.remove('open');
-  }
-}, true);
+document.addEventListener(
+  'click',
+  (e) => {
+    if (activeMfDropdown && !activeMfDropdown.contains(e.target) && e.target !== activeMfBtn) {
+      activeMfDropdown.remove();
+      activeMfDropdown = null;
+      activeMfBtn = null;
+    }
+    // Закрываем dropdown отделов
+    const deptMenu = document.getElementById('ppDeptMenu');
+    const deptDropdown = document.getElementById('ppDeptDropdown');
+    if (
+      deptMenu &&
+      deptMenu.classList.contains('open') &&
+      deptDropdown &&
+      !deptDropdown.contains(e.target)
+    ) {
+      deptMenu.classList.remove('open');
+    }
+  },
+  true,
+);
 
 /* ── Изменение ширины столбцов drag-handle ───────────────────────────── */
 // Инициализирует drag-resize хэндлы на всех th таблицы
 function initColumnResize() {
-  document.querySelectorAll('.pp-table th').forEach(th => {
+  document.querySelectorAll('.pp-table th').forEach((th) => {
     // Не добавляем повторно если хэндл уже есть
     if (th.querySelector('.resize-handle')) return;
     const handle = document.createElement('div');
@@ -2572,7 +2958,7 @@ function initColumnResize() {
           if (width > 30) {
             th.style.width = width + 'px';
             th.style.minWidth = width + 'px';
-            tblRows.forEach(row => {
+            tblRows.forEach((row) => {
               if (row.cells[colIndex]) {
                 row.cells[colIndex].style.width = width + 'px';
                 row.cells[colIndex].style.minWidth = width + 'px';
@@ -2599,9 +2985,9 @@ const _PP_URL_FILTER_KEYS = ['year', 'month', 'dept'];
 
 function _ppSyncFiltersToUrl() {
   syncFiltersToUrl({
-    year:  ppSelectedYear,
+    year: ppSelectedYear,
     month: ppSelectedMonth,
-    dept:  ppSelectedDepts.size > 0 ? [...ppSelectedDepts].join(',') : null,
+    dept: ppSelectedDepts.size > 0 ? [...ppSelectedDepts].join(',') : null,
   });
 }
 
@@ -2625,7 +3011,7 @@ function _ppRestoreFiltersFromUrl() {
 window.addEventListener('popstate', async () => {
   const pid = readProjectFromUrl();
   if (pid) {
-    const proj = projects.find(p => String(p.id) === String(pid));
+    const proj = projects.find((p) => String(p.id) === String(pid));
     if (proj) {
       await openProject(proj.id, proj.name);
     }
@@ -2636,17 +3022,21 @@ window.addEventListener('popstate', async () => {
 
 /* ── Инициализация ────────────────────────────────────────────────────── */
 (async function init() {
-  initViewModeToggle('#ppViewModeToggle', '.pp-table-wrap', (_ppCfg.colSettings && _ppCfg.colSettings.pp_view_mode) || 'full');
+  initViewModeToggle(
+    '#ppViewModeToggle',
+    '.pp-table-wrap',
+    (_ppCfg.colSettings && _ppCfg.colSettings.pp_view_mode) || 'full',
+  );
   _ppInitSort();
   // Drag-and-drop сортировка строк ПП
   if (typeof initDragSort === 'function') {
     initDragSort('#ppTable', {
-      onReorder: function(order) {
-        order.forEach(function(item) {
+      onReorder: function (order) {
+        order.forEach(function (item) {
           var numTd = item.el.querySelector('td[data-col-idx="0"]');
           if (numTd) numTd.textContent = item.index + 1;
         });
-      }
+      },
     });
   }
   // Параллельно загружаем справочники и список ПП-проектов
@@ -2655,7 +3045,7 @@ window.addEventListener('popstate', async () => {
   // Если в URL есть project_id — открываем план напрямую (прямая ссылка)
   const urlProjectId = readProjectFromUrl();
   if (urlProjectId) {
-    const proj = projects.find(p => String(p.id) === String(urlProjectId));
+    const proj = projects.find((p) => String(p.id) === String(urlProjectId));
     if (proj) {
       await openProject(proj.id, proj.name);
     } else {
@@ -2674,39 +3064,42 @@ window.addEventListener('popstate', async () => {
   buildExportDropdown('exportBtnContainer', {
     pageName: 'ПП',
     columns: [
-      { key: 'row_code',         header: 'Код строки',     width: 80,  forceText: true },
-      { key: 'work_order',       header: 'Наряд-заказ',    width: 90,  forceText: true },
-      { key: 'stage_num',        header: '№ этапа',        width: 60,  forceText: true },
-      { key: 'work_num',         header: '№ работы',       width: 60,  forceText: true },
-      { key: 'work_designation', header: 'Обозначение',    width: 140 },
-      { key: 'work_name',        header: 'Наименование',   width: 240 },
-      { key: 'date_start',       header: 'Начало',         width: 100 },
-      { key: 'date_end',         header: 'Окончание',     width: 100 },
-      { key: 'sheets_a4',        header: 'Ф, А4',          width: 60 },
-      { key: 'norm',             header: 'Норматив',       width: 70 },
-      { key: 'coeff',            header: 'Коэфф',          width: 60 },
-      { key: 'labor',            header: 'Трудоёмкость',   width: 90 },
-      { key: 'task_type',        header: 'Тип задачи',     width: 160 },
-      { key: 'center',           header: 'Подразделение',  width: 90,  forceText: true },
-      { key: 'dept',             header: 'Отдел',          width: 80,  forceText: true },
-      { key: 'sector_head',      header: 'Сектор',         width: 100, forceText: true },
-      { key: 'executor',         header: 'Разработчик',    width: 140 },
+      { key: 'row_code', header: 'Код строки', width: 80, forceText: true },
+      { key: 'work_order', header: 'Наряд-заказ', width: 90, forceText: true },
+      { key: 'stage_num', header: '№ этапа', width: 60, forceText: true },
+      { key: 'work_num', header: '№ работы', width: 60, forceText: true },
+      { key: 'work_designation', header: 'Обозначение', width: 140 },
+      { key: 'work_name', header: 'Наименование', width: 240 },
+      { key: 'date_start', header: 'Начало', width: 100 },
+      { key: 'date_end', header: 'Окончание', width: 100 },
+      { key: 'sheets_a4', header: 'Ф, А4', width: 60 },
+      { key: 'norm', header: 'Норматив', width: 70 },
+      { key: 'coeff', header: 'Коэфф', width: 60 },
+      { key: 'labor', header: 'Трудоёмкость', width: 90 },
+      { key: 'task_type', header: 'Тип задачи', width: 160 },
+      { key: 'center', header: 'Подразделение', width: 90, forceText: true },
+      { key: 'dept', header: 'Отдел', width: 80, forceText: true },
+      { key: 'sector_head', header: 'Сектор', width: 100, forceText: true },
+      { key: 'executor', header: 'Разработчик', width: 140 },
     ],
-    getAllData:      () => rows,
+    getAllData: () => rows,
     getFilteredData: ppGetFilteredRows,
   });
 })();
 
 function ppGetFilteredRows() {
-  return rows.filter(row => {
+  return rows.filter((row) => {
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
         const field = col.slice(3);
         if (val.size > 0) {
-            const cellVal = (field === 'date_end' || field === 'date_start')
+          const cellVal =
+            field === 'date_end' || field === 'date_start'
               ? (row[field] || '').slice(0, 7)
-              : ((field === 'pp_stage' || (field === 'stage_num')) ? (row.pp_stage_name || '') : (row[field] || ''));
-            if (!val.has(cellVal)) return false;
+              : field === 'pp_stage' || field === 'stage_num'
+                ? row.pp_stage_name || ''
+                : row[field] || '';
+          if (!val.has(cellVal)) return false;
         }
         continue;
       }
@@ -2716,7 +3109,6 @@ function ppGetFilteredRows() {
     return true;
   });
 }
-
 
 // ── PP DEPENDENCIES ────────────────────────────────────────────────────
 let ppCurrentDepsTaskId = null;
@@ -2731,7 +3123,7 @@ function _ppPopulateDepsSelect(excludeId) {
   input.value = '';
   hidden.value = '';
   _ppDepsDropdownItems = [];
-  rows.forEach(r => {
+  rows.forEach((r) => {
     if (r.id === excludeId) return;
     const name = r.work_name || r.work_num || '#' + r.id;
     const dept = r.dept ? ` [${r.dept}]` : '';
@@ -2743,21 +3135,27 @@ function _ppPopulateDepsSelect(excludeId) {
 function _ppRenderDepsDropdownList(filter) {
   const list = document.getElementById('ppDepsAddPredList');
   const lc = filter.toLowerCase();
-  const filtered = lc ? _ppDepsDropdownItems.filter(it => it.label.toLowerCase().includes(lc)) : _ppDepsDropdownItems;
+  const filtered = lc
+    ? _ppDepsDropdownItems.filter((it) => it.label.toLowerCase().includes(lc))
+    : _ppDepsDropdownItems;
   const selectedId = document.getElementById('ppDepsAddPredSelect').value;
   if (filtered.length === 0) {
     list.innerHTML = '<div class="search-dropdown-empty">Ничего не найдено</div>';
   } else {
-    list.innerHTML = filtered.map(it =>
-      `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`
-    ).join('');
+    list.innerHTML = filtered
+      .map(
+        (it) =>
+          `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`,
+      )
+      .join('');
   }
   _ppDepsDropdownHighlight = -1;
 }
 
 function _ppHighlightDepsItem(items) {
   items.forEach((it, i) => it.classList.toggle('highlighted', i === _ppDepsDropdownHighlight));
-  if (items[_ppDepsDropdownHighlight]) items[_ppDepsDropdownHighlight].scrollIntoView({ block: 'nearest' });
+  if (items[_ppDepsDropdownHighlight])
+    items[_ppDepsDropdownHighlight].scrollIntoView({ block: 'nearest' });
 }
 
 (function initPPDepsDropdown() {
@@ -2767,18 +3165,35 @@ function _ppHighlightDepsItem(items) {
     const hidden = document.getElementById('ppDepsAddPredSelect');
     if (!input) return;
 
-    input.addEventListener('focus', () => { _ppRenderDepsDropdownList(input.value); list.classList.add('open'); });
-    input.addEventListener('input', () => { _ppRenderDepsDropdownList(input.value); list.classList.add('open'); });
-
-    input.addEventListener('keydown', e => {
-      const items = list.querySelectorAll('.search-dropdown-item');
-      if (e.key === 'ArrowDown') { e.preventDefault(); _ppDepsDropdownHighlight = Math.min(_ppDepsDropdownHighlight + 1, items.length - 1); _ppHighlightDepsItem(items); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); _ppDepsDropdownHighlight = Math.max(_ppDepsDropdownHighlight - 1, 0); _ppHighlightDepsItem(items); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (_ppDepsDropdownHighlight >= 0 && items[_ppDepsDropdownHighlight]) items[_ppDepsDropdownHighlight].click(); }
-      else if (e.key === 'Escape') { list.classList.remove('open'); }
+    input.addEventListener('focus', () => {
+      _ppRenderDepsDropdownList(input.value);
+      list.classList.add('open');
+    });
+    input.addEventListener('input', () => {
+      _ppRenderDepsDropdownList(input.value);
+      list.classList.add('open');
     });
 
-    list.addEventListener('click', e => {
+    input.addEventListener('keydown', (e) => {
+      const items = list.querySelectorAll('.search-dropdown-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _ppDepsDropdownHighlight = Math.min(_ppDepsDropdownHighlight + 1, items.length - 1);
+        _ppHighlightDepsItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _ppDepsDropdownHighlight = Math.max(_ppDepsDropdownHighlight - 1, 0);
+        _ppHighlightDepsItem(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (_ppDepsDropdownHighlight >= 0 && items[_ppDepsDropdownHighlight])
+          items[_ppDepsDropdownHighlight].click();
+      } else if (e.key === 'Escape') {
+        list.classList.remove('open');
+      }
+    });
+
+    list.addEventListener('click', (e) => {
       const item = e.target.closest('.search-dropdown-item');
       if (!item) return;
       hidden.value = item.dataset.value;
@@ -2786,7 +3201,7 @@ function _ppHighlightDepsItem(items) {
       list.classList.remove('open');
     });
 
-    document.addEventListener('click', e => {
+    document.addEventListener('click', (e) => {
       if (!e.target.closest('#ppDepsAddPredDropdown')) list.classList.remove('open');
     });
   }
@@ -2807,7 +3222,7 @@ function _ppPopulateSuccSelect(excludeId) {
   input.value = '';
   hidden.value = '';
   _ppSuccDropdownItems = [];
-  rows.forEach(r => {
+  rows.forEach((r) => {
     if (r.id === excludeId) return;
     const name = r.work_name || r.work_num || '#' + r.id;
     const dept = r.dept ? ` [${r.dept}]` : '';
@@ -2819,21 +3234,27 @@ function _ppPopulateSuccSelect(excludeId) {
 function _ppRenderSuccDropdownList(filter) {
   const list = document.getElementById('ppDepsAddSuccList');
   const lc = filter.toLowerCase();
-  const filtered = lc ? _ppSuccDropdownItems.filter(it => it.label.toLowerCase().includes(lc)) : _ppSuccDropdownItems;
+  const filtered = lc
+    ? _ppSuccDropdownItems.filter((it) => it.label.toLowerCase().includes(lc))
+    : _ppSuccDropdownItems;
   const selectedId = document.getElementById('ppDepsAddSuccSelect').value;
   if (filtered.length === 0) {
     list.innerHTML = '<div class="search-dropdown-empty">Ничего не найдено</div>';
   } else {
-    list.innerHTML = filtered.map(it =>
-      `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`
-    ).join('');
+    list.innerHTML = filtered
+      .map(
+        (it) =>
+          `<div class="search-dropdown-item${it.id == selectedId ? ' selected' : ''}" data-value="${it.id}">${escapeHtml(it.label)}</div>`,
+      )
+      .join('');
   }
   _ppSuccDropdownHighlight = -1;
 }
 
 function _ppHighlightSuccItem(items) {
   items.forEach((it, i) => it.classList.toggle('highlighted', i === _ppSuccDropdownHighlight));
-  if (items[_ppSuccDropdownHighlight]) items[_ppSuccDropdownHighlight].scrollIntoView({ block: 'nearest' });
+  if (items[_ppSuccDropdownHighlight])
+    items[_ppSuccDropdownHighlight].scrollIntoView({ block: 'nearest' });
 }
 
 (function initPPSuccDropdown() {
@@ -2843,18 +3264,35 @@ function _ppHighlightSuccItem(items) {
     const hidden = document.getElementById('ppDepsAddSuccSelect');
     if (!input) return;
 
-    input.addEventListener('focus', () => { _ppRenderSuccDropdownList(input.value); list.classList.add('open'); });
-    input.addEventListener('input', () => { _ppRenderSuccDropdownList(input.value); list.classList.add('open'); });
-
-    input.addEventListener('keydown', e => {
-      const items = list.querySelectorAll('.search-dropdown-item');
-      if (e.key === 'ArrowDown') { e.preventDefault(); _ppSuccDropdownHighlight = Math.min(_ppSuccDropdownHighlight + 1, items.length - 1); _ppHighlightSuccItem(items); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); _ppSuccDropdownHighlight = Math.max(_ppSuccDropdownHighlight - 1, 0); _ppHighlightSuccItem(items); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (_ppSuccDropdownHighlight >= 0 && items[_ppSuccDropdownHighlight]) items[_ppSuccDropdownHighlight].click(); }
-      else if (e.key === 'Escape') { list.classList.remove('open'); }
+    input.addEventListener('focus', () => {
+      _ppRenderSuccDropdownList(input.value);
+      list.classList.add('open');
+    });
+    input.addEventListener('input', () => {
+      _ppRenderSuccDropdownList(input.value);
+      list.classList.add('open');
     });
 
-    list.addEventListener('click', e => {
+    input.addEventListener('keydown', (e) => {
+      const items = list.querySelectorAll('.search-dropdown-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _ppSuccDropdownHighlight = Math.min(_ppSuccDropdownHighlight + 1, items.length - 1);
+        _ppHighlightSuccItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _ppSuccDropdownHighlight = Math.max(_ppSuccDropdownHighlight - 1, 0);
+        _ppHighlightSuccItem(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (_ppSuccDropdownHighlight >= 0 && items[_ppSuccDropdownHighlight])
+          items[_ppSuccDropdownHighlight].click();
+      } else if (e.key === 'Escape') {
+        list.classList.remove('open');
+      }
+    });
+
+    list.addEventListener('click', (e) => {
       const item = e.target.closest('.search-dropdown-item');
       if (!item) return;
       hidden.value = item.dataset.value;
@@ -2862,7 +3300,7 @@ function _ppHighlightSuccItem(items) {
       list.classList.remove('open');
     });
 
-    document.addEventListener('click', e => {
+    document.addEventListener('click', (e) => {
       if (!e.target.closest('#ppDepsAddSuccDropdown')) list.classList.remove('open');
     });
   }
@@ -2875,18 +3313,29 @@ function _ppHighlightSuccItem(items) {
 
 async function ppAddSuccessor() {
   const succId = document.getElementById('ppDepsAddSuccSelect').value;
-  if (!succId) { showToast('Выберите задачу', 'warning'); return; }
+  if (!succId) {
+    showToast('Выберите задачу', 'warning');
+    return;
+  }
   const depType = document.getElementById('ppDepsAddSuccType').value;
   const lagDays = parseInt(document.getElementById('ppDepsAddSuccLag').value) || 0;
   try {
     const res = await fetch(`/api/tasks/${parseInt(succId)}/dependencies/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-      body: JSON.stringify({ predecessor_id: ppCurrentDepsTaskId, dep_type: depType, lag_days: lagDays }),
+      body: JSON.stringify({
+        predecessor_id: ppCurrentDepsTaskId,
+        dep_type: depType,
+        lag_days: lagDays,
+      }),
     });
     if (!res.ok) {
       let data = {};
-      try { data = await res.json(); } catch(_) {}
+      try {
+        data = await res.json();
+      } catch (_) {
+        /* ignored */
+      }
       showToast(data.error || 'Ошибка', 'error');
       return;
     }
@@ -2895,20 +3344,22 @@ async function ppAddSuccessor() {
     document.getElementById('ppDepsAddSuccInput').value = '';
     document.getElementById('ppDepsAddSuccSelect').value = '';
     await ppLoadDeps(ppCurrentDepsTaskId);
-    const succRow = rows.find(r => r.id === parseInt(succId));
+    const succRow = rows.find((r) => r.id === parseInt(succId));
     if (succRow) {
       succRow.predecessors_count = (succRow.predecessors_count || 0) + 1;
       renderPPTable();
     }
-  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'error');
+  }
 }
 
 function openPPDepsModal(taskId) {
   ppCurrentDepsTaskId = taskId;
-  const row = rows.find(r => r.id === taskId);
+  const row = rows.find((r) => r.id === taskId);
   const modal = document.getElementById('ppDepsModal');
   document.getElementById('ppDepsModalTitle').textContent =
-    `Зависимости: ${row ? (row.work_name || row.work_num || '#' + taskId) : '#' + taskId}`;
+    `Зависимости: ${row ? row.work_name || row.work_num || '#' + taskId : '#' + taskId}`;
   const ds = row && row.date_start ? row.date_start.split('-').reverse().join('.') : '—';
   const de = row && row.date_end ? row.date_end.split('-').reverse().join('.') : '—';
   document.getElementById('ppDepsModalDates').textContent = `Сроки: ${ds} → ${de}`;
@@ -2932,8 +3383,13 @@ function closePPDepsModal() {
 
 async function ppLoadDeps(taskId) {
   try {
-    const res = await fetch(`/api/tasks/${taskId}/dependencies/`, { headers: { 'X-CSRFToken': getCsrfToken() } });
-    if (!res.ok) { showToast('Ошибка загрузки зависимостей', 'error'); return; }
+    const res = await fetch(`/api/tasks/${taskId}/dependencies/`, {
+      headers: { 'X-CSRFToken': getCsrfToken() },
+    });
+    if (!res.ok) {
+      showToast('Ошибка загрузки зависимостей', 'error');
+      return;
+    }
     const data = await res.json();
     ppRenderPreds(data.predecessors || []);
     ppRenderSuccs(data.successors || []);
@@ -2965,20 +3421,28 @@ async function ppLoadDeps(taskId) {
 function ppRenderPreds(preds) {
   const wrap = document.getElementById('ppDepsPredBody');
   document.getElementById('ppDepsPredCount').textContent = preds.length ? `(${preds.length})` : '';
-  if (preds.length === 0) { wrap.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет предшественников</div>'; return; }
-  let html = '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
+  if (preds.length === 0) {
+    wrap.innerHTML =
+      '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет предшественников</div>';
+    return;
+  }
+  let html =
+    '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
   if (IS_WRITER) html += '<th style="width:40px;"></th>';
   html += '</tr></thead><tbody>';
-  preds.forEach(d => {
+  preds.forEach((d) => {
     const ds = d.date_start ? d.date_start.split('-').reverse().join('.') : '—';
     const de = d.date_end ? d.date_end.split('-').reverse().join('.') : '—';
     const rowStyle = d.conflict ? 'background:rgba(229,62,62,0.08);' : '';
-    const dateColor = d.conflict ? 'color:var(--danger, #e53e3e);font-weight:600;' : 'color:var(--text2);';
+    const dateColor = d.conflict
+      ? 'color:var(--danger, #e53e3e);font-weight:600;'
+      : 'color:var(--text2);';
     html += `<tr style="${rowStyle}"><td>${escapeHtml(d.work_name || d.work_num || '#' + d.work_id)}</td>`;
     html += `<td><span class="dep-type-badge">${d.dep_type}</span></td>`;
     html += `<td style="font-family:var(--mono);">${d.lag_days}д</td>`;
     html += `<td style="font-size:13px;${dateColor}">${ds} → ${de}${d.conflict ? ' ⚠' : ''}</td>`;
-    if (IS_WRITER) html += `<td><button class="btn-delete" onclick="ppDeleteDep(${d.id})" title="Удалить">✕</button></td>`;
+    if (IS_WRITER)
+      html += `<td><button class="btn-delete" onclick="ppDeleteDep(${d.id})" title="Удалить">✕</button></td>`;
     html += '</tr>';
   });
   html += '</tbody></table>';
@@ -2988,20 +3452,28 @@ function ppRenderPreds(preds) {
 function ppRenderSuccs(succs) {
   const wrap = document.getElementById('ppDepsSuccBody');
   document.getElementById('ppDepsSuccCount').textContent = succs.length ? `(${succs.length})` : '';
-  if (succs.length === 0) { wrap.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет последователей</div>'; return; }
-  let html = '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
+  if (succs.length === 0) {
+    wrap.innerHTML =
+      '<div style="color:var(--muted);font-size:14px;padding:8px 0;">Нет последователей</div>';
+    return;
+  }
+  let html =
+    '<table class="deps-table"><thead><tr><th>Задача</th><th>Тип</th><th>Лаг</th><th>Даты</th>';
   if (IS_WRITER) html += '<th style="width:40px;"></th>';
   html += '</tr></thead><tbody>';
-  succs.forEach(d => {
+  succs.forEach((d) => {
     const ds = d.date_start ? d.date_start.split('-').reverse().join('.') : '—';
     const de = d.date_end ? d.date_end.split('-').reverse().join('.') : '—';
     const rowStyle = d.conflict ? 'background:rgba(229,62,62,0.08);' : '';
-    const dateColor = d.conflict ? 'color:var(--danger, #e53e3e);font-weight:600;' : 'color:var(--text2);';
+    const dateColor = d.conflict
+      ? 'color:var(--danger, #e53e3e);font-weight:600;'
+      : 'color:var(--text2);';
     html += `<tr style="${rowStyle}"><td>${escapeHtml(d.work_name || d.work_num || '#' + d.work_id)}</td>`;
     html += `<td><span class="dep-type-badge">${d.dep_type}</span></td>`;
     html += `<td style="font-family:var(--mono);">${d.lag_days}д</td>`;
     html += `<td style="font-size:13px;${dateColor}">${ds} → ${de}${d.conflict ? ' ⚠' : ''}</td>`;
-    if (IS_WRITER) html += `<td><button class="btn-delete" onclick="ppDeleteDep(${d.id})" title="Удалить">✕</button></td>`;
+    if (IS_WRITER)
+      html += `<td><button class="btn-delete" onclick="ppDeleteDep(${d.id})" title="Удалить">✕</button></td>`;
     html += '</tr>';
   });
   html += '</tbody></table>';
@@ -3010,18 +3482,29 @@ function ppRenderSuccs(succs) {
 
 async function ppAddPredecessor() {
   const predId = document.getElementById('ppDepsAddPredSelect').value;
-  if (!predId) { showToast('Выберите задачу', 'warning'); return; }
+  if (!predId) {
+    showToast('Выберите задачу', 'warning');
+    return;
+  }
   const depType = document.getElementById('ppDepsAddType').value;
   const lagDays = parseInt(document.getElementById('ppDepsAddLag').value) || 0;
   try {
     const res = await fetch(`/api/tasks/${ppCurrentDepsTaskId}/dependencies/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-      body: JSON.stringify({ predecessor_id: parseInt(predId), dep_type: depType, lag_days: lagDays }),
+      body: JSON.stringify({
+        predecessor_id: parseInt(predId),
+        dep_type: depType,
+        lag_days: lagDays,
+      }),
     });
     if (!res.ok) {
       let data = {};
-      try { data = await res.json(); } catch(_) {}
+      try {
+        data = await res.json();
+      } catch (_) {
+        /* ignored */
+      }
       showToast(data.error || 'Ошибка', 'error');
       return;
     }
@@ -3030,10 +3513,12 @@ async function ppAddPredecessor() {
     document.getElementById('ppDepsAddPredInput').value = '';
     document.getElementById('ppDepsAddPredSelect').value = '';
     await ppLoadDeps(ppCurrentDepsTaskId);
-    const row = rows.find(r => r.id === ppCurrentDepsTaskId);
+    const row = rows.find((r) => r.id === ppCurrentDepsTaskId);
     if (row) row.predecessors_count = (row.predecessors_count || 0) + 1;
     renderPPTable();
-  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'error');
+  }
 }
 
 async function ppDeleteDep(depId) {
@@ -3041,23 +3526,28 @@ async function ppDeleteDep(depId) {
   if (!ok) return;
   try {
     const res = await fetch(`/api/dependencies/${depId}/`, {
-      method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() },
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCsrfToken() },
     });
     if (res.ok) {
       showToast('Зависимость удалена', 'success');
       await ppLoadDeps(ppCurrentDepsTaskId);
-      const row = rows.find(r => r.id === ppCurrentDepsTaskId);
+      const row = rows.find((r) => r.id === ppCurrentDepsTaskId);
       if (row) row.predecessors_count = Math.max(0, (row.predecessors_count || 0) - 1);
       renderPPTable();
-    } else { showToast('Ошибка удаления', 'error'); }
-  } catch (e) { showToast('Ошибка', 'error'); }
+    } else {
+      showToast('Ошибка удаления', 'error');
+    }
+  } catch (e) {
+    showToast('Ошибка', 'error');
+  }
 }
 
 async function ppAlignDates(cascade) {
   const msg = cascade
     ? 'Выровнять даты всех последователей по зависимостям?'
     : 'Выровнять даты этой задачи по предшественникам?';
-  if (!await confirmDialog(msg)) return;
+  if (!(await confirmDialog(msg))) return;
   try {
     const res = await fetch(`/api/tasks/${ppCurrentDepsTaskId}/align_dates/`, {
       method: 'POST',
@@ -3070,18 +3560,21 @@ async function ppAlignDates(cascade) {
       ppLoadDeps(ppCurrentDepsTaskId);
       await loadPPRows(currentProjectId, _ppScope);
       renderPPTable();
-    } else { showToast(data.error || 'Ошибка', 'error'); }
-  } catch (e) { showToast('Ошибка', 'error'); }
+    } else {
+      showToast(data.error || 'Ошибка', 'error');
+    }
+  } catch (e) {
+    showToast('Ошибка', 'error');
+  }
 }
 
 // Закрытие модала кликом по фону — обрабатывается глобально в modal.js/base.js
-
 
 // ── PP Gantt View ──────────────────────────────────────────────────────
 let ppGanttLoaded = false;
 
 function ppSwitchView(view) {
-  document.querySelectorAll('.pp-view-tab').forEach(tab => {
+  document.querySelectorAll('.pp-view-tab').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.view === view);
   });
   const tableEl = document.getElementById('ppTableView');
@@ -3109,22 +3602,32 @@ function ppSetGanttScale(scale) {
 }
 
 function ppLoadGantt() {
-  ganttLoad(() => { ppSetupGantt(); ppRenderGantt(); }, 'ppGanttContainer');
+  ganttLoad(() => {
+    ppSetupGantt();
+    ppRenderGantt();
+  }, 'ppGanttContainer');
 }
 
 const _PP_COL_KEY = 'pp_gantt_col_widths';
-const _PP_COL_DEFAULTS = { text: 200, designation: 140, work_name_full: 160, start_date: 90, end_date: 90, grid: 670 };
+const _PP_COL_DEFAULTS = {
+  text: 200,
+  designation: 140,
+  work_name_full: 160,
+  start_date: 90,
+  end_date: 90,
+  grid: 670,
+};
 
 function ppSetupGantt() {
   if (typeof gantt === 'undefined') return;
   ganttSetupBase();
   const cw = ganttLoadColWidths(_PP_COL_KEY, _PP_COL_DEFAULTS);
   gantt.config.columns = [
-    { name: "text", label: "Задача", width: cw.text, tree: false },
-    { name: "designation", label: "Обозначение", width: cw.designation, align: "left" },
-    { name: "work_name_full", label: "Наименование", width: cw.work_name_full, align: "left" },
-    { name: "start_date", label: "Начало", align: "center", width: cw.start_date },
-    { name: "end_date", label: "Окончание", align: "center", width: cw.end_date },
+    { name: 'text', label: 'Задача', width: cw.text, tree: false },
+    { name: 'designation', label: 'Обозначение', width: cw.designation, align: 'left' },
+    { name: 'work_name_full', label: 'Наименование', width: cw.work_name_full, align: 'left' },
+    { name: 'start_date', label: 'Начало', align: 'center', width: cw.start_date },
+    { name: 'end_date', label: 'Окончание', align: 'center', width: cw.end_date },
   ];
   gantt.config.grid_width = cw.grid;
   gantt.config.readonly = !IS_WRITER;
@@ -3134,40 +3637,50 @@ function ppSetupGantt() {
   gantt.config.drag_resize = IS_WRITER;
   gantt.config.drag_progress = false;
   ganttRestoreScale('pp_gantt_scale');
-  gantt.init("ppGanttContainer");
-  gantt.attachEvent("onGanttRender", () => ganttInjectResizers('ppGanttContainer', _PP_COL_KEY));
+  gantt.init('ppGanttContainer');
+  gantt.attachEvent('onGanttRender', () => ganttInjectResizers('ppGanttContainer', _PP_COL_KEY));
 
   // Drag → сохранение дат на сервере
-  gantt.attachEvent("onAfterTaskDrag", function(id) {
+  gantt.attachEvent('onAfterTaskDrag', function (id) {
     const task = gantt.getTask(id);
     if (!task) return;
     const startStr = ganttFormatDate(task.start_date);
     const endStr = ganttFormatDate(task.end_date);
     Promise.all([
       fetchJson('/api/production_plan/' + id + '/?field=date_start', {
-        method: 'PUT', body: JSON.stringify({ value: startStr }),
+        method: 'PUT',
+        body: JSON.stringify({ value: startStr }),
       }),
       fetchJson('/api/production_plan/' + id + '/?field=date_end', {
-        method: 'PUT', body: JSON.stringify({ value: endStr }),
+        method: 'PUT',
+        body: JSON.stringify({ value: endStr }),
       }),
-    ]).then(([r1, r2]) => {
-      // Обновить локальные данные
-      const row = rows.find(r => r.id === id);
-      if (row) { row.date_start = startStr; row.date_end = endStr; }
-      if (r1._error || r2._error) {
-        alert('Ошибка сохранения дат');
+    ])
+      .then(([r1, r2]) => {
+        // Обновить локальные данные
+        const row = rows.find((r) => r.id === id);
+        if (row) {
+          row.date_start = startStr;
+          row.date_end = endStr;
+        }
+        if (r1._error || r2._error) {
+          alert('Ошибка сохранения дат');
+          ppRenderGantt();
+        }
+      })
+      .catch(() => {
+        alert('Ошибка сохранения');
         ppRenderGantt();
-      }
-    }).catch(() => { alert('Ошибка сохранения'); ppRenderGantt(); });
+      });
   });
 }
 
 async function ppRenderGantt() {
   if (typeof gantt === 'undefined' || !currentProjectId) return;
   try {
-    const filteredRows = rows.filter(r => r.date_end);
+    const filteredRows = rows.filter((r) => r.date_end);
     const ganttData = {
-      data: filteredRows.map(r => ({
+      data: filteredRows.map((r) => ({
         id: r.id,
         text: r.work_name || r.work_num || '#' + r.id,
         designation: r.work_designation || '',
@@ -3181,7 +3694,9 @@ async function ppRenderGantt() {
     gantt.parse(ganttData);
     ganttAutoFitRowHeights();
     gantt.render();
-  } catch (e) { console.error('ppRenderGantt error:', e); }
+  } catch (e) {
+    console.error('ppRenderGantt error:', e);
+  }
 }
 
 // ── PP BULK SELECT / DELETE / EXPORT ─────────────────────────────────────
@@ -3194,16 +3709,18 @@ function ppToggleBulkMode() {
   var btn = document.getElementById('ppBulkModeBtn');
   if (btn) btn.classList.toggle('active', _ppBulkMode);
   // Добавляем/убираем чекбоксы в первую ячейку каждой строки
-  document.querySelectorAll('#ppTableBody tr').forEach(function(tr) {
+  document.querySelectorAll('#ppTableBody tr').forEach(function (tr) {
     var firstTd = tr.querySelector('td');
     if (!firstTd) return;
     var existing = firstTd.querySelector('.bulk-cb');
     if (_ppBulkMode && !existing) {
       var cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.className = 'bulk-cb';
-      cb.onchange = function() {
+      cb.type = 'checkbox';
+      cb.className = 'bulk-cb';
+      cb.onchange = function () {
         var id = parseInt(tr.dataset.id);
-        if (cb.checked) _ppBulkSelected.add(id); else _ppBulkSelected.delete(id);
+        if (cb.checked) _ppBulkSelected.add(id);
+        else _ppBulkSelected.delete(id);
         ppUpdateBulkBar();
       };
       firstTd.insertBefore(cb, firstTd.firstChild);
@@ -3226,32 +3743,65 @@ function ppUpdateBulkBar() {
 
 function ppBulkDeselectAll() {
   _ppBulkSelected.clear();
-  document.querySelectorAll('#ppTableBody .bulk-cb').forEach(function(cb) { cb.checked = false; });
+  document.querySelectorAll('#ppTableBody .bulk-cb').forEach(function (cb) {
+    cb.checked = false;
+  });
   ppUpdateBulkBar();
 }
 
 function ppBulkExport() {
   if (_ppBulkSelected.size === 0) return;
-  var selected = rows.filter(function(r) { return _ppBulkSelected.has(r.id); });
-  var cols = ['row_code','work_order','work_designation','work_name','date_end','dept','sector_head','executor','task_type'];
-  var headers = ['Код строки','Наряд-заказ','Обозначение','Наименование','Сроки выполнения','Отдел','Нач. сектора','Разработчик','Тип задачи'];
-  var csv = '\uFEFF' + headers.join(';') + '\n';
-  selected.forEach(function(r) {
-    csv += cols.map(function(c) { return '"' + String(r[c]||'').replace(/"/g,'""') + '"'; }).join(';') + '\n';
+  var selected = rows.filter(function (r) {
+    return _ppBulkSelected.has(r.id);
   });
-  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'ПП_выбранные.csv'; a.click(); URL.revokeObjectURL(a.href);
+  var cols = [
+    'row_code',
+    'work_order',
+    'work_designation',
+    'work_name',
+    'date_end',
+    'dept',
+    'sector_head',
+    'executor',
+    'task_type',
+  ];
+  var headers = [
+    'Код строки',
+    'Наряд-заказ',
+    'Обозначение',
+    'Наименование',
+    'Сроки выполнения',
+    'Отдел',
+    'Нач. сектора',
+    'Разработчик',
+    'Тип задачи',
+  ];
+  var csv = '\uFEFF' + headers.join(';') + '\n';
+  selected.forEach(function (r) {
+    csv +=
+      cols
+        .map(function (c) {
+          return '"' + String(r[c] || '').replace(/"/g, '""') + '"';
+        })
+        .join(';') + '\n';
+  });
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ПП_выбранные.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
   notify('Экспортировано строк: ' + selected.length, 'ok');
 }
 
 async function ppBulkDelete() {
   if (_ppBulkSelected.size === 0) return;
-  if (!await confirmDialog('Удалить ' + _ppBulkSelected.size + ' строк(и)?', 'Массовое удаление')) return;
+  if (!(await confirmDialog('Удалить ' + _ppBulkSelected.size + ' строк(и)?', 'Массовое удаление')))
+    return;
   var ids = Array.from(_ppBulkSelected);
   var deleted = 0;
   // 1. Анимация исчезновения строк
-  ids.forEach(function(id) {
+  ids.forEach(function (id) {
     var tr = document.querySelector('#ppTableBody tr[data-id="' + id + '"]');
     if (tr) {
       tr.style.transition = 'opacity 0.4s, transform 0.4s, background 0.2s';
@@ -3261,19 +3811,25 @@ async function ppBulkDelete() {
     }
   });
   // 2. Ждём завершения анимации
-  await new Promise(function(r) { setTimeout(r, 450); });
+  await new Promise(function (r) {
+    setTimeout(r, 450);
+  });
   // 3. Удаляем на сервере
   for (var i = 0; i < ids.length; i++) {
     try {
       var res = await fetch('/api/production_plan/' + ids[i] + '/', {
         method: 'DELETE',
-        headers: {'X-CSRFToken': csrfToken}
+        headers: { 'X-CSRFToken': csrfToken },
       });
       if (res.ok || res.status === 204) {
-        rows = rows.filter(function(r) { return r.id !== ids[i]; });
+        rows = rows.filter(function (r) {
+          return r.id !== ids[i];
+        });
         deleted++;
       }
-    } catch(e) { /* пропускаем ошибку отдельной строки */ }
+    } catch (e) {
+      /* пропускаем ошибку отдельной строки */
+    }
   }
   // 4. Всегда приводим таблицу в нормальное состояние
   _ppBulkSelected.clear();
