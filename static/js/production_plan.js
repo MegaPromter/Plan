@@ -337,8 +337,8 @@ async function loadPPRows(projectId, scope) {
 
 // Фоновая дозагрузка оставшихся строк порциями
 async function _ppBgLoadRemaining(projectId, offset) {
+  // eslint-disable-next-line no-constant-condition
   while (true) {
-    // eslint-disable-line no-constant-condition
     var url =
       '/api/production_plan/?project_id=' +
       projectId +

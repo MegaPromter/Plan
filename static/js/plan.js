@@ -607,8 +607,8 @@ async function loadTasks() {
 // Подсветка строки при переходе с дашборда (?highlight=<task_id>)
 // Фоновая дозагрузка оставшихся строк порциями
 async function _spBgLoadRemaining(baseUrl, offset) {
+  // eslint-disable-next-line no-constant-condition
   while (true) {
-    // eslint-disable-line no-constant-condition
     var url = baseUrl + '&limit=' + SP_FETCH_CHUNK + '&offset=' + offset;
     var resp;
     try {
