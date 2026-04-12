@@ -244,10 +244,17 @@ class DelegationsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
             ctx["auto_delegate_employee_id"] = col.get(
                 "auto_delegate_employee_id", None
             )
-            # Scope по умолчанию для формы создания
-            from apps.employees.signals import _resolve_delegation_scope
-
-            scope = _resolve_delegation_scope(emp)
+            # Scope по умолчанию для формы создания (по роли)
+            scope = None
+            role = emp.role
+            if role in ("ntc_head", "ntc_deputy") and emp.ntc_center:
+                scope = ("center", emp.ntc_center.code)
+            elif role in ("dept_head", "dept_deputy") and emp.department:
+                scope = ("dept", emp.department.code)
+            elif role == "sector_head" and emp.sector:
+                scope = ("sector", emp.sector.code)
+            elif emp.department:
+                scope = ("dept", emp.department.code)
             ctx["default_scope_type"] = scope[0] if scope else ""
             ctx["default_scope_value"] = scope[1] if scope else ""
 
