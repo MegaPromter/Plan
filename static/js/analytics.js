@@ -73,9 +73,8 @@
   window.anSetMode = function (mode) {
     currentMode = mode;
     updateModeTabs();
-    if (lastData) {
-      renderContent(lastData);
-    }
+    // Разные API для аналитики и отчётов — перезагружаем данные
+    loadData();
   };
 
   function updateModeTabs() {
@@ -91,7 +90,7 @@
 
   /* ── API ─────────────────────────────────────────────────────────────── */
   function buildUrl() {
-    var u = '/api/analytics/plan/';
+    var u = currentMode === 'tables' ? '/api/analytics/reports/' : '/api/analytics/plan/';
     var params = [];
 
     var yrs = idsToList(currentYears);
@@ -691,67 +690,246 @@
     renderBarChart(data.months || []);
   }
 
+  /* ── Общие хелперы отчётов ──────────────────────────────────────────── */
+
+  function _rptStatusBadge(status, days) {
+    var map = {
+      done: '<span class="rpt-status done">✓ Выполнено</span>',
+      inwork: '<span class="rpt-status inwork">В работе</span>',
+      overdue:
+        '<span class="rpt-status overdue">Просрочено' +
+        (days ? ' · ' + days + ' дн.' : '') +
+        '</span>',
+      debt:
+        '<span class="rpt-status debt">Долг' +
+        (days ? ' · ' + days + ' дн.' : '') +
+        '</span>',
+    };
+    return map[status] || '';
+  }
+
+  function _rptCompletionBar(pct) {
+    var cls = pct >= 50 ? 'green' : pct >= 10 ? 'yellow' : 'red';
+    var colorCls = pct >= 50 ? '' : pct >= 10 ? '' : ' style="color:var(--danger)"';
+    return (
+      '<div class="cell-bar">' +
+      '<div class="cell-bar-track"><div class="cell-bar-fill ' +
+      cls +
+      '" style="width:' +
+      Math.min(pct, 100) +
+      '%"></div></div>' +
+      '<div class="cell-bar-pct"' +
+      colorCls +
+      '>' +
+      fmtPct(pct) +
+      '</div></div>'
+    );
+  }
+
+  function _rptSummaryCards(data) {
+    var html = '<div class="rpt-summary-header">';
+    html += '<div class="an-summary">';
+    html +=
+      '<div class="an-summary-card an-summary-accent"><div class="an-summary-val an-val-accent">' +
+      fmtNum(data.total || 0) +
+      '</div><div class="an-summary-label">Всего задач</div></div>';
+    html +=
+      '<div class="an-summary-card an-summary-success"><div class="an-summary-val an-val-green">' +
+      fmtNum(data.done || 0) +
+      '</div><div class="an-summary-label">Выполнено</div><div class="an-summary-sub">' +
+      fmtPct(data.completion_pct || 0) +
+      '</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val">' +
+      fmtNum(data.inwork || 0) +
+      '</div><div class="an-summary-label">В работе</div></div>';
+    html +=
+      '<div class="an-summary-card an-summary-danger"><div class="an-summary-val an-val-red">' +
+      fmtNum(data.overdue || 0) +
+      '</div><div class="an-summary-label">Просрочено</div></div>';
+    html +=
+      '<div class="an-summary-card an-summary-warn"><div class="an-summary-val an-val-yellow">' +
+      fmtNum(data.debts_total || 0) +
+      '</div><div class="an-summary-label">Долги</div><div class="an-summary-sub">из прошлых мес.</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val">' +
+      fmtHrs(data.plan_hours || 0) +
+      ' ч</div><div class="an-summary-label">План (часы)</div></div>';
+    html += '</div>';
+
+    // Прогресс-бар
+    var t = data.total || 1;
+    var doneW = ((data.done || 0) / t) * 100;
+    var overdueW = ((data.overdue || 0) / t) * 100;
+    var inworkW = ((data.inwork || 0) / t) * 100;
+    html += '<div class="rpt-progress">';
+    html += '<div class="rpt-progress-labels"><span>Прогресс выполнения</span><span>' +
+      fmtNum(data.done || 0) + ' / ' + fmtNum(data.total || 0) + '</span></div>';
+    html += '<div class="rpt-progress-bar">';
+    html += '<div class="rpt-progress-done" style="width:' + doneW + '%"></div>';
+    html += '<div class="rpt-progress-overdue" style="width:' + overdueW + '%"></div>';
+    html += '<div class="rpt-progress-inwork" style="width:' + inworkW + '%"></div>';
+    html += '</div>';
+    html += '<div class="rpt-progress-legend">';
+    html += '<span class="rpt-lg-done">Выполнено (' + fmtNum(data.done || 0) + ')</span>';
+    html += '<span class="rpt-lg-overdue">Просрочено (' + fmtNum(data.overdue || 0) + ')</span>';
+    html += '<span class="rpt-lg-inwork">В работе (' + fmtNum(data.inwork || 0) + ')</span>';
+    html += '</div></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function _rptDebtsBlock(data) {
+    if (!data.debts_total) return '';
+    var html = '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-exclamation-triangle"></i> Долги из прошлых периодов</div>';
+    html += '<span class="rpt-badge-danger">' + fmtNum(data.debts_total) + ' задач</span>';
+    html += '</div>';
+
+    html += '<div class="rpt-debt-cards">';
+    html += '<div class="rpt-debt-card mild"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_1m || 0) + '</div><div class="rpt-debt-label">1 месяц</div></div>';
+    html += '<div class="rpt-debt-card medium"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_2_3m || 0) + '</div><div class="rpt-debt-label">2–3 месяца</div></div>';
+    html += '<div class="rpt-debt-card severe"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_3plus || 0) + '</div><div class="rpt-debt-label">3+ месяцев</div></div>';
+    html += '</div>';
+
+    var debts = data.debt_tasks || [];
+    if (debts.length > 0) {
+      html += '<table class="rpt-tbl">';
+      html += '<thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Отдел</th>';
+      html += '<th class="num">Плановый срок</th><th class="num">Просрочка</th><th>Глубина</th></tr></thead>';
+      html += '<tbody>';
+      debts.forEach(function (d) {
+        var depthCls = d.depth === '3plus' ? 'debt' : (d.depth === '2_3m' ? 'debt' : 'overdue');
+        var depthLabel = d.depth === '3plus' ? '3+ мес' : (d.depth === '2_3m' ? '2–3 мес' : '1 мес');
+        html += '<tr>';
+        html += '<td class="bold">' + esc(d.work_name) + '</td>';
+        html += '<td>' + esc(d.project_name) + '</td>';
+        html += '<td>' + esc(d.executor) + '</td>';
+        html += '<td class="muted">' + esc(d.dept) + '</td>';
+        html += '<td class="num">' + fmtDate(d.date_end) + '</td>';
+        html += '<td class="num" style="color:var(--danger)">' + d.days_overdue + ' дн.</td>';
+        html += '<td><span class="rpt-status ' + depthCls + '">' + depthLabel + '</span></td>';
+        html += '</tr>';
+      });
+      if (data.debt_tasks_total > debts.length) {
+        html += '<tr><td colspan="7" class="rpt-more">... ещё ' +
+          (data.debt_tasks_total - debts.length) + ' задач</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function _rptProjectsBlock(data) {
+    var projects = data.projects || [];
+    if (!projects.length) return '';
+    var html = '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-folder"></i> По проектам</div>';
+    html += '<span class="rpt-badge">' + projects.length + ' проектов</span>';
+    html += '</div>';
+    html += '<table class="rpt-tbl">';
+    html += '<thead><tr><th>Проект</th><th class="num">Задач</th><th class="num">Выполнено</th>';
+    html += '<th class="num">Просрочено</th><th class="num">Долги</th>';
+    html += '<th class="num">План (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
+    html += '<tbody>';
+    var totals = { total: 0, done: 0, overdue: 0, debts: 0, hours: 0 };
+    projects.forEach(function (p) {
+      totals.total += p.total;
+      totals.done += p.done;
+      totals.overdue += p.overdue;
+      totals.debts += p.debts_total;
+      totals.hours += p.plan_hours;
+      var pct = p.completion_pct || 0;
+      html += '<tr>';
+      html += '<td class="bold">' + esc(p.name) + '</td>';
+      html += '<td class="num">' + fmtNum(p.total) + '</td>';
+      html += '<td class="num" style="color:var(--success)">' + fmtNum(p.done) + '</td>';
+      html += '<td class="num" style="color:var(--danger)">' + fmtNum(p.overdue) + '</td>';
+      html += '<td class="num" style="color:#b91c1c">' + fmtNum(p.debts_total) + '</td>';
+      html += '<td class="num">' + fmtHrs(p.plan_hours) + '</td>';
+      html += '<td>' + _rptCompletionBar(pct) + '</td>';
+      html += '</tr>';
+    });
+    // Итого
+    var totalPct = totals.total > 0 ? (totals.done / totals.total) * 100 : 0;
+    html += '<tr class="rpt-total-row">';
+    html += '<td class="bold">Итого</td>';
+    html += '<td class="num bold">' + fmtNum(totals.total) + '</td>';
+    html += '<td class="num bold" style="color:var(--success)">' + fmtNum(totals.done) + '</td>';
+    html += '<td class="num bold" style="color:var(--danger)">' + fmtNum(totals.overdue) + '</td>';
+    html += '<td class="num bold" style="color:#b91c1c">' + fmtNum(totals.debts) + '</td>';
+    html += '<td class="num bold">' + fmtHrs(totals.hours) + '</td>';
+    html += '<td>' + _rptCompletionBar(totalPct) + '</td>';
+    html += '</tr></tbody></table></div>';
+    return html;
+  }
+
+  function _rptUnitTable(items, icon, nameKey, drillFn) {
+    if (!items.length) return '';
+    var html = '<table class="rpt-tbl">';
+    html += '<thead><tr><th>' + icon + '</th><th class="num">Задач</th><th class="num">Выполнено</th>';
+    html += '<th class="num">Просрочено</th><th class="num">Долги</th>';
+    html += '<th class="num">План (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
+    html += '<tbody>';
+    items.forEach(function (item) {
+      var name = item[nameKey] || item.code || item.name || '';
+      var pct = item.completion_pct || 0;
+      var onclick = drillFn ? ' onclick="' + drillFn(item) + '" class="rpt-clickable"' : '';
+      html += '<tr' + onclick + '>';
+      html += '<td class="bold">' + esc(name) + '</td>';
+      html += '<td class="num">' + fmtNum(item.total) + '</td>';
+      html += '<td class="num" style="color:var(--success)">' + fmtNum(item.done) + '</td>';
+      html += '<td class="num" style="color:var(--danger)">' + fmtNum(item.overdue) + '</td>';
+      html += '<td class="num" style="color:#b91c1c">' + fmtNum(item.debts_total) + '</td>';
+      html += '<td class="num">' + fmtHrs(item.plan_hours) + '</td>';
+      html += '<td>' + _rptCompletionBar(pct) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function fmtNum(n) {
+    if (n === null || n === undefined) return '0';
+    return n.toLocaleString('ru-RU');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var parts = iso.split('-');
+    if (parts.length === 3) return parts[2] + '.' + parts[1] + '.' + parts[0];
+    return iso;
+  }
+
+  /* ── Отчёты: уровень центров ─────────────────────────────────────────── */
+
   function renderCentersTables(el, data) {
     var centers = data.centers || [];
     if (!centers.length) {
-      el.innerHTML =
-        '<div class="an-empty"><i class="fas fa-sitemap"></i>Нет данных по центрам</div>';
+      el.innerHTML = '<div class="an-empty"><i class="fas fa-sitemap"></i>Нет данных</div>';
       return;
     }
 
-    var html = _renderCentersSummary(data, centers);
+    var html = _rptSummaryCards(data);
 
-    html += '<div class="rpt-level-header">';
-    html +=
-      '<div class="rpt-level-title"><i class="fas fa-sitemap"></i> Центры (' +
-      centers.length +
-      ')</div>';
+    html += '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-city"></i> По центрам</div>';
+    html += '<span class="rpt-badge">' + centers.length + ' центров</span>';
     html += '</div>';
-
-    html += '<div class="rpt-cards">';
-    centers.forEach(function (c) {
-      var badgeCls = loadBadgeCls(c.total_load_pct);
-      var barW = Math.min(c.total_load_pct || 0, 150);
-      html += '<div class="rpt-card" onclick="anDrillCenter(' + c.id + ')">';
-      html += '<div class="rpt-card-header">';
-      html +=
-        '<div class="rpt-card-title"><i class="fas fa-sitemap"></i>' + esc(c.code) + '</div>';
-      html += '<span class="rpt-card-arrow"><i class="fas fa-chevron-right"></i></span>';
-      html += '</div>';
-      if (c.name) html += '<div class="rpt-card-subtitle">' + esc(c.name) + '</div>';
-      html += '<div class="rpt-card-metrics">';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val an-val-accent">' +
-        fmtHrs(c.total_planned) +
-        '</div><div class="rpt-card-metric-label">план (ч)</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        fmtHrs(c.total_norm) +
-        '</div><div class="rpt-card-metric-label">норма</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val"><span class="an-load-badge ' +
-        badgeCls +
-        '">' +
-        fmtPct(c.total_load_pct) +
-        '</span></div><div class="rpt-card-metric-label">загрузка</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        (c.dept_count || 0) +
-        '</div><div class="rpt-card-metric-label">отд.</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        (c.employee_count || 0) +
-        '</div><div class="rpt-card-metric-label">сотр.</div></div>';
-      html += '</div>';
-      html +=
-        '<div class="rpt-card-bar"><div class="rpt-card-bar-fill ' +
-        badgeCls +
-        '" style="width:' +
-        barW +
-        '%"></div></div>';
-      html += '</div>';
+    html += _rptUnitTable(centers, 'Центр', 'code', function (c) {
+      return 'anDrillCenter(' + c.id + ')';
     });
     html += '</div>';
+
+    html += _rptDebtsBlock(data);
+    html += _rptProjectsBlock(data);
 
     el.innerHTML = html;
   }
@@ -1123,383 +1301,118 @@
   function renderAllDeptsTables(el, data) {
     var depts = data.depts || [];
     if (!depts.length) {
-      el.innerHTML =
-        '<div class="an-empty"><i class="fas fa-building"></i>Нет данных по отделам</div>';
+      el.innerHTML = '<div class="an-empty"><i class="fas fa-building"></i>Нет данных по отделам</div>';
       return;
     }
 
-    // Экспорт — задачи из сводки (drilldown)
-    _exportData = _summaryExportData(data);
+    var html = _rptSummaryCards(data);
 
-    var html = renderSummaryCards(data);
-    html += renderWorksSummary(data);
-
-    html += '<div class="rpt-level-header">';
-    html +=
-      '<div class="rpt-level-title"><i class="fas fa-building"></i> Отделы (' +
-      depts.length +
-      ')</div>';
-    html += '<div class="rpt-export-bar" id="anExportInline"></div>';
+    html += '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-building"></i> По отделам</div>';
+    html += '<span class="rpt-badge">' + depts.length + ' отделов</span>';
     html += '</div>';
-
-    html += '<div class="rpt-cards">';
-    depts.forEach(function (d) {
-      var badgeCls = loadBadgeCls(d.total_load_pct);
-      var barW = Math.min(d.total_load_pct || 0, 150);
-      html += '<div class="rpt-card" onclick="anDrillDept(\'' + escAttr(d.code) + '\')">';
-      html += '<div class="rpt-card-header">';
-      html +=
-        '<div class="rpt-card-title"><i class="fas fa-layer-group"></i>' + esc(d.code) + '</div>';
-      html += '<span class="rpt-card-arrow"><i class="fas fa-chevron-right"></i></span>';
-      html += '</div>';
-      if (d.name) html += '<div class="rpt-card-subtitle">' + esc(d.name) + '</div>';
-      html += '<div class="rpt-card-metrics">';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val an-val-accent">' +
-        fmtHrs(d.total_planned) +
-        '</div><div class="rpt-card-metric-label">план (ч)</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        fmtHrs(d.total_norm) +
-        '</div><div class="rpt-card-metric-label">норма</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val"><span class="an-load-badge ' +
-        badgeCls +
-        '">' +
-        fmtPct(d.total_load_pct) +
-        '</span></div><div class="rpt-card-metric-label">загрузка</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        (d.employee_count || 0) +
-        '</div><div class="rpt-card-metric-label">сотр.</div></div>';
-      html += '</div>';
-      html +=
-        '<div class="rpt-card-bar"><div class="rpt-card-bar-fill ' +
-        badgeCls +
-        '" style="width:' +
-        barW +
-        '%"></div></div>';
-      html += '</div>';
+    html += _rptUnitTable(depts, 'Отдел', 'code', function (d) {
+      return "anDrillDept('" + escAttr(d.code) + "')";
     });
     html += '</div>';
 
-    // Таблицы сотрудников по отделам (drilldown)
-    depts.forEach(function (d) {
-      (d.sectors || []).forEach(function (s) {
-        if (s.employees && s.employees.length > 0) {
-          html += _renderEmpTable(s.employees, esc(d.code) + ' — ' + esc(s.name));
-        }
-      });
-    });
+    html += _rptDebtsBlock(data);
+    html += _rptProjectsBlock(data);
 
     el.innerHTML = html;
-    _initSummarySort();
-    _buildExport('anExportContainer', 'Отчёт_НТЦ', _summaryExportCols(), ['НТЦ — Все отделы']);
   }
 
   function renderDeptTables(el, data) {
     var sectors = data.sectors || [];
-
-    // Экспорт — задачи из сводки (drilldown)
-    _exportData = _summaryExportData(data);
-
     var deptName = data.dept ? data.dept.name || data.dept.code : '';
-    var html = renderSummaryCards(data);
-    html += renderWorksSummary(data);
 
-    html += '<div class="rpt-level-header">';
-    html +=
-      '<div class="rpt-level-title"><i class="fas fa-layer-group"></i> ' +
-      esc(deptName) +
-      ' — Секторы (' +
-      sectors.length +
-      ')</div>';
-    html += '<div class="rpt-export-bar" id="anExportInline"></div>';
+    var html = _rptSummaryCards(data);
+
+    html += '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-layer-group"></i> ' +
+      esc(deptName) + ' — Секторы</div>';
+    html += '<span class="rpt-badge">' + sectors.length + ' секторов</span>';
     html += '</div>';
 
     if (sectors.length === 0) {
       html += '<div class="an-empty"><i class="fas fa-layer-group"></i>Нет секторов</div>';
-      el.innerHTML = html;
-      return;
+    } else {
+      html += _rptUnitTable(sectors, 'Сектор', 'name', function (s) {
+        return 'anDrillSector(' + s.id + ')';
+      });
     }
-
-    html += '<div class="rpt-cards">';
-    sectors.forEach(function (s) {
-      var badgeCls = loadBadgeCls(s.total_load_pct);
-      var empCount = (s.employees || []).length;
-      var barW = Math.min(s.total_load_pct || 0, 150);
-      html += '<div class="rpt-card" onclick="anDrillSector(' + s.id + ')">';
-      html += '<div class="rpt-card-header">';
-      html += '<div class="rpt-card-title"><i class="fas fa-users"></i>' + esc(s.name) + '</div>';
-      html += '<span class="rpt-card-arrow"><i class="fas fa-chevron-right"></i></span>';
-      html += '</div>';
-      html += '<div class="rpt-card-metrics">';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val an-val-accent">' +
-        fmtHrs(s.total_planned) +
-        '</div><div class="rpt-card-metric-label">план</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        fmtHrs(s.total_norm) +
-        '</div><div class="rpt-card-metric-label">норма</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val"><span class="an-load-badge ' +
-        badgeCls +
-        '">' +
-        fmtPct(s.total_load_pct) +
-        '</span></div><div class="rpt-card-metric-label">загрузка</div></div>';
-      html +=
-        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
-        empCount +
-        '</div><div class="rpt-card-metric-label">сотр.</div></div>';
-      html += '</div>';
-      html +=
-        '<div class="rpt-card-bar"><div class="rpt-card-bar-fill ' +
-        badgeCls +
-        '" style="width:' +
-        barW +
-        '%"></div></div>';
-      html += '</div>';
-    });
     html += '</div>';
 
-    sectors.forEach(function (s) {
-      if (s.employees && s.employees.length > 0) {
-        html += _renderEmpTable(s.employees, 'Сотрудники — ' + esc(s.name));
-      }
-    });
+    html += _rptDebtsBlock(data);
+    html += _rptProjectsBlock(data);
 
     el.innerHTML = html;
-    _initSummarySort();
-    var deptLabel = data.dept ? data.dept.code + (data.dept.name ? '_' + data.dept.name : '') : '';
-    var deptMeta = data.dept
-      ? ['Отдел: ' + data.dept.code + (data.dept.name ? ' — ' + data.dept.name : '')]
-      : [];
-    _buildExport(
-      'anExportContainer',
-      'Отчёт_' + deptLabel.replace(/\s+/g, '_'),
-      _summaryExportCols(),
-      deptMeta,
-    );
   }
 
   function renderSectorTables(el, data) {
     var employees = data.employees || [];
     var title = data.view === 'employees' ? 'Выбранные сотрудники' : 'Сотрудники сектора';
 
-    _exportData = employees.map(function (e) {
-      var deptCodes = idsToList(currentDeptCodes);
-      return _empExportRow(e, deptCodes[0] || '', data.sector ? data.sector.name : '');
-    });
+    var html = _rptSummaryCards(data);
 
-    var html = renderSummaryCards(data);
-
-    html += '<div class="rpt-level-header">';
-    html +=
-      '<div class="rpt-level-title"><i class="fas fa-users"></i> ' +
-      esc(title) +
-      ' (' +
-      employees.length +
-      ')</div>';
-    html += '<div class="rpt-export-bar" id="anExportInline"></div>';
+    html += '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-users"></i> ' + esc(title) + '</div>';
+    html += '<span class="rpt-badge">' + employees.length + ' сотрудников</span>';
     html += '</div>';
 
-    html += _renderEmpTable(employees, null);
+    if (employees.length > 0) {
+      html += _rptUnitTable(employees, 'Сотрудник', 'name', function (e) {
+        return 'anDrillEmployee(' + e.id + ')';
+      });
+    } else {
+      html += '<div class="an-empty"><i class="fas fa-users"></i>Нет сотрудников</div>';
+    }
+    html += '</div>';
+
+    html += _rptDebtsBlock(data);
 
     el.innerHTML = html;
-    var deptCodes = idsToList(currentDeptCodes);
-    var sectorLabel = (deptCodes[0] || '') + (data.sector ? '_' + data.sector.name : '');
-    var sectorMeta = [];
-    if (deptCodes[0]) sectorMeta.push('Отдел: ' + deptCodes[0]);
-    if (data.sector) sectorMeta.push('Сектор: ' + data.sector.name);
-    _buildExport(
-      'anExportContainer',
-      'Отчёт_' + sectorLabel.replace(/\s+/g, '_'),
-      _empExportCols(),
-      sectorMeta,
-    );
   }
 
   function renderEmployeeTables(el, data) {
     var emp = data.employee || {};
-    var tasks = (data.tasks || []).slice().sort(function (a, b) {
-      var da = a.date_end || '9999-12-31';
-      var db = b.date_end || '9999-12-31';
-      return da.localeCompare(db);
-    });
-    data.tasks = tasks; // обновить для renderTasksTableBody
-    var selYears = idsToList(currentYears);
+    var tasks = data.tasks || [];
 
-    _exportData = tasks.map(function (t) {
-      var row = {
-        work_name: t.work_name,
-        project: t.project_name || t.project || '',
-        date_start: t.date_start || '',
-        date_end: t.date_end || '',
-        status: t.status === 'done' ? 'Готово' : t.status === 'overdue' ? 'Просрочено' : 'В работе',
-      };
-      var total = 0;
-      for (var m = 1; m <= 12; m++) {
-        var hrs = 0;
-        selYears.forEach(function (y) {
-          var key = y + '-' + (m < 10 ? '0' + m : m);
-          if (t.plan_hours && t.plan_hours[key]) hrs += parseFloat(t.plan_hours[key]);
-        });
-        row['m' + m] = hrs;
-        total += hrs;
-      }
-      row.total_hours = total;
-      return row;
-    });
-
-    // Собираем отпуска/командировки по месяцам
-    var absences = data.absences || [];
-    var absMonths = {};
-    absences.forEach(function (a) {
-      var dsLabel = a.date_start ? a.date_start.slice(8, 10) + '.' + a.date_start.slice(5, 7) : '';
-      var deLabel = a.date_end ? a.date_end.slice(8, 10) + '.' + a.date_end.slice(5, 7) : '';
-      var fullLabel = a.label + ': ' + dsLabel + ' – ' + deLabel;
-      selYears.forEach(function (y) {
-        var yInt = parseInt(y);
-        var ds = new Date(a.date_start);
-        var de = new Date(a.date_end);
-        for (var mm = 1; mm <= 12; mm++) {
-          var mStart = new Date(yInt, mm - 1, 1);
-          var mEnd = new Date(yInt, mm, 0);
-          if (mEnd >= ds && mStart <= de) {
-            if (!absMonths[mm]) absMonths[mm] = { vac: false, trip: false, titles: [] };
-            if (a.type === 'vacation') absMonths[mm].vac = true;
-            else absMonths[mm].trip = true;
-            if (absMonths[mm].titles.indexOf(fullLabel) === -1)
-              absMonths[mm].titles.push(fullLabel);
-          }
-        }
-      });
-    });
-
-    var html = renderSummaryCards(data);
-
-    // Помесячная таблица (план/норма/загрузка + отпуска)
-    var months = data.months || [];
-    if (months.length > 0) {
-      html += '<div class="rpt-tasks-wrap" style="margin-bottom:16px;">';
-      html +=
-        '<div class="rpt-tasks-header"><div class="rpt-tasks-title"><i class="fas fa-calendar-alt"></i> Помесячная загрузка' +
-        (emp.name ? ': ' + esc(emp.name) : '') +
-        '</div></div>';
-      html += '<div style="overflow-x:auto;padding:0 14px 14px;">';
-      html += '<table class="an-months-table"><thead><tr><th></th>';
-      for (var m = 1; m <= 12; m++) html += '<th>' + MONTHS_SHORT[m] + '</th>';
-      html += '<th>Итого</th></tr></thead><tbody>';
-
-      html += '<tr><td class="row-label">План</td>';
-      var sumP = 0;
-      for (let m = 1; m <= 12; m++) {
-        let md = months.find(function (x) {
-          return x.month === m;
-        });
-        var p = md ? md.planned : 0;
-        sumP += p;
-        html += '<td>' + (p > 0 ? fmtHrs(p) : '') + '</td>';
-      }
-      html += '<td><strong>' + fmtHrs(sumP) + '</strong></td></tr>';
-
-      html += '<tr><td class="row-label">Норма</td>';
-      var sumN = 0;
-      for (let m = 1; m <= 12; m++) {
-        let md = months.find(function (x) {
-          return x.month === m;
-        });
-        var n = md ? md.norm : 0;
-        sumN += n;
-        html += '<td>' + (n > 0 ? fmtHrs(n) : '') + '</td>';
-      }
-      html += '<td><strong>' + fmtHrs(sumN) + '</strong></td></tr>';
-
-      html += '<tr><td class="row-label">Загрузка</td>';
-      for (let m = 1; m <= 12; m++) {
-        let md = months.find(function (x) {
-          return x.month === m;
-        });
-        var lp = md ? md.load_pct : 0;
-        var bc = loadBadgeCls(lp);
-        html += '<td><span class="an-load-badge ' + bc + '">' + fmtPct(lp) + '</span></td>';
-      }
-      var totalLoad = sumN > 0 ? (sumP / sumN) * 100 : 0;
-      var totalBC = loadBadgeCls(totalLoad);
-      html +=
-        '<td><span class="an-load-badge ' +
-        totalBC +
-        '">' +
-        fmtPct(totalLoad) +
-        '</span></td></tr>';
-
-      // Строка отпусков/командировок
-      if (absences.length > 0) {
-        html +=
-          '<tr><td class="row-label" style="color:var(--muted);"><i class="fas fa-plane-departure" style="font-size:10px;margin-right:3px;"></i>Отпуск / Ком.</td>';
-        for (let m = 1; m <= 12; m++) {
-          var info = absMonths[m];
-          if (info) {
-            var marks = '';
-            if (info.vac) marks += '<span class="an-abs-mark an-abs-vac"></span>';
-            if (info.trip) marks += '<span class="an-abs-mark an-abs-trip"></span>';
-            var bgCls =
-              info.vac && info.trip
-                ? 'an-cell-vac an-cell-trip'
-                : info.vac
-                  ? 'an-cell-vac'
-                  : 'an-cell-trip';
-            html +=
-              '<td class="' +
-              bgCls +
-              '" title="' +
-              esc(info.titles.join('; ')) +
-              '">' +
-              marks +
-              '</td>';
-          } else {
-            html += '<td></td>';
-          }
-        }
-        html += '<td></td></tr>';
-      }
-
-      html += '</tbody></table></div></div>';
-    }
+    var html = _rptSummaryCards(data);
 
     // Таблица задач
-    html += '<div class="rpt-tasks-wrap">';
-    html += '<div class="rpt-tasks-header">';
-    html +=
-      '<div class="rpt-tasks-title"><i class="fas fa-tasks"></i> Задачи' +
-      (emp.name ? ': ' + esc(emp.name) : '') +
-      ' (' +
-      tasks.length +
-      ')';
-    html += '<span class="an-legend"><span class="an-active-mark"></span> период';
-    html += ' &nbsp; <span class="an-abs-mark an-abs-vac"></span> отпуск';
-    html += ' &nbsp; <span class="an-abs-mark an-abs-trip"></span> командировка</span>';
-    html += '</div>';
-    html += '<div class="rpt-export-bar" id="anExportInline"></div>';
+    html += '<div class="rpt-section">';
+    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section-title"><i class="fas fa-tasks"></i> Задачи' +
+      (emp.name ? ': ' + esc(emp.name) : '') + '</div>';
+    html += '<span class="rpt-badge">' + tasks.length + ' задач</span>';
     html += '</div>';
 
-    html += renderTasksTableBody(data);
+    if (tasks.length > 0) {
+      html += '<table class="rpt-tbl">';
+      html += '<thead><tr><th>№</th><th>Задача</th><th>Проект</th>';
+      html += '<th class="num">Срок</th><th class="num">План (ч)</th><th>Статус</th></tr></thead>';
+      html += '<tbody>';
+      tasks.forEach(function (t, i) {
+        html += '<tr>';
+        html += '<td class="muted">' + (i + 1) + '</td>';
+        html += '<td class="bold">' + esc(t.work_name) + '</td>';
+        html += '<td>' + esc(t.project_name || '') + '</td>';
+        html += '<td class="num">' + fmtDate(t.date_end) + '</td>';
+        html += '<td class="num">' + fmtHrs(t.plan_hours || 0) + '</td>';
+        html += '<td>' + _rptStatusBadge(t.status, t.days_overdue) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="an-empty"><i class="fas fa-tasks"></i>Нет задач</div>';
+    }
     html += '</div>';
 
     el.innerHTML = html;
-    _anInitTaskSort();
-    var empDept = emp.dept || '';
-    var empFileName = (empDept ? empDept + '_' : '') + (emp.name || '');
-    var empMeta = [];
-    if (empDept) empMeta.push('Отдел: ' + empDept);
-    if (emp.name) empMeta.push('Сотрудник: ' + emp.name);
-    _buildExport(
-      'anExportContainer',
-      'Отчёт_' + empFileName.replace(/\s+/g, '_'),
-      _taskExportCols(),
-      empMeta,
-    );
   }
 
   /* ═══════════════════════════════════════════════════════════════════════

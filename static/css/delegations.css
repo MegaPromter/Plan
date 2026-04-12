@@ -1,0 +1,125 @@
+/* Делегирование прав — стили страницы */
+
+.deleg-section {
+  margin-bottom: 24px;
+}
+
+.deleg-auto-settings {
+  padding: 20px 24px;
+}
+
+.deleg-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.deleg-toggle-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.deleg-auto-delegate-pick {
+  margin-top: 16px;
+  padding-left: 28px;
+}
+
+.deleg-auto-delegate-pick label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.deleg-auto-delegate-pick select {
+  width: 100%;
+  max-width: 360px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-secondary, #fff);
+  color: var(--text-primary, #1f2937);
+}
+
+.deleg-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.deleg-table-wrap {
+  padding: 0 24px 20px;
+}
+
+.deleg-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-tertiary, #9ca3af);
+  font-size: 14px;
+}
+
+.deleg-expired td {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* Бейджи */
+.badge-auto {
+  background: var(--accent-blue, #3b82f6);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-manual {
+  background: var(--bg-tertiary, #e5e7eb);
+  color: var(--text-secondary, #6b7280);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Форма создания */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.form-group select,
+.form-group input[type='text'],
+.form-group input[type='date'] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-secondary, #fff);
+  color: var(--text-primary, #1f2937);
+}
+
+.form-group input[readonly],
+.form-group select[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleg-error {
+  color: var(--danger, #ef4444);
+  font-size: 13px;
+  margin-top: 8px;
+}

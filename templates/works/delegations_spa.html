@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Делегирование — ПРИЗМА{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/delegations.css' %}?v={{ v|default:'1' }}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Делегирование прав</h1>
+</div>
+
+<div x-data="delegationApp()" x-init="init()">
+
+  {% if is_writer %}
+  <!-- ── Авто-делегирование ──────────────────────────────────────────── -->
+  <div class="section deleg-section">
+    <div class="section-header">
+      <h2>Автоделегирование при отпуске</h2>
+    </div>
+    <div class="deleg-auto-settings">
+      <label class="deleg-toggle-row">
+        <input type="checkbox"
+               x-model="autoEnabled"
+               @change="saveAutoSettings()">
+        <span>Автоматически делегировать права заместителю при уходе в отпуск</span>
+      </label>
+      <div x-show="autoEnabled" x-transition class="deleg-auto-delegate-pick">
+        <label>Заместитель:</label>
+        <select x-model="autoDelegateId" @change="saveAutoSettings()">
+          <option value="">— Выберите сотрудника —</option>
+          <template x-for="e in employees" :key="e.id">
+            <option :value="e.id" x-text="e.full_name" :selected="e.id == autoDelegateId"></option>
+          </template>
+        </select>
+        <p class="deleg-hint">
+          При создании отпуска система автоматически делегирует ваши права
+          выбранному сотруднику на период отпуска.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Мои делегирования ───────────────────────────────────────────── -->
+  <div class="section deleg-section">
+    <div class="section-header">
+      <h2>Мои делегирования</h2>
+      <button class="btn btn-primary btn-sm" @click="showCreate = true">
+        <i class="fas fa-plus"></i> Создать
+      </button>
+    </div>
+    <div class="deleg-table-wrap">
+      <template x-if="given.length === 0">
+        <p class="deleg-empty">Нет активных делегирований</p>
+      </template>
+      <table x-show="given.length > 0" class="info-table">
+        <thead>
+          <tr>
+            <th>Получатель</th>
+            <th>Область</th>
+            <th>Право записи</th>
+            <th>Действует до</th>
+            <th>Тип</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="d in given" :key="d.id">
+            <tr :class="isExpired(d) ? 'deleg-expired' : ''">
+              <td x-text="d.delegate_full_name"></td>
+              <td x-text="scopeLabel(d)"></td>
+              <td x-text="d.delegator_write ? 'Да' : 'Нет'"></td>
+              <td x-text="formatDate(d.valid_until)"></td>
+              <td>
+                <span x-show="d.is_auto" class="badge badge-auto">Авто</span>
+                <span x-show="!d.is_auto" class="badge badge-manual">Ручное</span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-danger" @click="revoke(d.id)"
+                        :disabled="revoking === d.id">
+                  <i class="fas fa-times"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Делегировано мне ─────────────────────────────────────────────── -->
+  <div class="section deleg-section">
+    <div class="section-header">
+      <h2>Делегировано мне</h2>
+    </div>
+    <div class="deleg-table-wrap">
+      <template x-if="received.length === 0">
+        <p class="deleg-empty">Нет входящих делегирований</p>
+      </template>
+      <table x-show="received.length > 0" class="info-table">
+        <thead>
+          <tr>
+            <th>Делегатор</th>
+            <th>Область</th>
+            <th>Право записи</th>
+            <th>Действует до</th>
+            <th>Тип</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="d in received" :key="d.id">
+            <tr :class="isExpired(d) ? 'deleg-expired' : ''">
+              <td x-text="d.delegator_full_name"></td>
+              <td x-text="scopeLabel(d)"></td>
+              <td x-text="d.delegator_write ? 'Да' : 'Нет'"></td>
+              <td x-text="formatDate(d.valid_until)"></td>
+              <td>
+                <span x-show="d.is_auto" class="badge badge-auto">Авто</span>
+                <span x-show="!d.is_auto" class="badge badge-manual">Ручное</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Модалка создания ─────────────────────────────────────────────── -->
+  <div class="modal-overlay" :class="showCreate ? 'open' : ''" @click.self="showCreate = false">
+    <div class="modal-content" style="max-width: 480px">
+      <div class="modal-header">
+        <h3>Новое делегирование</h3>
+        <button class="modal-close" @click="showCreate = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Получатель</label>
+          <select x-model="newDelegateId">
+            <option value="">— Выберите сотрудника —</option>
+            <template x-for="e in employees" :key="e.id">
+              <option :value="e.id" x-text="e.full_name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Тип области</label>
+          <select x-model="newScopeType" disabled>
+            <option value="center">НТЦ-центр</option>
+            <option value="dept">Отдел</option>
+            <option value="sector">Сектор</option>
+            <option value="executor">Исполнитель</option>
+          </select>
+          <p class="deleg-hint">Определяется вашей ролью</p>
+        </div>
+        <div class="form-group">
+          <label>Значение области</label>
+          <input type="text" x-model="newScopeValue" readonly>
+        </div>
+        <div class="form-group">
+          <label>Действует до</label>
+          <input type="date" x-model="newValidUntil" class="cell-edit">
+        </div>
+        <div class="form-group">
+          <label class="deleg-toggle-row">
+            <input type="checkbox" x-model="newCanWrite">
+            <span>Право записи (создание/редактирование)</span>
+          </label>
+        </div>
+        <p x-show="createError" class="deleg-error" x-text="createError"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" @click="showCreate = false">Отмена</button>
+        <button class="btn btn-primary" @click="createDelegation()" :disabled="creating">
+          Создать
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function delegationApp() {
+  return {
+    // Авто-делегирование
+    autoEnabled: {{ auto_delegate_enabled|yesno:"true,false" }},
+    autoDelegateId: '{{ auto_delegate_employee_id|default:"" }}',
+
+    // Списки
+    given: [],
+    received: [],
+    employees: [],
+
+    // Создание
+    showCreate: false,
+    newDelegateId: '',
+    newScopeType: '{{ default_scope_type }}',
+    newScopeValue: '{{ default_scope_value }}',
+    newValidUntil: '',
+    newCanWrite: true,
+    createError: '',
+    creating: false,
+    revoking: null,
+
+    async init() {
+      await Promise.all([
+        this.loadGiven(),
+        this.loadReceived(),
+        this.loadEmployees(),
+      ]);
+    },
+
+    async loadGiven() {
+      try {
+        const r = await fetch('/api/delegations/?role=delegator');
+        this.given = await r.json();
+      } catch (e) { /* ignored */ }
+    },
+
+    async loadReceived() {
+      try {
+        const r = await fetch('/api/delegations/?role=delegate');
+        this.received = await r.json();
+      } catch (e) { /* ignored */ }
+    },
+
+    async loadEmployees() {
+      try {
+        const r = await fetch('/api/dept_employees/');
+        const data = await r.json();
+        this.employees = Array.isArray(data) ? data : (data.results || []);
+      } catch (e) { /* ignored */ }
+    },
+
+    scopeLabel(d) {
+      const labels = {center: 'НТЦ', dept: 'Отдел', sector: 'Сектор', executor: 'Исполнитель'};
+      return (labels[d.scope_type] || d.scope_type) + ': ' + d.scope_value;
+    },
+
+    formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    },
+
+    isExpired(d) {
+      if (!d.valid_until) return false;
+      return new Date(d.valid_until) < new Date();
+    },
+
+    async saveAutoSettings() {
+      try {
+        await fetch('/api/col_settings/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                          || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+          },
+          body: JSON.stringify({
+            auto_delegate_enabled: this.autoEnabled,
+            auto_delegate_employee_id: this.autoDelegateId ? Number(this.autoDelegateId) : null,
+          }),
+        });
+      } catch (e) { /* ignored */ }
+    },
+
+    async createDelegation() {
+      this.createError = '';
+      if (!this.newDelegateId) { this.createError = 'Выберите получателя'; return; }
+      if (!this.newValidUntil) { this.createError = 'Укажите срок действия'; return; }
+
+      this.creating = true;
+      try {
+        const r = await fetch('/api/delegations/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                          || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+          },
+          body: JSON.stringify({
+            delegate_id: Number(this.newDelegateId),
+            scope_type: this.newScopeType,
+            scope_value: this.newScopeValue,
+            delegator_write: this.newCanWrite,
+            valid_until: this.newValidUntil + 'T23:59:59',
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          this.createError = data.error || 'Ошибка создания';
+          return;
+        }
+        this.showCreate = false;
+        this.newDelegateId = '';
+        this.newValidUntil = '';
+        this.newCanWrite = true;
+        await this.loadGiven();
+      } catch (e) {
+        this.createError = 'Сетевая ошибка';
+      } finally {
+        this.creating = false;
+      }
+    },
+
+    async revoke(id) {
+      if (!confirm('Отозвать делегирование?')) return;
+      this.revoking = id;
+      try {
+        await fetch('/api/delegations/' + id + '/', {
+          method: 'DELETE',
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                          || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+          },
+        });
+        await this.loadGiven();
+      } catch (e) { /* ignored */ }
+      this.revoking = null;
+    },
+  };
+}
+</script>
+{% csrf_token %}
+{% endblock %}

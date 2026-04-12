@@ -16,6 +16,7 @@ from .views.analytics import (
     WorkloadAnalyticsView,
 )
 from .views.analytics_plan import PlanAnalyticsView
+from .views.analytics_reports import ReportsAnalyticsView
 
 # Журнал аудита (только admin)
 from .views.audit_log import AuditLogListView
@@ -354,6 +355,8 @@ urlpatterns = [
     path("analytics/pp/", PPAnalyticsView.as_view()),
     # GET /api/analytics/plan/ — иерархическая аналитика личного плана (единая)
     path("analytics/plan/", PlanAnalyticsView.as_view()),
+    # GET /api/analytics/reports/ — отчёты о выполнении плана
+    path("analytics/reports/", ReportsAnalyticsView.as_view()),
     # ── Dashboard ─────────────────────────────────────────────────────
     # GET /api/dashboard/ — личный план + сводка для руководителя
     path("dashboard/", DashboardAPIView.as_view()),
