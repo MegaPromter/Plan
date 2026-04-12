@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="{% static 'css/components.css' %}?v=21">
 <!-- Flatpickr — календарь для date-инпутов -->
 <link rel="stylesheet" href="{% static 'lib/flatpickr/flatpickr.min.css' %}">
-<link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/flatpickr-theme.css' %}?v=3">
 {% block styles %}{% endblock %}
 <link rel="stylesheet" href="{% static 'css/tour.css' %}?v=10">
 </head>
@@ -95,7 +95,7 @@
       <div class="base-user-dropdown" id="baseUserDropdown">
         <a href="{% url 'works:plan' %}"><i class="fas fa-tasks"></i> Личный план</a>
         <a href="{% url 'accounts:stub' 'analytics-reports' %}"><i class="fas fa-file-alt"></i> Отчёт</a>
-        <a href="{% url 'accounts:stub' 'delegation' %}"><i class="fas fa-people-arrows"></i> Делегирование</a>
+        <a href="{% url 'works:delegations' %}"><i class="fas fa-people-arrows"></i> Делегирование</a>
         <div class="ud-sep"></div>
         <div class="ud-theme-row" id="themeToggle">
           <span class="ud-theme-label"><i class="fas fa-palette"></i> Тема</span>
