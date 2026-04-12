@@ -126,6 +126,11 @@
     return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
   }
 
+  function formatDateShort(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('ru-RU');
+  }
+
   function isExpired(d) {
     return d.valid_until && new Date(d.valid_until) < new Date();
   }
@@ -143,7 +148,7 @@
     var wrap = document.getElementById('givenWrap');
     if (!wrap) return;
     if (!data.length) { wrap.innerHTML = '<p class="deleg-empty">Нет активных делегирований</p>'; return; }
-    var html = '<table class="info-table"><thead><tr><th>Получатель</th><th>Область</th><th>Право записи</th><th>Действует до</th><th>Тип</th><th></th></tr></thead><tbody>';
+    var html = '<table class="info-table"><thead><tr><th>Получатель</th><th>Область</th><th>Право записи</th><th>Период</th><th>Тип</th><th></th></tr></thead><tbody>';
     for (var i = 0; i < data.length; i++) {
       var d = data[i];
       var cls = isExpired(d) ? ' class="deleg-expired"' : '';
@@ -151,7 +156,7 @@
       html += '<td>' + esc(d.delegate_full_name || '') + '</td>';
       html += '<td>' + scopeLabel(d) + '</td>';
       html += '<td>' + (d.delegator_write ? 'Да' : 'Нет') + '</td>';
-      html += '<td>' + formatDate(d.valid_until) + '</td>';
+      html += '<td>' + formatDateShort(d.created_at) + ' — ' + formatDateShort(d.valid_until) + '</td>';
       html += '<td>' + (d.is_auto ? '<span class="badge badge-auto">Авто</span>' : '<span class="badge badge-manual">Ручное</span>') + '</td>';
       html += '<td><button class="btn btn-sm btn-danger" onclick="delegState.revoke(' + d.id + ')"><i class="fas fa-times"></i></button></td>';
       html += '</tr>';
@@ -164,7 +169,7 @@
     var wrap = document.getElementById('receivedWrap');
     if (!wrap) return;
     if (!data.length) { wrap.innerHTML = '<p class="deleg-empty">Нет входящих делегирований</p>'; return; }
-    var html = '<table class="info-table"><thead><tr><th>Делегатор</th><th>Область</th><th>Право записи</th><th>Действует до</th><th>Тип</th></tr></thead><tbody>';
+    var html = '<table class="info-table"><thead><tr><th>Делегатор</th><th>Область</th><th>Право записи</th><th>Период</th><th>Тип</th></tr></thead><tbody>';
     for (var i = 0; i < data.length; i++) {
       var d = data[i];
       var cls = isExpired(d) ? ' class="deleg-expired"' : '';
@@ -172,7 +177,7 @@
       html += '<td>' + esc(d.delegator_full_name || '') + '</td>';
       html += '<td>' + scopeLabel(d) + '</td>';
       html += '<td>' + (d.delegator_write ? 'Да' : 'Нет') + '</td>';
-      html += '<td>' + formatDate(d.valid_until) + '</td>';
+      html += '<td>' + formatDateShort(d.created_at) + ' — ' + formatDateShort(d.valid_until) + '</td>';
       html += '<td>' + (d.is_auto ? '<span class="badge badge-auto">Авто</span>' : '<span class="badge badge-manual">Ручное</span>') + '</td>';
       html += '</tr>';
     }
