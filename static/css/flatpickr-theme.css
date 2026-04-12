@@ -165,15 +165,10 @@ span.flatpickr-weekday {
   transform: scale(1.05);
 }
 
-/* Дни соседних месяцев — скрыты, строка схлопывается */
+/* Дни соседних месяцев — невидимы, но сохраняют место в сетке */
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
   visibility: hidden !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  line-height: 0 !important;
-  border: none !important;
 }
 
 /* Недоступные дни */
