@@ -126,10 +126,8 @@ span.flatpickr-weekday {
   font-weight: 500;
   color: var(--text, #1e293b);
   transition: all 0.12s ease;
-  max-width: 36px;
   height: 36px;
   line-height: 36px;
-  margin: 1px;
   border: 2px solid transparent !important;
 }
 
