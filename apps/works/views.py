@@ -228,6 +228,55 @@ class FeedbackSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     template_name = "works/feedback_spa.html"
 
 
+class DelegationsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
+    """SPA-страница «Делегирование прав»."""
+
+    template_name = "works/delegations_spa.html"
+
+    def get_context_data(self, **kwargs):
+        import json as _json
+
+        ctx = super().get_context_data(**kwargs)
+        emp = getattr(self.request.user, "employee", None)
+        if emp:
+            col = emp.col_settings or {}
+            ctx["auto_delegate_enabled"] = col.get("auto_delegate_enabled", False)
+            ctx["auto_delegate_employee_id"] = col.get(
+                "auto_delegate_employee_id", None
+            )
+            # Scope по умолчанию для формы создания
+            from apps.employees.signals import _resolve_delegation_scope
+
+            scope = _resolve_delegation_scope(emp)
+            ctx["default_scope_type"] = scope[0] if scope else ""
+            ctx["default_scope_value"] = scope[1] if scope else ""
+
+            # Список всех активных сотрудников для dropdown (исключая себя)
+            employees = list(
+                Employee.objects.filter(is_active=True)
+                .exclude(pk=emp.pk)
+                .order_by("last_name", "first_name")
+                .values("pk", "last_name", "first_name", "patronymic")
+            )
+            ctx["employees_json"] = _json.dumps(
+                [
+                    {
+                        "id": e["pk"],
+                        "full_name": " ".join(
+                            filter(
+                                None,
+                                [e["last_name"], e["first_name"], e["patronymic"]],
+                            )
+                        ),
+                    }
+                    for e in employees
+                ]
+            )
+        else:
+            ctx["employees_json"] = "[]"
+        return ctx
+
+
 class EnterpriseSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
     """SPA-страница «Управление предприятием»."""
 
