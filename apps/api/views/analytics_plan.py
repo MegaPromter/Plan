@@ -433,8 +433,19 @@ class PlanAnalyticsView(APIView):
                 emp,
             )
 
-        # user → личный план
+        # user → карточка своего сектора
         if role == "user":
+            if emp and emp.sector_id:
+                return self._respond_sector(
+                    request,
+                    emp.sector_id,
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                )
             return self._respond_employee(
                 request,
                 emp.pk if emp else 0,
@@ -446,8 +457,20 @@ class PlanAnalyticsView(APIView):
                 emp,
             )
 
-        # sector_head → по умолчанию свой сектор
+        # sector_head → карточки секторов своего отдела
         if role == "sector_head" and not dept_codes and not sector_ids:
+            dc = emp.department.code if emp and emp.department else ""
+            if dc:
+                return self._respond_dept(
+                    request,
+                    dc,
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                )
             sid = emp.sector_id if emp and emp.sector_id else 0
             return self._respond_sector(
                 request,
@@ -460,8 +483,18 @@ class PlanAnalyticsView(APIView):
                 emp,
             )
 
-        # dept_head/dept_deputy → по умолчанию свой отдел
+        # dept_head/dept_deputy → карточки отделов своего центра
         if role in ("dept_head", "dept_deputy") and not dept_codes and not sector_ids:
+            if emp and emp.department and emp.department.ntc_center_id:
+                center_id = emp.department.ntc_center_id
+                filtered = [
+                    w
+                    for w in works_list
+                    if w.department and w.department.ntc_center_id == center_id
+                ]
+                return self._respond_all_depts(
+                    request, filtered, all_norms, years, months_filter, role_info, emp
+                )
             dc = emp.department.code if emp and emp.department else ""
             return self._respond_dept(
                 request, dc, works_list, all_norms, years, months_filter, role_info, emp
@@ -526,7 +559,51 @@ class PlanAnalyticsView(APIView):
                 show_sectors=True,
             )
 
-        # Верхний уровень — все отделы
+        # Верхний уровень — карточки центров (для admin, ntc_head, ntc_deputy,
+        # chief_designer, deputy_gd_econ) или все отделы (для остальных)
+        top_roles = (
+            "admin",
+            "ntc_head",
+            "ntc_deputy",
+            "chief_designer",
+            "deputy_gd_econ",
+        )
+        if role in top_roles and not dept_codes and not center_ids:
+            return self._respond_all_centers(
+                request, works_list, all_norms, years, months_filter, role_info, emp
+            )
+
+        # Конкретный центр выбран через фильтр
+        if center_ids and len(center_ids) == 1:
+            center_id = center_ids[0]
+            filtered = [
+                w
+                for w in works_list
+                if w.department and w.department.ntc_center_id == center_id
+            ]
+            # Передаём данные о центре для хлебных крошек
+            center_obj = NTCCenter.objects.filter(pk=center_id).first()
+            center_info = (
+                {
+                    "id": center_id,
+                    "code": center_obj.code if center_obj else "",
+                    "name": center_obj.name if center_obj else "",
+                }
+                if center_obj
+                else None
+            )
+            return self._respond_all_depts(
+                request,
+                filtered,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
+                center_info=center_info,
+            )
+
+        # Все отделы (fallback)
         return self._respond_all_depts(
             request, works_list, all_norms, years, months_filter, role_info, emp
         )
@@ -737,6 +814,92 @@ class PlanAnalyticsView(APIView):
             }
         )
 
+    # ── Ответ: все центры ──────────────────────────────────────────────────
+
+    def _respond_all_centers(
+        self,
+        request,
+        works,
+        all_norms,
+        years,
+        months_filter,
+        role_info,
+        emp,
+    ):
+        """Группировка работ по НТЦ-центрам → карточки центров."""
+        # Группируем работы по центрам
+        center_map = defaultdict(list)
+        for w in works:
+            if w.department and w.department.ntc_center_id:
+                center_map[w.department.ntc_center_id].append(w)
+            else:
+                center_map[0].append(w)
+
+        # Загружаем справочник центров
+        centers_db = {c.pk: c for c in NTCCenter.objects.all()}
+
+        # Считаем количество отделов в каждом центре
+        dept_counts = defaultdict(set)
+        for w in works:
+            if w.department:
+                cid = w.department.ntc_center_id or 0
+                dept_counts[cid].add(w.department.code)
+
+        centers_data = []
+        for cid in sorted(center_map.keys()):
+            c_works = center_map[cid]
+            center_obj = centers_db.get(cid)
+
+            # Группируем по отделам внутри центра для агрегации
+            dept_map = defaultdict(list)
+            for w in c_works:
+                code = w.department.code if w.department else "—"
+                dept_map[code].append(w)
+
+            # Собираем данные по отделам для агрегации месяцев
+            depts_agg = []
+            total_employees = 0
+            for d_code in sorted(dept_map.keys()):
+                d_works = dept_map[d_code]
+                employees = self._collect_employees_for_works(d_works)
+                emp_plans = []
+                for e_id, e_info in employees.items():
+                    plan = _build_employee_plan(
+                        e_id, e_info["works"], all_norms, years, months_filter
+                    )
+                    emp_plans.append({"id": e_id, "name": e_info["name"], **plan})
+                total_employees += len(emp_plans)
+                agg = self._aggregate_months(emp_plans)
+                depts_agg.append(agg)
+
+            center_agg = self._aggregate_months(depts_agg)
+            centers_data.append(
+                {
+                    "id": cid,
+                    "code": center_obj.code if center_obj else "—",
+                    "name": center_obj.name if center_obj else "Без центра",
+                    "dept_count": len(dept_counts.get(cid, set())),
+                    "employee_count": total_employees,
+                    **center_agg,
+                }
+            )
+
+        total_agg = self._aggregate_months(centers_data)
+        summary = _build_works_summary(works, years, months_filter)
+
+        return Response(
+            {
+                "view": "centers",
+                "years": years,
+                "months_filter": months_filter,
+                "role_info": role_info,
+                "centers": centers_data,
+                **total_agg,
+                **summary,
+                **self._nav_context(works, role_info, emp, years),
+            }
+        )
+
     # ── Ответ: все отделы ─────────────────────────────────────────────────
 
     def _respond_all_depts(
@@ -749,6 +912,7 @@ class PlanAnalyticsView(APIView):
         role_info,
         emp,
         show_sectors=False,
+        center_info=None,
     ):
         dept_map = defaultdict(list)
         for w in works:
@@ -815,21 +979,22 @@ class PlanAnalyticsView(APIView):
         summary = _build_works_summary(works, years, months_filter)
         total_emp = sum(d.get("employee_count", 0) for d in depts_data)
 
-        return Response(
-            {
-                "view": "all",
-                "years": years,
-                "months_filter": months_filter,
-                "role_info": role_info,
-                "depts": depts_data,
-                "employee_count": total_emp,
-                **total_agg,
-                **summary,
-                **self._nav_context(
-                    works, role_info, emp, years, show_sectors=show_sectors
-                ),
-            }
-        )
+        result = {
+            "view": "all",
+            "years": years,
+            "months_filter": months_filter,
+            "role_info": role_info,
+            "depts": depts_data,
+            "employee_count": total_emp,
+            **total_agg,
+            **summary,
+            **self._nav_context(
+                works, role_info, emp, years, show_sectors=show_sectors
+            ),
+        }
+        if center_info:
+            result["center"] = center_info
+        return Response(result)
 
     # ── Вспомогательные ──────────────────────────────────────────────────
 
@@ -908,13 +1073,20 @@ class PlanAnalyticsView(APIView):
         role = role_info["role"]
 
         # НТЦ-центры (все, из справочника)
-        if role in ("admin", "ntc_head", "ntc_deputy"):
+        center_roles = (
+            "admin",
+            "ntc_head",
+            "ntc_deputy",
+            "chief_designer",
+            "deputy_gd_econ",
+        )
+        if role in center_roles:
             nav["nav_centers"] = [
                 {"id": c.pk, "code": c.code, "name": c.name or c.code}
                 for c in NTCCenter.objects.order_by("code")
             ]
 
-        if role in ("admin", "ntc_head", "ntc_deputy"):
+        if role in center_roles:
             # Отделы из работ + привязка к центру
             dept_set = {}
             for w in works:

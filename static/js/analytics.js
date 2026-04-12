@@ -246,6 +246,14 @@
   };
 
   // Drill-down через таблицы (ставит единственный фильтр)
+  window.anDrillCenter = function (id) {
+    currentCenterIds = {};
+    currentCenterIds[id] = true;
+    currentDeptCodes = {};
+    currentSectorIds = {};
+    currentExecutorIds = {};
+    loadData();
+  };
   window.anDrillDept = function (code) {
     currentDeptCodes = {};
     currentDeptCodes[code] = true;
@@ -473,16 +481,34 @@
     var parts = [];
 
     var role = data.role_info ? data.role_info.role : 'user';
-    var canGoHome = role === 'admin' || role === 'ntc_head' || role === 'ntc_deputy';
+    var canGoHome = role === 'admin' || role === 'ntc_head' || role === 'ntc_deputy' ||
+      role === 'chief_designer' || role === 'deputy_gd_econ';
 
-    if (data.view === 'all') {
+    if (data.view === 'centers') {
       parts.push(
-        '<span style="font-weight:600;"><i class="fas fa-building" style="margin-right:4px;color:var(--accent);"></i>НТЦ — Все отделы</span>',
+        '<span style="font-weight:600;"><i class="fas fa-city" style="margin-right:4px;color:var(--accent);"></i>Все центры</span>',
       );
+    } else if (data.view === 'all') {
+      if (canGoHome) {
+        parts.push(
+          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-city"></i> Центры</a>',
+        );
+        parts.push('<span class="an-breadcrumb-sep">›</span>');
+      }
+      if (data.center) {
+        parts.push(
+          '<span style="font-weight:600;"><i class="fas fa-building" style="margin-right:4px;color:var(--accent);"></i>' +
+            esc(data.center.name || data.center.code) + ' — Отделы</span>',
+        );
+      } else {
+        parts.push(
+          '<span style="font-weight:600;"><i class="fas fa-building" style="margin-right:4px;color:var(--accent);"></i>Все отделы</span>',
+        );
+      }
     } else if (data.view === 'dept') {
       if (canGoHome) {
         parts.push(
-          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-building"></i> НТЦ</a>',
+          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-city"></i> Центры</a>',
         );
         parts.push('<span class="an-breadcrumb-sep">›</span>');
       }
@@ -494,7 +520,7 @@
     } else if (data.view === 'sector') {
       if (canGoHome) {
         parts.push(
-          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-building"></i> НТЦ</a>',
+          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-city"></i> Центры</a>',
         );
         parts.push('<span class="an-breadcrumb-sep">›</span>');
       }
@@ -521,7 +547,7 @@
     } else if (data.view === 'employee') {
       if (canGoHome) {
         parts.push(
-          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-building"></i> НТЦ</a>',
+          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-city"></i> Центры</a>',
         );
         parts.push('<span class="an-breadcrumb-sep">›</span>');
       }
@@ -544,7 +570,7 @@
     } else if (data.view === 'employees') {
       if (canGoHome) {
         parts.push(
-          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-building"></i> НТЦ</a>',
+          '<a class="an-breadcrumb-link" onclick="anGoHome()"><i class="fas fa-city"></i> Центры</a>',
         );
         parts.push('<span class="an-breadcrumb-sep">›</span>');
       }
@@ -564,6 +590,9 @@
 
     if (currentMode === 'charts') {
       switch (data.view) {
+        case 'centers':
+          renderCentersCharts(el, data);
+          break;
         case 'all':
           renderAllDeptsCharts(el, data);
           break;
@@ -584,6 +613,9 @@
       }
     } else {
       switch (data.view) {
+        case 'centers':
+          renderCentersTables(el, data);
+          break;
         case 'all':
           renderAllDeptsTables(el, data);
           break;
@@ -608,6 +640,159 @@
   /* ═══════════════════════════════════════════════════════════════════════
    РЕЖИМ «ГРАФИКИ» — графики + таблицы drill-down
    ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Уровень центров (charts + tables) ────────────────────────────────── */
+
+  function renderCentersCharts(el, data) {
+    var centers = data.centers || [];
+    if (!centers.length) {
+      el.innerHTML =
+        '<div class="an-empty"><i class="fas fa-sitemap"></i>Нет данных по центрам</div>';
+      return;
+    }
+
+    var html = _renderCentersSummary(data, centers);
+
+    html += '<div class="an-widgets">';
+    html +=
+      '<div class="an-widget an-widget-full"><div class="an-widget-title"><i class="fas fa-chart-bar"></i> Загрузка по месяцам</div><div class="an-chart-wrap"><canvas id="anChart"></canvas></div></div>';
+    html += '</div>';
+
+    html += '<div class="an-widget an-widget-full" style="padding:0;">';
+    html +=
+      '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-sitemap"></i> Центры</div>';
+    html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
+    html += '<table class="an-list-table"><thead><tr>';
+    html += '<th>Центр</th><th>Название</th><th class="cell-num">Отделов</th><th class="cell-num">Сотрудников</th>';
+    html +=
+      '<th class="cell-num">План (ч)</th><th class="cell-num">Норма (ч)</th><th class="cell-num">Загрузка</th>';
+    html += '</tr></thead><tbody>';
+
+    centers.forEach(function (c) {
+      var badgeCls = loadBadgeCls(c.total_load_pct);
+      html += '<tr onclick="anDrillCenter(' + c.id + ')" style="cursor:pointer;">';
+      html += '<td><strong>' + esc(c.code) + '</strong></td>';
+      html += '<td>' + esc(c.name) + '</td>';
+      html += '<td class="cell-num">' + (c.dept_count || 0) + '</td>';
+      html += '<td class="cell-num">' + (c.employee_count || 0) + '</td>';
+      html += '<td class="cell-num">' + fmtHrs(c.total_planned) + '</td>';
+      html += '<td class="cell-num">' + fmtHrs(c.total_norm) + '</td>';
+      html +=
+        '<td class="cell-num"><span class="an-load-badge ' +
+        badgeCls +
+        '">' +
+        fmtPct(c.total_load_pct) +
+        '</span></td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+    el.innerHTML = html;
+    renderBarChart(data.months || []);
+  }
+
+  function renderCentersTables(el, data) {
+    var centers = data.centers || [];
+    if (!centers.length) {
+      el.innerHTML =
+        '<div class="an-empty"><i class="fas fa-sitemap"></i>Нет данных по центрам</div>';
+      return;
+    }
+
+    var html = _renderCentersSummary(data, centers);
+
+    html += '<div class="rpt-level-header">';
+    html +=
+      '<div class="rpt-level-title"><i class="fas fa-sitemap"></i> Центры (' +
+      centers.length +
+      ')</div>';
+    html += '</div>';
+
+    html += '<div class="rpt-cards">';
+    centers.forEach(function (c) {
+      var badgeCls = loadBadgeCls(c.total_load_pct);
+      var barW = Math.min(c.total_load_pct || 0, 150);
+      html += '<div class="rpt-card" onclick="anDrillCenter(' + c.id + ')">';
+      html += '<div class="rpt-card-header">';
+      html +=
+        '<div class="rpt-card-title"><i class="fas fa-sitemap"></i>' + esc(c.code) + '</div>';
+      html += '<span class="rpt-card-arrow"><i class="fas fa-chevron-right"></i></span>';
+      html += '</div>';
+      if (c.name) html += '<div class="rpt-card-subtitle">' + esc(c.name) + '</div>';
+      html += '<div class="rpt-card-metrics">';
+      html +=
+        '<div class="rpt-card-metric"><div class="rpt-card-metric-val an-val-accent">' +
+        fmtHrs(c.total_planned) +
+        '</div><div class="rpt-card-metric-label">план (ч)</div></div>';
+      html +=
+        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
+        fmtHrs(c.total_norm) +
+        '</div><div class="rpt-card-metric-label">норма</div></div>';
+      html +=
+        '<div class="rpt-card-metric"><div class="rpt-card-metric-val"><span class="an-load-badge ' +
+        badgeCls +
+        '">' +
+        fmtPct(c.total_load_pct) +
+        '</span></div><div class="rpt-card-metric-label">загрузка</div></div>';
+      html +=
+        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
+        (c.dept_count || 0) +
+        '</div><div class="rpt-card-metric-label">отд.</div></div>';
+      html +=
+        '<div class="rpt-card-metric"><div class="rpt-card-metric-val">' +
+        (c.employee_count || 0) +
+        '</div><div class="rpt-card-metric-label">сотр.</div></div>';
+      html += '</div>';
+      html +=
+        '<div class="rpt-card-bar"><div class="rpt-card-bar-fill ' +
+        badgeCls +
+        '" style="width:' +
+        barW +
+        '%"></div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    el.innerHTML = html;
+  }
+
+  function _renderCentersSummary(data, centers) {
+    var planned = data.total_planned || 0;
+    var norm = data.total_norm || 0;
+    var load = data.total_load_pct || 0;
+    var loadCls = loadBadgeCls(load);
+    var colorMap = { ok: 'an-val-green', warn: 'an-val-yellow', over: 'an-val-red' };
+    var totalEmps = 0;
+    centers.forEach(function (c) { totalEmps += (c.employee_count || 0); });
+
+    var html = '<div class="an-summary">';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val an-val-accent">' +
+      centers.length +
+      '</div><div class="an-summary-label">Центров</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val an-val-accent">' +
+      totalEmps +
+      '</div><div class="an-summary-label">Сотрудников</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val an-val-accent">' +
+      fmtHrs(planned) +
+      '</div><div class="an-summary-label">План (ч)</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val">' +
+      fmtHrs(norm) +
+      '</div><div class="an-summary-label">Норма (ч)</div></div>';
+    html +=
+      '<div class="an-summary-card"><div class="an-summary-val ' +
+      (colorMap[loadCls] || '') +
+      '">' +
+      fmtPct(load) +
+      '</div><div class="an-summary-label">Загрузка</div></div>';
+    html += '</div>';
+    return html;
+  }
+
+  /* ── Уровень отделов (charts) ────────────────────────────────────────── */
 
   function renderAllDeptsCharts(el, data) {
     var depts = data.depts || [];
