@@ -580,6 +580,7 @@ document.addEventListener('click', function (e) {
         dateFormat: 'Y-m-d',
         allowInput: true,
         appendTo: document.body,
+        locale: flatpickr.l10ns.ru || 'default',
         onChange: function (selectedDates, dateStr) {
           inp.value = dateStr;
           inp.dispatchEvent(new Event('change', { bubbles: true }));
