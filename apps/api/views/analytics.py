@@ -2,7 +2,9 @@
 API аналитики: загрузка по отделам, выполнение по месяцам, просроченные, дедлайны.
 """
 
-from django.db.models import Count, Exists, OuterRef, Q, Sum
+from datetime import date
+
+from django.db.models import Count, Exists, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -31,9 +33,14 @@ class WorkloadAnalyticsView(APIView):
             show_in_plan=True,
         )
 
-        # Аннотируем: есть ли отчёты (done)
+        # Аннотируем: есть ли отчёты + дата заполнения
         has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
-        base = base.annotate(_done=has_reports)
+        first_report = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
+        base = base.annotate(_done=has_reports, _report_date=first_report)
 
         # Фильтр по году: задачи активные в данном году
         year_q = (
@@ -43,13 +50,24 @@ class WorkloadAnalyticsView(APIView):
         )
         qs = base.filter(year_q)
 
-        # 1. По отделам
+        # Границы года (для привязки отчёта к периоду)
+        yr_start = date(year, 1, 1)
+        yr_end = date(year + 1, 1, 1)
+
+        # 1. По отделам — «выполнено» = отчёт заполнен в этом году
         by_dept = []
         dept_data = (
             qs.values("department__code")
             .annotate(
                 total=Count("id"),
-                done=Count("id", filter=Q(_done=True)),
+                done=Count(
+                    "id",
+                    filter=Q(
+                        _done=True,
+                        _report_date__gte=yr_start,
+                        _report_date__lt=yr_end,
+                    ),
+                ),
                 overdue=Count(
                     "id",
                     filter=Q(
@@ -71,13 +89,22 @@ class WorkloadAnalyticsView(APIView):
                 }
             )
 
-        # 2. По месяцам (текущий год)
+        # 2. По месяцам — «выполнено» = отчёт заполнен в этом месяце
         monthly = []
         for m in range(1, 13):
+            m_start = date(year, m, 1)
+            m_end = date(year, m + 1, 1) if m < 12 else date(year + 1, 1, 1)
             month_q = Q(date_end__year=year, date_end__month=m)
             agg = qs.filter(month_q).aggregate(
                 total=Count("id"),
-                done=Count("id", filter=Q(_done=True)),
+                done=Count(
+                    "id",
+                    filter=Q(
+                        _done=True,
+                        _report_date__gte=m_start,
+                        _report_date__lt=m_end,
+                    ),
+                ),
             )
             monthly.append(
                 {
@@ -195,10 +222,15 @@ class EmployeeAnalyticsView(APIView):
         # Базовый queryset задач сотрудника (с учётом visibility)
         vis_q = get_visibility_filter(request.user)
         has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+        first_report = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
         base = (
             Work.objects.filter(show_in_plan=True, executor=target_emp)
             .filter(vis_q)
-            .annotate(_done=has_reports)
+            .annotate(_done=has_reports, _report_date=first_report)
         )
 
         # Фильтр по году
@@ -209,10 +241,21 @@ class EmployeeAnalyticsView(APIView):
         )
         qs = base.filter(year_q)
 
-        # Сводка (один запрос вместо трёх)
+        # Границы года (для привязки отчёта к периоду)
+        yr_start = date(year, 1, 1)
+        yr_end = date(year + 1, 1, 1)
+
+        # Сводка — «выполнено» = отчёт заполнен в этом году
         agg = qs.aggregate(
             total=Count("id"),
-            done=Count("id", filter=Q(_done=True)),
+            done=Count(
+                "id",
+                filter=Q(
+                    _done=True,
+                    _report_date__gte=yr_start,
+                    _report_date__lt=yr_end,
+                ),
+            ),
             overdue=Count("id", filter=Q(_done=False, date_end__lt=today)),
         )
         total = agg["total"]
@@ -225,9 +268,11 @@ class EmployeeAnalyticsView(APIView):
         for w in qs.select_related(
             "department", "project", "pp_project", "pp_project__up_project", "pp_stage"
         ).order_by("date_end"):
-            is_done = w._done
-            is_overdue = not is_done and w.date_end and w.date_end < today
-            if is_done:
+            # Статус привязан к периоду: done только если отчёт в этом году
+            rd = w._report_date
+            is_done_in_period = w._done and rd and rd >= yr_start and rd < yr_end
+            is_overdue = not w._done and w.date_end and w.date_end < today
+            if is_done_in_period:
                 status = "done"
             elif is_overdue:
                 status = "overdue"
@@ -342,7 +387,14 @@ class PPAnalyticsView(APIView):
                 pp_project_id = None
 
         has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
-        base = Work.objects.filter(show_in_pp=True).annotate(_done=has_reports)
+        first_report = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
+        base = Work.objects.filter(show_in_pp=True).annotate(
+            _done=has_reports, _report_date=first_report
+        )
 
         # Фильтр по году
         year_q = (
@@ -356,12 +408,23 @@ class PPAnalyticsView(APIView):
         if pp_project_id:
             qs = qs.filter(pp_project_id=pp_project_id)
 
-        # 1. Сводка
+        # Границы года (для привязки отчёта к периоду)
+        yr_start = date(year, 1, 1)
+        yr_end = date(year + 1, 1, 1)
+
+        # 1. Сводка — «выполнено» = отчёт заполнен в этом году
         agg = qs.aggregate(
             total_tasks=Count("id"),
             total_labor=Sum("labor"),
             total_sheets=Sum("sheets_a4"),
-            done=Count("id", filter=Q(_done=True)),
+            done=Count(
+                "id",
+                filter=Q(
+                    _done=True,
+                    _report_date__gte=yr_start,
+                    _report_date__lt=yr_end,
+                ),
+            ),
             overdue=Count("id", filter=Q(_done=False, date_end__lt=today)),
         )
         summary = {
@@ -380,7 +443,14 @@ class PPAnalyticsView(APIView):
                 tasks=Count("id"),
                 labor=Sum("labor"),
                 sheets=Sum("sheets_a4"),
-                done=Count("id", filter=Q(_done=True)),
+                done=Count(
+                    "id",
+                    filter=Q(
+                        _done=True,
+                        _report_date__gte=yr_start,
+                        _report_date__lt=yr_end,
+                    ),
+                ),
                 overdue=Count("id", filter=Q(_done=False, date_end__lt=today)),
             )
             .order_by("-labor")
@@ -441,11 +511,20 @@ class PPAnalyticsView(APIView):
         # 5. Помесячно
         monthly = []
         for m in range(1, 13):
+            m_start = date(year, m, 1)
+            m_end = date(year, m + 1, 1) if m < 12 else date(year + 1, 1, 1)
             month_q = Q(date_end__year=year, date_end__month=m)
             m_agg = qs.filter(month_q).aggregate(
                 total=Count("id"),
                 labor=Sum("labor"),
-                done=Count("id", filter=Q(_done=True)),
+                done=Count(
+                    "id",
+                    filter=Q(
+                        _done=True,
+                        _report_date__gte=m_start,
+                        _report_date__lt=m_end,
+                    ),
+                ),
             )
             monthly.append(
                 {

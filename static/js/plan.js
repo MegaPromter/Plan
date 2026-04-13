@@ -59,8 +59,23 @@ let _spStatusFilter = 'all';
  * @returns {'done'|'overdue'|'inwork'}
  */
 function _spGetStatus(t) {
-  if (t.has_reports) return 'done';
-  // is_overdue уже приходит из API, но проверим и вручную
+  if (t.has_reports) {
+    // Привязка к периоду: «выполнено» только если отчёт заполнен
+    // внутри выбранного периода. Иначе — «в работе» (отчёт ещё не заполнен).
+    const rca = t.report_created_at ? t.report_created_at.slice(0, 10) : '';
+    if (rca && selectedMonth && !showAll) {
+      // Конец периода: первый день следующего месяца
+      const endM = selectedMonth < 12
+        ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+        : `${selectedYear + 1}-01-01`;
+      if (rca >= endM) return 'inwork'; // отчёт заполнен после периода
+    } else if (rca && !selectedMonth && !showAll) {
+      // Выбран только год
+      const endY = `${selectedYear + 1}-01-01`;
+      if (rca >= endY) return 'inwork';
+    }
+    return 'done';
+  }
   const dl = t.deadline || t.date_end || '';
   const _today = new Date();
   const _todayStr =
@@ -726,14 +741,29 @@ async function calcPlanningErrors() {
   const monthEndStr = `${curYear}-${String(curMonth).padStart(2, '0')}-31`;
   let vacations = vacData.filter((v) => v.date_start <= monthEndStr && v.date_end >= monthStartStr);
 
-  // ── 1. Просроченные задачи (срок прошёл, отчёт не заполнен) ──────────────
-  // has_reports приходит из API задач (annotate), N+1 fetch не нужен
-  const overdue = allTasks.filter((t) => {
+  // ── 1. Просроченные задачи и долги ──────────────────────────────────────
+  // Просроченные = срок прошёл, отчёта нет, ЕСТЬ часы в текущем периоде
+  // Долги = срок прошёл, отчёта нет, НЕТ часов в текущем периоде (из прошлого)
+  const _hasHoursInPeriod = (t) => {
+    // Проверяем executors_list
+    const exList = t.executors_list || [];
+    if (exList.length > 0) {
+      return exList.some((ex) => parseFloat((ex.hours || {})[curKey] || 0) > 0);
+    }
+    // Иначе plan_hours_all
+    const ph = t.plan_hours_all || {};
+    return parseFloat(ph[curKey] || 0) > 0;
+  };
+
+  const overdueAll = allTasks.filter((t) => {
     const de = t.date_end ? t.date_end.slice(0, 10) : null;
     const dead = t.deadline ? t.deadline.slice(0, 10) : null;
     const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
-    return isOverdue && !t.has_reports && !isIgn(`overdue_${t.id}`);
+    return isOverdue && !t.has_reports;
   });
+
+  const overdue = overdueAll.filter((t) => _hasHoursInPeriod(t) && !isIgn(`overdue_${t.id}`));
+  const debts = overdueAll.filter((t) => !_hasHoursInPeriod(t) && !isIgn(`debt_${t.id}`));
 
   // ── 2. Задачи с датами уже просроченными при создании ────────────────────
   const badDates = allTasks.filter((t) => {
@@ -824,20 +854,25 @@ async function calcPlanningErrors() {
   const deptStats = {};
   overdue.forEach((t) => {
     const d = t.department || '—';
-    if (!deptStats[d]) deptStats[d] = { danger: 0, warn: 0 };
+    if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
     deptStats[d].danger++;
+  });
+  debts.forEach((t) => {
+    const d = t.department || '—';
+    if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
+    deptStats[d].debt++;
   });
   underloaded.forEach((e) => {
     // underloaded не имеет department — пропускаем
   });
   badDates.forEach((t) => {
     const d = t.department || '—';
-    if (!deptStats[d]) deptStats[d] = { danger: 0, warn: 0 };
+    if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
     deptStats[d].warn++;
   });
   // Сортируем по общему количеству ошибок (убывание)
   const deptBreakdown = Object.entries(deptStats)
-    .map(([name, v]) => ({ name, danger: v.danger, warn: v.warn, total: v.danger + v.warn }))
+    .map(([name, v]) => ({ name, danger: v.danger, debt: v.debt, warn: v.warn, total: v.danger + v.debt + v.warn }))
     .sort((a, b) => b.total - a.total);
 
   // ── 6. Прогноз: дедлайны в ближайшие 7 дней ────────────────────────────
@@ -871,6 +906,7 @@ async function calcPlanningErrors() {
 
   return {
     overdue,
+    debts,
     badDates,
     overloaded,
     underloaded,
@@ -900,6 +936,7 @@ async function refreshPlanningErrors() {
   const result = await calcPlanningErrors();
   const total =
     result.overdue.length +
+    result.debts.length +
     result.badDates.length +
     result.overloaded.length +
     result.underloaded.length +
@@ -925,6 +962,7 @@ async function openPlanningErrors() {
   const result = await refreshPlanningErrors();
   const {
     overdue,
+    debts,
     badDates,
     overloaded,
     underloaded,
@@ -964,6 +1002,7 @@ async function openPlanningErrors() {
 
   const barMax = Math.max(
     overdue.length,
+    debts.length,
     badDates.length,
     overloaded.length,
     underloaded.length,
@@ -990,6 +1029,7 @@ async function openPlanningErrors() {
     </div>
     <div class="vc-bars">
       <div class="vc-bar-row"><span class="vc-bar-label">Просроченные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(overdue.length, 10)}" style="width:${barPct(overdue.length)}%">${overdue.length}</div></div></div>
+      <div class="vc-bar-row"><span class="vc-bar-label">Долги</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(debts.length, 10)}" style="width:${barPct(debts.length)}%">${debts.length}</div></div></div>
       <div class="vc-bar-row"><span class="vc-bar-label">Ошибки в датах</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(badDates.length, 5)}" style="width:${barPct(badDates.length)}%">${badDates.length}</div></div></div>
       <div class="vc-bar-row"><span class="vc-bar-label">Перегруженные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(overloaded.length, 5)}" style="width:${barPct(overloaded.length)}%">${overloaded.length}</div></div></div>
       <div class="vc-bar-row"><span class="vc-bar-label">Недозагруженные</span><div class="vc-bar-track"><div class="vc-bar-fill ${barCls(underloaded.length, 10)}" style="width:${barPct(underloaded.length)}%">${underloaded.length}</div></div></div>
@@ -1029,11 +1069,13 @@ async function openPlanningErrors() {
       .slice(0, 6)
       .map((d) => {
         const dPct = maxDept > 0 ? Math.round((d.danger / maxDept) * 100) : 0;
+        const debtPct = maxDept > 0 ? Math.round((d.debt / maxDept) * 100) : 0;
         const wPct = maxDept > 0 ? Math.round((d.warn / maxDept) * 100) : 0;
         return `<div class="dept-row">
         <span class="dept-name">${escapePe(d.name)}</span>
         <div class="dept-bar-track">
           ${d.danger > 0 ? `<div class="dept-bar-seg danger" style="width:${dPct}%">${d.danger}</div>` : ''}
+          ${d.debt > 0 ? `<div class="dept-bar-seg debt" style="width:${debtPct}%;background:#9333ea">${d.debt}</div>` : ''}
           ${d.warn > 0 ? `<div class="dept-bar-seg warn" style="width:${wPct}%">${d.warn}</div>` : ''}
         </div>
         <span class="dept-total">${d.total}</span>
@@ -1044,6 +1086,7 @@ async function openPlanningErrors() {
       <div class="dept-rows">${rowsHtml}</div>
       <div class="timeline-legend" style="margin-top:8px">
         <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:var(--danger)"></span> Просрочено</span>
+        <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#9333ea"></span> Долги</span>
         <span class="timeline-leg-item"><span class="timeline-leg-dot" style="background:#f59e0b"></span> Ошибки дат</span>
       </div>`;
     viz.appendChild(deptDiv);
@@ -1136,6 +1179,49 @@ async function openPlanningErrors() {
               label: 'Игнорировать',
               fn: () => {
                 peSetIgnored('overdue_' + t.id);
+                closePeModal();
+              },
+            },
+          ],
+        };
+      }),
+    },
+    {
+      icon: '🟣',
+      cls: 'debt',
+      title: `Долги — незакрытые работы из прошлых периодов (${debts.length})`,
+      count: debts.length,
+      items: debts.map((t) => {
+        const de = t.date_end ? t.date_end.slice(0, 10) : null;
+        const dead = t.deadline ? t.deadline.slice(0, 10) : null;
+        const daysCalc = de
+          ? Math.floor((new Date(todayStr) - new Date(de)) / 86400000)
+          : dead
+            ? Math.floor((new Date(todayStr) - new Date(dead)) / 86400000)
+            : 0;
+        return {
+          title: t.work_name || `Работа #${t.id}`,
+          meta: `${t.task_type || ''} · ${t.executor || '—'} · Окончание: ${de || '—'} · Срок: ${dead || '—'}`,
+          highlight: `Долг ${daysCalc} дн.`,
+          actions: [
+            {
+              label: '✏️ Редактировать',
+              fn: () => {
+                closePeModal();
+                openEditTaskModal(tasks.find((x) => x.id === t.id) || { id: t.id });
+              },
+            },
+            {
+              label: '📝 Внести отчёт',
+              fn: () => {
+                closePeModal();
+                openReportModal(tasks.find((x) => x.id === t.id) || { id: t.id });
+              },
+            },
+            {
+              label: 'Игнорировать',
+              fn: () => {
+                peSetIgnored('debt_' + t.id);
                 closePeModal();
               },
             },

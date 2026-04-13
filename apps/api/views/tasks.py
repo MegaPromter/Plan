@@ -15,7 +15,7 @@ from datetime import date as dt_date
 
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -149,6 +149,10 @@ def _serialize_task(work, executors_data=None, sector_heads=None):
     d["predecessors_count"] = getattr(work, "_pred_count", 0) or 0
     d["has_reports"] = bool(getattr(work, "_has_reports", False))
 
+    # Дата заполнения отчёта (для привязки статуса к периоду на клиенте)
+    rca = getattr(work, "_report_created_at", None)
+    d["report_created_at"] = rca.isoformat() if rca else ""
+
     # Индикатор просроченности: приоритет date_end (ПП) → deadline (СП)
     today = timezone.now().date()
     effective_deadline = work.date_end or work.deadline
@@ -246,6 +250,15 @@ class TaskListView(APIView):
                         else Q()
                     )
                 )
+                # Исключить задачи с отчётом, заполненным до начала выбранного месяца
+                qs = qs.exclude(
+                    Exists(
+                        WorkReport.objects.filter(
+                            work_id=OuterRef("pk"),
+                            created_at__lt=sel_start,
+                        )
+                    )
+                )
             except (ValueError, TypeError):
                 pass
         elif year:
@@ -281,6 +294,15 @@ class TaskListView(APIView):
                         date_start__isnull=True,
                     )
                 )
+                # Исключить задачи с отчётом, заполненным до начала года
+                qs = qs.exclude(
+                    Exists(
+                        WorkReport.objects.filter(
+                            work_id=OuterRef("pk"),
+                            created_at__lt=yr_start,
+                        )
+                    )
+                )
             except (ValueError, TypeError):
                 pass
 
@@ -310,6 +332,11 @@ class TaskListView(APIView):
             .annotate(
                 _pred_count=Count("predecessor_links"),
                 _has_reports=Exists(WorkReport.objects.filter(work_id=OuterRef("pk"))),
+                _report_created_at=Subquery(
+                    WorkReport.objects.filter(work_id=OuterRef("pk"))
+                    .order_by("created_at")
+                    .values("created_at")[:1]
+                ),
             )
             .select_related(
                 "department",

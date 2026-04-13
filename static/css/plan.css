@@ -1399,6 +1399,10 @@ tr.pp-locked .pp-lock-badge {
   background: #fffbeb;
   color: #f59e0b;
 }
+.va-sec-icon.debt {
+  background: #faf5ff;
+  color: #9333ea;
+}
 .va-sec-icon.ok {
   background: #f0fdf4;
   color: #22c55e;
@@ -1420,6 +1424,10 @@ tr.pp-locked .pp-lock-badge {
 }
 .va-sec-count.warn {
   background: #f59e0b;
+  color: #fff;
+}
+.va-sec-count.debt {
+  background: #9333ea;
   color: #fff;
 }
 .va-sec-count.ok {

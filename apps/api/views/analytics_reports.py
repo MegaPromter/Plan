@@ -18,7 +18,7 @@ GET /api/analytics/reports/
 from collections import defaultdict
 from datetime import date
 
-from django.db.models import Exists, OuterRef, Prefetch, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -26,9 +26,59 @@ from rest_framework.views import APIView
 
 from apps.api.utils import get_visibility_filter
 from apps.employees.models import Department, Employee, NTCCenter, Sector
-from apps.works.models import Project, ProjectProduct, TaskExecutor, Work, WorkReport
+from apps.works.models import (
+    Project,
+    ProjectProduct,
+    TaskExecutor,
+    Work,
+    WorkCalendar,
+    WorkReport,
+)
 
 from .analytics_plan import _get_role_info, _int_list_param, _str_list_param
+
+
+def _get_calendar_norm_total(years, months_filter):
+    """Сумма часов из производственного календаря за период (для одного человека)."""
+    norms = {}
+    for wc in WorkCalendar.objects.filter(year__in=years):
+        norms.setdefault(wc.year, {})[wc.month] = float(wc.hours_norm)
+    total = 0.0
+    months_set = set(months_filter) if months_filter else None
+    for y in years:
+        for m in range(1, 13):
+            if months_set and m not in months_set:
+                continue
+            total += norms.get(y, {}).get(m, 0)
+    return round(total, 2)
+
+
+def _staff_count_by_center(center_id):
+    """Количество штатных сотрудников центра."""
+    return Employee.objects.filter(department__ntc_center_id=center_id).count()
+
+
+def _staff_count_by_dept(dept_code):
+    """Количество штатных сотрудников отдела."""
+    return Employee.objects.filter(department__code=dept_code).count()
+
+
+def _staff_count_by_sector(sector_id):
+    """Количество штатных сотрудников сектора."""
+    if not sector_id:
+        return 0
+    return Employee.objects.filter(sector_id=sector_id).count()
+
+
+def _total_staff_count(works):
+    """Количество штатных сотрудников по всем отделам, задействованным в works."""
+    dept_ids = set()
+    for w in works:
+        if w.department_id:
+            dept_ids.add(w.department_id)
+    if not dept_ids:
+        return 0
+    return Employee.objects.filter(department_id__in=dept_ids).count()
 
 
 def _period_start(years, months_filter):
@@ -38,16 +88,32 @@ def _period_start(years, months_filter):
     return date(y, m, 1)
 
 
-def _classify_task(w, today, period_start):
+def _period_end(years, months_filter):
+    """Конец отчётного периода: первый день следующего месяца после максимального."""
+    y = max(years)
+    m = max(months_filter) if months_filter else 12
+    if m == 12:
+        return date(y + 1, 1, 1)
+    return date(y, m + 1, 1)
+
+
+def _classify_task(w, today, period_start, period_end=None):
     """
     Классифицирует задачу:
-      done     — есть отчёт (work_report)
+      done     — есть отчёт, заполненный в выбранном периоде
+      done_other — есть отчёт, но заполненный в другом периоде (не считается)
       debt     — отчёта нет, срок < начало периода (долг из прошлых периодов)
       overdue  — отчёта нет, срок прошёл внутри/после начала периода, но < сегодня
       inwork   — срок ещё не наступил или дата не задана
     """
     is_done = getattr(w, "_done", False)
     if is_done:
+        report_dt = getattr(w, "_report_created_at", None)
+        if report_dt and period_end:
+            report_date = report_dt.date() if hasattr(report_dt, "date") else report_dt
+            if period_start <= report_date < period_end:
+                return "done"
+            return "done_other"
         return "done"
     effective_end = w.date_end or w.deadline
     if not effective_end:
@@ -132,6 +198,7 @@ def _build_report_metrics(works, years, months_filter, today):
     years_set = set(years)
     months_set = set(months_filter) if months_filter else None
     ps = _period_start(years, months_filter)
+    pe = _period_end(years, months_filter)
 
     total = 0
     done = 0
@@ -148,7 +215,11 @@ def _build_report_metrics(works, years, months_filter, today):
         has_hours = _has_hours_in_period(w, years_set, months_set)
         effective_end = w.date_end or w.deadline
 
-        status = _classify_task(w, today, ps)
+        status = _classify_task(w, today, ps, pe)
+
+        # Выполнена в другом периоде — пропускаем
+        if status == "done_other":
+            continue
 
         # Долги всегда включаем (они из прошлых периодов)
         if status == "debt":
@@ -173,10 +244,43 @@ def _build_report_metrics(works, years, months_filter, today):
                     "depth": depth,
                 }
             )
-            plan_hours += _task_plan_hours_in_period(w, years_set, months_set)
+            # Долги не учитываются в plan_hours текущего периода
             continue
 
-        # Остальные — только если имеют часы в периоде
+        # Просроченные без часов — это долги, не просрочка текущего периода
+        if status == "overdue" and not has_hours:
+            depth = _debt_depth(effective_end, ps)
+            if depth == "1m":
+                debts_1m += 1
+            elif depth == "2_3m":
+                debts_2_3m += 1
+            else:
+                debts_3plus += 1
+            total += 1
+            days_overdue = (today - effective_end).days if effective_end else 0
+            debt_tasks.append(
+                {
+                    "id": w.id,
+                    "work_name": w.work_name or w.work_num or "",
+                    "project_name": _project_name(w),
+                    "executor": w.executor.short_name if w.executor else "",
+                    "dept": w.department.code if w.department else "",
+                    "date_end": effective_end.isoformat() if effective_end else "",
+                    "days_overdue": days_overdue,
+                    "depth": depth,
+                }
+            )
+            continue
+
+        # Выполненные — считаем всегда (независимо от наличия часов)
+        if status == "done":
+            total += 1
+            done += 1
+            ph = _task_plan_hours_in_period(w, years_set, months_set)
+            plan_hours += ph
+            continue
+
+        # Остальные (overdue, inwork) — только если имеют часы в периоде
         if not has_hours:
             continue
 
@@ -184,9 +288,7 @@ def _build_report_metrics(works, years, months_filter, today):
         ph = _task_plan_hours_in_period(w, years_set, months_set)
         plan_hours += ph
 
-        if status == "done":
-            done += 1
-        elif status == "overdue":
+        if status == "overdue":
             overdue += 1
         else:
             inwork += 1
@@ -211,6 +313,57 @@ def _build_report_metrics(works, years, months_filter, today):
         "plan_hours": round(plan_hours, 1),
         "completion_pct": completion_pct,
     }
+
+
+def _build_debts_by_units(works, years, months_filter, today, group_by="center"):
+    """
+    Группировка долгов по подразделениям.
+    group_by: 'center' | 'dept' | 'sector'
+    Возвращает список: [{code, name, debts_total, debts_1m, debts_2_3m, debts_3plus}]
+    """
+    ps = _period_start(years, months_filter)
+    units = defaultdict(lambda: {"debts_1m": 0, "debts_2_3m": 0, "debts_3plus": 0})
+
+    for w in works:
+        status = _classify_task(w, today, ps)
+        if status != "debt":
+            continue
+        effective_end = w.date_end or w.deadline
+        depth = _debt_depth(effective_end, ps)
+
+        if group_by == "center":
+            uid = w.department.ntc_center_id if w.department else 0
+            uname = ""
+            if w.department and w.department.ntc_center:
+                uname = w.department.ntc_center.code or ""
+        elif group_by == "dept":
+            uid = w.department.code if w.department else "—"
+            uname = uid
+        else:  # sector
+            uid = w.sector_id or 0
+            uname = (w.sector.name or w.sector.code) if w.sector else "Без сектора"
+
+        bucket = units[uid]
+        bucket["id"] = uid
+        bucket["name"] = uname
+        bucket[f"debts_{depth}"] = bucket.get(f"debts_{depth}", 0) + 1
+
+    result = []
+    for uid, data in sorted(units.items(), key=lambda x: x[0]):
+        total = data["debts_1m"] + data["debts_2_3m"] + data["debts_3plus"]
+        if total == 0:
+            continue
+        result.append(
+            {
+                "id": data.get("id", uid),
+                "name": data.get("name", str(uid)),
+                "debts_total": total,
+                "debts_1m": data["debts_1m"],
+                "debts_2_3m": data["debts_2_3m"],
+                "debts_3plus": data["debts_3plus"],
+            }
+        )
+    return result
 
 
 def _build_project_breakdown(works, years, months_filter, today):
@@ -247,6 +400,7 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
     years_set = set(years)
     months_set = set(months_filter) if months_filter else None
     ps = _period_start(years, months_filter)
+    pe = _period_end(years, months_filter)
 
     tasks = []
     total = 0
@@ -286,10 +440,14 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
                 pass
         ph_filtered = round(ph_filtered, 2)
 
-        status = _classify_task(w, today, ps)
+        status = _classify_task(w, today, ps, pe)
 
-        # Долги включаем всегда, остальные — только с часами
-        if status != "debt" and not has_hours:
+        # Выполнена в другом периоде — пропускаем
+        if status == "done_other":
+            continue
+
+        # Долги и выполненные — всегда; остальные — только с часами
+        if status not in ("debt", "done") and not has_hours:
             continue
 
         effective_end = w.date_end or w.deadline
@@ -298,7 +456,9 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
             days_overdue = (today - effective_end).days
 
         total += 1
-        plan_hours_sum += ph_filtered
+        # Долги не учитываются в plan_hours текущего периода
+        if status != "debt":
+            plan_hours_sum += ph_filtered
         if status == "done":
             done_count += 1
         elif status == "overdue":
@@ -360,10 +520,16 @@ class ReportsAnalyticsView(APIView):
         # ── Базовый queryset ──
         vis_q = get_visibility_filter(request.user)
         has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+        # Дата первого заполненного отчёта (для привязки к периоду)
+        first_report_created = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
 
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
-            .annotate(_done=has_reports)
+            .annotate(_done=has_reports, _report_created_at=first_report_created)
             .select_related(
                 "department",
                 "department__ntc_center",
@@ -410,28 +576,32 @@ class ReportsAnalyticsView(APIView):
         role_info = _get_role_info(emp)
         role = role_info["role"]
 
+        # ── Фильтры (drill-down) ──────────────────────────────────────
+        # Все кроме user могут смотреть любые подразделения.
+        # user ограничен своим центром (visibility_filter уже фильтрует).
+
         if executor_ids:
+            eid_set = set(executor_ids)
+            filtered = [
+                w
+                for w in works_list
+                if w.executor_id in eid_set
+                or any(
+                    te.executor_id in eid_set
+                    for te in getattr(w, "_prefetched_executors", [])
+                )
+            ]
             if len(executor_ids) == 1:
                 return self._respond_employee(
                     request,
                     executor_ids[0],
-                    works_list,
+                    filtered,
                     years,
                     months_filter,
                     role_info,
                     emp,
                     today,
                 )
-            # Несколько сотрудников — показать их сектор/отдел
-            filtered = [
-                w
-                for w in works_list
-                if w.executor_id in set(executor_ids)
-                or any(
-                    te.executor_id in set(executor_ids)
-                    for te in getattr(w, "_prefetched_executors", [])
-                )
-            ]
             return self._respond_all_depts(
                 request,
                 filtered,
@@ -441,61 +611,6 @@ class ReportsAnalyticsView(APIView):
                 emp,
                 today,
             )
-
-        if role == "user":
-            if emp and emp.sector_id:
-                return self._respond_sector(
-                    request,
-                    emp.sector_id,
-                    works_list,
-                    years,
-                    months_filter,
-                    role_info,
-                    emp,
-                    today,
-                )
-            return self._respond_employee(
-                request,
-                emp.pk if emp else 0,
-                works_list,
-                years,
-                months_filter,
-                role_info,
-                emp,
-                today,
-            )
-
-        if role == "sector_head" and not dept_codes and not sector_ids:
-            dc = emp.department.code if emp and emp.department else ""
-            if dc:
-                return self._respond_dept(
-                    request,
-                    dc,
-                    works_list,
-                    years,
-                    months_filter,
-                    role_info,
-                    emp,
-                    today,
-                )
-
-        if role in ("dept_head", "dept_deputy") and not dept_codes and not sector_ids:
-            if emp and emp.department and emp.department.ntc_center_id:
-                cid = emp.department.ntc_center_id
-                filtered = [
-                    w
-                    for w in works_list
-                    if w.department and w.department.ntc_center_id == cid
-                ]
-                return self._respond_all_depts(
-                    request,
-                    filtered,
-                    years,
-                    months_filter,
-                    role_info,
-                    emp,
-                    today,
-                )
 
         if sector_ids:
             if len(sector_ids) == 1:
@@ -547,24 +662,6 @@ class ReportsAnalyticsView(APIView):
                 today,
             )
 
-        top_roles = (
-            "admin",
-            "ntc_head",
-            "ntc_deputy",
-            "chief_designer",
-            "deputy_gd_econ",
-        )
-        if role in top_roles and not dept_codes and not center_ids:
-            return self._respond_all_centers(
-                request,
-                works_list,
-                years,
-                months_filter,
-                role_info,
-                emp,
-                today,
-            )
-
         if center_ids and len(center_ids) == 1:
             cid = center_ids[0]
             filtered = [
@@ -589,7 +686,77 @@ class ReportsAnalyticsView(APIView):
                 center_info=center_info,
             )
 
-        return self._respond_all_depts(
+        # ── Стартовые экраны по ролям (без фильтров) ──────────────────
+        # user → свои задачи
+        if role == "user":
+            return self._respond_employee(
+                request,
+                emp.pk if emp else 0,
+                works_list,
+                years,
+                months_filter,
+                role_info,
+                emp,
+                today,
+            )
+
+        # sector_head → свой сектор (сотрудники)
+        if role == "sector_head":
+            sid = emp.sector_id if emp else None
+            if sid:
+                return self._respond_sector(
+                    request,
+                    sid,
+                    works_list,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                    today,
+                )
+
+        # dept_head/dept_deputy → свой отдел (секторы)
+        if role in ("dept_head", "dept_deputy"):
+            if emp and emp.department:
+                return self._respond_dept(
+                    request,
+                    emp.department.code,
+                    works_list,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                    today,
+                )
+
+        # ntc_head/ntc_deputy → свой центр (отделы)
+        if role in ("ntc_head", "ntc_deputy"):
+            if emp and emp.department and emp.department.ntc_center_id:
+                cid = emp.department.ntc_center_id
+                filtered = [
+                    w
+                    for w in works_list
+                    if w.department and w.department.ntc_center_id == cid
+                ]
+                center_obj = NTCCenter.objects.filter(pk=cid).first()
+                center_info = (
+                    {"id": cid, "code": center_obj.code, "name": center_obj.name}
+                    if center_obj
+                    else None
+                )
+                return self._respond_all_depts(
+                    request,
+                    filtered,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                    today,
+                    center_info=center_info,
+                )
+
+        # admin/chief_designer/deputy_gd_econ → все центры
+        return self._respond_all_centers(
             request,
             works_list,
             years,
@@ -632,7 +799,25 @@ class ReportsAnalyticsView(APIView):
             )
 
         total_metrics = _build_report_metrics(works, years, months_filter, today)
+        total_metrics.pop("debt_tasks", None)
+        total_metrics.pop("debt_tasks_total", None)
         projects = _build_project_breakdown(works, years, months_filter, today)
+        debts_units = _build_debts_by_units(
+            works, years, months_filter, today, group_by="center"
+        )
+
+        # Норма = календарные часы * штатная численность
+        norm_per_person = _get_calendar_norm_total(years, months_filter)
+        total_staff = _total_staff_count(works)
+        total_metrics["norm_hours"] = round(norm_per_person * total_staff, 1)
+        total_metrics["employee_count"] = total_staff
+
+        # Норма и кол-во сотрудников для каждого центра
+        for cd in centers_data:
+            cid = cd["id"]
+            ec = _staff_count_by_center(cid)
+            cd["employee_count"] = ec
+            cd["norm_hours"] = round(norm_per_person * ec, 1)
 
         return Response(
             {
@@ -642,6 +827,8 @@ class ReportsAnalyticsView(APIView):
                 "role_info": role_info,
                 "centers": centers_data,
                 "projects": projects,
+                "debts_by_units": debts_units,
+                "debts_group": "center",
                 **total_metrics,
                 **self._nav_context(works, role_info, emp, years),
             }
@@ -683,7 +870,22 @@ class ReportsAnalyticsView(APIView):
             )
 
         total_metrics = _build_report_metrics(works, years, months_filter, today)
+        total_metrics.pop("debt_tasks", None)
+        total_metrics.pop("debt_tasks_total", None)
         projects = _build_project_breakdown(works, years, months_filter, today)
+        debts_units = _build_debts_by_units(
+            works, years, months_filter, today, group_by="dept"
+        )
+
+        norm_per_person = _get_calendar_norm_total(years, months_filter)
+        total_staff = _total_staff_count(works)
+        total_metrics["norm_hours"] = round(norm_per_person * total_staff, 1)
+        total_metrics["employee_count"] = total_staff
+
+        for dd in depts_data:
+            ec = _staff_count_by_dept(dd["code"])
+            dd["employee_count"] = ec
+            dd["norm_hours"] = round(norm_per_person * ec, 1)
 
         result = {
             "view": "all",
@@ -692,6 +894,8 @@ class ReportsAnalyticsView(APIView):
             "role_info": role_info,
             "depts": depts_data,
             "projects": projects,
+            "debts_by_units": debts_units,
+            "debts_group": "dept",
             **total_metrics,
             **self._nav_context(works, role_info, emp, years),
         }
@@ -754,6 +958,19 @@ class ReportsAnalyticsView(APIView):
 
         total_metrics = _build_report_metrics(dept_works, years, months_filter, today)
         projects = _build_project_breakdown(dept_works, years, months_filter, today)
+        debts_units = _build_debts_by_units(
+            dept_works, years, months_filter, today, group_by="sector"
+        )
+
+        norm_per_person = _get_calendar_norm_total(years, months_filter)
+        dept_staff = _staff_count_by_dept(dept_code)
+        total_metrics["norm_hours"] = round(norm_per_person * dept_staff, 1)
+        total_metrics["employee_count"] = dept_staff
+
+        for sd in sectors_data:
+            ec = _staff_count_by_sector(sd["id"])
+            sd["employee_count"] = ec
+            sd["norm_hours"] = round(norm_per_person * ec, 1)
 
         return Response(
             {
@@ -764,6 +981,8 @@ class ReportsAnalyticsView(APIView):
                 "dept": {"code": dept_code, "name": dept_name},
                 "sectors": sectors_data,
                 "projects": projects,
+                "debts_by_units": debts_units,
+                "debts_group": "sector",
                 **total_metrics,
                 **self._nav_context(works, role_info, emp, years, show_sectors=True),
             }
@@ -832,6 +1051,14 @@ class ReportsAnalyticsView(APIView):
 
         total_metrics = _build_report_metrics(sector_works, years, months_filter, today)
 
+        norm_per_person = _get_calendar_norm_total(years, months_filter)
+        sector_staff = _staff_count_by_sector(sector_id)
+        total_metrics["norm_hours"] = round(norm_per_person * sector_staff, 1)
+        total_metrics["employee_count"] = sector_staff
+
+        for ed in employees_data:
+            ed["norm_hours"] = norm_per_person
+
         return Response(
             {
                 "view": "sector",
@@ -883,6 +1110,7 @@ class ReportsAnalyticsView(APIView):
             months_filter,
             today,
         )
+        report["norm_hours"] = _get_calendar_norm_total(years, months_filter)
 
         return Response(
             {
@@ -911,23 +1139,27 @@ class ReportsAnalyticsView(APIView):
         nav = {}
         role = role_info["role"]
 
-        center_roles = (
-            "admin",
-            "ntc_head",
-            "ntc_deputy",
-            "chief_designer",
-            "deputy_gd_econ",
-        )
-        if role in center_roles:
+        top_global = ("admin", "chief_designer", "deputy_gd_econ")
+        center_roles = top_global + ("ntc_head", "ntc_deputy")
+
+        # Центры: top_global → все; ntc_head/ntc_deputy → не показываем (видит только свой)
+        if role in top_global:
             nav["nav_centers"] = [
                 {"id": c.pk, "code": c.code, "name": c.name or c.code}
                 for c in NTCCenter.objects.order_by("code")
             ]
 
+        # Отделы: top_global → все; ntc_head/ntc_deputy → только своего центра
         if role in center_roles:
+            own_center_id = (
+                emp.department.ntc_center_id if emp and emp.department else None
+            )
             dept_set = {}
             for w in works:
                 if w.department and w.department.code not in dept_set:
+                    if role in ("ntc_head", "ntc_deputy") and own_center_id:
+                        if w.department.ntc_center_id != own_center_id:
+                            continue
                     dept_set[w.department.code] = {
                         "code": w.department.code,
                         "center_id": w.department.ntc_center_id,
@@ -935,9 +1167,14 @@ class ReportsAnalyticsView(APIView):
             nav["nav_depts"] = [dept_set[c] for c in sorted(dept_set.keys())]
 
         if show_sectors or role in ("dept_head", "dept_deputy"):
+            # dept_head/dept_deputy → только секторы своего отдела
+            own_dept_code = emp.department.code if emp and emp.department else None
             sectors_set = {}
             for w in works:
                 if w.sector_id and w.sector:
+                    if role in ("dept_head", "dept_deputy") and own_dept_code:
+                        if not w.department or w.department.code != own_dept_code:
+                            continue
                     sectors_set[w.sector_id] = w.sector.name or w.sector.code
             nav["nav_sectors"] = [
                 {"id": sid, "name": sname}

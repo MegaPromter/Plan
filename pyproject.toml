@@ -57,7 +57,7 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["tests/test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --reuse-db"
 
 [tool.coverage.run]
 source = ["apps"]

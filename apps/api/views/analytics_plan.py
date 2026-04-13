@@ -12,8 +12,9 @@ GET /api/analytics/plan/
 """
 
 from collections import defaultdict
+from datetime import date
 
-from django.db.models import Exists, OuterRef, Prefetch, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -111,6 +112,23 @@ def _get_absences(employee_id, years):
     return absences
 
 
+def _period_end(years_set, months_set):
+    """
+    Конец выбранного периода.
+    Отчёт «выполнен в периоде» если report_date < period_end.
+    - Конкретные месяцы: первое число следующего за последним выбранным месяцем
+    - Только годы: 1 января следующего за последним выбранным годом
+    """
+    max_year = max(years_set)
+    if months_set:
+        max_month = max(months_set)
+        if max_month < 12:
+            return date(max_year, max_month + 1, 1)
+        else:
+            return date(max_year + 1, 1, 1)
+    return date(max_year + 1, 1, 1)
+
+
 def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
     """
     Считает план для одного сотрудника.
@@ -156,8 +174,14 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
         if months_filter_set and not has_hours_in_filter:
             continue
 
+        # Определяем статус с привязкой к периоду (снимок)
         is_done = getattr(w, "_done", False)
+        report_date = getattr(w, "_report_date", None)
         today = timezone.now().date()
+
+        # Границы выбранного периода для определения «выполнено в этом периоде»
+        period_end = _period_end(years_set, months_filter_set)
+        is_done_in_period = is_done and report_date and report_date < period_end
         is_overdue = not is_done and w.date_end and w.date_end < today
 
         tasks.append(
@@ -185,7 +209,9 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
                 "labor": _float(w.labor),
                 "plan_hours": {k: _float(v) for k, v in filtered_ph.items()},
                 "status": (
-                    "done" if is_done else ("overdue" if is_overdue else "inwork")
+                    "done"
+                    if is_done_in_period
+                    else ("overdue" if is_overdue else "inwork")
                 ),
             }
         )
@@ -252,8 +278,13 @@ def _build_works_summary(works, years, months_filter):
     done = []  # Выполнено
     not_done = []  # Не выполнено (в работе)
 
+    period_end = _period_end(years_set, months_set)
+
     for w in works:
         is_done = getattr(w, "_done", False)
+        report_date = getattr(w, "_report_date", None)
+        # Статус привязан к периоду: done только если отчёт до конца периода
+        is_done_in_period = is_done and report_date and report_date < period_end
         is_overdue = not is_done and w.date_end and w.date_end < today
 
         # Проверяем, попадает ли задача в выбранный период по plan_hours
@@ -275,8 +306,6 @@ def _build_works_summary(works, years, months_filter):
         if months_set and len(months_set) == 1:
             m = list(months_set)[0]
             for y in years:
-                from datetime import date
-
                 sel_start = date(y, m, 1)
                 sel_end = date(y, m + 1, 1) if m < 12 else date(y + 1, 1, 1)
                 if w.date_start and w.date_end:
@@ -306,10 +335,12 @@ def _build_works_summary(works, years, months_filter):
                 if (w.date_end or w.deadline)
                 else ""
             ),
-            "status": "done" if is_done else ("overdue" if is_overdue else "inwork"),
+            "status": (
+                "done" if is_done_in_period else ("overdue" if is_overdue else "inwork")
+            ),
         }
 
-        if is_done:
+        if is_done_in_period:
             done.append(task_item)
         elif is_overdue:
             overdue.append(task_item)
@@ -355,10 +386,15 @@ class PlanAnalyticsView(APIView):
         # ── Базовый queryset ──
         vis_q = get_visibility_filter(request.user)
         has_reports = Exists(WorkReport.objects.filter(work=OuterRef("pk")))
+        first_report = Subquery(
+            WorkReport.objects.filter(work=OuterRef("pk"))
+            .order_by("created_at")
+            .values("created_at")[:1]
+        )
 
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
-            .annotate(_done=has_reports)
+            .annotate(_done=has_reports, _report_date=first_report)
             .select_related(
                 "department",
                 "department__ntc_center",
@@ -433,74 +469,10 @@ class PlanAnalyticsView(APIView):
                 emp,
             )
 
-        # user → карточка своего сектора
-        if role == "user":
-            if emp and emp.sector_id:
-                return self._respond_sector(
-                    request,
-                    emp.sector_id,
-                    works_list,
-                    all_norms,
-                    years,
-                    months_filter,
-                    role_info,
-                    emp,
-                )
-            return self._respond_employee(
-                request,
-                emp.pk if emp else 0,
-                works_list,
-                all_norms,
-                years,
-                months_filter,
-                role_info,
-                emp,
-            )
+        # ── Фильтры (drill-down) ──────────────────────────────────────
+        # Все кроме user могут смотреть любые подразделения.
+        # user ограничен своим центром (visibility_filter фильтрует).
 
-        # sector_head → карточки секторов своего отдела
-        if role == "sector_head" and not dept_codes and not sector_ids:
-            dc = emp.department.code if emp and emp.department else ""
-            if dc:
-                return self._respond_dept(
-                    request,
-                    dc,
-                    works_list,
-                    all_norms,
-                    years,
-                    months_filter,
-                    role_info,
-                    emp,
-                )
-            sid = emp.sector_id if emp and emp.sector_id else 0
-            return self._respond_sector(
-                request,
-                sid,
-                works_list,
-                all_norms,
-                years,
-                months_filter,
-                role_info,
-                emp,
-            )
-
-        # dept_head/dept_deputy → карточки отделов своего центра
-        if role in ("dept_head", "dept_deputy") and not dept_codes and not sector_ids:
-            if emp and emp.department and emp.department.ntc_center_id:
-                center_id = emp.department.ntc_center_id
-                filtered = [
-                    w
-                    for w in works_list
-                    if w.department and w.department.ntc_center_id == center_id
-                ]
-                return self._respond_all_depts(
-                    request, filtered, all_norms, years, months_filter, role_info, emp
-                )
-            dc = emp.department.code if emp and emp.department else ""
-            return self._respond_dept(
-                request, dc, works_list, all_norms, years, months_filter, role_info, emp
-            )
-
-        # Секторы выбраны через чипы
         if sector_ids:
             if len(sector_ids) == 1:
                 return self._respond_sector(
@@ -559,20 +531,6 @@ class PlanAnalyticsView(APIView):
                 show_sectors=True,
             )
 
-        # Верхний уровень — карточки центров (для admin, ntc_head, ntc_deputy,
-        # chief_designer, deputy_gd_econ) или все отделы (для остальных)
-        top_roles = (
-            "admin",
-            "ntc_head",
-            "ntc_deputy",
-            "chief_designer",
-            "deputy_gd_econ",
-        )
-        if role in top_roles and not dept_codes and not center_ids:
-            return self._respond_all_centers(
-                request, works_list, all_norms, years, months_filter, role_info, emp
-            )
-
         # Конкретный центр выбран через фильтр
         if center_ids and len(center_ids) == 1:
             center_id = center_ids[0]
@@ -581,7 +539,6 @@ class PlanAnalyticsView(APIView):
                 for w in works_list
                 if w.department and w.department.ntc_center_id == center_id
             ]
-            # Передаём данные о центре для хлебных крошек
             center_obj = NTCCenter.objects.filter(pk=center_id).first()
             center_info = (
                 {
@@ -603,8 +560,81 @@ class PlanAnalyticsView(APIView):
                 center_info=center_info,
             )
 
-        # Все отделы (fallback)
-        return self._respond_all_depts(
+        # ── Стартовые экраны по ролям (без фильтров) ──────────────────
+        # user → свои задачи
+        if role == "user":
+            return self._respond_employee(
+                request,
+                emp.pk if emp else 0,
+                works_list,
+                all_norms,
+                years,
+                months_filter,
+                role_info,
+                emp,
+            )
+
+        # sector_head → свой сектор (сотрудники)
+        if role == "sector_head":
+            sid = emp.sector_id if emp else None
+            if sid:
+                return self._respond_sector(
+                    request,
+                    sid,
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                )
+
+        # dept_head/dept_deputy → свой отдел (секторы)
+        if role in ("dept_head", "dept_deputy"):
+            if emp and emp.department:
+                return self._respond_dept(
+                    request,
+                    emp.department.code,
+                    works_list,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                )
+
+        # ntc_head/ntc_deputy → свой центр (отделы)
+        if role in ("ntc_head", "ntc_deputy"):
+            if emp and emp.department and emp.department.ntc_center_id:
+                cid = emp.department.ntc_center_id
+                filtered = [
+                    w
+                    for w in works_list
+                    if w.department and w.department.ntc_center_id == cid
+                ]
+                center_obj = NTCCenter.objects.filter(pk=cid).first()
+                center_info = (
+                    {
+                        "id": cid,
+                        "code": center_obj.code if center_obj else "",
+                        "name": center_obj.name if center_obj else "",
+                    }
+                    if center_obj
+                    else None
+                )
+                return self._respond_all_depts(
+                    request,
+                    filtered,
+                    all_norms,
+                    years,
+                    months_filter,
+                    role_info,
+                    emp,
+                    center_info=center_info,
+                )
+
+        # admin/chief_designer/deputy_gd_econ → все центры
+        return self._respond_all_centers(
             request, works_list, all_norms, years, months_filter, role_info, emp
         )
 
@@ -1072,25 +1102,27 @@ class PlanAnalyticsView(APIView):
         nav = {}
         role = role_info["role"]
 
-        # НТЦ-центры (все, из справочника)
-        center_roles = (
-            "admin",
-            "ntc_head",
-            "ntc_deputy",
-            "chief_designer",
-            "deputy_gd_econ",
-        )
-        if role in center_roles:
+        top_global = ("admin", "chief_designer", "deputy_gd_econ")
+        center_roles = top_global + ("ntc_head", "ntc_deputy")
+
+        # Центры: top_global → все; ntc_head/ntc_deputy → не показываем
+        if role in top_global:
             nav["nav_centers"] = [
                 {"id": c.pk, "code": c.code, "name": c.name or c.code}
                 for c in NTCCenter.objects.order_by("code")
             ]
 
+        # Отделы: top_global → все; ntc_head/ntc_deputy → только своего центра
         if role in center_roles:
-            # Отделы из работ + привязка к центру
+            own_center_id = (
+                emp.department.ntc_center_id if emp and emp.department else None
+            )
             dept_set = {}
             for w in works:
                 if w.department and w.department.code not in dept_set:
+                    if role in ("ntc_head", "ntc_deputy") and own_center_id:
+                        if w.department.ntc_center_id != own_center_id:
+                            continue
                     dept_set[w.department.code] = {
                         "code": w.department.code,
                         "center_id": w.department.ntc_center_id,
@@ -1099,9 +1131,14 @@ class PlanAnalyticsView(APIView):
 
         # Секторы показываем только если drill-down в отдел или роль dept_head/dept_deputy
         if show_sectors or role in ("dept_head", "dept_deputy"):
+            # dept_head/dept_deputy → только секторы своего отдела
+            own_dept_code = emp.department.code if emp and emp.department else None
             sectors_set = {}
             for w in works:
                 if w.sector_id and w.sector:
+                    if role in ("dept_head", "dept_deputy") and own_dept_code:
+                        if not w.department or w.department.code != own_dept_code:
+                            continue
                     sectors_set[w.sector_id] = w.sector.name or w.sector.code
             nav["nav_sectors"] = [
                 {"id": sid, "name": sname}

@@ -179,9 +179,20 @@ def _compute_kpi_sql(user, year, month, team_ids_set, month_norm):
         ),
     )
 
+    # Первый день следующего месяца (для границы периода)
+    m_next = date(year, month + 1, 1) if month < 12 else date(year + 1, 1, 1)
+
     # Один SQL-запрос для всех counts
+    # done_in_month: отчёт заполнен именно в этом месяце (m_start <= report_date < m_next)
     counts = annotated.aggregate(
-        done_in_month=Count("pk", filter=Q(_done=True, _in_month=True)),
+        done_in_month=Count(
+            "pk",
+            filter=Q(
+                _done=True,
+                _report_date__gte=m_start,
+                _report_date__lt=m_next,
+            ),
+        ),
         inwork_in_month=Count(
             "pk", filter=Q(_done=False, _is_overdue=False, _in_month=True)
         ),
@@ -257,15 +268,18 @@ def _compute_hours(user, year, month, team_ids_set, month_norm):
     month_key = f"{year}-{month:02d}"
     base = _base_plan_qs(user, year)
 
-    # Часы основных исполнителей
+    # Часы исполнителей
     emp_hours = defaultdict(float)
     emp_monthly = defaultdict(lambda: defaultdict(float))
 
     # 1) Work.plan_hours + executor_id — основной исполнитель
+    #    Work.plan_hours — актуальный источник (обновляется через plan_hours_update)
+    main_seen_works = set()
     main_data = base.filter(executor_id__in=team_ids_set).values_list(
-        "executor_id", "plan_hours"
+        "pk", "executor_id", "plan_hours"
     )
-    for eid, ph in main_data:
+    for wid, eid, ph in main_data:
+        main_seen_works.add(wid)
         if not ph:
             continue
         for k, v in ph.items():
@@ -279,12 +293,16 @@ def _compute_hours(user, year, month, team_ids_set, month_norm):
             except (ValueError, TypeError):
                 pass
 
-    # 2) TaskExecutor.plan_hours — дополнительные исполнители
+    # 2) TaskExecutor — только задачи, где executor_id НЕ из team
+    #    (доп. исполнители, назначенные через executors_list)
     te_data = TaskExecutor.objects.filter(
         work__in=base,
         executor_id__in=team_ids_set,
-    ).values_list("executor_id", "plan_hours")
-    for eid, ph in te_data:
+    ).values_list("executor_id", "plan_hours", "work_id")
+    for eid, ph, wid in te_data:
+        if wid in main_seen_works:
+            # Work.plan_hours уже учтён для основного исполнителя — пропускаем
+            continue
         if not ph:
             continue
         for k, v in ph.items():
@@ -610,10 +628,16 @@ class DashboardScopeView(APIView):
         qs = _full_qs(request.user, year).filter(team_q).distinct()
 
         if scope_type == "debts":
-            # Просроченные невыполненные
-            qs = qs.exclude(pk__in=WorkReport.objects.values("work_id")).filter(
-                date_end__lt=today, date_end__isnull=False
-            )
+            # Просроченные невыполненные (отчёт не заполнен до конца просматриваемого месяца)
+            m_next = date(year, month + 1, 1) if month < 12 else date(year + 1, 1, 1)
+            qs = qs.exclude(
+                Exists(
+                    WorkReport.objects.filter(
+                        work_id=OuterRef("pk"),
+                        created_at__lt=m_next,
+                    )
+                )
+            ).filter(date_end__lt=today, date_end__isnull=False)
             qs = qs.order_by("date_end")
         elif scope_type == "done_late":
             # Выполненные с просрочкой — нужно post-filter
@@ -788,8 +812,10 @@ class DashboardAPIView(APIView):
 
         base = _base_plan_qs(user, year)
 
-        # Main executor
-        for (ph,) in base.filter(executor_id=emp_id).values_list("plan_hours"):
+        # 1) Work.plan_hours — основной исполнитель (актуальный источник)
+        main_work_ids = set()
+        for wid, ph in base.filter(executor_id=emp_id).values_list("pk", "plan_hours"):
+            main_work_ids.add(wid)
             if not ph:
                 continue
             for k, v in ph.items():
@@ -803,10 +829,12 @@ class DashboardAPIView(APIView):
                 except (ValueError, TypeError):
                     pass
 
-        # TaskExecutor
-        for (ph,) in TaskExecutor.objects.filter(
+        # 2) TaskExecutor — только задачи, где этот сотрудник НЕ основной
+        for wid, ph in TaskExecutor.objects.filter(
             work__in=base, executor_id=emp_id
-        ).values_list("plan_hours"):
+        ).values_list("work_id", "plan_hours"):
+            if wid in main_work_ids:
+                continue
             if not ph:
                 continue
             for k, v in ph.items():
