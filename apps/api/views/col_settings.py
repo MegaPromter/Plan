@@ -62,7 +62,13 @@ class ColSettingsView(APIView):
             preserved = {
                 k: v
                 for k, v in current.items()
-                if k in ("show_all_depts", "pp_input_modal")
+                if k
+                in (
+                    "show_all_depts",
+                    "pp_input_modal",
+                    "auto_delegate_enabled",
+                    "auto_delegate_employee_id",
+                )
             }
             employee.col_settings = preserved
             employee.save(update_fields=["col_settings"])

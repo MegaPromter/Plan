@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.generic import ListView, TemplateView
 
 # Модели сотрудников — нужны для получения роли, настроек пользователя и списка отделов
-from apps.employees.models import Department, Employee
+from apps.employees.models import Department, Employee, RoleDelegation, Vacation
 
 # Общий миксин для SPA-страниц
 from .mixins import SPAContextMixin
@@ -279,8 +279,42 @@ class DelegationsSPAView(LoginRequiredMixin, SPAContextMixin, TemplateView):
                     for e in employees
                 ]
             )
+
+            # Предстоящие отпуска текущего пользователя
+            today = timezone.now().date()
+            upcoming = list(
+                Vacation.objects.filter(employee=emp, date_end__gte=today).order_by(
+                    "date_start"
+                )
+            )
+            # ID отпусков, для которых уже есть автоделегирование
+            vac_ids_with_deleg = (
+                set(
+                    RoleDelegation.objects.filter(
+                        source_vacation_id__in=[v.pk for v in upcoming]
+                    ).values_list("source_vacation_id", flat=True)
+                )
+                if upcoming
+                else set()
+            )
+            ctx["my_vacations_json"] = _json.dumps(
+                [
+                    {
+                        "id": v.pk,
+                        "vac_type": v.vac_type,
+                        "vac_type_display": v.get_vac_type_display(),
+                        "date_start": v.date_start.isoformat(),
+                        "date_end": v.date_end.isoformat(),
+                        "duration_days": v.duration_days,
+                        "notes": v.notes,
+                        "has_delegation": v.pk in vac_ids_with_deleg,
+                    }
+                    for v in upcoming
+                ]
+            )
         else:
             ctx["employees_json"] = "[]"
+            ctx["my_vacations_json"] = "[]"
         return ctx
 
 

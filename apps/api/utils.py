@@ -275,44 +275,19 @@ def get_visibility_filter(user):
     if role == "admin":
         return Q()  # Без фильтра — видит всё
 
-    # show_all_depts: руководители НТЦ могут включить видимость всех подразделений
-    # Читаем из col_settings (JSONField, хранит пользовательские настройки)
-    col_settings = employee.col_settings or {}
-    if role in ("ntc_head", "ntc_deputy") and col_settings.get("show_all_depts"):
-        return Q()  # Видит всё (как admin)
+    # Все должности кроме user видят все подразделения
+    if role != "user":
+        return Q()
 
-    # Базовый фильтр по роли
+    # user — видит задачи своего центра
     q = Q()
-    if role in ("ntc_head", "ntc_deputy"):
-        # Руководитель НТЦ видит только свой центр
-        if employee.ntc_center:
-            q = Q(ntc_center=employee.ntc_center)
-        else:
-            # Центр не назначен — ничего не показываем
-            q = Q(pk__isnull=True)
-    elif role in ("dept_head", "dept_deputy"):
-        # Начальник отдела видит только свой отдел
-        if employee.department:
-            q = Q(department=employee.department)
-        else:
-            # Отдел не назначен — ничего не показываем
-            q = Q(pk__isnull=True)
-    elif role == "sector_head":
-        # Начальник сектора видит только свой сектор
-        if employee.department and employee.sector:
-            # Оба поля заполнены — фильтруем по отделу И сектору
-            q = Q(department=employee.department, sector=employee.sector)
-        else:
-            # Сектор или отдел не назначен — ничего не показываем
-            # (sector_head без привязки к сектору не должен видеть весь отдел)
-            q = Q(pk__isnull=True)
+    if employee.department and employee.department.ntc_center_id:
+        q = Q(ntc_center=employee.department.ntc_center)
+    elif employee.department:
+        q = Q(department=employee.department)
     else:
-        # user — видит задачи своего отдела (как dept_head)
-        if employee.department:
-            q = Q(department=employee.department)
-        else:
-            # Отдел не назначен — видит только свои задачи
-            q = Q(executor=employee) | Q(created_by=employee)
+        # Отдел не назначен — видит только свои задачи
+        q = Q(executor=employee) | Q(created_by=employee)
 
     # Добавляем делегирования: временно расширяем видимость на чужие данные
     for d in _get_active_delegations(employee):

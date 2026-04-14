@@ -583,7 +583,7 @@
   function renderContent(data) {
     var el = document.getElementById('anContent');
 
-    // Очищаем экспорт — будет пересоздан в табличном режиме
+    // Очищаем экспорт — будет пересоздан в _setupExport
     var expTop = document.getElementById('anExportTop');
     if (expTop) expTop.innerHTML = '';
 
@@ -634,6 +634,9 @@
           el.innerHTML = '<div class="an-empty"><i class="fas fa-table"></i>Нет данных</div>';
       }
     }
+
+    // Подключаем экспорт для обоих режимов
+    _setupExport(data);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -754,7 +757,9 @@
     html +=
       '<div class="an-summary-card"><div class="an-summary-val">' +
       fmtHrs(data.plan_hours || 0) +
-      ' ч</div><div class="an-summary-label">План (часы)</div></div>';
+      (data.norm_hours ? ' / ' + fmtHrs(data.norm_hours) : '') +
+      '</div><div class="an-summary-label">' +
+      (data.norm_hours ? 'План / Норма (ч)' : 'План (часы)') + '</div></div>';
     html += '</div>';
 
     // Прогресс-бар
@@ -781,11 +786,12 @@
 
   function _rptDebtsBlock(data) {
     if (!data.debts_total) return '';
-    var html = '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-exclamation-triangle"></i> Долги из прошлых периодов</div>';
+    var html = '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<div class="rpt-section-title"><i class="fas fa-exclamation-triangle"></i> Долги из прошлых периодов <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge-danger">' + fmtNum(data.debts_total) + ' задач</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
 
     html += '<div class="rpt-debt-cards">';
     html += '<div class="rpt-debt-card mild"><div class="rpt-debt-val">' +
@@ -796,7 +802,59 @@
       fmtNum(data.debts_3plus || 0) + '</div><div class="rpt-debt-label">3+ месяцев</div></div>';
     html += '</div>';
 
+    // Группировка по подразделениям (центры/отделы/секторы)
+    var units = data.debts_by_units || [];
+    if (units.length > 0) {
+      var groupLabels = { center: 'Центр', dept: 'Отдел', sector: 'Сектор' };
+      var groupLabel = groupLabels[data.debts_group] || 'Подразделение';
+      html += '<table class="rpt-tbl">';
+      html += '<thead><tr><th>' + groupLabel + '</th>';
+      html += '<th class="num">Всего</th><th class="num">1 мес</th>';
+      html += '<th class="num">2–3 мес</th><th class="num">3+ мес</th></tr></thead>';
+      html += '<tbody>';
+      var totals = { total: 0, m1: 0, m23: 0, m3p: 0 };
+      var drillGroup = data.debts_group;
+      units.forEach(function (u) {
+        totals.total += u.debts_total;
+        totals.m1 += u.debts_1m;
+        totals.m23 += u.debts_2_3m;
+        totals.m3p += u.debts_3plus;
+        var drillAttr = '';
+        if (drillGroup === 'center') {
+          drillAttr = ' onclick="anDrillCenter(' + u.id + ')" class="rpt-clickable"';
+        } else if (drillGroup === 'dept') {
+          drillAttr = ' onclick="anDrillDept(\'' + escAttr(u.id) + '\')" class="rpt-clickable"';
+        } else if (drillGroup === 'sector') {
+          drillAttr = ' onclick="anDrillSector(' + u.id + ')" class="rpt-clickable"';
+        }
+        html += '<tr' + drillAttr + '>';
+        html += '<td class="bold">' + esc(u.name) + '</td>';
+        html += '<td class="num" style="color:var(--danger)">' + fmtNum(u.debts_total) + '</td>';
+        html += '<td class="num">' + fmtNum(u.debts_1m) + '</td>';
+        html += '<td class="num">' + fmtNum(u.debts_2_3m) + '</td>';
+        html += '<td class="num">' + fmtNum(u.debts_3plus) + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr class="rpt-total-row">';
+      html += '<td class="bold">Итого</td>';
+      html += '<td class="num bold" style="color:var(--danger)">' + fmtNum(totals.total) + '</td>';
+      html += '<td class="num bold">' + fmtNum(totals.m1) + '</td>';
+      html += '<td class="num bold">' + fmtNum(totals.m23) + '</td>';
+      html += '<td class="num bold">' + fmtNum(totals.m3p) + '</td>';
+      html += '</tr>';
+      html += '</tbody></table>';
+    }
+
+    // Список задач-долгов (для уровня сектора/сотрудника, или детализация отдела)
     var debts = data.debt_tasks || [];
+    if (debts.length > 0 && units.length > 0) {
+      // Если есть и группировка, и задачи — сворачиваемый блок
+      html += '<div class="rpt-subsection collapsed">';
+      html += '<div class="rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')" style="margin:12px 0 8px;font-size:0.9em">';
+      html += '<i class="fas fa-list"></i> Все задачи (' + (data.debt_tasks_total || debts.length) + ')';
+      html += ' <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+      html += '<div class="rpt-section-body">';
+    }
     if (debts.length > 0) {
       html += '<table class="rpt-tbl">';
       html += '<thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Отдел</th>';
@@ -820,19 +878,24 @@
           (data.debt_tasks_total - debts.length) + ' задач</td></tr>';
       }
       html += '</tbody></table>';
+      if (units.length > 0) {
+        html += '</div></div>'; // rpt-section-body + rpt-subsection
+      }
     }
-    html += '</div>';
+    html += '</div>'; // rpt-section-body
+    html += '</div>'; // rpt-section
     return html;
   }
 
   function _rptProjectsBlock(data) {
     var projects = data.projects || [];
     if (!projects.length) return '';
-    var html = '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-folder"></i> По проектам</div>';
+    var html = '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<div class="rpt-section-title"><i class="fas fa-folder"></i> По проектам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + projects.length + ' проектов</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
     html += '<table class="rpt-tbl">';
     html += '<thead><tr><th>Проект</th><th class="num">Задач</th><th class="num">Выполнено</th>';
     html += '<th class="num">Просрочено</th><th class="num">Долги</th>';
@@ -866,31 +929,55 @@
     html += '<td class="num bold" style="color:#b91c1c">' + fmtNum(totals.debts) + '</td>';
     html += '<td class="num bold">' + fmtHrs(totals.hours) + '</td>';
     html += '<td>' + _rptCompletionBar(totalPct) + '</td>';
-    html += '</tr></tbody></table></div>';
+    html += '</tr></tbody></table>';
+    html += '</div>'; // rpt-section-body
+    html += '</div>'; // rpt-section
     return html;
   }
 
   function _rptUnitTable(items, icon, nameKey, drillFn) {
     if (!items.length) return '';
     var html = '<table class="rpt-tbl">';
-    html += '<thead><tr><th>' + icon + '</th><th class="num">Задач</th><th class="num">Выполнено</th>';
+    html += '<thead><tr><th>' + icon + '</th><th class="num">Сотр.</th><th class="num">Задач</th><th class="num">Выполнено</th>';
     html += '<th class="num">Просрочено</th><th class="num">Долги</th>';
-    html += '<th class="num">План (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
+    html += '<th class="num">План (ч)</th><th class="num">Норма (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
     html += '<tbody>';
+    var totals = { emps: 0, total: 0, done: 0, overdue: 0, debts: 0, hours: 0, norm: 0 };
     items.forEach(function (item) {
       var name = item[nameKey] || item.code || item.name || '';
       var pct = item.completion_pct || 0;
       var onclick = drillFn ? ' onclick="' + drillFn(item) + '" class="rpt-clickable"' : '';
+      totals.emps += item.employee_count || 0;
+      totals.total += item.total || 0;
+      totals.done += item.done || 0;
+      totals.overdue += item.overdue || 0;
+      totals.debts += item.debts_total || 0;
+      totals.hours += item.plan_hours || 0;
+      totals.norm += item.norm_hours || 0;
       html += '<tr' + onclick + '>';
       html += '<td class="bold">' + esc(name) + '</td>';
+      html += '<td class="num">' + fmtNum(item.employee_count || 0) + '</td>';
       html += '<td class="num">' + fmtNum(item.total) + '</td>';
       html += '<td class="num" style="color:var(--success)">' + fmtNum(item.done) + '</td>';
       html += '<td class="num" style="color:var(--danger)">' + fmtNum(item.overdue) + '</td>';
       html += '<td class="num" style="color:#b91c1c">' + fmtNum(item.debts_total) + '</td>';
       html += '<td class="num">' + fmtHrs(item.plan_hours) + '</td>';
+      html += '<td class="num">' + fmtHrs(item.norm_hours) + '</td>';
       html += '<td>' + _rptCompletionBar(pct) + '</td>';
       html += '</tr>';
     });
+    var totalPct = totals.total > 0 ? Math.round(totals.done / totals.total * 1000) / 10 : 0;
+    html += '<tr class="rpt-total-row">';
+    html += '<td class="bold">Итого</td>';
+    html += '<td class="num bold">' + fmtNum(totals.emps) + '</td>';
+    html += '<td class="num bold">' + fmtNum(totals.total) + '</td>';
+    html += '<td class="num bold" style="color:var(--success)">' + fmtNum(totals.done) + '</td>';
+    html += '<td class="num bold" style="color:var(--danger)">' + fmtNum(totals.overdue) + '</td>';
+    html += '<td class="num bold" style="color:#b91c1c">' + fmtNum(totals.debts) + '</td>';
+    html += '<td class="num bold">' + fmtHrs(totals.hours) + '</td>';
+    html += '<td class="num bold">' + fmtHrs(totals.norm) + '</td>';
+    html += '<td>' + _rptCompletionBar(totalPct) + '</td>';
+    html += '</tr>';
     html += '</tbody></table>';
     return html;
   }
@@ -918,18 +1005,19 @@
 
     var html = _rptSummaryCards(data);
 
-    html += '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-city"></i> По центрам</div>';
+    html += '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<div class="rpt-section-title"><i class="fas fa-city"></i> По центрам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + centers.length + ' центров</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
     html += _rptUnitTable(centers, 'Центр', 'code', function (c) {
       return 'anDrillCenter(' + c.id + ')';
     });
-    html += '</div>';
+    html += '</div></div>';
 
-    html += _rptDebtsBlock(data);
     html += _rptProjectsBlock(data);
+    html += _rptDebtsBlock(data);
 
     el.innerHTML = html;
   }
@@ -1307,18 +1395,19 @@
 
     var html = _rptSummaryCards(data);
 
-    html += '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-building"></i> По отделам</div>';
+    html += '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<div class="rpt-section-title"><i class="fas fa-building"></i> По отделам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + depts.length + ' отделов</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
     html += _rptUnitTable(depts, 'Отдел', 'code', function (d) {
       return "anDrillDept('" + escAttr(d.code) + "')";
     });
-    html += '</div>';
+    html += '</div></div>';
 
-    html += _rptDebtsBlock(data);
     html += _rptProjectsBlock(data);
+    html += _rptDebtsBlock(data);
 
     el.innerHTML = html;
   }
@@ -1329,12 +1418,13 @@
 
     var html = _rptSummaryCards(data);
 
-    html += '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
+    html += '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
     html += '<div class="rpt-section-title"><i class="fas fa-layer-group"></i> ' +
-      esc(deptName) + ' — Секторы</div>';
+      esc(deptName) + ' — Секторы <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + sectors.length + ' секторов</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
 
     if (sectors.length === 0) {
       html += '<div class="an-empty"><i class="fas fa-layer-group"></i>Нет секторов</div>';
@@ -1343,10 +1433,10 @@
         return 'anDrillSector(' + s.id + ')';
       });
     }
-    html += '</div>';
+    html += '</div></div>';
 
-    html += _rptDebtsBlock(data);
     html += _rptProjectsBlock(data);
+    html += _rptDebtsBlock(data);
 
     el.innerHTML = html;
   }
@@ -1357,11 +1447,12 @@
 
     var html = _rptSummaryCards(data);
 
-    html += '<div class="rpt-section">';
-    html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-users"></i> ' + esc(title) + '</div>';
+    html += '<div class="rpt-section collapsed">';
+    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<div class="rpt-section-title"><i class="fas fa-users"></i> ' + esc(title) + ' <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + employees.length + ' сотрудников</span>';
     html += '</div>';
+    html += '<div class="rpt-section-body">';
 
     if (employees.length > 0) {
       html += _rptUnitTable(employees, 'Сотрудник', 'name', function (e) {
@@ -1370,7 +1461,7 @@
     } else {
       html += '<div class="an-empty"><i class="fas fa-users"></i>Нет сотрудников</div>';
     }
-    html += '</div>';
+    html += '</div></div>';
 
     html += _rptDebtsBlock(data);
 
@@ -1986,6 +2077,119 @@
     cols.push({ key: 'total_hours', header: 'Итого (ч)', width: 80 });
     cols.push({ key: 'status', header: 'Статус', width: 80 });
     return cols;
+  }
+
+  /* ── Подготовка данных для экспорта ───────────────────────────────────── */
+
+  function _unitExportCols(label) {
+    return [
+      { key: 'name', header: label, width: 200 },
+      { key: 'employee_count', header: 'Сотрудников', width: 100 },
+      { key: 'total', header: 'Задач', width: 80 },
+      { key: 'done', header: 'Выполнено', width: 100 },
+      { key: 'overdue', header: 'Просрочено', width: 100 },
+      { key: 'debts_total', header: 'Долги', width: 80 },
+      { key: 'plan_hours', header: 'План (ч)', width: 100 },
+      { key: 'norm_hours', header: 'Норма (ч)', width: 100 },
+      {
+        key: 'completion_pct', header: 'Выполнение (%)', width: 100,
+        format: function (r) { return (r.completion_pct || 0).toFixed(1); },
+      },
+    ];
+  }
+
+  function _unitExportData(items, nameKey) {
+    return (items || []).map(function (item) {
+      return {
+        name: item[nameKey] || item.code || item.name || '',
+        employee_count: item.employee_count || 0,
+        total: item.total || 0,
+        done: item.done || 0,
+        overdue: item.overdue || 0,
+        debts_total: item.debts_total || 0,
+        plan_hours: item.plan_hours || 0,
+        norm_hours: item.norm_hours || 0,
+        completion_pct: item.completion_pct || 0,
+      };
+    });
+  }
+
+  function _taskExportData(tasks) {
+    return (tasks || []).map(function (t) {
+      var statusMap = { done: 'Готово', overdue: 'Просрочено', inwork: 'В работе', debt: 'Долг' };
+      return {
+        work_name: t.work_name || '',
+        project_name: t.project_name || '',
+        date_end: t.date_end || '',
+        plan_hours: t.plan_hours || 0,
+        status: statusMap[t.status] || t.status || '',
+      };
+    });
+  }
+
+  function _taskExportColsSimple() {
+    return [
+      { key: 'work_name', header: 'Задача', width: 260 },
+      { key: 'project_name', header: 'Проект', width: 160 },
+      { key: 'date_end', header: 'Срок', width: 100 },
+      { key: 'plan_hours', header: 'План (ч)', width: 80 },
+      { key: 'status', header: 'Статус', width: 100 },
+    ];
+  }
+
+  function _exportMeta(data) {
+    var parts = [];
+    var mode = currentMode === 'charts' ? 'Личный план' : 'Отчёты';
+    parts.push(mode);
+    var years = Object.keys(currentYears);
+    if (years.length) parts.push('Период: ' + years.join(', '));
+    if (data.center) parts.push('Центр: ' + (data.center.name || data.center.code));
+    if (data.dept) parts.push('Отдел: ' + (data.dept.name || data.dept.code));
+    if (data.sector) parts.push('Сектор: ' + (data.sector.name || data.sector.code || data.sector.id));
+    if (data.employee) parts.push('Сотрудник: ' + (data.employee.name || ''));
+    return parts;
+  }
+
+  function _setupExport(data) {
+    var cols, pageName;
+    var view = data.view;
+    var mode = currentMode === 'charts' ? 'План' : 'Отчёты';
+
+    switch (view) {
+      case 'centers':
+        _exportData = _unitExportData(data.centers, 'code');
+        cols = _unitExportCols('Центр');
+        pageName = mode + '_Центры';
+        break;
+      case 'all':
+        _exportData = _unitExportData(data.depts, 'code');
+        cols = _unitExportCols('Отдел');
+        pageName = mode + '_Отделы';
+        break;
+      case 'dept':
+        _exportData = _unitExportData(data.sectors, 'name');
+        cols = _unitExportCols('Сектор');
+        pageName = mode + '_Секторы';
+        break;
+      case 'sector':
+      case 'employees':
+        _exportData = _unitExportData(data.employees, 'name');
+        cols = _unitExportCols('Сотрудник');
+        pageName = mode + '_Сотрудники';
+        break;
+      case 'employee':
+        _exportData = _taskExportData(data.tasks);
+        cols = _taskExportColsSimple();
+        pageName = mode + '_Задачи';
+        break;
+      default:
+        _exportData = [];
+        return;
+    }
+
+    if (_exportData.length) {
+      _buildExport('anExportTop', pageName, cols, _exportMeta(data));
+    }
   }
 
   function _buildExport(containerId, pageName, columns, meta) {

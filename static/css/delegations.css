@@ -87,6 +87,30 @@
   font-weight: 600;
 }
 
+/* Мои отпуска — активный отпуск (сейчас в отпуске) */
+.deleg-vac-active td {
+  background: var(--accent-green-bg, #f0fdf4);
+}
+
+/* Бейджи статуса делегирования для отпуска */
+.badge-deleg-ok {
+  background: var(--accent-green, #22c55e);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-deleg-warn {
+  background: var(--accent-amber, #f59e0b);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* Форма создания */
 .deleg-form .form-group {
   margin-bottom: 16px;

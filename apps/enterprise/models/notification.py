@@ -18,12 +18,14 @@ class EnterpriseNotification(models.Model):
     TYPE_REALLOCATION_RESULT = "reallocation_result"
     TYPE_PHASE_CHANGE = "phase_change"
     TYPE_PRIORITY_CONFIRM = "priority_confirm"
+    TYPE_DELEGATION_REMINDER = "delegation_reminder"
 
     TYPE_CHOICES = [
         (TYPE_REALLOCATION_REQUEST, "Запрос на перераспределение"),
         (TYPE_REALLOCATION_RESULT, "Результат согласования"),
         (TYPE_PHASE_CHANGE, "Смена фазы"),
         (TYPE_PRIORITY_CONFIRM, "Подтверждение приоритетов"),
+        (TYPE_DELEGATION_REMINDER, "Напоминание о делегировании"),
     ]
 
     recipient = models.ForeignKey(

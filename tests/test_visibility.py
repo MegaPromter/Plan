@@ -22,21 +22,23 @@ class TestVisibilityFilter:
         q = get_visibility_filter(user)
         assert "isnull" in str(q).lower() or "pk" in str(q).lower()
 
-    def test_user_sees_own_tasks(self, regular_user):
+    def test_user_sees_own_center(self, regular_user):
         emp = regular_user.employee
         q = get_visibility_filter(regular_user)
         q_str = str(q)
-        # Пользователь с отделом видит задачи отдела; без отдела — свои (executor/created_by)
+        # User видит свой центр; если центр не привязан — отдел или свои задачи
         assert (
-            "department" in q_str.lower()
+            "ntc_center" in q_str.lower()
+            or "department" in q_str.lower()
             or "executor" in q_str.lower()
             or str(emp.pk) in q_str
         )
 
-    def test_dept_head_sees_dept(self, dept_head_user, dept):
+    def test_dept_head_sees_all(self, dept_head_user, dept):
+        """Все роли кроме user видят все подразделения."""
         q = get_visibility_filter(dept_head_user)
-        q_str = str(q)
-        assert "department" in q_str.lower()
+        # Q() без условий — пустой фильтр (видит всё)
+        assert str(q) == str(type(q)())
 
 
 @pytest.mark.django_db

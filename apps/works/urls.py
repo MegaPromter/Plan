@@ -55,6 +55,8 @@ urlpatterns = [
     path("feedback/", views.FeedbackSPAView.as_view(), name="feedback"),
     # ER-диаграмма моделей
     path("er-diagram/", views.ERDiagramView.as_view(), name="er_diagram"),
+    # Делегирование прав SPA
+    path("delegations/", views.DelegationsSPAView.as_view(), name="delegations"),
     # Управление предприятием SPA
     path("enterprise/", views.EnterpriseSPAView.as_view(), name="enterprise"),
     # ── Журнал корректирующих извещений (SPA) ─────────────────────────────────

@@ -31,6 +31,41 @@ _URL_RE = re.compile(
 )
 
 
+def _zero_future_plan_hours(work, report_created_at):
+    """Обнулить plan_hours во всех месяцах после месяца заполнения отчёта.
+
+    Вызывается при создании WorkReport.
+    report_created_at — datetime заполнения отчёта (created_at).
+    Обнуляет часы у Work и у всех TaskExecutor.
+    """
+    from apps.works.models import TaskExecutor
+
+    report_month = f"{report_created_at.year}-{report_created_at.month:02d}"
+
+    # Обнулить в Work.plan_hours
+    ph = work.plan_hours or {}
+    changed = False
+    for key in list(ph.keys()):
+        if key > report_month:
+            ph[key] = 0
+            changed = True
+    if changed:
+        work.plan_hours = ph
+        work.save(update_fields=["plan_hours", "updated_at"])
+
+    # Обнулить в TaskExecutor.plan_hours
+    for te in TaskExecutor.objects.filter(work=work):
+        te_ph = te.plan_hours or {}
+        te_changed = False
+        for key in list(te_ph.keys()):
+            if key > report_month:
+                te_ph[key] = 0
+                te_changed = True
+        if te_changed:
+            te.plan_hours = te_ph
+            te.save(update_fields=["plan_hours"])
+
+
 def _validate_url(value):
     """Вернуть строку ошибки если value не пустой и не похож на URL, иначе None."""
     if not value:
@@ -231,6 +266,8 @@ class ReportCreateView(APIView):
             )
             report.work = work
             _sync_notice_for_report(report)
+            # Обнулить часы в будущих месяцах (после месяца заполнения)
+            _zero_future_plan_hours(work, report.created_at)
         return Response({"id": report.id})
 
 

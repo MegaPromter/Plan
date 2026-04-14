@@ -10,6 +10,7 @@ DELETE  /api/delegations/<id>     -- отзыв делегирования
 import logging
 from datetime import datetime
 
+from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +20,35 @@ from rest_framework.views import APIView
 from apps.employees.models import Employee, RoleDelegation
 
 logger = logging.getLogger(__name__)
+
+
+def _serialize_delegation(rd, role_filter="both"):
+    """Сериализация одного делегирования в словарь."""
+    data = {
+        "id": rd.pk,
+        "delegator_id": rd.delegator_id,
+        "delegate_id": rd.delegate_id,
+        "scope_type": rd.scope_type,
+        "scope_value": rd.scope_value,
+        "delegator_write": rd.can_write,
+        "valid_until": rd.valid_until.isoformat() if rd.valid_until else None,
+        "created_at": rd.created_at.isoformat() if rd.created_at else None,
+        "is_auto": rd.source_vacation_id is not None,
+        "source_vacation_id": rd.source_vacation_id,
+    }
+    if role_filter == "delegator":
+        data["delegate_username"] = rd.delegate.user.username
+        data["delegate_full_name"] = rd.delegate.full_name
+    elif role_filter == "delegate":
+        data["delegator_username"] = rd.delegator.user.username
+        data["delegator_full_name"] = rd.delegator.full_name
+    elif role_filter == "both":
+        data["delegate_username"] = rd.delegate.user.username
+        data["delegate_full_name"] = rd.delegate.full_name
+        data["delegator_username"] = rd.delegator.user.username
+        data["delegator_full_name"] = rd.delegator.full_name
+    return data
+
 
 # Допустимые типы области делегирования
 _VALID_SCOPE_TYPES = {"center", "dept", "sector", "executor"}
@@ -45,52 +75,12 @@ class DelegationListView(APIView):
                 .select_related("delegate__user")
                 .order_by("-created_at")
             )
-            result = [
-                {
-                    "id": rd.pk,
-                    "delegator_id": rd.delegator_id,
-                    "delegate_id": rd.delegate_id,
-                    "scope_type": rd.scope_type,
-                    "scope_value": rd.scope_value,
-                    "delegator_write": rd.can_write,
-                    "valid_until": (
-                        rd.valid_until.isoformat() if rd.valid_until else None
-                    ),
-                    "created_at": (
-                        rd.created_at.isoformat() if rd.created_at else None
-                    ),
-                    "delegate_username": rd.delegate.user.username,
-                    "delegate_full_name": rd.delegate.full_name,
-                }
-                for rd in qs
-            ]
-
         elif role_filter == "delegate":
             qs = (
                 RoleDelegation.objects.filter(delegate=employee)
                 .select_related("delegator__user")
                 .order_by("-created_at")
             )
-            result = [
-                {
-                    "id": rd.pk,
-                    "delegator_id": rd.delegator_id,
-                    "delegate_id": rd.delegate_id,
-                    "scope_type": rd.scope_type,
-                    "scope_value": rd.scope_value,
-                    "delegator_write": rd.can_write,
-                    "valid_until": (
-                        rd.valid_until.isoformat() if rd.valid_until else None
-                    ),
-                    "created_at": (
-                        rd.created_at.isoformat() if rd.created_at else None
-                    ),
-                    "delegator_username": rd.delegator.user.username,
-                    "delegator_full_name": rd.delegator.full_name,
-                }
-                for rd in qs
-            ]
-
         else:
             qs = (
                 RoleDelegation.objects.filter(
@@ -99,24 +89,8 @@ class DelegationListView(APIView):
                 .select_related("delegate__user", "delegator__user")
                 .order_by("-created_at")
             )
-            result = [
-                {
-                    "id": rd.pk,
-                    "delegator_id": rd.delegator_id,
-                    "delegate_id": rd.delegate_id,
-                    "scope_type": rd.scope_type,
-                    "scope_value": rd.scope_value,
-                    "delegator_write": rd.can_write,
-                    "valid_until": (
-                        rd.valid_until.isoformat() if rd.valid_until else None
-                    ),
-                    "created_at": (
-                        rd.created_at.isoformat() if rd.created_at else None
-                    ),
-                }
-                for rd in qs
-            ]
 
+        result = [_serialize_delegation(rd, role_filter) for rd in qs]
         return Response(result)
 
     def post(self, request):
@@ -216,6 +190,9 @@ class DelegationListView(APIView):
             valid_until=valid_until,
         )
 
+        # Инвалидация кэша делегирований получателя
+        cache.delete(f"delegations:{delegate.pk}")
+
         logger.info(
             "Delegation %s: delegator=%s -> delegate=%s scope=%s:%s write=%s until=%s",
             rd.pk,
@@ -249,6 +226,9 @@ class DelegationDetailView(APIView):
                 {"error": "Нет прав для отзыва этого делегирования"}, status=403
             )
 
+        delegate_pk = rd.delegate_id
         rd.delete()
+        # Инвалидация кэша делегирований получателя
+        cache.delete(f"delegations:{delegate_pk}")
         logger.info("Delegation %s revoked by user %s", pk, employee.pk)
         return Response({"ok": True})

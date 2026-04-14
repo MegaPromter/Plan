@@ -705,6 +705,15 @@ class RoleDelegation(models.Model):
     valid_until = models.DateTimeField("Действует до")
     # Метка времени создания записи о делегировании
     created_at = models.DateTimeField("Создан", auto_now_add=True)
+    # Отпуск-источник: если заполнено — делегирование создано автоматически
+    source_vacation = models.ForeignKey(
+        "Vacation",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="auto_delegations",
+        verbose_name="Источник (отпуск)",
+    )
 
     class Meta:
         # Имя таблицы в БД

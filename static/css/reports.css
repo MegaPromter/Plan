@@ -188,6 +188,44 @@
   justify-content: space-between;
   gap: 12px;
 }
+.rpt-section-header.rpt-collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+.rpt-section-header.rpt-collapsible:hover {
+  background: var(--surface2);
+}
+.rpt-collapse-icon {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s;
+  margin-left: 6px;
+}
+.rpt-section.collapsed .rpt-collapse-icon {
+  transform: rotate(-90deg);
+}
+.rpt-section-body {
+  /* анимация не нужна, просто show/hide */
+}
+.rpt-section.collapsed .rpt-section-body,
+.rpt-subsection.collapsed > .rpt-section-body {
+  display: none;
+}
+.rpt-subsection.collapsed .rpt-collapse-icon {
+  transform: rotate(-90deg);
+}
+.rpt-subsection .rpt-collapsible {
+  cursor: pointer;
+  user-select: none;
+  color: var(--primary);
+  font-weight: 600;
+}
+.rpt-subsection .rpt-collapsible:hover {
+  text-decoration: underline;
+}
+.rpt-section.collapsed .rpt-section-header {
+  border-bottom: none;
+}
 .rpt-section-title {
   font-size: 14px;
   font-weight: 700;

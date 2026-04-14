@@ -37,6 +37,13 @@
 
   <div class="section deleg-section">
     <div class="section-header">
+      <h2>Мои предстоящие отпуска</h2>
+    </div>
+    <div class="deleg-table-wrap" id="myVacationsWrap"></div>
+  </div>
+
+  <div class="section deleg-section">
+    <div class="section-header">
       <h2>Мои делегирования</h2>
       <button class="btn btn-primary btn-sm" onclick="delegState.openCreate()">
         <i class="fas fa-plus"></i> Создать
@@ -103,6 +110,7 @@
   var employees = {{ employees_json|safe }};
   var autoEnabled = {{ auto_delegate_enabled|yesno:"true,false" }};
   var autoDelegateId = '{{ auto_delegate_employee_id|default:"" }}';
+  var myVacations = {{ my_vacations_json|safe }};
   var defaultScopeType = '{{ default_scope_type }}';
   var defaultScopeValue = '{{ default_scope_value }}';
 
@@ -179,6 +187,35 @@
       html += '<td>' + (d.delegator_write ? 'Да' : 'Нет') + '</td>';
       html += '<td>' + formatDateShort(d.created_at) + ' — ' + formatDateShort(d.valid_until) + '</td>';
       html += '<td>' + (d.is_auto ? '<span class="badge badge-auto">Авто</span>' : '<span class="badge badge-manual">Ручное</span>') + '</td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function renderMyVacations(data) {
+    var wrap = document.getElementById('myVacationsWrap');
+    if (!wrap) return;
+    if (!data.length) {
+      wrap.innerHTML = '<p class="deleg-empty">Нет предстоящих отпусков</p>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    var html = '<table class="info-table"><thead><tr>' +
+      '<th>Тип</th><th>Период</th><th>Дней</th><th>Примечания</th><th>Делегирование</th>' +
+      '</tr></thead><tbody>';
+    for (var i = 0; i < data.length; i++) {
+      var v = data[i];
+      var isActive = v.date_start <= today && today <= v.date_end;
+      var cls = isActive ? ' class="deleg-vac-active"' : '';
+      html += '<tr' + cls + '>';
+      html += '<td>' + esc(v.vac_type_display) + '</td>';
+      html += '<td>' + formatDateShort(v.date_start) + ' — ' + formatDateShort(v.date_end) + '</td>';
+      html += '<td>' + v.duration_days + '</td>';
+      html += '<td>' + esc(v.notes || '') + '</td>';
+      html += '<td>' + (v.has_delegation
+        ? '<span class="badge badge-deleg-ok">Настроено</span>'
+        : '<span class="badge badge-deleg-warn">Не настроено</span>') + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table>';
@@ -276,6 +313,7 @@
   var scopeVal = document.getElementById('newScopeValue');
   if (scopeVal) scopeVal.value = defaultScopeValue;
 
+  renderMyVacations(myVacations);
   delegState.loadGiven();
   delegState.loadReceived();
 })();
