@@ -233,7 +233,9 @@
   align-items: center;
   gap: 8px;
 }
-.rpt-section-title i { color: var(--accent); }
+.rpt-section-title i {
+  color: var(--accent);
+}
 .rpt-badge {
   font-size: 11px;
   font-weight: 700;
@@ -265,13 +267,23 @@
   color: var(--muted);
   margin-top: 2px;
 }
-.an-summary-accent { background: #eff6ff; }
-.an-summary-success { background: #f0fdf4; }
-.an-summary-danger { background: #fef2f2; }
-.an-summary-warn { background: #fffbeb; }
+.an-summary-accent {
+  background: #eff6ff;
+}
+.an-summary-success {
+  background: #f0fdf4;
+}
+.an-summary-danger {
+  background: #fef2f2;
+}
+.an-summary-warn {
+  background: #fffbeb;
+}
 
 /* ── Прогресс-бар ──────────────────────────────────────────────────── */
-.rpt-progress { margin-top: 16px; }
+.rpt-progress {
+  margin-top: 16px;
+}
 .rpt-progress-labels {
   display: flex;
   justify-content: space-between;
@@ -286,9 +298,18 @@
   overflow: hidden;
   display: flex;
 }
-.rpt-progress-done { background: #22c55e; height: 100%; }
-.rpt-progress-overdue { background: #ef4444; height: 100%; }
-.rpt-progress-inwork { background: #f59e0b; height: 100%; }
+.rpt-progress-done {
+  background: #22c55e;
+  height: 100%;
+}
+.rpt-progress-overdue {
+  background: #ef4444;
+  height: 100%;
+}
+.rpt-progress-inwork {
+  background: #f59e0b;
+  height: 100%;
+}
 .rpt-progress-legend {
   display: flex;
   gap: 16px;
@@ -307,9 +328,15 @@
   margin-right: 4px;
   vertical-align: middle;
 }
-.rpt-lg-done::before { background: #22c55e; }
-.rpt-lg-overdue::before { background: #ef4444; }
-.rpt-lg-inwork::before { background: #f59e0b; }
+.rpt-lg-done::before {
+  background: #22c55e;
+}
+.rpt-lg-overdue::before {
+  background: #ef4444;
+}
+.rpt-lg-inwork::before {
+  background: #f59e0b;
+}
 
 /* ── Таблица отчёта ────────────────────────────────────────────────── */
 .rpt-tbl {
@@ -334,13 +361,28 @@
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-.rpt-tbl tr:last-child td { border-bottom: none; }
-.rpt-tbl tr:hover td { background: #fafbfd; }
-.rpt-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
-.rpt-tbl .bold { font-weight: 700; }
-.rpt-tbl .muted { color: var(--muted); }
-.rpt-clickable { cursor: pointer; }
-.rpt-clickable:hover td { background: #eff6ff !important; }
+.rpt-tbl tr:last-child td {
+  border-bottom: none;
+}
+.rpt-tbl tr:hover td {
+  background: #fafbfd;
+}
+.rpt-tbl .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rpt-tbl .bold {
+  font-weight: 700;
+}
+.rpt-tbl .muted {
+  color: var(--muted);
+}
+.rpt-clickable {
+  cursor: pointer;
+}
+.rpt-clickable:hover td {
+  background: #eff6ff !important;
+}
 .rpt-total-row td {
   background: var(--surface2) !important;
   font-weight: 700;
@@ -354,7 +396,11 @@
 }
 
 /* ── Прогресс-бар в ячейке ─────────────────────────────────────────── */
-.cell-bar { display: flex; align-items: center; gap: 8px; }
+.cell-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .cell-bar-track {
   flex: 1;
   height: 6px;
@@ -363,10 +409,19 @@
   overflow: hidden;
   min-width: 60px;
 }
-.cell-bar-fill { height: 100%; border-radius: 3px; }
-.cell-bar-fill.green { background: #22c55e; }
-.cell-bar-fill.yellow { background: #f59e0b; }
-.cell-bar-fill.red { background: #ef4444; }
+.cell-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.cell-bar-fill.green {
+  background: #22c55e;
+}
+.cell-bar-fill.yellow {
+  background: #f59e0b;
+}
+.cell-bar-fill.red {
+  background: #ef4444;
+}
 .cell-bar-pct {
   font-size: 12px;
   font-weight: 700;
@@ -386,10 +441,22 @@
   font-weight: 700;
   white-space: nowrap;
 }
-.rpt-status.done { background: #f0fdf4; color: #22c55e; }
-.rpt-status.overdue { background: #fef2f2; color: #ef4444; }
-.rpt-status.inwork { background: #fffbeb; color: #f59e0b; }
-.rpt-status.debt { background: #fef2f2; color: #b91c1c; }
+.rpt-status.done {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+.rpt-status.overdue {
+  background: #fef2f2;
+  color: #ef4444;
+}
+.rpt-status.inwork {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+.rpt-status.debt {
+  background: #fef2f2;
+  color: #b91c1c;
+}
 
 /* ── Карточки долгов ───────────────────────────────────────────────── */
 .rpt-debt-cards {
@@ -403,17 +470,32 @@
   border-radius: var(--radius);
   text-align: center;
 }
-.rpt-debt-card.mild { background: #fffbeb; border: 1px solid #fde68a; }
-.rpt-debt-card.medium { background: #fff7ed; border: 1px solid #fdba74; }
-.rpt-debt-card.severe { background: #fef2f2; border: 1px solid #fca5a5; }
+.rpt-debt-card.mild {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.rpt-debt-card.medium {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+}
+.rpt-debt-card.severe {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+}
 .rpt-debt-val {
   font-size: 28px;
   font-weight: 800;
   line-height: 1;
 }
-.rpt-debt-card.mild .rpt-debt-val { color: #d97706; }
-.rpt-debt-card.medium .rpt-debt-val { color: #ea580c; }
-.rpt-debt-card.severe .rpt-debt-val { color: #dc2626; }
+.rpt-debt-card.mild .rpt-debt-val {
+  color: #d97706;
+}
+.rpt-debt-card.medium .rpt-debt-val {
+  color: #ea580c;
+}
+.rpt-debt-card.severe .rpt-debt-val {
+  color: #dc2626;
+}
 .rpt-debt-label {
   font-size: 11px;
   font-weight: 700;

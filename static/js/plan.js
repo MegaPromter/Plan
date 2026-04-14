@@ -65,9 +65,10 @@ function _spGetStatus(t) {
     const rca = t.report_created_at ? t.report_created_at.slice(0, 10) : '';
     if (rca && selectedMonth && !showAll) {
       // Конец периода: первый день следующего месяца
-      const endM = selectedMonth < 12
-        ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`
-        : `${selectedYear + 1}-01-01`;
+      const endM =
+        selectedMonth < 12
+          ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+          : `${selectedYear + 1}-01-01`;
       if (rca >= endM) return 'inwork'; // отчёт заполнен после периода
     } else if (rca && !selectedMonth && !showAll) {
       // Выбран только год
@@ -872,7 +873,13 @@ async function calcPlanningErrors() {
   });
   // Сортируем по общему количеству ошибок (убывание)
   const deptBreakdown = Object.entries(deptStats)
-    .map(([name, v]) => ({ name, danger: v.danger, debt: v.debt, warn: v.warn, total: v.danger + v.debt + v.warn }))
+    .map(([name, v]) => ({
+      name,
+      danger: v.danger,
+      debt: v.debt,
+      warn: v.warn,
+      total: v.danger + v.debt + v.warn,
+    }))
     .sort((a, b) => b.total - a.total);
 
   // ── 6. Прогноз: дедлайны в ближайшие 7 дней ────────────────────────────

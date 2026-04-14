@@ -480,8 +480,12 @@
     var parts = [];
 
     var role = data.role_info ? data.role_info.role : 'user';
-    var canGoHome = role === 'admin' || role === 'ntc_head' || role === 'ntc_deputy' ||
-      role === 'chief_designer' || role === 'deputy_gd_econ';
+    var canGoHome =
+      role === 'admin' ||
+      role === 'ntc_head' ||
+      role === 'ntc_deputy' ||
+      role === 'chief_designer' ||
+      role === 'deputy_gd_econ';
 
     if (data.view === 'centers') {
       parts.push(
@@ -497,7 +501,8 @@
       if (data.center) {
         parts.push(
           '<span style="font-weight:600;"><i class="fas fa-building" style="margin-right:4px;color:var(--accent);"></i>' +
-            esc(data.center.name || data.center.code) + ' — Отделы</span>',
+            esc(data.center.name || data.center.code) +
+            ' — Отделы</span>',
         );
       } else {
         parts.push(
@@ -665,7 +670,8 @@
       '<div class="an-widget-title" style="padding:20px 20px 0;"><i class="fas fa-sitemap"></i> Центры</div>';
     html += '<div style="overflow-x:auto;padding:0 12px 10px;">';
     html += '<table class="an-list-table"><thead><tr>';
-    html += '<th>Центр</th><th>Название</th><th class="cell-num">Отделов</th><th class="cell-num">Сотрудников</th>';
+    html +=
+      '<th>Центр</th><th>Название</th><th class="cell-num">Отделов</th><th class="cell-num">Сотрудников</th>';
     html +=
       '<th class="cell-num">План (ч)</th><th class="cell-num">Норма (ч)</th><th class="cell-num">Загрузка</th>';
     html += '</tr></thead><tbody>';
@@ -703,10 +709,7 @@
         '<span class="rpt-status overdue">Просрочено' +
         (days ? ' · ' + days + ' дн.' : '') +
         '</span>',
-      debt:
-        '<span class="rpt-status debt">Долг' +
-        (days ? ' · ' + days + ' дн.' : '') +
-        '</span>',
+      debt: '<span class="rpt-status debt">Долг' + (days ? ' · ' + days + ' дн.' : '') + '</span>',
     };
     return map[status] || '';
   }
@@ -759,7 +762,8 @@
       fmtHrs(data.plan_hours || 0) +
       (data.norm_hours ? ' / ' + fmtHrs(data.norm_hours) : '') +
       '</div><div class="an-summary-label">' +
-      (data.norm_hours ? 'План / Норма (ч)' : 'План (часы)') + '</div></div>';
+      (data.norm_hours ? 'План / Норма (ч)' : 'План (часы)') +
+      '</div></div>';
     html += '</div>';
 
     // Прогресс-бар
@@ -768,8 +772,12 @@
     var overdueW = ((data.overdue || 0) / t) * 100;
     var inworkW = ((data.inwork || 0) / t) * 100;
     html += '<div class="rpt-progress">';
-    html += '<div class="rpt-progress-labels"><span>Прогресс выполнения</span><span>' +
-      fmtNum(data.done || 0) + ' / ' + fmtNum(data.total || 0) + '</span></div>';
+    html +=
+      '<div class="rpt-progress-labels"><span>Прогресс выполнения</span><span>' +
+      fmtNum(data.done || 0) +
+      ' / ' +
+      fmtNum(data.total || 0) +
+      '</span></div>';
     html += '<div class="rpt-progress-bar">';
     html += '<div class="rpt-progress-done" style="width:' + doneW + '%"></div>';
     html += '<div class="rpt-progress-overdue" style="width:' + overdueW + '%"></div>';
@@ -787,19 +795,27 @@
   function _rptDebtsBlock(data) {
     if (!data.debts_total) return '';
     var html = '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-exclamation-triangle"></i> Долги из прошлых периодов <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-exclamation-triangle"></i> Долги из прошлых периодов <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge-danger">' + fmtNum(data.debts_total) + ' задач</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
 
     html += '<div class="rpt-debt-cards">';
-    html += '<div class="rpt-debt-card mild"><div class="rpt-debt-val">' +
-      fmtNum(data.debts_1m || 0) + '</div><div class="rpt-debt-label">1 месяц</div></div>';
-    html += '<div class="rpt-debt-card medium"><div class="rpt-debt-val">' +
-      fmtNum(data.debts_2_3m || 0) + '</div><div class="rpt-debt-label">2–3 месяца</div></div>';
-    html += '<div class="rpt-debt-card severe"><div class="rpt-debt-val">' +
-      fmtNum(data.debts_3plus || 0) + '</div><div class="rpt-debt-label">3+ месяцев</div></div>';
+    html +=
+      '<div class="rpt-debt-card mild"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_1m || 0) +
+      '</div><div class="rpt-debt-label">1 месяц</div></div>';
+    html +=
+      '<div class="rpt-debt-card medium"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_2_3m || 0) +
+      '</div><div class="rpt-debt-label">2–3 месяца</div></div>';
+    html +=
+      '<div class="rpt-debt-card severe"><div class="rpt-debt-val">' +
+      fmtNum(data.debts_3plus || 0) +
+      '</div><div class="rpt-debt-label">3+ месяцев</div></div>';
     html += '</div>';
 
     // Группировка по подразделениям (центры/отделы/секторы)
@@ -850,19 +866,22 @@
     if (debts.length > 0 && units.length > 0) {
       // Если есть и группировка, и задачи — сворачиваемый блок
       html += '<div class="rpt-subsection collapsed">';
-      html += '<div class="rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')" style="margin:12px 0 8px;font-size:0.9em">';
-      html += '<i class="fas fa-list"></i> Все задачи (' + (data.debt_tasks_total || debts.length) + ')';
+      html +=
+        '<div class="rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')" style="margin:12px 0 8px;font-size:0.9em">';
+      html +=
+        '<i class="fas fa-list"></i> Все задачи (' + (data.debt_tasks_total || debts.length) + ')';
       html += ' <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
       html += '<div class="rpt-section-body">';
     }
     if (debts.length > 0) {
       html += '<table class="rpt-tbl">';
       html += '<thead><tr><th>Задача</th><th>Проект</th><th>Исполнитель</th><th>Отдел</th>';
-      html += '<th class="num">Плановый срок</th><th class="num">Просрочка</th><th>Глубина</th></tr></thead>';
+      html +=
+        '<th class="num">Плановый срок</th><th class="num">Просрочка</th><th>Глубина</th></tr></thead>';
       html += '<tbody>';
       debts.forEach(function (d) {
-        var depthCls = d.depth === '3plus' ? 'debt' : (d.depth === '2_3m' ? 'debt' : 'overdue');
-        var depthLabel = d.depth === '3plus' ? '3+ мес' : (d.depth === '2_3m' ? '2–3 мес' : '1 мес');
+        var depthCls = d.depth === '3plus' ? 'debt' : d.depth === '2_3m' ? 'debt' : 'overdue';
+        var depthLabel = d.depth === '3plus' ? '3+ мес' : d.depth === '2_3m' ? '2–3 мес' : '1 мес';
         html += '<tr>';
         html += '<td class="bold">' + esc(d.work_name) + '</td>';
         html += '<td>' + esc(d.project_name) + '</td>';
@@ -874,8 +893,10 @@
         html += '</tr>';
       });
       if (data.debt_tasks_total > debts.length) {
-        html += '<tr><td colspan="7" class="rpt-more">... ещё ' +
-          (data.debt_tasks_total - debts.length) + ' задач</td></tr>';
+        html +=
+          '<tr><td colspan="7" class="rpt-more">... ещё ' +
+          (data.debt_tasks_total - debts.length) +
+          ' задач</td></tr>';
       }
       html += '</tbody></table>';
       if (units.length > 0) {
@@ -891,8 +912,10 @@
     var projects = data.projects || [];
     if (!projects.length) return '';
     var html = '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-folder"></i> По проектам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-folder"></i> По проектам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + projects.length + ' проектов</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
@@ -938,9 +961,13 @@
   function _rptUnitTable(items, icon, nameKey, drillFn) {
     if (!items.length) return '';
     var html = '<table class="rpt-tbl">';
-    html += '<thead><tr><th>' + icon + '</th><th class="num">Сотр.</th><th class="num">Задач</th><th class="num">Выполнено</th>';
+    html +=
+      '<thead><tr><th>' +
+      icon +
+      '</th><th class="num">Сотр.</th><th class="num">Задач</th><th class="num">Выполнено</th>';
     html += '<th class="num">Просрочено</th><th class="num">Долги</th>';
-    html += '<th class="num">План (ч)</th><th class="num">Норма (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
+    html +=
+      '<th class="num">План (ч)</th><th class="num">Норма (ч)</th><th style="min-width:140px">Выполнение</th></tr></thead>';
     html += '<tbody>';
     var totals = { emps: 0, total: 0, done: 0, overdue: 0, debts: 0, hours: 0, norm: 0 };
     items.forEach(function (item) {
@@ -966,7 +993,7 @@
       html += '<td>' + _rptCompletionBar(pct) + '</td>';
       html += '</tr>';
     });
-    var totalPct = totals.total > 0 ? Math.round(totals.done / totals.total * 1000) / 10 : 0;
+    var totalPct = totals.total > 0 ? Math.round((totals.done / totals.total) * 1000) / 10 : 0;
     html += '<tr class="rpt-total-row">';
     html += '<td class="bold">Итого</td>';
     html += '<td class="num bold">' + fmtNum(totals.emps) + '</td>';
@@ -1006,8 +1033,10 @@
     var html = _rptSummaryCards(data);
 
     html += '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-city"></i> По центрам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-city"></i> По центрам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + centers.length + ' центров</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
@@ -1029,7 +1058,9 @@
     var loadCls = loadBadgeCls(load);
     var colorMap = { ok: 'an-val-green', warn: 'an-val-yellow', over: 'an-val-red' };
     var totalEmps = 0;
-    centers.forEach(function (c) { totalEmps += (c.employee_count || 0); });
+    centers.forEach(function (c) {
+      totalEmps += c.employee_count || 0;
+    });
 
     var html = '<div class="an-summary">';
     html +=
@@ -1389,15 +1420,18 @@
   function renderAllDeptsTables(el, data) {
     var depts = data.depts || [];
     if (!depts.length) {
-      el.innerHTML = '<div class="an-empty"><i class="fas fa-building"></i>Нет данных по отделам</div>';
+      el.innerHTML =
+        '<div class="an-empty"><i class="fas fa-building"></i>Нет данных по отделам</div>';
       return;
     }
 
     var html = _rptSummaryCards(data);
 
     html += '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-building"></i> По отделам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-building"></i> По отделам <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + depts.length + ' отделов</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
@@ -1419,9 +1453,12 @@
     var html = _rptSummaryCards(data);
 
     html += '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-layer-group"></i> ' +
-      esc(deptName) + ' — Секторы <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-layer-group"></i> ' +
+      esc(deptName) +
+      ' — Секторы <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + sectors.length + ' секторов</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
@@ -1448,8 +1485,12 @@
     var html = _rptSummaryCards(data);
 
     html += '<div class="rpt-section collapsed">';
-    html += '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="rpt-section-title"><i class="fas fa-users"></i> ' + esc(title) + ' <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
+    html +=
+      '<div class="rpt-section-header rpt-collapsible" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-users"></i> ' +
+      esc(title) +
+      ' <i class="fas fa-chevron-down rpt-collapse-icon"></i></div>';
     html += '<span class="rpt-badge">' + employees.length + ' сотрудников</span>';
     html += '</div>';
     html += '<div class="rpt-section-body">';
@@ -1477,8 +1518,10 @@
     // Таблица задач
     html += '<div class="rpt-section">';
     html += '<div class="rpt-section-header">';
-    html += '<div class="rpt-section-title"><i class="fas fa-tasks"></i> Задачи' +
-      (emp.name ? ': ' + esc(emp.name) : '') + '</div>';
+    html +=
+      '<div class="rpt-section-title"><i class="fas fa-tasks"></i> Задачи' +
+      (emp.name ? ': ' + esc(emp.name) : '') +
+      '</div>';
     html += '<span class="rpt-badge">' + tasks.length + ' задач</span>';
     html += '</div>';
 
@@ -2092,8 +2135,12 @@
       { key: 'plan_hours', header: 'План (ч)', width: 100 },
       { key: 'norm_hours', header: 'Норма (ч)', width: 100 },
       {
-        key: 'completion_pct', header: 'Выполнение (%)', width: 100,
-        format: function (r) { return (r.completion_pct || 0).toFixed(1); },
+        key: 'completion_pct',
+        header: 'Выполнение (%)',
+        width: 100,
+        format: function (r) {
+          return (r.completion_pct || 0).toFixed(1);
+        },
       },
     ];
   }
@@ -2145,7 +2192,8 @@
     if (years.length) parts.push('Период: ' + years.join(', '));
     if (data.center) parts.push('Центр: ' + (data.center.name || data.center.code));
     if (data.dept) parts.push('Отдел: ' + (data.dept.name || data.dept.code));
-    if (data.sector) parts.push('Сектор: ' + (data.sector.name || data.sector.code || data.sector.id));
+    if (data.sector)
+      parts.push('Сектор: ' + (data.sector.name || data.sector.code || data.sector.id));
     if (data.employee) parts.push('Сотрудник: ' + (data.employee.name || ''));
     return parts;
   }
