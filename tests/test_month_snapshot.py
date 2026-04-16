@@ -221,6 +221,98 @@ class TestDebtPriority:
 
 
 class TestHistoricalSnapshot:
+    def test_future_deadline_in_current_month_is_inwork(
+        self, admin_user, dept, monkeypatch
+    ):
+        """
+        Текущий месяц ещё не закончился: задача с дедлайном в будущем
+        (после сегодня, но в этом же месяце) должна быть «в работе»,
+        а не «просрочена».
+        """
+        # Фиксируем «сегодня» = 10 марта 2026 (середина месяца)
+        import apps.api.views.month_snapshot as ms
+
+        class _FakeTZ:
+            @staticmethod
+            def now():
+                return datetime(2026, 3, 10, 12, 0, tzinfo=timezone.utc)
+
+        monkeypatch.setattr(ms, "timezone", _FakeTZ)
+
+        # Дедлайн 25 марта — в будущем относительно 10 марта
+        Work.objects.create(
+            work_name="future-in-month",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 25),
+            plan_hours={"2026-03": 40},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        assert data["month_tasks"]["inwork"] == 1
+        assert data["month_tasks"]["overdue"] == 0
+
+    def test_past_deadline_in_current_month_is_overdue(
+        self, admin_user, dept, monkeypatch
+    ):
+        """
+        Текущий месяц: дедлайн в прошлом (до сегодня) и отчёта нет →
+        «просрочено». Это проверка, что фикс не сломал базовое поведение.
+        """
+        import apps.api.views.month_snapshot as ms
+
+        class _FakeTZ:
+            @staticmethod
+            def now():
+                return datetime(2026, 3, 20, 12, 0, tzinfo=timezone.utc)
+
+        monkeypatch.setattr(ms, "timezone", _FakeTZ)
+
+        Work.objects.create(
+            work_name="past-in-month",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 10),
+            plan_hours={"2026-03": 40},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        assert data["month_tasks"]["overdue"] == 1
+        assert data["month_tasks"]["inwork"] == 0
+
+    def test_past_month_all_overdue_regardless_of_today(
+        self, admin_user, dept, monkeypatch
+    ):
+        """
+        Прошедший месяц: сегодня уже в апреле, смотрим снимок марта.
+        Все мартовские задачи без отчёта — «просрочено», today не важна.
+        """
+        import apps.api.views.month_snapshot as ms
+
+        class _FakeTZ:
+            @staticmethod
+            def now():
+                return datetime(2026, 4, 16, 12, 0, tzinfo=timezone.utc)
+
+        monkeypatch.setattr(ms, "timezone", _FakeTZ)
+
+        Work.objects.create(
+            work_name="march-no-report",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 28),
+            plan_hours={"2026-03": 40},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        assert data["month_tasks"]["overdue"] == 1
+
     def test_report_in_april_stays_overdue_in_march(self, admin_user, dept):
         """
         Задача с дедлайном в марте, отчёт сдан в апреле.

@@ -18,8 +18,9 @@ GET /api/analytics/month_snapshot/
   • Задача месяца — has_plan_in(M) = True И is_debt = False.
   • done                  — дедлайн ∈ M, отчёт сдан в M.
   • done_early            — дедлайн > M_end, отчёт сдан в M.
-  • overdue               — дедлайн ∈ M, отчёта в M нет.
-  • inwork                — дедлайн > M_end, отчёта в M нет.
+  • overdue               — дедлайн ∈ M и УЖЕ наступил (дедлайн ≤ today), отчёта в M нет.
+    Для прошедших месяцев today не применяется — весь месяц считается прошедшим.
+  • inwork                — дедлайн > today (ещё не наступил) ИЛИ дедлайн > M_end, отчёта в M нет.
   • debt_closed           — долг, отчёт сдан в M.
   • debt_hanging          — долг, отчёта в M нет.
 """
@@ -27,6 +28,7 @@ GET /api/analytics/month_snapshot/
 from datetime import date
 
 from django.db.models import Exists, OuterRef, Q, Subquery
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -82,7 +84,7 @@ def _as_date(value):
     return value
 
 
-def _classify(work, year, month, m_start, m_end):
+def _classify(work, year, month, m_start, m_end, today):
     """
     Возвращает код статуса для задачи в снимке месяца (year, month).
 
@@ -117,7 +119,13 @@ def _classify(work, year, month, m_start, m_end):
 
     if deadline and m_start <= deadline < m_end:
         # Дедлайн в этом месяце
-        return "done" if reported_in_month else "overdue"
+        if reported_in_month:
+            return "done"
+        # Для текущего (ещё не завершённого) месяца — «просрочено» только если
+        # дедлайн уже наступил. Если срок впереди — задача «в работе».
+        if today < m_end and deadline > today:
+            return "inwork"
+        return "overdue"
 
     if deadline and deadline >= m_end:
         # Дедлайн позже месяца
@@ -145,6 +153,9 @@ class MonthSnapshotView(APIView):
             )
         year, month = parsed
         m_start, m_end = _month_bounds(year, month)
+        # Сегодняшняя дата нужна, чтобы в ТЕКУЩЕМ месяце не записывать в
+        # «просрочено» задачи с ещё не наступившим дедлайном.
+        today = timezone.now().date()
 
         dept_code = (request.GET.get("dept") or "").strip()
         sector_id = request.GET.get("sector_id")
@@ -212,7 +223,7 @@ class MonthSnapshotView(APIView):
         task_ids_by_bucket = {k: [] for k in buckets}
 
         for w in qs:
-            code = _classify(w, year, month, m_start, m_end)
+            code = _classify(w, year, month, m_start, m_end, today)
             if code is None:
                 continue
             buckets[code] += 1
