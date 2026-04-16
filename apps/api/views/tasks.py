@@ -249,6 +249,19 @@ class TaskListView(APIView):
                         if sel_start <= today
                         else Q()
                     )
+                    # Долги, закрытые в выбранном месяце: дедлайн был до месяца,
+                    # но отчёт сдан именно в этом месяце. Нужно, чтобы клик по
+                    # «Закрыто в этом месяце» в снимке показывал те же задачи.
+                    | (
+                        Q(date_end__lt=sel_start)
+                        & Exists(
+                            WorkReport.objects.filter(
+                                work_id=OuterRef("pk"),
+                                created_at__gte=sel_start,
+                                created_at__lt=sel_end,
+                            )
+                        )
+                    )
                 )
                 # Исключить задачи с отчётом, заполненным до начала выбранного месяца
                 qs = qs.exclude(
