@@ -4,7 +4,7 @@
 
 /* ── Hero ─────────────────────────────────────────────────────── */
 .dash-hero {
-  background: linear-gradient(135deg, var(--nav-bg, #1a2744) 0%, var(--accent, #2563eb) 100%);
+  background: linear-gradient(135deg, #0f1a30 0%, var(--accent, #2563eb) 50%, #1e3a5f 100%);
   border-radius: var(--radius-lg);
   padding: 28px 28px;
   color: #fff;
@@ -20,6 +20,17 @@
   width: 400px;
   height: 400px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.dash-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -53,6 +64,10 @@
 .dash-section-title i {
   color: var(--accent);
   font-size: 14px;
+  transition: transform 0.2s ease;
+}
+.dash-section-title:hover i {
+  transform: scale(1.15);
 }
 .dash-section-title .dash-toggle {
   color: var(--muted);
@@ -116,6 +131,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
+}
+.dash-kpi > * {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.dash-kpi > *:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── Таблица команды (compact) ──────────────────────────────── */
@@ -224,6 +246,8 @@
 }
 .dash-dept-header:hover {
   background: var(--row-hover);
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
 }
 .dash-dept-toggle {
   font-size: 10px;
@@ -437,6 +461,14 @@
   padding: 0;
   transition: all 0.3s ease;
   position: relative;
+  box-shadow: var(--shadow-sm);
+  animation: dashFadeIn 0.4s ease-out backwards;
+}
+.dash-widget:hover {
+  box-shadow: var(--shadow-md);
+}
+.customize-mode .dash-widget:hover {
+  box-shadow: none;
 }
 .dash-widget.widget-hidden {
   display: none;
@@ -579,7 +611,7 @@
 /* ── Sparklines (мини-графики в KPI) ──────────────────────────── */
 .dash-sparkline {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 /* ── Delta (сравнение с предыдущим месяцем) ───────────────────── */
@@ -684,3 +716,15 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Анимация появления виджетов ─────────────────────────────── */
+@keyframes dashFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dash-widget:nth-child(1) { animation-delay: 0s; }
+.dash-widget:nth-child(2) { animation-delay: 0.08s; }
+.dash-widget:nth-child(3) { animation-delay: 0.16s; }
+.dash-widget:nth-child(4) { animation-delay: 0.24s; }
+.dash-widget:nth-child(5) { animation-delay: 0.32s; }
+.dash-widget:nth-child(6) { animation-delay: 0.4s; }

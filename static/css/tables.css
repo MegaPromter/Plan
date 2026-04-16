@@ -72,6 +72,7 @@
   text-align: center;
   line-height: var(--td-lh);
   font-size: var(--td-font);
+  background-clip: padding-box;
 }
 
 /* Чередование строк */
