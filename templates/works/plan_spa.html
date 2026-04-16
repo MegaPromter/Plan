@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'23' }}">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'24' }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -30,6 +30,73 @@
 {% endblock %}
 
 {% block content %}
+<!-- ══ Снимок месяца ═════════════════════════════════════════════════ -->
+<section class="snapshot" id="monthSnapshot" aria-label="Снимок месяца">
+  <header class="snapshot__header" onclick="toggleSnapshot()">
+    <div class="snapshot__title">
+      <span class="snapshot__chevron" aria-hidden="true">▾</span>
+      <span>Снимок месяца</span>
+      <span class="snapshot__month" id="snapMonthLabel">—</span>
+    </div>
+    <div class="snapshot__summary-inline" id="snapSummaryInline">
+      <span class="snap-inline snap-inline--month">План: <b id="snapInlineMonth">—</b></span>
+      <span class="snap-inline snap-inline--debt">Долги: <b id="snapInlineDebt">—</b></span>
+    </div>
+  </header>
+  <div class="snapshot__body">
+    <!-- Задачи месяца -->
+    <div class="snap-group snap-group--month">
+      <div class="snap-group__head">
+        <span class="snap-group__title">Задачи месяца</span>
+        <span class="snap-group__total" id="snapMonthTotal">0</span>
+      </div>
+      <div class="snap-row snap-row--done" data-bucket="done">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">Выполнено в срок</span>
+        <span class="snap-row__count" id="snapDone">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDoneBar" style="width:0%"></span></span>
+      </div>
+      <div class="snap-row snap-row--early" data-bucket="done_early">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">С опережением</span>
+        <span class="snap-row__count" id="snapEarly">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapEarlyBar" style="width:0%"></span></span>
+      </div>
+      <div class="snap-row snap-row--overdue" data-bucket="overdue">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">Просрочено</span>
+        <span class="snap-row__count" id="snapOverdue">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapOverdueBar" style="width:0%"></span></span>
+      </div>
+      <div class="snap-row snap-row--inwork" data-bucket="inwork">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">В работе</span>
+        <span class="snap-row__count" id="snapInwork">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapInworkBar" style="width:0%"></span></span>
+      </div>
+    </div>
+    <!-- Долги -->
+    <div class="snap-group snap-group--debt">
+      <div class="snap-group__head">
+        <span class="snap-group__title">Долги</span>
+        <span class="snap-group__total" id="snapDebtTotal">0</span>
+      </div>
+      <div class="snap-row snap-row--debt-closed" data-bucket="debt_closed">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">Закрыто в этом месяце</span>
+        <span class="snap-row__count" id="snapDebtClosed">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtClosedBar" style="width:0%"></span></span>
+      </div>
+      <div class="snap-row snap-row--debt-hanging" data-bucket="debt_hanging">
+        <span class="snap-row__dot" aria-hidden="true"></span>
+        <span class="snap-row__label">Долги</span>
+        <span class="snap-row__count" id="snapDebtHanging">0</span>
+        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtHangingBar" style="width:0%"></span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
 <div class="toolbar" id="toolbar">
   <!-- 1. Панель периода -->
@@ -575,7 +642,7 @@
   "deptCodes": {{ dept_codes_json|safe }}
 }</script>
 <script src="{% static 'js/gantt_common.js' %}?v={{ v|default:'2' }}"></script>
-<script src="{% static 'js/plan.js' %}?v={{ v|default:'39' }}"></script>
+<script src="{% static 'js/plan.js' %}?v={{ v|default:'40' }}"></script>
 <script>
 // Гарантийная калибровка sticky top для multi-row thead
 // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),

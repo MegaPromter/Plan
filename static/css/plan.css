@@ -2202,3 +2202,267 @@ button.mf-trigger.mf-icon::after {
 }
 
 /* Подсветка появившихся столбцов (анимация в production_plan.css) */
+
+/* ═══════════════════════════════════════════════════════════════════
+   Снимок месяца — сворачиваемый блок над тулбаром
+   ═══════════════════════════════════════════════════════════════════ */
+.snapshot {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin: 0 0 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.snapshot__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.snapshot__header:hover {
+  background: var(--accent-light);
+}
+.snapshot__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.snapshot__chevron {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.snapshot.is-open .snapshot__chevron {
+  transform: rotate(180deg);
+}
+.snapshot__context {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+.snapshot__summary-inline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.snapshot__summary-inline b {
+  color: var(--text);
+  font-weight: 600;
+}
+.snapshot.is-open .snapshot__summary-inline {
+  display: none;
+}
+.snapshot__body {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  border-top: 1px solid var(--border);
+  max-height: 500px;
+  transition: max-height 0.25s ease;
+}
+.snapshot:not(.is-open) .snapshot__body {
+  max-height: 0;
+  border-top-color: transparent;
+  overflow: hidden;
+}
+.snap-group {
+  padding: 16px 18px;
+}
+.snap-group + .snap-group {
+  border-left: 1px solid var(--border);
+}
+.snap-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.snap-group__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.snap-group__total {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+.snap-group__total small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.snap-row {
+  display: grid;
+  grid-template-columns: 20px 1fr 44px 110px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.snap-row:hover {
+  background: var(--accent-light);
+}
+.snap-row.is-linked {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.snap-row__icon {
+  font-size: 13px;
+  text-align: center;
+}
+.snap-row__label {
+  font-size: 12px;
+  color: var(--text);
+}
+.snap-row__count {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--text);
+}
+.snap-row__bar {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.snap-row__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.snap-row--done .snap-row__icon,
+.snap-row--debt-closed .snap-row__icon {
+  color: var(--success);
+}
+.snap-row--done .snap-row__bar-fill,
+.snap-row--debt-closed .snap-row__bar-fill {
+  background: var(--success);
+}
+.snap-row--early .snap-row__icon {
+  color: var(--purple);
+}
+.snap-row--early .snap-row__bar-fill {
+  background: var(--purple);
+}
+.snap-row--overdue .snap-row__icon {
+  color: var(--danger);
+}
+.snap-row--overdue .snap-row__bar-fill {
+  background: var(--danger);
+}
+.snap-row--inwork .snap-row__icon {
+  color: var(--info);
+}
+.snap-row--inwork .snap-row__bar-fill {
+  background: var(--info);
+}
+.snap-row--debt-hanging .snap-row__icon {
+  color: var(--warning);
+}
+.snap-row--debt-hanging .snap-row__bar-fill {
+  background: var(--warning);
+}
+.snap-summary {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border2);
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.snap-summary__label {
+  color: var(--muted);
+}
+.snap-summary__value {
+  font-weight: 600;
+  color: var(--text);
+}
+.snap-summary__value b {
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Бейджи статусов в ячейке «Окончание» (СП)
+   ═══════════════════════════════════════════════════════════════════ */
+.deadline-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.2;
+}
+.deadline-cell__date {
+  font-size: inherit;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.2px;
+  width: fit-content;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.status-badge--done {
+  background: rgba(var(--success-rgb), 0.12);
+  color: var(--success);
+  border-color: rgba(var(--success-rgb), 0.22);
+}
+.status-badge--overdue {
+  background: rgba(var(--danger-rgb), 0.12);
+  color: var(--danger);
+  border-color: rgba(var(--danger-rgb), 0.22);
+}
+.status-badge--inwork {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--info);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+.status-badge--early {
+  background: rgba(168, 85, 247, 0.12);
+  color: var(--purple);
+  border-color: rgba(168, 85, 247, 0.22);
+}
+.status-badge--hanging {
+  background: rgba(var(--warning-rgb), 0.14);
+  color: var(--warning);
+  border-color: rgba(var(--warning-rgb), 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Цветные полосы строк таблицы (по категории снимка)
+   ═══════════════════════════════════════════════════════════════════ */
+#mainTable tbody tr.row-month td:first-child {
+  box-shadow: inset 3px 0 0 var(--success);
+}
+#mainTable tbody tr.row-debt td:first-child {
+  box-shadow: inset 3px 0 0 var(--warning);
+}

@@ -52,6 +52,33 @@ let _spCalCache = {}; // {year: [{month, hours_norm, ...}]}
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _spStatusFilter = 'all';
 
+/* ── Снимок месяца: разворачивание/сворачивание ─────────────────────── */
+/**
+ * Переключает видимость блока снимка месяца.
+ * Состояние сохраняется в localStorage.
+ */
+function toggleSnapshot() {
+  const el = document.getElementById('monthSnapshot');
+  if (!el) return;
+  el.classList.toggle('is-open');
+  try {
+    localStorage.setItem('sp_snapshot_open', el.classList.contains('is-open') ? '1' : '0');
+  } catch (e) {
+    /* ignore quota */
+  }
+}
+
+// Восстановление состояния снимка при загрузке страницы
+document.addEventListener('DOMContentLoaded', function () {
+  const el = document.getElementById('monthSnapshot');
+  if (!el) return;
+  const saved = localStorage.getItem('sp_snapshot_open');
+  // По умолчанию — развёрнут
+  if (saved === null || saved === '1') {
+    el.classList.add('is-open');
+  }
+});
+
 /* ── Статус-панель (прогресс-бар + фильтры) для СП ───────────────────── */
 /**
  * Определяет статус задачи для панели фильтров.
