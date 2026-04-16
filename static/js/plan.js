@@ -278,12 +278,27 @@ function renderMonthSnapshot(data) {
 function _applySnapshotRowMarkers() {
   const body = document.getElementById('taskBody');
   if (!body) return;
+  const snapActive = selectedMonth && !showAll;
   body.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = parseInt(tr.dataset.id);
     tr.classList.remove('row-month', 'row-debt');
     const b = _snapBucketOf(id);
     if (b === 'debt_closed' || b === 'debt_hanging') tr.classList.add('row-debt');
     else if (b) tr.classList.add('row-month');
+
+    // Если снимок активен — перекрашиваем row-done/overdue/inwork строго по корзине,
+    // чтобы цвет строки и цифра в чипе/снимке совпадали.
+    if (snapActive && b) {
+      tr.classList.remove('row-done', 'row-overdue', 'row-inwork');
+      if (b === 'done' || b === 'done_early' || b === 'debt_closed') {
+        tr.classList.add('row-done');
+      } else if (b === 'overdue' || b === 'debt_hanging') {
+        tr.classList.add('row-overdue');
+      } else {
+        tr.classList.add('row-inwork');
+      }
+    }
+
     // Обновляем бейдж в ячейке «Окончание»
     const badge = tr.querySelector('.status-badge[data-role="snap-badge"]');
     if (badge) _fillSnapBadge(badge, b);
@@ -2700,14 +2715,29 @@ function makeRow(t, num) {
   const tr = document.createElement('tr');
   tr.dataset.id = t.id;
   tr.dataset.draggable = 'true';
-  // Подсветка строки по статусу
-  const _st = _spGetStatus(t);
-  if (_st === 'done') tr.classList.add('row-done');
-  else if (_st === 'overdue') tr.classList.add('row-overdue');
-  else tr.classList.add('row-inwork');
-  // Полоса-маркер слева: задача месяца (зелёная) или долг (оранжевая).
-  // Корзины заполнены ответом /api/analytics/month_snapshot/.
+  // Подсветка строки по статусу.
+  // Если снимок месяца активен (выбран ровно один месяц) — используем
+  // его корзину как единый источник правды. Иначе — fallback на _spGetStatus
+  // (режим «весь год» / «все месяцы»: снимка нет, считаем по has_reports+дедлайну).
   const _snapBucket = _snapBucketOf(t.id);
+  if (selectedMonth && !showAll && _snapBucket) {
+    // Раскраска строго по корзине снимка
+    if (_snapBucket === 'done' || _snapBucket === 'done_early' || _snapBucket === 'debt_closed') {
+      tr.classList.add('row-done');
+    } else if (_snapBucket === 'overdue' || _snapBucket === 'debt_hanging') {
+      tr.classList.add('row-overdue');
+    } else {
+      // inwork
+      tr.classList.add('row-inwork');
+    }
+  } else {
+    // Fallback: нет снимка — старая 3-статусная логика
+    const _st = _spGetStatus(t);
+    if (_st === 'done') tr.classList.add('row-done');
+    else if (_st === 'overdue') tr.classList.add('row-overdue');
+    else tr.classList.add('row-inwork');
+  }
+  // Полоса-маркер слева: задача месяца (зелёная) или долг (оранжевая).
   if (_snapBucket === 'debt_closed' || _snapBucket === 'debt_hanging') {
     tr.classList.add('row-debt');
   } else if (_snapBucket) {
