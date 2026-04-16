@@ -52,7 +52,23 @@ let _spCalCache = {}; // {year: [{month, hours_norm, ...}]}
 // Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
 let _spStatusFilter = 'all';
 
-/* ── Снимок месяца: разворачивание/сворачивание ─────────────────────── */
+/* ── Снимок месяца: API + рендер ─────────────────────────────────────── */
+
+// ID задач, распределённых по корзинам снимка месяца.
+// Заполняется ответом /api/analytics/month_snapshot/, используется
+// для drill-down (полосы строк + фильтр-чипы).
+let _snapTaskIds = {
+  done: new Set(),
+  done_early: new Set(),
+  overdue: new Set(),
+  inwork: new Set(),
+  debt_closed: new Set(),
+  debt_hanging: new Set(),
+};
+
+// Последний загруженный месяц в формате YYYY-MM (чтобы избежать повторных запросов)
+let _snapLastMonth = null;
+
 /**
  * Переключает видимость блока снимка месяца.
  * Состояние сохраняется в localStorage.
@@ -78,6 +94,148 @@ document.addEventListener('DOMContentLoaded', function () {
     el.classList.add('is-open');
   }
 });
+
+/**
+ * Подгружает снимок месяца и отрисовывает блок.
+ * Если месяц не выбран или showAll — прячет блок.
+ */
+async function loadMonthSnapshot() {
+  const el = document.getElementById('monthSnapshot');
+  if (!el) return;
+
+  // Снимок — только для конкретного месяца
+  if (!selectedMonth || showAll) {
+    el.style.display = 'none';
+    _snapLastMonth = null;
+    _snapClearIds();
+    return;
+  }
+  el.style.display = '';
+
+  const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+  // При выборе ровно одного отдела — пробрасываем его в снимок.
+  // При нескольких отделах — без фильтра (см. ограничение API).
+  let deptCode = '';
+  if (spSelectedDepts && spSelectedDepts.size === 1) {
+    deptCode = [...spSelectedDepts][0];
+  }
+
+  let url = `/api/analytics/month_snapshot/?month=${monthKey}`;
+  if (deptCode) url += `&dept=${encodeURIComponent(deptCode)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn('month_snapshot HTTP', res.status);
+      return;
+    }
+    const data = await res.json();
+    _snapLastMonth = monthKey;
+    renderMonthSnapshot(data);
+  } catch (e) {
+    console.error('loadMonthSnapshot error:', e);
+  }
+}
+
+function _snapClearIds() {
+  for (const k of Object.keys(_snapTaskIds)) _snapTaskIds[k] = new Set();
+}
+
+/**
+ * Заполняет блок снимка данными из /api/analytics/month_snapshot/.
+ * @param {Object} data
+ */
+function renderMonthSnapshot(data) {
+  const setText = (id, v) => {
+    const e = document.getElementById(id);
+    if (e) e.textContent = v;
+  };
+  const setBar = (id, pct) => {
+    const e = document.getElementById(id);
+    if (e) e.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  };
+
+  // Заголовок — «Март 2026»
+  const months = [
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+  ];
+  const [yStr, mStr] = (data.month || '').split('-');
+  const y = parseInt(yStr), m = parseInt(mStr);
+  setText('snapMonthLabel', isNaN(m) ? '—' : `${months[m - 1]} ${y}`);
+
+  const mt = data.month_tasks || {};
+  const d = data.debts || {};
+
+  setText('snapMonthTotal', mt.total || 0);
+  setText('snapDone', mt.done || 0);
+  setText('snapEarly', mt.done_early || 0);
+  setText('snapOverdue', mt.overdue || 0);
+  setText('snapInwork', mt.inwork || 0);
+
+  setBar('snapDoneBar', mt.done_pct || 0);
+  setBar('snapEarlyBar', mt.done_early_pct || 0);
+  setBar('snapOverdueBar', mt.overdue_pct || 0);
+  setBar('snapInworkBar', mt.inwork_pct || 0);
+
+  setText('snapDebtTotal', d.total || 0);
+  setText('snapDebtClosed', d.closed || 0);
+  setText('snapDebtHanging', d.hanging || 0);
+  setBar('snapDebtClosedBar', d.closed_pct || 0);
+  setBar('snapDebtHangingBar', d.hanging_pct || 0);
+
+  // Свёрнутое состояние — показываем короткую сводку
+  const closed = mt.closed || 0;
+  const total = mt.total || 0;
+  setText('snapInlineMonth', total ? `${closed}/${total}` : '0');
+  setText('snapInlineDebt', d.total ? `${d.closed}/${d.total}` : '0');
+
+  // Заполняем наборы ID для drill-down
+  const ids = mt.task_ids || {};
+  const dIds = d.task_ids || {};
+  _snapTaskIds.done = new Set(ids.done || []);
+  _snapTaskIds.done_early = new Set(ids.done_early || []);
+  _snapTaskIds.overdue = new Set(ids.overdue || []);
+  _snapTaskIds.inwork = new Set(ids.inwork || []);
+  _snapTaskIds.debt_closed = new Set(dIds.closed || []);
+  _snapTaskIds.debt_hanging = new Set(dIds.hanging || []);
+
+  // Применяем цветные полосы к уже отрисованным строкам таблицы,
+  // не пересоздавая их целиком (чтобы не дёргать DOM лишний раз).
+  _applySnapshotRowMarkers();
+}
+
+/**
+ * Добавляет/удаляет классы row-month / row-debt у существующих строк
+ * таблицы после обновления _snapTaskIds. Дёшево — только classList.
+ */
+function _applySnapshotRowMarkers() {
+  const body = document.getElementById('taskBody');
+  if (!body) return;
+  body.querySelectorAll('tr[data-id]').forEach((tr) => {
+    const id = parseInt(tr.dataset.id);
+    tr.classList.remove('row-month', 'row-debt');
+    const b = _snapBucketOf(id);
+    if (b === 'debt_closed' || b === 'debt_hanging') tr.classList.add('row-debt');
+    else if (b) tr.classList.add('row-month');
+  });
+}
+
+/**
+ * Возвращает код корзины снимка для конкретной задачи, либо null.
+ * Используется для отрисовки цветных полос строк и бейджей.
+ * @param {number} taskId
+ * @returns {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|null}
+ */
+function _snapBucketOf(taskId) {
+  if (_snapTaskIds.done.has(taskId)) return 'done';
+  if (_snapTaskIds.done_early.has(taskId)) return 'done_early';
+  if (_snapTaskIds.overdue.has(taskId)) return 'overdue';
+  if (_snapTaskIds.inwork.has(taskId)) return 'inwork';
+  if (_snapTaskIds.debt_closed.has(taskId)) return 'debt_closed';
+  if (_snapTaskIds.debt_hanging.has(taskId)) return 'debt_hanging';
+  return null;
+}
 
 /* ── Статус-панель (прогресс-бар + фильтры) для СП ───────────────────── */
 /**
@@ -634,6 +792,9 @@ async function loadTasks() {
     initDeptChips();
     initMfTriggers();
     renderTable();
+
+    // Снимок месяца — параллельно, не блокирует рендер таблицы
+    loadMonthSnapshot();
 
     // Дозагрузка в фоне если есть ещё
     var hasMore = res.headers.get('X-Has-More') === 'true';
@@ -2409,6 +2570,14 @@ function makeRow(t, num) {
   if (_st === 'done') tr.classList.add('row-done');
   else if (_st === 'overdue') tr.classList.add('row-overdue');
   else tr.classList.add('row-inwork');
+  // Полоса-маркер слева: задача месяца (зелёная) или долг (оранжевая).
+  // Корзины заполнены ответом /api/analytics/month_snapshot/.
+  const _snapBucket = _snapBucketOf(t.id);
+  if (_snapBucket === 'debt_closed' || _snapBucket === 'debt_hanging') {
+    tr.classList.add('row-debt');
+  } else if (_snapBucket) {
+    tr.classList.add('row-month');
+  }
   // Флаг: задача перенесена из Производственного плана
   const isFromPP = !!t.from_pp;
   if (isFromPP) tr.classList.add('pp-locked');
