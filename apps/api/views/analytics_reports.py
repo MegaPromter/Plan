@@ -984,7 +984,14 @@ class ReportsAnalyticsView(APIView):
                 "debts_by_units": debts_units,
                 "debts_group": "sector",
                 **total_metrics,
-                **self._nav_context(works, role_info, emp, years, show_sectors=True),
+                **self._nav_context(
+                    works,
+                    role_info,
+                    emp,
+                    years,
+                    show_sectors=True,
+                    current_dept_code=dept_code,
+                ),
             }
         )
 
@@ -1068,7 +1075,16 @@ class ReportsAnalyticsView(APIView):
                 "sector": {"id": sector_id, "name": sector_name},
                 "employees": employees_data,
                 **total_metrics,
-                **self._nav_context(works, role_info, emp, years),
+                **self._nav_context(
+                    works,
+                    role_info,
+                    emp,
+                    years,
+                    show_sectors=True,
+                    current_dept_code=(
+                        sector.department.code if sector and sector.department else None
+                    ),
+                ),
             }
         )
 
@@ -1135,7 +1151,9 @@ class ReportsAnalyticsView(APIView):
 
     # ── Навигация (фильтр-чипы) ────────────────────────────────────────
 
-    def _nav_context(self, works, role_info, emp, years, show_sectors=False):
+    def _nav_context(
+        self, works, role_info, emp, years, show_sectors=False, current_dept_code=None
+    ):
         nav = {}
         role = role_info["role"]
 
@@ -1169,11 +1187,15 @@ class ReportsAnalyticsView(APIView):
         if show_sectors or role in ("dept_head", "dept_deputy"):
             # dept_head/dept_deputy → только секторы своего отдела
             own_dept_code = emp.department.code if emp and emp.department else None
+            # При drill-down в конкретный отдел — сектора только этого отдела
+            restrict_dept = current_dept_code
+            if role in ("dept_head", "dept_deputy") and own_dept_code:
+                restrict_dept = own_dept_code
             sectors_set = {}
             for w in works:
                 if w.sector_id and w.sector:
-                    if role in ("dept_head", "dept_deputy") and own_dept_code:
-                        if not w.department or w.department.code != own_dept_code:
+                    if restrict_dept:
+                        if not w.department or w.department.code != restrict_dept:
                             continue
                     sectors_set[w.sector_id] = w.sector.name or w.sector.code
             nav["nav_sectors"] = [

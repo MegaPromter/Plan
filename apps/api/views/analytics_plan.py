@@ -181,7 +181,13 @@ def _build_employee_plan(emp_id, works, all_norms, years, months_filter):
 
         # Границы выбранного периода для определения «выполнено в этом периоде»
         period_end = _period_end(years_set, months_filter_set)
-        is_done_in_period = is_done and report_date and report_date < period_end
+        # report_date может быть datetime — приводим к date
+        rd = (
+            report_date.date()
+            if report_date and hasattr(report_date, "date")
+            else report_date
+        )
+        is_done_in_period = is_done and rd and rd < period_end
         is_overdue = not is_done and w.date_end and w.date_end < today
 
         tasks.append(
@@ -283,8 +289,14 @@ def _build_works_summary(works, years, months_filter):
     for w in works:
         is_done = getattr(w, "_done", False)
         report_date = getattr(w, "_report_date", None)
+        # report_date может быть datetime — приводим к date
+        rd = (
+            report_date.date()
+            if report_date and hasattr(report_date, "date")
+            else report_date
+        )
         # Статус привязан к периоду: done только если отчёт до конца периода
-        is_done_in_period = is_done and report_date and report_date < period_end
+        is_done_in_period = is_done and rd and rd < period_end
         is_overdue = not is_done and w.date_end and w.date_end < today
 
         # Проверяем, попадает ли задача в выбранный период по plan_hours
@@ -769,7 +781,16 @@ class PlanAnalyticsView(APIView):
                 "total_planned": sector_months["total_planned"],
                 "total_norm": sector_months["total_norm"],
                 "total_load_pct": sector_months["total_load_pct"],
-                **self._nav_context(works, role_info, emp, years),
+                **self._nav_context(
+                    works,
+                    role_info,
+                    emp,
+                    years,
+                    show_sectors=True,
+                    current_dept_code=(
+                        sector.department.code if sector and sector.department else None
+                    ),
+                ),
             }
         )
 
@@ -839,7 +860,12 @@ class PlanAnalyticsView(APIView):
                 **dept_agg,
                 **summary,
                 **self._nav_context(
-                    dept_works, role_info, emp, years, show_sectors=True
+                    works,
+                    role_info,
+                    emp,
+                    years,
+                    show_sectors=True,
+                    current_dept_code=dept_code,
                 ),
             }
         )
@@ -1098,7 +1124,9 @@ class PlanAnalyticsView(APIView):
             "total_load_pct": total_load,
         }
 
-    def _nav_context(self, works, role_info, emp, years, show_sectors=False):
+    def _nav_context(
+        self, works, role_info, emp, years, show_sectors=False, current_dept_code=None
+    ):
         nav = {}
         role = role_info["role"]
 
@@ -1133,11 +1161,15 @@ class PlanAnalyticsView(APIView):
         if show_sectors or role in ("dept_head", "dept_deputy"):
             # dept_head/dept_deputy → только секторы своего отдела
             own_dept_code = emp.department.code if emp and emp.department else None
+            # При drill-down в конкретный отдел — сектора только этого отдела
+            restrict_dept = current_dept_code
+            if role in ("dept_head", "dept_deputy") and own_dept_code:
+                restrict_dept = own_dept_code
             sectors_set = {}
             for w in works:
                 if w.sector_id and w.sector:
-                    if role in ("dept_head", "dept_deputy") and own_dept_code:
-                        if not w.department or w.department.code != own_dept_code:
+                    if restrict_dept:
+                        if not w.department or w.department.code != restrict_dept:
                             continue
                     sectors_set[w.sector_id] = w.sector.name or w.sector.code
             nav["nav_sectors"] = [
