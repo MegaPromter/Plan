@@ -148,19 +148,29 @@
 
     <span class="seg-divider"></span>
 
-    <!-- Статус-фильтры -->
+    <!-- Статус-фильтры: единый источник правды со Снимком месяца.
+         Чип «Все» сбрасывает drill-down по корзине снимка. -->
     <div class="seg-group seg-status status-pills" id="spStatusPanel" style="display:none;">
-      <button class="sp sp-all" data-status="all" onclick="spFilterStatus('all')" data-tip="Все задачи">
+      <button class="sp sp-all" data-bucket="all" onclick="spFilterBucket('all')" data-tip="Все задачи выбранного месяца + долги">
         Все <span class="num" id="spCountAll">0</span>
       </button>
-      <button class="sp sp-done" data-status="done" onclick="spFilterStatus('done')" data-tip="Выполненные (есть отчёт)">
+      <button class="sp sp-done" data-bucket="done" onclick="spFilterBucket('done')" data-tip="Выполнено в срок">
         ✓ <span class="num" id="spCountDone">0</span>
       </button>
-      <button class="sp sp-overdue" data-status="overdue" onclick="spFilterStatus('overdue')" data-tip="Просроченные задачи">
+      <button class="sp sp-early" data-bucket="done_early" onclick="spFilterBucket('done_early')" data-tip="Выполнено с опережением">
+        ⚡ <span class="num" id="spCountEarly">0</span>
+      </button>
+      <button class="sp sp-overdue" data-bucket="overdue" onclick="spFilterBucket('overdue')" data-tip="Просрочено (дедлайн в этом месяце, отчёта нет)">
         ⚠ <span class="num" id="spCountOverdue">0</span>
       </button>
-      <button class="sp sp-inwork" data-status="inwork" onclick="spFilterStatus('inwork')" data-tip="В работе">
+      <button class="sp sp-inwork" data-bucket="inwork" onclick="spFilterBucket('inwork')" data-tip="В работе">
         ⟳ <span class="num" id="spCountInWork">0</span>
+      </button>
+      <button class="sp sp-debt-closed" data-bucket="debt_closed" onclick="spFilterBucket('debt_closed')" data-tip="Долги прошлых месяцев, закрытые в этом">
+        ✓● <span class="num" id="spCountDebtClosed">0</span>
+      </button>
+      <button class="sp sp-debt" data-bucket="debt_hanging" onclick="spFilterBucket('debt_hanging')" data-tip="Долги: дедлайн прошёл, отчёта нет">
+        ● <span class="num" id="spCountDebt">0</span>
       </button>
     </div>
 

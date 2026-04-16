@@ -49,9 +49,6 @@ let colSettings = _spCfg.colSettings;
 /** @type {Object<number, CalendarMonth[]>} */
 let _spCalCache = {}; // {year: [{month, hours_norm, ...}]}
 
-// Текущий фильтр статуса: 'all' | 'done' | 'overdue' | 'inwork'
-let _spStatusFilter = 'all';
-
 /* ── Снимок месяца: API + рендер ─────────────────────────────────────── */
 
 // ID задач, распределённых по корзинам снимка месяца.
@@ -75,22 +72,45 @@ let _snapBucketFilter = null;
 
 /**
  * Клик по строке снимка месяца → включает/выключает drill-down фильтр
- * по соответствующей корзине. Совместим с обычным _spStatusFilter —
- * при активации корзины сбрасывает его, чтобы не было двойной фильтрации.
+ * по соответствующей корзине. Одна переменная (_snapBucketFilter) —
+ * один источник правды для строк снимка и чипов в тулбаре.
  * @param {string} bucket
  */
 function snapFilterByBucket(bucket) {
   _snapBucketFilter = _snapBucketFilter === bucket ? null : bucket;
-  if (_snapBucketFilter) {
-    // Корзина и статус-чип — взаимоисключающие фильтры (чтобы цифры не путались).
-    _spStatusFilter = 'all';
-    spUpdateStatusPanel();
-  }
-  // Подсветка активной строки снимка
+  // Подсветка активной строки снимка и активного чипа — единый источник правды
+  _syncSnapActiveUI();
+  renderTable();
+}
+
+/**
+ * Синхронизирует UI-подсветку корзины снимка: строки в блоке снимка
+ * (.snap-row.is-linked) и чипы в тулбаре (.sp.active). Без неё клик
+ * по строке не отражается на чипе и наоборот.
+ */
+function _syncSnapActiveUI() {
+  const bucket = _snapBucketFilter || 'all';
   document.querySelectorAll('.snap-row').forEach((r) => {
     r.classList.toggle('is-linked', r.dataset.bucket === _snapBucketFilter);
   });
-  renderTable();
+  document.querySelectorAll('#spStatusPanel .sp').forEach((c) => {
+    c.classList.toggle('active', c.dataset.bucket === bucket);
+  });
+}
+
+/**
+ * Обработчик клика по чипу в тулбаре. 'all' сбрасывает drill-down,
+ * остальные — делегируют в snapFilterByBucket (toggle-поведение).
+ * @param {string} bucket
+ */
+function spFilterBucket(bucket) {
+  if (bucket === 'all') {
+    _snapBucketFilter = null;
+    _syncSnapActiveUI();
+    renderTable();
+    return;
+  }
+  snapFilterByBucket(bucket);
 }
 
 /**
@@ -144,11 +164,12 @@ async function loadMonthSnapshot() {
     el.style.display = 'none';
     _snapLastMonth = null;
     _snapClearIds();
-    // Сбросить drill-down, если был активен — иначе фильтр прилипает
-    if (_snapBucketFilter) {
-      _snapBucketFilter = null;
-      document.querySelectorAll('.snap-row.is-linked').forEach((r) => r.classList.remove('is-linked'));
-    }
+    // Сбросить drill-down и подсветку чипов/строк — иначе фильтр прилипает
+    _snapBucketFilter = null;
+    _syncSnapActiveUI();
+    // Спрятать панель чипов целиком (без выбранного месяца они бессмысленны)
+    const panel = document.getElementById('spStatusPanel');
+    if (panel) panel.style.display = 'none';
     return;
   }
   el.style.display = '';
@@ -241,6 +262,9 @@ function renderMonthSnapshot(data) {
   _snapTaskIds.debt_closed = new Set(dIds.closed || []);
   _snapTaskIds.debt_hanging = new Set(dIds.hanging || []);
 
+  // Обновляем чипы в тулбаре — те же цифры, что в снимке (единый источник правды)
+  spUpdateStatusPanel();
+
   // Применяем цветные полосы к уже отрисованным строкам таблицы,
   // не пересоздавая их целиком (чтобы не дёргать DOM лишний раз).
   _applySnapshotRowMarkers();
@@ -320,26 +344,29 @@ function _snapBucketOf(taskId) {
   return null;
 }
 
-/* ── Статус-панель (прогресс-бар + фильтры) для СП ───────────────────── */
+/* ── Вспомогательные функции статусов ──────────────────────────────────
+   _spGetStatus/_spTasksWithoutStatusFilter остаются для:
+   - подсветки строк row-done/row-overdue/row-inwork (makeRow)
+   - бейджа статуса в панели деталей (_renderActivityDetails)
+   - подсчёта часов и исполнителей в summary (renderTable)
+   В фильтрации они больше не участвуют — её ведёт _snapBucketFilter.
+   ─────────────────────────────────────────────────────────────────── */
+
 /**
- * Определяет статус задачи для панели фильтров.
+ * Определяет простой статус задачи (3 состояния).
  * @param {Task} t
  * @returns {'done'|'overdue'|'inwork'}
  */
 function _spGetStatus(t) {
   if (t.has_reports) {
-    // Привязка к периоду: «выполнено» только если отчёт заполнен
-    // внутри выбранного периода. Иначе — «в работе» (отчёт ещё не заполнен).
     const rca = t.report_created_at ? t.report_created_at.slice(0, 10) : '';
     if (rca && selectedMonth && !showAll) {
-      // Конец периода: первый день следующего месяца
       const endM =
         selectedMonth < 12
           ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`
           : `${selectedYear + 1}-01-01`;
-      if (rca >= endM) return 'inwork'; // отчёт заполнен после периода
+      if (rca >= endM) return 'inwork';
     } else if (rca && !selectedMonth && !showAll) {
-      // Выбран только год
       const endY = `${selectedYear + 1}-01-01`;
       if (rca >= endY) return 'inwork';
     }
@@ -359,8 +386,8 @@ function _spGetStatus(t) {
 
 /**
  * Фильтрует tasks по всем colFilters (без статус-фильтра).
- * Нужно для корректного подсчёта в панели статусов (иначе панель обнуляется
- * когда сам статус-фильтр уже применён, и цифры не совпадут).
+ * Нужно для корректного подсчёта в summary (часы/исполнители),
+ * чтобы drill-down по снимку не занижал итоги.
  * @returns {Task[]}
  */
 function _spTasksWithoutStatusFilter() {
@@ -368,23 +395,18 @@ function _spTasksWithoutStatusFilter() {
   return tasks.filter((t) => {
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
-        // Мультифильтр: col = "mf_field", val = Set выбранных значений
         const field = col.slice(3);
         if (val.size > 0) {
           if (field === 'executor') {
-            // Исполнитель может быть как основным (t.executor), так и в списке (t.executors_list)
             const inSingle = val.has(t.executor || '');
             const inList = (t.executors_list || []).some((ex) => val.has(ex.name || ''));
             if (!inSingle && !inList) return false;
           } else if (field === 'has_deps') {
-            // Псевдо-поле: "Со связями" / "Без связей" — вычисляется на лету
             const label = (t.predecessors_count || 0) > 0 ? 'Со связями' : 'Без связей';
             if (!val.has(label)) return false;
           } else if (field === 'task_type') {
-            // task_type: пустые считаются «ПП» (ПП-записи без типа)
             if (!val.has(t.task_type || 'ПП')) return false;
           } else if (field === 'date_start' || field === 'date_end') {
-            // Для дат сравниваем только год-месяц (YYYY-MM) — первые 7 символов
             const cellVal = (t[field] || '').slice(0, 7);
             if (!val.has(cellVal)) return false;
           } else {
@@ -394,7 +416,6 @@ function _spTasksWithoutStatusFilter() {
         continue;
       }
       if (col === 'plan_hours_total') {
-        // Числовой порог: показываем только задачи с суммой плановых часов >= threshold
         const total = Object.values(t.plan_hours_all || {}).reduce(
           (s, v) => s + (parseFloat(v) || 0),
           0,
@@ -403,7 +424,6 @@ function _spTasksWithoutStatusFilter() {
         if (!isNaN(threshold) && total < threshold) return false;
         continue;
       }
-      // Текстовый contains-фильтр (case-insensitive)
       const cellVal = (t[col] || '').toString().toLowerCase();
       if (!cellVal.includes(val)) return false;
     }
@@ -411,26 +431,50 @@ function _spTasksWithoutStatusFilter() {
   });
 }
 
-function spUpdateStatusPanel() {
-  updateStatusPanel({
-    panelId: 'spStatusPanel',
-    prefix: 'sp',
-    data: _spTasksWithoutStatusFilter(),
-    getStatus: _spGetStatus,
-    activeFilter: _spStatusFilter,
-  });
-}
+/* ── Статус-панель (чипы в тулбаре) для СП ─────────────────────────────
+   Цифры в чипах читаются ТОЛЬКО из _snapTaskIds (снимок месяца) —
+   чтобы в чипах и блоке снимка совпадали значения (единый источник правды).
+   Панель показывается только если выбран ровно один месяц (снимок активен).
+   ─────────────────────────────────────────────────────────────────── */
 
-function spFilterStatus(status) {
-  _spStatusFilter = _spStatusFilter === status ? 'all' : status;
-  // Drill-down снимка и статус-чипы — взаимоисключающие
-  if (_spStatusFilter !== 'all' && _snapBucketFilter) {
-    _snapBucketFilter = null;
-    document.querySelectorAll('.snap-row.is-linked').forEach((r) => r.classList.remove('is-linked'));
+/**
+ * Обновляет счётчики в чипах тулбара на основе _snapTaskIds.
+ * Если снимок не активен (нет месяца / showAll) — прячет панель.
+ */
+function spUpdateStatusPanel() {
+  const panel = document.getElementById('spStatusPanel');
+  if (!panel) return;
+
+  // Панель имеет смысл только для конкретного месяца
+  if (!selectedMonth || showAll) {
+    panel.style.display = 'none';
+    return;
   }
-  spUpdateStatusPanel();
-  renderTable();
-  _spSyncFiltersToUrl();
+  panel.style.display = '';
+
+  const setText = (id, v) => {
+    const e = document.getElementById(id);
+    if (e) e.textContent = v;
+  };
+
+  const done = _snapTaskIds.done.size;
+  const early = _snapTaskIds.done_early.size;
+  const overdue = _snapTaskIds.overdue.size;
+  const inwork = _snapTaskIds.inwork.size;
+  const debtClosed = _snapTaskIds.debt_closed.size;
+  const debtHanging = _snapTaskIds.debt_hanging.size;
+  const all = done + early + overdue + inwork + debtClosed + debtHanging;
+
+  setText('spCountAll', all);
+  setText('spCountDone', done);
+  setText('spCountEarly', early);
+  setText('spCountOverdue', overdue);
+  setText('spCountInWork', inwork);
+  setText('spCountDebtClosed', debtClosed);
+  setText('spCountDebt', debtHanging);
+
+  // Подсветка активного чипа
+  _syncSnapActiveUI();
 }
 
 /* ── Skeleton-загрузка — skeletonRows() в utils.js ────────────────── */
@@ -527,14 +571,14 @@ const MONTH_NAMES = [
 let showAll = false;
 
 // ── Синхронизация фильтров СП с URL ────────────────────────────────────────
-const _SP_URL_FILTER_KEYS = ['year', 'month', 'dept', 'status'];
+const _SP_URL_FILTER_KEYS = ['year', 'month', 'dept', 'bucket'];
 
 function _spSyncFiltersToUrl() {
   syncFiltersToUrl({
     year: selectedYear,
     month: showAll ? 'all' : selectedMonth || null,
     dept: spSelectedDepts.size ? [...spSelectedDepts].join(',') : null,
-    status: _spStatusFilter !== 'all' ? _spStatusFilter : null,
+    bucket: _snapBucketFilter || null,
   });
 }
 
@@ -567,8 +611,11 @@ function _spRestoreFiltersFromUrl() {
     spSelectedDepts = new Set(f.dept.split(',').filter(Boolean));
     changed = true;
   }
-  if (f.status && ['done', 'overdue', 'inwork'].includes(f.status)) {
-    _spStatusFilter = f.status;
+  if (
+    f.bucket &&
+    ['done', 'done_early', 'overdue', 'inwork', 'debt_closed', 'debt_hanging'].includes(f.bucket)
+  ) {
+    _snapBucketFilter = f.bucket;
     changed = true;
   }
   return changed;
@@ -2438,9 +2485,7 @@ function renderTable() {
   }
 
   _spFiltered = tasks.filter((t) => {
-    // Фильтр по статусу (прогресс-панель)
-    if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
-    // Drill-down по снимку месяца: оставить только задачи выбранной корзины
+    // Drill-down по снимку месяца: единый фильтр по корзинам (чипы = строки снимка)
     if (_snapBucketFilter && _snapBucketOf(t.id) !== _snapBucketFilter) return false;
 
     for (const [col, val] of Object.entries(colFilters)) {
@@ -2527,7 +2572,7 @@ function renderTable() {
     return;
   }
   // Пустое состояние: нет строк после фильтрации
-  if (_spFiltered.length === 0 && (hasFilters || _spStatusFilter !== 'all')) {
+  if (_spFiltered.length === 0 && (hasFilters || _snapBucketFilter)) {
     tbody.innerHTML = emptyStateHtml({
       icon: 'fas fa-search',
       title: 'Ничего не найдено',
