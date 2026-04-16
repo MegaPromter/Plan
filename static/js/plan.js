@@ -69,6 +69,41 @@ let _snapTaskIds = {
 // Последний загруженный месяц в формате YYYY-MM (чтобы избежать повторных запросов)
 let _snapLastMonth = null;
 
+// Drill-down фильтр по корзине снимка месяца (null = не активен)
+/** @type {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|null} */
+let _snapBucketFilter = null;
+
+/**
+ * Клик по строке снимка месяца → включает/выключает drill-down фильтр
+ * по соответствующей корзине. Совместим с обычным _spStatusFilter —
+ * при активации корзины сбрасывает его, чтобы не было двойной фильтрации.
+ * @param {string} bucket
+ */
+function snapFilterByBucket(bucket) {
+  _snapBucketFilter = _snapBucketFilter === bucket ? null : bucket;
+  if (_snapBucketFilter) {
+    // Корзина и статус-чип — взаимоисключающие фильтры (чтобы цифры не путались).
+    _spStatusFilter = 'all';
+    spUpdateStatusPanel();
+  }
+  // Подсветка активной строки снимка
+  document.querySelectorAll('.snap-row').forEach((r) => {
+    r.classList.toggle('is-linked', r.dataset.bucket === _snapBucketFilter);
+  });
+  renderTable();
+}
+
+/**
+ * Привязывает обработчики клика к строкам снимка месяца.
+ * Вызывается при DOMContentLoaded (разметка статическая).
+ */
+function _bindSnapRowClicks() {
+  document.querySelectorAll('.snap-row[data-bucket]').forEach((row) => {
+    row.addEventListener('click', () => snapFilterByBucket(row.dataset.bucket));
+    row.style.cursor = 'pointer';
+  });
+}
+
 /**
  * Переключает видимость блока снимка месяца.
  * Состояние сохраняется в localStorage.
@@ -93,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (saved === null || saved === '1') {
     el.classList.add('is-open');
   }
+  _bindSnapRowClicks();
 });
 
 /**
@@ -108,6 +144,11 @@ async function loadMonthSnapshot() {
     el.style.display = 'none';
     _snapLastMonth = null;
     _snapClearIds();
+    // Сбросить drill-down, если был активен — иначе фильтр прилипает
+    if (_snapBucketFilter) {
+      _snapBucketFilter = null;
+      document.querySelectorAll('.snap-row.is-linked').forEach((r) => r.classList.remove('is-linked'));
+    }
     return;
   }
   el.style.display = '';
@@ -382,6 +423,11 @@ function spUpdateStatusPanel() {
 
 function spFilterStatus(status) {
   _spStatusFilter = _spStatusFilter === status ? 'all' : status;
+  // Drill-down снимка и статус-чипы — взаимоисключающие
+  if (_spStatusFilter !== 'all' && _snapBucketFilter) {
+    _snapBucketFilter = null;
+    document.querySelectorAll('.snap-row.is-linked').forEach((r) => r.classList.remove('is-linked'));
+  }
   spUpdateStatusPanel();
   renderTable();
   _spSyncFiltersToUrl();
@@ -2394,6 +2440,8 @@ function renderTable() {
   _spFiltered = tasks.filter((t) => {
     // Фильтр по статусу (прогресс-панель)
     if (_spStatusFilter !== 'all' && _spGetStatus(t) !== _spStatusFilter) return false;
+    // Drill-down по снимку месяца: оставить только задачи выбранной корзины
+    if (_snapBucketFilter && _snapBucketOf(t.id) !== _snapBucketFilter) return false;
 
     for (const [col, val] of Object.entries(colFilters)) {
       if (col.startsWith('mf_')) {
