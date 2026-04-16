@@ -4871,6 +4871,18 @@ function makeReportRow(r, idx, cfg) {
   // Ссылка
   tr.appendChild(_makeTextCell('doc_link', r.doc_link, cfg.disabled.has('doc_link')));
 
+  // Дата заполнения отчёта (created_at) — read-only, только для отображения.
+  // Для новых (несохранённых) строк — прочерк.
+  const createdTd = document.createElement('td');
+  createdTd.style.cssText = 'text-align:center;color:var(--muted);white-space:nowrap;';
+  if (r.created_at) {
+    const d = r.created_at.slice(0, 10).split('-'); // YYYY-MM-DD → DD.MM.YYYY
+    createdTd.textContent = `${d[2]}.${d[1]}.${d[0]}`;
+  } else {
+    createdTd.textContent = '—';
+  }
+  tr.appendChild(createdTd);
+
   // Кнопки ✓ сохранить / ✕ удалить — только для writer своего отдела
   const actTd = document.createElement('td');
   actTd.style.cssText = 'padding:4px 6px;white-space:nowrap;';

@@ -136,6 +136,9 @@ def _serialize_report(r):
         "bvd_hours": float(r.bvd_hours) if r.bvd_hours is not None else None,
         "norm_control": r.norm_control or "",
         "doc_link": r.doc_link or "",
+        # Дата заполнения отчёта (created_at) — только для отображения,
+        # на бэкенде auto_now_add, не редактируется.
+        "created_at": r.created_at.isoformat() if r.created_at else "",
     }
 
 
