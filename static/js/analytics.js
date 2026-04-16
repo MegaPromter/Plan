@@ -142,6 +142,9 @@
           renderToolbar(data);
           renderBreadcrumb(data);
           renderContent(data);
+          // Снимок месяца — общий блок с СП. Показываем только при
+          // строго одном выбранном годе и месяце (иначе бессмыслен).
+          loadMonthSnapshot();
         } catch (renderErr) {
           console.error('Analytics render error:', renderErr);
           el.innerHTML =
@@ -2258,6 +2261,130 @@
       },
     });
   }
+
+  /* ── Снимок месяца ────────────────────────────────────────────────────
+   * Переиспользует ту же разметку и тот же API, что и СП.
+   * Показывается только при строго одном годе и одном месяце.
+   * ────────────────────────────────────────────────────────────────── */
+  function loadMonthSnapshot() {
+    var el = document.getElementById('monthSnapshot');
+    if (!el) return;
+
+    var years = idsToList(currentYears);
+    var months = idsToList(currentMonths);
+
+    // Требуется ровно один год + один месяц — иначе снимок не имеет смысла
+    if (years.length !== 1 || months.length !== 1) {
+      el.style.display = 'none';
+      return;
+    }
+
+    var y = parseInt(years[0]);
+    var m = parseInt(months[0]);
+    if (!y || !m) {
+      el.style.display = 'none';
+      return;
+    }
+
+    el.style.display = '';
+    var monthKey = y + '-' + (m < 10 ? '0' + m : '' + m);
+    var url = '/api/analytics/month_snapshot/?month=' + monthKey;
+
+    // Пробрасываем фильтры, поддерживаемые API (единичные).
+    // При множественных значениях снимок считается по объединению (без фильтра) —
+    // чтобы не скрывать данные.
+    var dcs = idsToList(currentDeptCodes);
+    if (dcs.length === 1) url += '&dept=' + encodeURIComponent(dcs[0]);
+    var sids = idsToList(currentSectorIds);
+    if (sids.length === 1) url += '&sector_id=' + sids[0];
+    var cids = idsToList(currentCenterIds);
+    if (cids.length === 1) url += '&center_id=' + cids[0];
+    var pids = idsToList(currentProjectIds);
+    if (pids.length === 1) url += '&project_id=' + pids[0];
+
+    fetch(url)
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (data) {
+        if (data) renderMonthSnapshot(data);
+      })
+      .catch(function (e) {
+        console.error('month_snapshot error:', e);
+      });
+  }
+
+  function renderMonthSnapshot(data) {
+    function setText(id, v) {
+      var e = document.getElementById(id);
+      if (e) e.textContent = v;
+    }
+    function setBar(id, pct) {
+      var e = document.getElementById(id);
+      if (e) e.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+
+    var MONTHS = [
+      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+    ];
+    var parts = (data.month || '').split('-');
+    var year = parseInt(parts[0]);
+    var mon = parseInt(parts[1]);
+    setText('snapMonthLabel', isNaN(mon) ? '—' : MONTHS[mon - 1] + ' ' + year);
+
+    var mt = data.month_tasks || {};
+    var d = data.debts || {};
+
+    setText('snapMonthTotal', mt.total || 0);
+    setText('snapDone', mt.done || 0);
+    setText('snapEarly', mt.done_early || 0);
+    setText('snapOverdue', mt.overdue || 0);
+    setText('snapInwork', mt.inwork || 0);
+
+    setBar('snapDoneBar', mt.done_pct || 0);
+    setBar('snapEarlyBar', mt.done_early_pct || 0);
+    setBar('snapOverdueBar', mt.overdue_pct || 0);
+    setBar('snapInworkBar', mt.inwork_pct || 0);
+
+    setText('snapDebtTotal', d.total || 0);
+    setText('snapDebtClosed', d.closed || 0);
+    setText('snapDebtHanging', d.hanging || 0);
+    setBar('snapDebtClosedBar', d.closed_pct || 0);
+    setBar('snapDebtHangingBar', d.hanging_pct || 0);
+
+    var closed = mt.closed || 0;
+    var total = mt.total || 0;
+    setText('snapInlineMonth', total ? closed + '/' + total : '0');
+    setText('snapInlineDebt', d.total ? d.closed + '/' + d.total : '0');
+  }
+
+  // Разворачивание/сворачивание блока снимка
+  window.anToggleSnapshot = function () {
+    var el = document.getElementById('monthSnapshot');
+    if (!el) return;
+    el.classList.toggle('is-open');
+    try {
+      localStorage.setItem(
+        'an_snapshot_open',
+        el.classList.contains('is-open') ? '1' : '0',
+      );
+    } catch (e) {
+      /* ignore quota */
+    }
+  };
+
+  // Восстановление состояния снимка
+  (function restoreSnapshotState() {
+    var el = document.getElementById('monthSnapshot');
+    if (!el) return;
+    var saved = localStorage.getItem('an_snapshot_open');
+    if (saved === '0') {
+      el.classList.remove('is-open');
+    } else {
+      el.classList.add('is-open');
+    }
+  })();
 
   /* ── Init ─────────────────────────────────────────────────────────────── */
   loadData();

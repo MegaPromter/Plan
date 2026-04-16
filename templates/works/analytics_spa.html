@@ -5,6 +5,8 @@
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/analytics.css' %}?v=12">
 <link rel="stylesheet" href="{% static 'css/reports.css' %}?v=4">
+<!-- Единый блок «Снимок месяца» (общий источник стилей для СП и Отчётов) -->
+<link rel="stylesheet" href="{% static 'css/month_snapshot.css' %}?v=1">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -27,6 +29,73 @@
   <!-- Хлебные крошки drill-down -->
   <div class="an-breadcrumb" id="anBreadcrumb"></div>
 
+  <!-- ══ Снимок месяца ═════════════════════════════════════════════════
+       Показывается только если выбран ровно один год + один месяц
+       (см. анализ фильтров в analytics.js). -->
+  <section class="snapshot is-open" id="monthSnapshot" style="display:none;" aria-label="Снимок месяца">
+    <header class="snapshot__header" onclick="anToggleSnapshot()">
+      <div class="snapshot__title">
+        <span class="snapshot__chevron" aria-hidden="true">▾</span>
+        <span>Снимок месяца</span>
+        <span class="snapshot__month" id="snapMonthLabel">—</span>
+      </div>
+      <div class="snapshot__summary-inline">
+        <span>План: <b id="snapInlineMonth">—</b></span>
+        <span>Долги: <b id="snapInlineDebt">—</b></span>
+      </div>
+    </header>
+    <div class="snapshot__body">
+      <div class="snap-group">
+        <div class="snap-group__head">
+          <span class="snap-group__title">Задачи месяца</span>
+          <span class="snap-group__total" id="snapMonthTotal">0</span>
+        </div>
+        <div class="snap-row snap-row--done" data-bucket="done">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">Выполнено в срок</span>
+          <span class="snap-row__count" id="snapDone">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDoneBar" style="width:0%"></span></span>
+        </div>
+        <div class="snap-row snap-row--early" data-bucket="done_early">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">С опережением</span>
+          <span class="snap-row__count" id="snapEarly">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapEarlyBar" style="width:0%"></span></span>
+        </div>
+        <div class="snap-row snap-row--overdue" data-bucket="overdue">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">Просрочено</span>
+          <span class="snap-row__count" id="snapOverdue">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapOverdueBar" style="width:0%"></span></span>
+        </div>
+        <div class="snap-row snap-row--inwork" data-bucket="inwork">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">В работе</span>
+          <span class="snap-row__count" id="snapInwork">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapInworkBar" style="width:0%"></span></span>
+        </div>
+      </div>
+      <div class="snap-group">
+        <div class="snap-group__head">
+          <span class="snap-group__title">Долги</span>
+          <span class="snap-group__total" id="snapDebtTotal">0</span>
+        </div>
+        <div class="snap-row snap-row--debt-closed" data-bucket="debt_closed">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">Закрыто в этом месяце</span>
+          <span class="snap-row__count" id="snapDebtClosed">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtClosedBar" style="width:0%"></span></span>
+        </div>
+        <div class="snap-row snap-row--debt-hanging" data-bucket="debt_hanging">
+          <span class="snap-row__dot" aria-hidden="true"></span>
+          <span class="snap-row__label">Долги</span>
+          <span class="snap-row__count" id="snapDebtHanging">0</span>
+          <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtHangingBar" style="width:0%"></span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Тулбар фильтров -->
   <div class="an-toolbar-row" id="anToolbar">
     <div class="an-toolbar-panel"><div class="an-loading"><i class="fas fa-spinner"></i></div></div>
@@ -44,5 +113,5 @@
   "role": "{{ role|escapejs }}",
   "deptCode": "{{ user_dept|escapejs }}"
 }</script>
-<script src="{% static 'js/analytics.js' %}?v=23"></script>
+<script src="{% static 'js/analytics.js' %}?v=24"></script>
 {% endblock %}
