@@ -2409,6 +2409,8 @@ button.mf-trigger.mf-icon::after {
 .deadline-cell {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 3px;
   line-height: 1.2;
 }
@@ -2416,6 +2418,10 @@ button.mf-trigger.mf-icon::after {
   font-size: inherit;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+/* Скрываем пустой бейдж — чтобы дата оставалась выровненной */
+.deadline-cell .status-badge:empty {
+  display: none !important;
 }
 .status-badge {
   display: inline-flex;

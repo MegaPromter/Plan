@@ -207,7 +207,8 @@ function renderMonthSnapshot(data) {
 
 /**
  * Добавляет/удаляет классы row-month / row-debt у существующих строк
- * таблицы после обновления _snapTaskIds. Дёшево — только classList.
+ * таблицы и обновляет бейджи статуса в ячейке «Окончание».
+ * Дёшево — только classList + textContent одной span.
  */
 function _applySnapshotRowMarkers() {
   const body = document.getElementById('taskBody');
@@ -218,7 +219,48 @@ function _applySnapshotRowMarkers() {
     const b = _snapBucketOf(id);
     if (b === 'debt_closed' || b === 'debt_hanging') tr.classList.add('row-debt');
     else if (b) tr.classList.add('row-month');
+    // Обновляем бейдж в ячейке «Окончание»
+    const badge = tr.querySelector('.status-badge[data-role="snap-badge"]');
+    if (badge) _fillSnapBadge(badge, b);
   });
+}
+
+/**
+ * Заполняет span.status-badge нужным текстом и классом-модификатором
+ * по коду корзины снимка. Если bucket=null — прячет бейдж.
+ * @param {HTMLElement} el
+ * @param {string|null} bucket
+ */
+function _fillSnapBadge(el, bucket) {
+  // Сброс всех класс-модификаторов
+  el.classList.remove(
+    'status-badge--done',
+    'status-badge--early',
+    'status-badge--overdue',
+    'status-badge--inwork',
+    'status-badge--hanging',
+  );
+  if (!bucket) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.style.display = '';
+  const map = {
+    done: { cls: 'status-badge--done', text: '✓ Выполнено' },
+    done_early: { cls: 'status-badge--early', text: '⚡ С опережением' },
+    overdue: { cls: 'status-badge--overdue', text: '✗ Просрочено' },
+    inwork: { cls: 'status-badge--inwork', text: '● В работе' },
+    debt_closed: { cls: 'status-badge--done', text: '✓ Долг закрыт' },
+    debt_hanging: { cls: 'status-badge--hanging', text: '⚠ Долг' },
+  };
+  const m = map[bucket];
+  if (!m) {
+    el.style.display = 'none';
+    return;
+  }
+  el.classList.add(m.cls);
+  el.textContent = m.text;
 }
 
 /**
@@ -2763,7 +2805,22 @@ function makeRow(t, num) {
         }
       } else if (col.type === 'date') {
         // Даты: преобразуем YYYY-MM-DD → DD.MM.YYYY
-        td.textContent = t[col.field] ? t[col.field].split('-').reverse().join('.') : '';
+        const dateStr = t[col.field] ? t[col.field].split('-').reverse().join('.') : '';
+        if (col.field === 'date_end') {
+          // Ячейка «Окончание» — дата + бейдж снимка под ней
+          td.classList.add('deadline-cell');
+          const dateSpan = document.createElement('span');
+          dateSpan.className = 'deadline-cell__date';
+          dateSpan.textContent = dateStr;
+          const badge = document.createElement('span');
+          badge.className = 'status-badge';
+          badge.dataset.role = 'snap-badge';
+          _fillSnapBadge(badge, _snapBucketOf(t.id));
+          td.appendChild(dateSpan);
+          td.appendChild(badge);
+        } else {
+          td.textContent = dateStr;
+        }
       } else if (col.type === 'select' && col.extraField) {
         // Сектор: код + ФИО начальника серым под ним
         td.textContent = t[col.field] || '';
@@ -2991,6 +3048,15 @@ function makeRow(t, num) {
         await saveTask(t.id, tr);
       });
       td.appendChild(inp);
+      // Бейдж снимка месяца под полем «Окончание» (только для date_end)
+      if (col.field === 'date_end') {
+        td.classList.add('deadline-cell');
+        const badge = document.createElement('span');
+        badge.className = 'status-badge';
+        badge.dataset.role = 'snap-badge';
+        _fillSnapBadge(badge, _snapBucketOf(t.id));
+        td.appendChild(badge);
+      }
     }
     tr.appendChild(td);
     // Вставляем «Код строки» и «Наряд-заказ» после «Проект» (idx=0 → project)
