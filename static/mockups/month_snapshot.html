@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Мокап — Снимок месяца в СП</title>
+    <style>
+      /* ── Дизайн-токены (копия из variables.css) ────────────── */
+      :root {
+        --bg: #f0f2f5;
+        --surface: #ffffff;
+        --surface2: #f8f9fb;
+        --border: #e2e6ed;
+        --border2: #c8d0dc;
+        --accent: #2563eb;
+        --accent-light: #eff6ff;
+        --accent-rgb: 37, 99, 235;
+        --text: #1e293b;
+        --text2: #475569;
+        --muted: #526077;
+        --danger: #dc2626;
+        --success: #16a34a;
+        --warning: #d97706;
+        --info: #3b82f6;
+        --purple: #a855f7;
+        --danger-rgb: 220, 38, 38;
+        --success-rgb: 22, 163, 74;
+        --warning-rgb: 217, 119, 6;
+        --text-rgb: 30, 41, 59;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+        --th-bg: #eef1f7;
+        --th-color: #4a5568;
+        --row-hover: #edf2ff;
+      }
+      [data-theme='dark'] {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface2: #22252f;
+        --border: #2d3140;
+        --border2: #3a3f50;
+        --accent: #3b82f6;
+        --accent-light: rgba(59, 130, 246, 0.1);
+        --text: #e2e8f0;
+        --text2: #94a3b8;
+        --muted: #7a8ba0;
+        --th-bg: #1e2130;
+        --th-color: #94a3b8;
+        --row-hover: rgba(59, 130, 246, 0.08);
+        --text-rgb: 226, 232, 240;
+      }
+      [data-theme='twilight'] {
+        --bg: #dfe4ec;
+        --surface: #e8ecf3;
+        --surface2: #d2d9e4;
+        --border: #bfc8d6;
+        --border2: #a4b0c2;
+        --accent: #3b7cf5;
+        --accent-light: #e0ecff;
+        --text: #2d3a4e;
+        --text2: #56667d;
+        --muted: #56667d;
+        --th-bg: #d0d7e3;
+        --th-color: #445064;
+        --row-hover: #d4ddef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        background: var(--bg);
+        font-family: var(--font);
+        color: var(--text);
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 0 0 24px;
+      }
+      .page-wrap {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         СНИМОК МЕСЯЦА (сворачиваемый)
+         ═══════════════════════════════════════════════════════ */
+      .snapshot {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        margin-bottom: 12px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .snapshot__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        background: var(--surface2);
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s;
+      }
+      .snapshot__header:hover {
+        background: var(--accent-light);
+      }
+      .snapshot__title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .snapshot__chevron {
+        font-size: 12px;
+        color: var(--muted);
+        transition: transform 0.2s;
+      }
+      .snapshot.is-open .snapshot__chevron {
+        transform: rotate(180deg);
+      }
+      .snapshot__context {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 400;
+      }
+      .snapshot__summary-inline {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--text2);
+      }
+      .snapshot__summary-inline b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .snapshot.is-open .snapshot__summary-inline {
+        display: none;
+      }
+
+      .snapshot__body {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        border-top: 1px solid var(--border);
+        max-height: 500px;
+        transition: max-height 0.25s ease;
+      }
+      .snapshot:not(.is-open) .snapshot__body {
+        max-height: 0;
+        border-top-color: transparent;
+        overflow: hidden;
+      }
+
+      .snap-group {
+        padding: 18px 20px;
+      }
+      .snap-group + .snap-group {
+        border-left: 1px solid var(--border);
+      }
+      .snap-group__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .snap-group__label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .snap-group__total {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .snap-group__total small {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+        margin-left: 6px;
+      }
+      .snap-row {
+        display: grid;
+        grid-template-columns: 20px 1fr 48px 120px;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 8px;
+        margin: 0 -8px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.15s;
+      }
+      .snap-row:hover {
+        background: var(--accent-light);
+      }
+      .snap-row.is-linked {
+        outline: 2px solid var(--accent);
+        outline-offset: -1px;
+      }
+      .snap-row__icon {
+        font-size: 14px;
+        text-align: center;
+      }
+      .snap-row__label {
+        font-size: 13px;
+      }
+      .snap-row__count {
+        font-size: 14px;
+        font-weight: 600;
+        text-align: right;
+      }
+      .snap-row__bar {
+        height: 6px;
+        background: var(--surface2);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .snap-row__bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .snap-row--done .snap-row__icon,
+      .snap-row--debt-closed .snap-row__icon {
+        color: var(--success);
+      }
+      .snap-row--done .snap-row__bar-fill,
+      .snap-row--debt-closed .snap-row__bar-fill {
+        background: var(--success);
+      }
+      .snap-row--early .snap-row__icon {
+        color: var(--purple);
+      }
+      .snap-row--early .snap-row__bar-fill {
+        background: var(--purple);
+      }
+      .snap-row--overdue .snap-row__icon {
+        color: var(--danger);
+      }
+      .snap-row--overdue .snap-row__bar-fill {
+        background: var(--danger);
+      }
+      .snap-row--inwork .snap-row__icon {
+        color: var(--info);
+      }
+      .snap-row--inwork .snap-row__bar-fill {
+        background: var(--info);
+      }
+      .snap-row--debt-hanging .snap-row__icon {
+        color: var(--warning);
+      }
+      .snap-row--debt-hanging .snap-row__bar-fill {
+        background: var(--warning);
+      }
+      .snap-summary {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border2);
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .snap-summary__label {
+        color: var(--muted);
+      }
+      .snap-summary__value {
+        font-weight: 600;
+      }
+      .snap-summary__value b {
+        color: var(--accent);
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         ТУЛБАР
+         ═══════════════════════════════════════════════════════ */
+      .toolbar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+      }
+      .toolbar__row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        flex-wrap: wrap;
+      }
+      .toolbar__row + .toolbar__row {
+        border-top: 1px solid var(--border);
+      }
+      .fake-input {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 12px;
+        font-size: 13px;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .fake-input--search {
+        flex: 1;
+        min-width: 180px;
+        max-width: 320px;
+        color: var(--muted);
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 7px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .toolbar__spacer {
+        flex: 1;
+      }
+      .toolbar__label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-right: 4px;
+      }
+      .toolbar__divider {
+        width: 1px;
+        height: 20px;
+        background: var(--border2);
+        margin: 0 6px;
+      }
+
+      /* ── Чипы ─────────────────────────────────── */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+      }
+      .chip:hover {
+        background: var(--accent-light);
+      }
+      .chip:active {
+        transform: scale(0.97);
+      }
+      .chip.is-active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .chip__count {
+        font-size: 11px;
+        padding: 1px 7px;
+        border-radius: 9px;
+        background: rgba(var(--text-rgb), 0.08);
+        font-weight: 600;
+      }
+      .chip.is-active .chip__count {
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .chip--danger.is-active {
+        background: var(--danger);
+        border-color: var(--danger);
+      }
+      .chip--warning.is-active {
+        background: var(--warning);
+        border-color: var(--warning);
+      }
+      .chip--success.is-active {
+        background: var(--success);
+        border-color: var(--success);
+      }
+      .chip--purple.is-active {
+        background: var(--purple);
+        border-color: var(--purple);
+      }
+      .chip--info.is-active {
+        background: var(--info);
+        border-color: var(--info);
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         ТАБЛИЦА СП
+         ═══════════════════════════════════════════════════════ */
+      .sp-table {
+        margin-top: 12px;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+      }
+      .sp-table th {
+        text-align: left;
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--th-bg);
+        color: var(--th-color);
+        border-bottom: 1px solid var(--border);
+      }
+      .sp-table td {
+        padding: 12px;
+        font-size: 13px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sp-table tr:last-child td {
+        border-bottom: none;
+      }
+      .sp-table tr:hover td {
+        background: var(--row-hover);
+      }
+
+      /* Метки строк: цветная полоса слева через inset-shadow на первой ячейке */
+      .sp-table tr.row-month td:first-child {
+        box-shadow: inset 4px 0 0 var(--success);
+      }
+      .sp-table tr.row-debt td:first-child {
+        box-shadow: inset 4px 0 0 var(--warning);
+      }
+
+      /* Ячейка «Дедлайн» — две строки: дата + бейдж-статус */
+      .deadline-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        line-height: 1.2;
+      }
+      .deadline-cell__date {
+        font-size: 13px;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+      /* Бейдж статуса — компактный, прямоугольный, с иконкой */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.4;
+        letter-spacing: 0.2px;
+        width: fit-content;
+        border: 1px solid transparent;
+      }
+      .status-badge--done {
+        background: rgba(var(--success-rgb), 0.12);
+        color: var(--success);
+        border-color: rgba(var(--success-rgb), 0.2);
+      }
+      .status-badge--overdue {
+        background: rgba(var(--danger-rgb), 0.12);
+        color: var(--danger);
+        border-color: rgba(var(--danger-rgb), 0.22);
+      }
+      .status-badge--inwork {
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--info);
+        border-color: rgba(59, 130, 246, 0.22);
+      }
+      .status-badge--early {
+        background: rgba(168, 85, 247, 0.12);
+        color: var(--purple);
+        border-color: rgba(168, 85, 247, 0.22);
+      }
+      .status-badge--hanging {
+        background: rgba(var(--warning-rgb), 0.14);
+        color: var(--warning);
+        border-color: rgba(var(--warning-rgb), 0.25);
+      }
+
+      /* ── Theme toggle ── */
+      .theme-toggle {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        display: flex;
+        gap: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 4px;
+        border-radius: 20px;
+        box-shadow: var(--shadow-sm);
+        z-index: 100;
+      }
+      .theme-toggle button {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .theme-toggle button.is-active {
+        background: var(--accent);
+        color: white;
+      }
+
+      /* ── Подсказка под страницей ── */
+      .footnotes {
+        margin-top: 32px;
+        padding: 16px 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        color: var(--text2);
+        line-height: 1.6;
+      }
+      .footnotes b {
+        color: var(--text);
+      }
+      .footnotes ul {
+        margin: 6px 0 0;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="theme-toggle">
+      <button onclick="setTheme('')" class="is-active">Light</button>
+      <button onclick="setTheme('twilight')">Twilight</button>
+      <button onclick="setTheme('dark')">Dark</button>
+    </div>
+
+    <div class="page-wrap">
+      <h1>План задач (СП) — Март 2026</h1>
+      <p class="subtitle">
+        Мокап финальной компоновки: снимок → тулбар с фильтрами и чипами → таблица
+      </p>
+
+      <!-- ═══════════ 1. Снимок месяца (сворачиваемый) ═══════════ -->
+      <div class="snapshot is-open" id="snapshot">
+        <div class="snapshot__header" onclick="toggleSnapshot()">
+          <div class="snapshot__title">
+            <span class="snapshot__chevron">▼</span>
+            Снимок марта 2026
+            <span class="snapshot__context">· Отдел 201 · Все проекты</span>
+          </div>
+          <div class="snapshot__summary-inline">
+            <span><b>162</b> задачи</span>
+            <span><b>120</b> закрыто (74.1%)</span>
+            <span><b>42</b> долга</span>
+          </div>
+        </div>
+
+        <div class="snapshot__body">
+          <div class="snap-group">
+            <div class="snap-group__head">
+              <span class="snap-group__label">Задачи месяца</span>
+              <span class="snap-group__total">162 <small>задачи</small></span>
+            </div>
+
+            <div class="snap-row snap-row--done" data-target-chip="done">
+              <span class="snap-row__icon">✓</span>
+              <span class="snap-row__label">Выполнено</span>
+              <span class="snap-row__count">98</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 60.5%"></span
+              ></span>
+            </div>
+
+            <div class="snap-row snap-row--early" data-target-chip="early">
+              <span class="snap-row__icon">✨</span>
+              <span class="snap-row__label">Выполнено с опережением</span>
+              <span class="snap-row__count">22</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 13.6%"></span
+              ></span>
+            </div>
+
+            <div class="snap-row snap-row--overdue" data-target-chip="overdue">
+              <span class="snap-row__icon">⚠</span>
+              <span class="snap-row__label">Просрочено</span>
+              <span class="snap-row__count">41</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 25.3%"></span
+              ></span>
+            </div>
+
+            <div class="snap-row snap-row--inwork" data-target-chip="inwork">
+              <span class="snap-row__icon">⟳</span>
+              <span class="snap-row__label">В работе</span>
+              <span class="snap-row__count">1</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 0.6%"></span
+              ></span>
+            </div>
+
+            <div class="snap-summary">
+              <span class="snap-summary__label">Закрыто из задач месяца</span>
+              <span class="snap-summary__value"><b>120</b> из 162 · 74.1%</span>
+            </div>
+          </div>
+
+          <div class="snap-group">
+            <div class="snap-group__head">
+              <span class="snap-group__label">Долги прошлых месяцев</span>
+              <span class="snap-group__total">42 <small>задачи</small></span>
+            </div>
+
+            <div class="snap-row snap-row--debt-closed" data-target-chip="debt-closed">
+              <span class="snap-row__icon">✓</span>
+              <span class="snap-row__label">Закрыто в марте</span>
+              <span class="snap-row__count">14</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 33.3%"></span
+              ></span>
+            </div>
+
+            <div class="snap-row snap-row--debt-hanging" data-target-chip="debt-hanging">
+              <span class="snap-row__icon">⚠</span>
+              <span class="snap-row__label">Долги</span>
+              <span class="snap-row__count">28</span>
+              <span class="snap-row__bar"
+                ><span class="snap-row__bar-fill" style="width: 66.7%"></span
+              ></span>
+            </div>
+
+            <div class="snap-summary">
+              <span class="snap-summary__label">Разгружено долгов</span>
+              <span class="snap-summary__value"><b>14</b> из 42 · 33.3%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ 2. Тулбар с фильтрами и чипами ═══════════ -->
+      <div class="toolbar">
+        <!-- Ряд 1: штатные фильтры/поиск -->
+        <div class="toolbar__row">
+          <span class="fake-input">Март 2026 ▾</span>
+          <span class="fake-input">Отдел 201 ▾</span>
+          <span class="fake-input">Все проекты ▾</span>
+          <span class="fake-input fake-input--search">🔍 Поиск…</span>
+          <span class="toolbar__spacer"></span>
+          <button class="btn-primary">+ Добавить</button>
+        </div>
+
+        <!-- Ряд 2: чипы группы (всегда видны) -->
+        <div class="toolbar__row">
+          <span class="toolbar__label">Показать:</span>
+          <button class="chip is-active" data-chip="all">
+            Все <span class="chip__count">204</span>
+          </button>
+          <button class="chip" data-chip="month">
+            План месяца <span class="chip__count">162</span>
+          </button>
+          <button class="chip" data-chip="debts">
+            Долги <span class="chip__count">42</span>
+          </button>
+        </div>
+
+        <!-- Ряд 3: чипы статусов (активны когда выбрана группа) -->
+        <div class="toolbar__row">
+          <span class="toolbar__label">Статус:</span>
+          <button class="chip chip--success" data-chip="done">
+            ✓ Выполнено <span class="chip__count">98</span>
+          </button>
+          <button class="chip chip--purple" data-chip="early">
+            ✨ С опережением <span class="chip__count">22</span>
+          </button>
+          <button class="chip chip--danger" data-chip="overdue">
+            ⚠ Просрочено <span class="chip__count">41</span>
+          </button>
+          <button class="chip chip--info" data-chip="inwork">
+            ⟳ В работе <span class="chip__count">1</span>
+          </button>
+          <span class="toolbar__divider"></span>
+          <button class="chip chip--success" data-chip="debt-closed">
+            ✓ Долги закрыты <span class="chip__count">14</span>
+          </button>
+          <button class="chip chip--warning" data-chip="debt-hanging">
+            ⚠ Долги <span class="chip__count">28</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════ 3. Таблица СП ═══════════ -->
+      <table class="sp-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">#</th>
+            <th>Работа</th>
+            <th>Исполнитель</th>
+            <th style="width: 160px">Дедлайн</th>
+            <th style="width: 80px">Март, ч</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-month">
+            <td>1</td>
+            <td>Разработка чертежа КД-2026-001</td>
+            <td>Иванов И.И.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">20.03.2026</span>
+                <span class="status-badge status-badge--done">✓ Выполнено</span>
+              </div>
+            </td>
+            <td>40</td>
+          </tr>
+          <tr class="row-month">
+            <td>2</td>
+            <td>Корректировка по извещению 142</td>
+            <td>Петров П.П.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">25.03.2026</span>
+                <span class="status-badge status-badge--overdue">⚠ Просрочено</span>
+              </div>
+            </td>
+            <td>20</td>
+          </tr>
+          <tr class="row-month">
+            <td>3</td>
+            <td>Согласование с заказчиком</td>
+            <td>Сидоров С.С.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">15.04.2026</span>
+                <span class="status-badge status-badge--early">✨ С опережением</span>
+              </div>
+            </td>
+            <td>30</td>
+          </tr>
+          <tr class="row-debt">
+            <td>4</td>
+            <td>Отчёт по ОКР (задолженность)</td>
+            <td>Иванов И.И.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">30.01.2026</span>
+                <span class="status-badge status-badge--hanging">⚠ Долг с января</span>
+              </div>
+            </td>
+            <td>—</td>
+          </tr>
+          <tr class="row-debt">
+            <td>5</td>
+            <td>Акт технического осмотра</td>
+            <td>Петров П.П.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">20.02.2026</span>
+                <span class="status-badge status-badge--done">✓ Закрыто в марте</span>
+              </div>
+            </td>
+            <td>—</td>
+          </tr>
+          <tr class="row-month">
+            <td>6</td>
+            <td>Испытание прототипа изд. 45</td>
+            <td>Сидоров С.С.</td>
+            <td>
+              <div class="deadline-cell">
+                <span class="deadline-cell__date">10.04.2026</span>
+                <span class="status-badge status-badge--inwork">⟳ В работе</span>
+              </div>
+            </td>
+            <td>15</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footnotes">
+        <b>Как это работает:</b>
+        <ul>
+          <li>
+            Клик по заголовку снимка — <b>сворачивает/разворачивает</b> блок. Когда
+            свёрнут — видна только одна строка с ключевыми цифрами.
+          </li>
+          <li>
+            Клик по ряду снимка (например «Просрочено 41») — <b>активирует чип</b>
+            «Просрочено» в тулбаре, таблица фильтруется.
+          </li>
+          <li>
+            Клик по чипу группы (Все / План / Долги) — <b>переключает контекст</b>,
+            чипы статусов ниже подсвечивают то, что доступно в текущей группе.
+          </li>
+          <li>
+            Слева у каждой строки таблицы — <b>цветная полоса</b>: 🟢 зелёная для
+            задач месяца, 🟠 оранжевая для долгов. Плюс — тултип при наведении.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      function setTheme(t) {
+        document.documentElement.dataset.theme = t;
+        document
+          .querySelectorAll('.theme-toggle button')
+          .forEach((b) => b.classList.remove('is-active'));
+        const idx = t === '' ? 0 : t === 'twilight' ? 1 : 2;
+        document.querySelectorAll('.theme-toggle button')[idx].classList.add('is-active');
+      }
+
+      function toggleSnapshot() {
+        document.getElementById('snapshot').classList.toggle('is-open');
+      }
+
+      // Клик по ряду снимка → активирует соответствующий чип
+      document.querySelectorAll('.snap-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const target = row.dataset.targetChip;
+          activateChip(target);
+          highlightSnapRow(target);
+        });
+      });
+
+      // Клик по чипу → выделяет соответствующий ряд в снимке
+      document.querySelectorAll('.chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          activateChip(chip.dataset.chip);
+          highlightSnapRow(chip.dataset.chip);
+        });
+      });
+
+      function activateChip(chipKey) {
+        document
+          .querySelectorAll('.chip')
+          .forEach((c) => c.classList.remove('is-active'));
+        const target = document.querySelector(`.chip[data-chip="${chipKey}"]`);
+        if (target) target.classList.add('is-active');
+      }
+
+      function highlightSnapRow(chipKey) {
+        document
+          .querySelectorAll('.snap-row')
+          .forEach((r) => r.classList.remove('is-linked'));
+        const row = document.querySelector(`.snap-row[data-target-chip="${chipKey}"]`);
+        if (row) row.classList.add('is-linked');
+      }
+    </script>
+  </body>
+</html>

@@ -89,6 +89,7 @@ from .views.journal import (
     JournalFacetsView,
     JournalListView,
 )
+from .views.month_snapshot import MonthSnapshotView
 
 # Уведомления
 from .views.notifications import (
@@ -357,6 +358,8 @@ urlpatterns = [
     path("analytics/plan/", PlanAnalyticsView.as_view()),
     # GET /api/analytics/reports/ — отчёты о выполнении плана
     path("analytics/reports/", ReportsAnalyticsView.as_view()),
+    # GET /api/analytics/month_snapshot/ — снимок месяца (задачи + долги)
+    path("analytics/month_snapshot/", MonthSnapshotView.as_view()),
     # ── Dashboard ─────────────────────────────────────────────────────
     # GET /api/dashboard/ — личный план + сводка для руководителя
     path("dashboard/", DashboardAPIView.as_view()),
