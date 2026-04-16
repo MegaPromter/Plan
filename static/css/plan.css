@@ -2215,6 +2215,10 @@ button.mf-trigger.mf-icon::after {
   margin: 0 0 12px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Внутри тулбара — без нижнего маржина (у toolbar есть свой gap) */
+.toolbar > .snapshot {
+  margin: 0;
+}
 .snapshot__header {
   display: flex;
   align-items: center;

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'25' }}">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'26' }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -30,7 +30,9 @@
 {% endblock %}
 
 {% block content %}
-<!-- ══ Снимок месяца ═════════════════════════════════════════════════ -->
+<!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
+<div class="toolbar" id="toolbar">
+<!-- ══ Снимок месяца (внутри тулбара: его высота учитывается в --toolbar-h) -->
 <section class="snapshot" id="monthSnapshot" aria-label="Снимок месяца">
   <header class="snapshot__header" onclick="toggleSnapshot()">
     <div class="snapshot__title">
@@ -97,8 +99,6 @@
   </div>
 </section>
 
-<!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
-<div class="toolbar" id="toolbar">
   <!-- 1. Панель периода -->
   <div class="pp-period-bar">
     <span class="cal-label">Период:</span>
