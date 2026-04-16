@@ -289,8 +289,10 @@ function _applySnapshotRowMarkers() {
     // Если снимок активен — перекрашиваем row-done/overdue/inwork строго по корзине,
     // чтобы цвет строки и цифра в чипе/снимке совпадали.
     if (snapActive && b) {
-      tr.classList.remove('row-done', 'row-overdue', 'row-inwork');
-      if (b === 'done' || b === 'done_early' || b === 'debt_closed') {
+      tr.classList.remove('row-done', 'row-early', 'row-overdue', 'row-inwork');
+      if (b === 'done_early') {
+        tr.classList.add('row-early');
+      } else if (b === 'done' || b === 'debt_closed') {
         tr.classList.add('row-done');
       } else if (b === 'overdue' || b === 'debt_hanging') {
         tr.classList.add('row-overdue');
@@ -2722,7 +2724,9 @@ function makeRow(t, num) {
   const _snapBucket = _snapBucketOf(t.id);
   if (selectedMonth && !showAll && _snapBucket) {
     // Раскраска строго по корзине снимка
-    if (_snapBucket === 'done' || _snapBucket === 'done_early' || _snapBucket === 'debt_closed') {
+    if (_snapBucket === 'done_early') {
+      tr.classList.add('row-early');
+    } else if (_snapBucket === 'done' || _snapBucket === 'debt_closed') {
       tr.classList.add('row-done');
     } else if (_snapBucket === 'overdue' || _snapBucket === 'debt_hanging') {
       tr.classList.add('row-overdue');
