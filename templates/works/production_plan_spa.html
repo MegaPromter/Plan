@@ -194,23 +194,23 @@
 
   <div class="pp-table-wrap" id="ppTableView">
     <!-- Таблица производственного плана с инлайн-редактированием -->
-    <table class="pp-table" id="ppTable">
+    <table class="pp-table" id="ppTable" data-col-table="pp">
       <thead>
         <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
           <th style="width:40px;" rowspan="2" data-col-idx="0">№</th>
-          <th style="width:100px;" rowspan="2" data-sort="row_code" data-col-idx="1">Код строки <button class="mf-trigger mf-icon" data-col="row_code" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:110px;" rowspan="2" data-sort="work_order" data-col-idx="2">Наряд-заказ <button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:90px;" rowspan="2" data-sort="stage_num" data-col-idx="3">№ этапа <button class="mf-trigger mf-icon" data-col="stage_num" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:90px;" rowspan="2" data-sort="work_num" data-col-idx="4">№ работы <button class="mf-trigger mf-icon" data-col="work_num" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
+          <th style="width:100px;" rowspan="2" data-sort="row_code" data-col-idx="1">Код строки <button class="mf-trigger mf-icon" data-col="row_code" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="row_code"></div></th>
+          <th style="width:110px;" rowspan="2" data-sort="work_order" data-col-idx="2">Наряд-заказ <button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="work_order"></div></th>
+          <th style="width:90px;" rowspan="2" data-sort="stage_num" data-col-idx="3">№ этапа <button class="mf-trigger mf-icon" data-col="stage_num" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="stage_num"></div></th>
+          <th style="width:90px;" rowspan="2" data-sort="work_num" data-col-idx="4">№ работы <button class="mf-trigger mf-icon" data-col="work_num" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="work_num"></div></th>
           <th colspan="2" style="text-align:center;">Группа</th>
           <th colspan="2" style="text-align:center;">Сроки</th>
           <th style="width:500px;" colspan="4" data-col-group="labor">Расчёт трудозатрат</th>
-          <th style="width:100px;" rowspan="2" data-sort="ntc_center" data-col-idx="13">Подразделение <button class="mf-trigger mf-icon" data-col="center" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:60px;" rowspan="2" data-sort="department" data-col-idx="14">Отдел <button class="mf-trigger mf-icon" data-col="dept" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:130px;" rowspan="2" data-sort="sector" data-col-idx="15">Сектор /<br>Нач. сектора <button class="mf-trigger mf-icon" data-col="sector_head" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:140px;" rowspan="2" data-sort="executor" data-col-idx="16">Разработчик <button class="mf-trigger mf-icon" data-col="executor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:120px;" rowspan="2" data-sort="task_type" data-col-idx="17">Тип задачи <button class="mf-trigger mf-icon" data-col="task_type" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
+          <th style="width:100px;" rowspan="2" data-sort="ntc_center" data-col-idx="13">Подразделение <button class="mf-trigger mf-icon" data-col="center" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="ntc_center"></div></th>
+          <th style="width:60px;" rowspan="2" data-sort="department" data-col-idx="14">Отдел <button class="mf-trigger mf-icon" data-col="dept" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="dept"></div></th>
+          <th style="width:130px;" rowspan="2" data-sort="sector" data-col-idx="15">Сектор /<br>Нач. сектора <button class="mf-trigger mf-icon" data-col="sector_head" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="sector"></div></th>
+          <th style="width:140px;" rowspan="2" data-sort="executor" data-col-idx="16">Разработчик <button class="mf-trigger mf-icon" data-col="executor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="executor"></div></th>
+          <th style="width:120px;" rowspan="2" data-sort="task_type" data-col-idx="17">Тип задачи <button class="mf-trigger mf-icon" data-col="task_type" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="task_type"></div></th>
           <th style="width:70px;" rowspan="2" data-col-idx="18">Действия</th>
         </tr>
         <!-- Вторая строка заголовков: детализация -->

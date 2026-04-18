@@ -2237,6 +2237,29 @@ tbody tr:hover > .td-actions-hover::after {
   background: rgba(139, 92, 246, 0.06);
 }
 
+/* ── Ручка изменения ширины колонки таблицы (col_resize.js) ──────── */
+/* Работает во всех SPA-таблицах, у которых <table data-col-table="..."> */
+.col-resize {
+  position: absolute;
+  right: -8px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  z-index: 20;
+  cursor: col-resize;
+  flex-shrink: 0;
+  border-right: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.col-resize:hover {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb, 37, 99, 235), 0.06);
+}
+/* Внутри <th> без .th-inner ручка позиционируется относительно самой ячейки */
+th {
+  position: relative;
+}
+
 /* ── Общие стили Ганта (gantt_common.js) ─────────────────────────── */
 .gantt-col-resizer {
   position: absolute;

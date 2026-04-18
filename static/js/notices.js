@@ -167,6 +167,21 @@ async function loadJournal() {
   jiLoading = false;
   _jiInitSort();
   renderTable();
+  _initJiColResize();
+}
+
+/* ── Ресайз колонок (общий модуль col_resize.js) ────────────────────────── */
+
+let _jiColResizeInitialized = false;
+function _initJiColResize() {
+  const table = document.getElementById('jiTable');
+  if (!table || !window.ColResize) return;
+  // Применяем сохранённые ширины при каждом обновлении данных —
+  // они хранятся в `col_settings` по ключам `journal_<col>`.
+  window.ColResize.apply(table, _cfg.colSettings || {});
+  if (_jiColResizeInitialized) return;
+  window.ColResize.attach(table);
+  _jiColResizeInitialized = true;
 }
 
 /** Дозагрузка следующей порции (при скролле вниз). */

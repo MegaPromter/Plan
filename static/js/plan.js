@@ -5357,71 +5357,47 @@ async function resetUserPassword(uid, username) {
 }
 
 // ── COL RESIZE — изменение ширины колонок перетаскиванием ──────────────────
-// Инициализирует drag-обработчики на ручках .col-resize в заголовках таблицы
+// Все операции с шириной делегированы общему модулю window.ColResize
+// (static/js/col_resize.js). Модуль хранит данные в `col_settings` под
+// префиксом `plan_*`, чтобы не конфликтовать с настройками других таблиц.
+
+// Инициализирует drag-обработчики. Вызывается один раз при старте страницы.
 function initColResize() {
-  document.querySelectorAll('.col-resize').forEach((handle) => {
-    const th = handle.closest('th');
-    let startX, startW;
-    handle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      startX = e.clientX;
-      startW = th.offsetWidth;
-      let _rafResize = null;
-      // mousemove — изменяем ширину колонки (с rAF throttle)
-      const onMove = (ev) => {
-        if (_rafResize) return;
-        _rafResize = requestAnimationFrame(() => {
-          _rafResize = null;
-          const w = Math.max(60, startW + ev.clientX - startX);
-          th.style.width = w + 'px';
-          const idx = th.cellIndex;
-          document.querySelectorAll('#mainTable tbody tr').forEach((tr) => {
-            if (tr.cells[idx]) tr.cells[idx].style.width = w + 'px';
-          });
-          colSettings[handle.dataset.col] = { width: w };
-        });
-      };
-      // mouseup — завершаем drag, ресайзим textarea, сохраняем настройки
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        _resizeTextareas(document.getElementById('taskBody'));
-        saveColSettings();
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
+  const table = document.getElementById('mainTable');
+  if (!table || !window.ColResize) return;
+  window.ColResize.attach(table, {
+    // После каждого пикселя ресайза пересчитываем textarea открытой задачи
+    onResize: () => {
+      const body = document.getElementById('taskBody');
+      if (body) _resizeTextareas(body);
+    },
   });
 }
 
-// Применяет сохранённые ширины колонок из colSettings (загружены с сервера)
+// Применяет сохранённые ширины колонок из colSettings (загружены с сервера).
+// Поддерживает «старый» формат ключей без префикса — для обратной совместимости
+// со старыми сохранениями у пользователей (новые ресайзы пишутся уже с префиксом).
 function applyColSettings() {
-  const DATE_COLS_MIN = { ppds: 150, ppde: 160 }; // Минимальная ширина для колонок дат ПП
-  // Устанавливаем сохранённую ширину (но не меньше минимума для дат)
-  for (const [key, val] of Object.entries(colSettings)) {
-    const th = document.getElementById(`th-${key}`);
-    if (th && val.width) {
-      const minW = DATE_COLS_MIN[key] || 0;
-      th.style.width = Math.max(val.width, minW) + 'px';
+  const table = document.getElementById('mainTable');
+  if (!table) return;
+  // Минимальные ширины для ПП-дат (узкие даты плохо читаются)
+  const DATE_COLS_MIN = { ppds: 150, ppde: 160 };
+  // Собираем «приведённый» объект: если ширина лежит под голым ключом —
+  // копируем её под ключ с префиксом, чтобы модуль её нашёл.
+  const src = colSettings || {};
+  const resolved = { ...src };
+  for (const k of Object.keys(src)) {
+    if (!k.startsWith('plan_') && src[k] && src[k].width) {
+      resolved['plan_' + k] = src[k];
     }
   }
-  // Для колонок дат без сохранённой ширины — задаём minWidth
+  if (window.ColResize) window.ColResize.apply(table, resolved);
+  // Минимумы для дат — ставим на th, если пользователь ещё не задал ширину
   for (const [key, minW] of Object.entries(DATE_COLS_MIN)) {
     const th = document.getElementById(`th-${key}`);
-    if (th && !colSettings[key]?.width) th.style.minWidth = minW + 'px';
-  }
-}
-
-// Сохраняет настройки ширины колонок на сервер (POST /api/col_settings/)
-async function saveColSettings() {
-  try {
-    await fetch('/api/col_settings/', {
-      method: 'POST',
-      headers: apiHeaders(),
-      body: JSON.stringify(colSettings),
-    });
-  } catch (e) {
-    console.error('saveColSettings error:', e);
+    if (!th) continue;
+    const saved = resolved['plan_' + key] || src[key];
+    if (!saved || !saved.width) th.style.minWidth = minW + 'px';
   }
 }
 

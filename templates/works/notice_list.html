@@ -32,7 +32,7 @@
 </div>
 
 <div class="ji-wrap">
-  <table class="ji-table" id="jiTable">
+  <table class="ji-table" id="jiTable" data-col-table="journal">
     <colgroup>
       <col style="width:30px;">  <!-- № -->
       <col style="width:62px;">  <!-- ИИ/ПИ -->
@@ -51,16 +51,16 @@
     <thead>
       <tr>
         <th rowspan="2">&#8470;</th>
-        <th rowspan="2" data-sort="ii_pi">ИИ/ПИ</th>
-        <th rowspan="2" data-sort="notice_number">Номер изв.</th>
+        <th rowspan="2" data-sort="ii_pi">ИИ/ПИ<div class="col-resize" data-col="ii_pi"></div></th>
+        <th rowspan="2" data-sort="notice_number">Номер изв.<div class="col-resize" data-col="notice_number"></div></th>
         <th colspan="2" style="text-align:center;">Группа</th>
-        <th rowspan="2" data-sort="date_issued">Дата выпуска</th>
-        <th rowspan="2" data-sort="date_expires">Срок действия</th>
-        <th rowspan="2" data-sort="dept">Отдел</th>
-        <th rowspan="2" data-sort="sector">Сектор</th>
-        <th rowspan="2" data-sort="developer">Разработчик</th>
-        <th rowspan="2" data-sort="description">Описание</th>
-        <th rowspan="2" data-sort="status">Статус</th>
+        <th rowspan="2" data-sort="date_issued">Дата выпуска<div class="col-resize" data-col="date_issued"></div></th>
+        <th rowspan="2" data-sort="date_expires">Срок действия<div class="col-resize" data-col="date_expires"></div></th>
+        <th rowspan="2" data-sort="dept">Отдел<div class="col-resize" data-col="dept"></div></th>
+        <th rowspan="2" data-sort="sector">Сектор<div class="col-resize" data-col="sector"></div></th>
+        <th rowspan="2" data-sort="developer">Разработчик<div class="col-resize" data-col="executor"></div></th>
+        <th rowspan="2" data-sort="description">Описание<div class="col-resize" data-col="description"></div></th>
+        <th rowspan="2" data-sort="status">Статус<div class="col-resize" data-col="status"></div></th>
         <th rowspan="2" class="col-actions"></th>
       </tr>
       <tr>
@@ -227,5 +227,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}?v=9"></script>
+<script src="{% static 'js/notices.js' %}?v=10"></script>
 {% endblock %}

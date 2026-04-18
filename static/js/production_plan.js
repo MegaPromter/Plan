@@ -979,6 +979,22 @@ async function openProject(id, name) {
   initPPPeriodBar();
   _ppMarkTodayMonth();
   initPPDeptChips();
+  _initPPColResize();
+}
+
+// ── Ресайз колонок ПП ──────────────────────────────────────────────
+// Делегируется общему модулю ColResize (static/js/col_resize.js).
+// Ширины хранятся в `Employee.col_settings` под префиксом `pp_*`.
+let _ppColResizeInitialized = false;
+function _initPPColResize() {
+  const table = document.getElementById('ppTable');
+  if (!table || !window.ColResize) return;
+  // Применяем ранее сохранённые ширины
+  window.ColResize.apply(table, (_ppCfg && _ppCfg.colSettings) || {});
+  // Drag-хэндлеры вешаем один раз
+  if (_ppColResizeInitialized) return;
+  window.ColResize.attach(table);
+  _ppColResizeInitialized = true;
 }
 
 // Возврат на лендинг
