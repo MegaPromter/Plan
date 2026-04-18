@@ -1299,56 +1299,50 @@ tr.row-pinned td:first-child::after {
   top: calc(100% + 6px);
 }
 
-/* ── Hover-действия на строках таблицы ─────────────────────────── */
+/* ── Кнопки-действия на строках таблицы ─────────────────────────
+   Кнопки всегда видны (не по hover). Они живут внутри ячейки
+   «Действия», выстроены в ряд. При наведении на строку слегка
+   подсвечиваются. При наведении на саму кнопку — акцент. */
 .td-actions-hover {
   position: relative;
+  padding: 4px 6px !important;
+  text-align: center;
+  white-space: nowrap;
 }
 .row-actions {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s;
-  z-index: 10;
-}
-tbody tr:hover > .td-actions-hover > .row-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-tbody tr:hover > .td-actions-hover::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 170px;
-  background: linear-gradient(90deg, transparent, var(--surface) 40%);
-  pointer-events: none;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
 }
 .row-action-btn {
-  width: 30px;
-  height: 30px;
-  border: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
   color: var(--text2);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.12s;
+  opacity: 0.6;
+  transition:
+    opacity 0.12s,
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s,
+    transform 0.12s;
+}
+tbody tr:hover .row-action-btn {
+  opacity: 1;
 }
 .row-action-btn:hover {
   background: var(--accent);
   color: #fff;
-  transform: scale(1.1);
+  border-color: var(--accent);
+  opacity: 1;
 }
 .row-action-btn.btn-report:hover {
   background: var(--success);
