@@ -298,3 +298,20 @@ class TestSerialization:
         assert task["work_number"] == "001"
         assert task["description"] == "АБВГ.123456.001"
         assert task["stage"] == "1"
+
+    def test_task_duration_over_5_years_rejected(self, admin_user, synced_work):
+        """Длительность задачи не может превышать 5 лет."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/tasks/{synced_work.id}/",
+            data=json.dumps(
+                {
+                    "date_start": "2025-01-01",
+                    "date_end": "2032-01-01",  # 7 лет — должно отклониться
+                }
+            ),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+        assert "5 лет" in resp.json().get("error", "")

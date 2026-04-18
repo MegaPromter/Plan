@@ -977,6 +977,12 @@ def _set_date_fields(work, d):
     # Валидация: date_start не может быть позже date_end
     if work.date_start and work.date_end and work.date_start > work.date_end:
         raise ValueError("Дата начала не может быть позже даты окончания")
+    # Валидация: максимальная длительность работы — 5 лет
+    # (страховка от опечаток в году, напр. 2099 вместо 2029)
+    if work.date_start and work.date_end:
+        delta = (work.date_end - work.date_start).days
+        if delta > 5 * 366:  # с запасом на високосные годы
+            raise ValueError("Длительность работы не может превышать 5 лет")
 
 
 # Локальный алиас для обратной совместимости (реализация в utils.py)

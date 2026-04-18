@@ -70,7 +70,8 @@ class TestReportCreate:
         r = c.post("/api/reports/", "{}", content_type="application/json")
         assert r.status_code == 401
 
-    def test_regular_user_403(self, regular_user, work):
+    def test_regular_user_not_executor_403(self, regular_user, work):
+        """Рядовой user, не назначенный исполнителем, получает 403."""
         c = Client()
         c.login(username="user_test", password="testpass123")
         r = c.post(
@@ -79,6 +80,97 @@ class TestReportCreate:
             content_type="application/json",
         )
         assert r.status_code == 403
+
+    def test_regular_user_as_executor_can_create(self, regular_user, work):
+        """Рядовой user, назначенный исполнителем задачи, может создать отчёт."""
+        emp = regular_user.employee
+        work.executor = emp
+        work.save(update_fields=["executor"])
+        c = Client()
+        c.login(username="user_test", password="testpass123")
+        r = c.post(
+            "/api/reports/",
+            json.dumps(
+                {
+                    "task_id": work.id,
+                    "doc_name": "Отчёт исполнителя",
+                    "ii_pi": "ИИ",
+                }
+            ),
+            content_type="application/json",
+        )
+        assert r.status_code == 200, r.content
+
+    def test_regular_user_as_task_executor_can_create(self, regular_user, work):
+        """Рядовой user, добавленный как доп. исполнитель (TaskExecutor), может создать отчёт."""
+        from apps.works.models import TaskExecutor
+
+        TaskExecutor.objects.create(
+            work=work,
+            executor=regular_user.employee,
+            executor_name=regular_user.employee.full_name,
+        )
+        c = Client()
+        c.login(username="user_test", password="testpass123")
+        r = c.post(
+            "/api/reports/",
+            json.dumps(
+                {
+                    "task_id": work.id,
+                    "doc_name": "Отчёт соисполнителя",
+                    "ii_pi": "ИИ",
+                }
+            ),
+            content_type="application/json",
+        )
+        assert r.status_code == 200, r.content
+
+    def test_create_rejects_future_plan_hours_without_confirm(self, admin_user, work):
+        """Если у задачи есть часы в будущих месяцах, первый POST возвращает 409."""
+        import datetime as dt
+
+        # Ставим часы на год вперёд
+        next_year = dt.date.today().year + 1
+        work.plan_hours = {f"{next_year}-01": 40, f"{next_year}-02": 20}
+        work.save(update_fields=["plan_hours"])
+
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.post(
+            "/api/reports/",
+            json.dumps({"task_id": work.id, "doc_name": "Ранний отчёт", "ii_pi": "ИИ"}),
+            content_type="application/json",
+        )
+        assert r.status_code == 409
+        data = r.json()
+        assert data.get("error") == "confirm_zero_future_required"
+        assert f"{next_year}-01" in data.get("future_months", [])
+
+    def test_create_with_confirm_zero_future_succeeds(self, admin_user, work):
+        """С флагом confirm_zero_future=true сохраняем и обнуляем будущие месяцы."""
+        import datetime as dt
+
+        next_year = dt.date.today().year + 1
+        work.plan_hours = {f"{next_year}-01": 40}
+        work.save(update_fields=["plan_hours"])
+
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.post(
+            "/api/reports/",
+            json.dumps(
+                {
+                    "task_id": work.id,
+                    "doc_name": "Досрочный",
+                    "ii_pi": "ИИ",
+                    "confirm_zero_future": True,
+                }
+            ),
+            content_type="application/json",
+        )
+        assert r.status_code == 200, r.content
+        work.refresh_from_db()
+        assert work.plan_hours[f"{next_year}-01"] == 0
 
     def test_create_success(self, admin_user, work):
         c = Client()

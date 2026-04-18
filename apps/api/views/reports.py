@@ -17,7 +17,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.api.drf_utils import IsWriterPermission
 from apps.api.utils import get_visibility_filter, safe_date, safe_decimal, safe_int
 from apps.works.models import Notice, Work, WorkReport
 
@@ -102,18 +101,57 @@ def _sync_notices_for_work(work):
 def _check_report_access(user, report):
     """Проверка: writer может менять отчёт только для задачи своего отдела.
     admin / ntc_head / ntc_deputy — без ограничений.
+    Рядовой исполнитель (user) — только по своим задачам (где он назначен).
     Возвращает строку ошибки или None (доступ разрешён)."""
     employee = getattr(user, "employee", None)
     if not employee:
         return "Нет профиля сотрудника"
     if employee.role in ("admin", "ntc_head", "ntc_deputy"):
         return None
+    work = report.work
+    # Рядовой исполнитель: только если он сам назначен на задачу
+    if not employee.is_writer:
+        if _is_task_executor(work, employee):
+            return None
+        return "Вы можете менять отчёты только по задачам, где назначены исполнителем"
+    # Writer: в рамках своего отдела
     if not employee.department:
         return "Вашему профилю не назначен отдел"
-    work = report.work
     if work and work.department_id and employee.department_id != work.department_id:
         return "Вы можете редактировать только отчёты своего отдела"
     return None
+
+
+def _is_task_executor(work, employee):
+    """True, если сотрудник назначен исполнителем этой работы
+    (как основной executor либо в TaskExecutor)."""
+    if not work or not employee:
+        return False
+    if work.executor_id == employee.pk:
+        return True
+    from apps.works.models import TaskExecutor
+
+    return TaskExecutor.objects.filter(work=work, executor=employee).exists()
+
+
+def _future_plan_months(work, report_created_at):
+    """Список месяцев (в формате 'YYYY-MM') с ненулевыми plan_hours,
+    которые БУДУТ обнулены при создании отчёта (строго после месяца отчёта).
+
+    Нужно, чтобы фронт мог показать подтверждение досрочного выполнения.
+    """
+    report_month = f"{report_created_at.year}-{report_created_at.month:02d}"
+    ph = work.plan_hours or {}
+    result = []
+    for key, hours in ph.items():
+        if key > report_month:
+            try:
+                if float(hours or 0) > 0:
+                    result.append(key)
+            except (TypeError, ValueError):
+                continue
+    result.sort()
+    return result
 
 
 def _serialize_report(r):
@@ -191,9 +229,16 @@ class ReportListView(APIView):
 
 
 class ReportCreateView(APIView):
-    """POST /api/reports — создание отчёта."""
+    """POST /api/reports — создание отчёта.
 
-    permission_classes = [IsWriterPermission]
+    Доступ:
+      - admin / ntc_head / ntc_deputy — любую задачу;
+      - writer (dept_head / dept_deputy / sector_head / ...) — задачи своего отдела;
+      - рядовой user — только задачи, где он назначен исполнителем
+        (work.executor или запись в TaskExecutor).
+    """
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -225,18 +270,33 @@ class ReportCreateView(APIView):
             return Response({"error": "Задача не найдена"}, status=404)
 
         employee = getattr(request.user, "employee", None)
-        if employee and employee.role not in ("admin", "ntc_head", "ntc_deputy"):
-            if not employee.department_id:
-                return Response(
-                    {"error": "Вашему профилю не назначен отдел"}, status=403
-                )
-            if work.department_id and employee.department_id != work.department_id:
-                return Response(
-                    {
-                        "error": "Вы можете создавать отчёты только для задач своего отдела"
-                    },
-                    status=403,
-                )
+        if not employee:
+            return Response({"error": "Нет профиля сотрудника"}, status=403)
+
+        # Доступ: админы/руководители НТЦ — без ограничений;
+        # writers — свой отдел; рядовой user — только свои задачи.
+        if employee.role not in ("admin", "ntc_head", "ntc_deputy"):
+            if employee.is_writer:
+                if not employee.department_id:
+                    return Response(
+                        {"error": "Вашему профилю не назначен отдел"}, status=403
+                    )
+                if work.department_id and employee.department_id != work.department_id:
+                    return Response(
+                        {
+                            "error": "Вы можете создавать отчёты только для задач своего отдела"
+                        },
+                        status=403,
+                    )
+            else:
+                # Рядовой исполнитель: разрешаем только по своим задачам
+                if not _is_task_executor(work, employee):
+                    return Response(
+                        {
+                            "error": "Вы можете заполнять отчёты только по задачам, где назначены исполнителем"
+                        },
+                        status=403,
+                    )
 
         url_err = _validate_url(d.get("doc_link"))
         if url_err:
@@ -246,6 +306,23 @@ class ReportCreateView(APIView):
         if da and da > timezone.now().date():
             return Response(
                 {"error": "Дата выпуска не может быть позже текущей даты"}, status=400
+            )
+
+        # Досрочное выполнение: если есть план-часы в будущих месяцах, требуем
+        # явное подтверждение пользователя (флаг confirm_zero_future=true).
+        # Иначе возвращаем 409 + список месяцев, чтобы фронт мог спросить.
+        future_months = _future_plan_months(work, timezone.now())
+        if future_months and not d.get("confirm_zero_future"):
+            return Response(
+                {
+                    "error": "confirm_zero_future_required",
+                    "future_months": future_months,
+                    "message": (
+                        "У задачи запланированы часы в будущих месяцах. "
+                        "Они будут обнулены. Подтвердите действие."
+                    ),
+                },
+                status=409,
             )
 
         with transaction.atomic():
@@ -280,9 +357,14 @@ class ReportCreateView(APIView):
 
 
 class ReportDetailView(APIView):
-    """PUT /api/reports/<id>; DELETE /api/reports/<id>."""
+    """PUT /api/reports/<id>; DELETE /api/reports/<id>.
 
-    permission_classes = [IsWriterPermission]
+    Доступ уточняется в _check_report_access():
+      - писатели — свой отдел; админы/руководство НТЦ — везде;
+      - рядовые исполнители — только по задачам, где они назначены.
+    """
+
+    permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
         try:

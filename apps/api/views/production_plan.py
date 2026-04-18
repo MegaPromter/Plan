@@ -154,6 +154,11 @@ def _serialize_pp(work, today=None):
 
 _PP_DECIMAL_FIELDS = {"sheets_a4", "norm", "coeff", "total_2d", "total_3d", "labor"}
 
+# Поля трудоёмкости, которые должны быть СТРОГО больше нуля
+# (если клиент прислал их и значение распарсилось — запрещаем <= 0).
+# Пустое значение допустимо — означает «не задано».
+_PP_STRICT_POSITIVE_FIELDS = {"labor"}
+
 
 # ---------------------------------------------------------------------------
 #  GET / POST  /api/production_plan
@@ -328,16 +333,25 @@ class ProductionPlanCreateView(APIView):
             # Применяем остальные поля без промежуточных save()
             detail_view = ProductionPlanDetailView()
             changed = False
+            validation_error = None
             for field in PRODUCTION_ALLOWED_FIELDS:
                 if field in ("work_name", "task_type"):
                     continue
                 value = d.get(field)
                 if value is None or value == "":
                     continue
-                detail_view._update_field(
-                    work, field, value, save=False, skip_date_check=True
-                )
+                try:
+                    detail_view._update_field(
+                        work, field, value, save=False, skip_date_check=True
+                    )
+                except ValueError as exc:
+                    validation_error = str(exc)
+                    break
                 changed = True
+            if validation_error:
+                # Внутри transaction.atomic() — вызываем set_rollback
+                transaction.set_rollback(True)
+                return Response({"error": validation_error}, status=400)
             # Проверка дат после установки всех полей
             if work.date_start and work.date_end and work.date_start > work.date_end:
                 work.delete()
@@ -345,6 +359,14 @@ class ProductionPlanCreateView(APIView):
                     {"error": "Дата начала не может быть позже даты окончания"},
                     status=400,
                 )
+            # Максимальная длительность работы — 5 лет
+            if work.date_start and work.date_end:
+                if (work.date_end - work.date_start).days > 5 * 366:
+                    work.delete()
+                    return Response(
+                        {"error": "Длительность работы не может превышать 5 лет"},
+                        status=400,
+                    )
 
             # Автогенерация номера работы (если проект УП привязан)
             if not work.work_num:
@@ -546,6 +568,13 @@ class ProductionPlanDetailView(APIView):
                 and parsed > work.date_end
             ):
                 raise ValueError("Дата начала не может быть позже даты окончания")
+            if (
+                not skip_date_check
+                and parsed
+                and work.date_end
+                and (work.date_end - parsed).days > 5 * 366
+            ):
+                raise ValueError("Длительность работы не может превышать 5 лет")
             work.date_start = parsed
             work.pp_date_start = parsed
         elif field == "date_end":
@@ -557,6 +586,13 @@ class ProductionPlanDetailView(APIView):
                 and parsed < work.date_start
             ):
                 raise ValueError("Дата окончания не может быть раньше даты начала")
+            if (
+                not skip_date_check
+                and parsed
+                and work.date_start
+                and (parsed - work.date_start).days > 5 * 366
+            ):
+                raise ValueError("Длительность работы не может превышать 5 лет")
             work.date_end = parsed
             work.pp_date_end = parsed
         elif field == "executor":
@@ -585,7 +621,15 @@ class ProductionPlanDetailView(APIView):
             else:
                 work.ntc_center = None
         elif field in _PP_DECIMAL_FIELDS:
-            setattr(work, field, _safe_decimal(value))
+            parsed = _safe_decimal(value)
+            # Строгая проверка «> 0» для трудоёмкости (labor и т.п.)
+            if (
+                field in _PP_STRICT_POSITIVE_FIELDS
+                and parsed is not None
+                and parsed <= 0
+            ):
+                raise ValueError(f"Поле «{field}» должно быть больше нуля")
+            setattr(work, field, parsed)
         elif field == "sector_head":
             # sector_head устанавливается через FK sector (только в рамках отдела)
             if value:

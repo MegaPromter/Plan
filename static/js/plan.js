@@ -4961,8 +4961,29 @@ async function saveOneReportRow(tr, r, idx) {
       });
       if (updRes._error) return false;
     } else {
-      const resp = await fetchJson('/api/reports/', { method: 'POST', body: JSON.stringify(data) });
-      if (resp._error) return false;
+      let resp = await fetchJson('/api/reports/', { method: 'POST', body: JSON.stringify(data) });
+      // Backend возвращает 409 если у задачи есть плановые часы в будущих
+      // месяцах. Спрашиваем пользователя и, при согласии, отправляем
+      // повторно с флагом confirm_zero_future=true.
+      if (resp && resp._conflict && resp.error === 'confirm_zero_future_required') {
+        const months = Array.isArray(resp.future_months) ? resp.future_months : [];
+        const monthsTxt = months.length ? `\n\nБудущие месяцы с часами: ${months.join(', ')}` : '';
+        const ok = window.confirm(
+          'Задача имеет плановые часы в будущих месяцах.\n' +
+            'При сохранении отчёта они будут обнулены (досрочное выполнение).' +
+            monthsTxt +
+            '\n\nПродолжить?',
+        );
+        if (!ok) {
+          notify('Сохранение отчёта отменено', 'warn');
+          return false;
+        }
+        resp = await fetchJson('/api/reports/', {
+          method: 'POST',
+          body: JSON.stringify({ ...data, confirm_zero_future: true }),
+        });
+      }
+      if (resp._error || resp._conflict) return false;
       if (resp && resp.id) {
         tr.dataset.rid = resp.id;
         reportRows[idx].id = resp.id;
@@ -5054,8 +5075,27 @@ async function saveAllReports() {
       });
       if (updRes._error) return;
     } else {
-      const resp = await fetchJson('/api/reports/', { method: 'POST', body: JSON.stringify(data) });
-      if (resp._error) return;
+      let resp = await fetchJson('/api/reports/', { method: 'POST', body: JSON.stringify(data) });
+      // Досрочное выполнение: подтверждение обнуления часов в будущих месяцах
+      if (resp && resp._conflict && resp.error === 'confirm_zero_future_required') {
+        const months = Array.isArray(resp.future_months) ? resp.future_months : [];
+        const monthsTxt = months.length ? `\n\nБудущие месяцы с часами: ${months.join(', ')}` : '';
+        const ok = window.confirm(
+          'Задача имеет плановые часы в будущих месяцах.\n' +
+            'При сохранении отчёта они будут обнулены (досрочное выполнение).' +
+            monthsTxt +
+            '\n\nПродолжить?',
+        );
+        if (!ok) {
+          notify('Сохранение отчёта отменено', 'warn');
+          return;
+        }
+        resp = await fetchJson('/api/reports/', {
+          method: 'POST',
+          body: JSON.stringify({ ...data, confirm_zero_future: true }),
+        });
+      }
+      if (resp._error || resp._conflict) return;
       if (resp && resp.id) tr.dataset.rid = resp.id;
     }
   }

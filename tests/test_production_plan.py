@@ -270,6 +270,57 @@ class TestProductionPlanUpdate:
         )
         assert resp.status_code == 404
 
+    def test_labor_must_be_positive_on_update(self, admin_user, pp_work_dept1):
+        """Трудоёмкость должна быть строго > 0."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/production_plan/{pp_work_dept1.id}/?field=labor",
+            data=json.dumps({"value": "0"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+        assert "больше нуля" in resp.json().get("error", "")
+
+        resp_neg = client.put(
+            f"/api/production_plan/{pp_work_dept1.id}/?field=labor",
+            data=json.dumps({"value": "-5"}),
+            content_type="application/json",
+        )
+        assert resp_neg.status_code == 400
+
+    def test_labor_positive_value_accepted(self, admin_user, pp_work_dept1):
+        """Положительная трудоёмкость сохраняется."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/production_plan/{pp_work_dept1.id}/?field=labor",
+            data=json.dumps({"value": "12.5"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        pp_work_dept1.refresh_from_db()
+        assert float(pp_work_dept1.labor) == 12.5
+
+    def test_duration_over_5_years_rejected(self, admin_user, pp_work_dept1):
+        """Длительность работы не может превышать 5 лет."""
+        client = Client()
+        client.force_login(admin_user)
+        # Сначала задаём корректный date_start
+        client.put(
+            f"/api/production_plan/{pp_work_dept1.id}/?field=date_start",
+            data=json.dumps({"value": "2025-01-01"}),
+            content_type="application/json",
+        )
+        # Пытаемся поставить окончание на 7 лет вперёд
+        resp = client.put(
+            f"/api/production_plan/{pp_work_dept1.id}/?field=date_end",
+            data=json.dumps({"value": "2032-01-01"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 400
+        assert "5 лет" in resp.json().get("error", "")
+
 
 # ── Удаление ─────────────────────────────────────────────────────────────────
 
