@@ -1052,28 +1052,42 @@ async function calcPlanningErrors() {
   let vacations = vacData.filter((v) => v.date_start <= monthEndStr && v.date_end >= monthStartStr);
 
   // ── 1. Просроченные задачи и долги ──────────────────────────────────────
-  // Просроченные = срок прошёл, отчёта нет, ЕСТЬ часы в текущем периоде
-  // Долги = срок прошёл, отчёта нет, НЕТ часов в текущем периоде (из прошлого)
-  const _hasHoursInPeriod = (t) => {
-    // Проверяем executors_list
-    const exList = t.executors_list || [];
-    if (exList.length > 0) {
-      return exList.some((ex) => parseFloat((ex.hours || {})[curKey] || 0) > 0);
-    }
-    // Иначе plan_hours_all
-    const ph = t.plan_hours_all || {};
-    return parseFloat(ph[curKey] || 0) > 0;
-  };
+  // Берём из снимка месяца (_snapTaskIds), чтобы определения совпадали
+  // с чипами тулбара — единый источник правды на сервере.
+  //   overdue       — дедлайн в этом месяце, уже наступил, отчёта нет
+  //   debt_hanging  — дедлайн до начала месяца, отчёта нет
+  // Если снимок ещё не загружен (первый клик до ответа API) — откатываемся
+  // на клиентскую логику, чтобы модалка не падала.
+  const _snapReady =
+    _snapLastMonth === curKey &&
+    (_snapTaskIds.overdue.size > 0 ||
+      _snapTaskIds.debt_hanging.size > 0 ||
+      _snapTaskIds.inwork.size > 0);
 
-  const overdueAll = allTasks.filter((t) => {
-    const de = t.date_end ? t.date_end.slice(0, 10) : null;
-    const dead = t.deadline ? t.deadline.slice(0, 10) : null;
-    const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
-    return isOverdue && !t.has_reports;
-  });
-
-  const overdue = overdueAll.filter((t) => _hasHoursInPeriod(t) && !isIgn(`overdue_${t.id}`));
-  const debts = overdueAll.filter((t) => !_hasHoursInPeriod(t) && !isIgn(`debt_${t.id}`));
+  let overdue, debts;
+  if (_snapReady) {
+    overdue = allTasks.filter((t) => _snapTaskIds.overdue.has(t.id) && !isIgn(`overdue_${t.id}`));
+    debts = allTasks.filter((t) => _snapTaskIds.debt_hanging.has(t.id) && !isIgn(`debt_${t.id}`));
+  } else {
+    // Fallback: клиентский расчёт (используется, только если снимок не успел
+    // загрузиться; цифры могут слегка расходиться с чипами — это временно).
+    const _hasHoursInPeriod = (t) => {
+      const exList = t.executors_list || [];
+      if (exList.length > 0) {
+        return exList.some((ex) => parseFloat((ex.hours || {})[curKey] || 0) > 0);
+      }
+      const ph = t.plan_hours_all || {};
+      return parseFloat(ph[curKey] || 0) > 0;
+    };
+    const overdueAll = allTasks.filter((t) => {
+      const de = t.date_end ? t.date_end.slice(0, 10) : null;
+      const dead = t.deadline ? t.deadline.slice(0, 10) : null;
+      const isOverdue = (de && de < todayStr) || (dead && dead < todayStr);
+      return isOverdue && !t.has_reports;
+    });
+    overdue = overdueAll.filter((t) => _hasHoursInPeriod(t) && !isIgn(`overdue_${t.id}`));
+    debts = overdueAll.filter((t) => !_hasHoursInPeriod(t) && !isIgn(`debt_${t.id}`));
+  }
 
   // ── 2. Задачи с датами уже просроченными при создании ────────────────────
   const badDates = allTasks.filter((t) => {
@@ -1265,6 +1279,14 @@ async function refreshPlanningErrors() {
   btn.disabled = true;
   btn.innerHTML = '⏳ Проверка...';
   btn.className = 'topbar-btn errors';
+
+  // Убедимся, что снимок месяца загружен — модалка ошибок берёт оттуда
+  // просроченные/долги, чтобы цифры совпадали с чипами тулбара.
+  const _curKey =
+    selectedMonth && !showAll ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` : null;
+  if (_curKey && _snapLastMonth !== _curKey) {
+    await loadMonthSnapshot();
+  }
 
   const result = await calcPlanningErrors();
   const total =
