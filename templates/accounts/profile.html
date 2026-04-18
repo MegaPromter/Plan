@@ -81,9 +81,9 @@
       </button>
     </div>
 
-    <!-- Настройка видимости подразделений — только для руководителей НТЦ и admin -->
+    <!-- Настройка видимости подразделений — для руководителей (НТЦ, отделов) и admin -->
     {% if employee %}
-    {% if employee.role == 'ntc_head' or employee.role == 'ntc_deputy' or employee.role == 'admin' %}
+    {% if employee.role == 'ntc_head' or employee.role == 'ntc_deputy' or employee.role == 'dept_head' or employee.role == 'dept_deputy' or employee.role == 'admin' %}
     <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:14px;font-weight:500;color:var(--text);">Видимость подразделений</div>
@@ -195,6 +195,12 @@ async function savePpInputModal(checked) {
 async function saveShowAllDepts(checked) {
   // Отправляем POST с новым значением флага show_all_depts
   const data = await apiPost('/api/col_settings/', { show_all_depts: checked });
+  // Сбрасываем сохранённый выбор отделов СП/ПП — иначе старый выбор
+  // (например «свой отдел») переопределит новый флаг при заходе на страницу.
+  if (!data.error) {
+    try { localStorage.removeItem('sp_selected_depts'); } catch (e) {}
+    try { localStorage.removeItem('pp_selected_depts'); } catch (e) {}
+  }
   // Показываем toast-уведомление с результатом
   showToast(data.error ? ('Ошибка: ' + data.error) : (checked ? 'Показаны все отделы НТЦ' : 'Показывается только свой отдел'), data.error ? 'error' : 'success');
 }

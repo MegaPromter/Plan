@@ -742,11 +742,19 @@
       '<div class="an-summary-card an-summary-accent"><div class="an-summary-val an-val-accent">' +
       fmtNum(data.total || 0) +
       '</div><div class="an-summary-label">Всего задач</div></div>';
+    var doneSub = fmtPct(data.completion_pct || 0);
+    if ((data.done_intime || 0) + (data.done_early || 0) > 0) {
+      doneSub +=
+        ' &middot; в срок ' +
+        fmtNum(data.done_intime || 0) +
+        ' + опереж. ' +
+        fmtNum(data.done_early || 0);
+    }
     html +=
       '<div class="an-summary-card an-summary-success"><div class="an-summary-val an-val-green">' +
       fmtNum(data.done || 0) +
       '</div><div class="an-summary-label">Выполнено</div><div class="an-summary-sub">' +
-      fmtPct(data.completion_pct || 0) +
+      doneSub +
       '</div></div>';
     html +=
       '<div class="an-summary-card"><div class="an-summary-val">' +
@@ -756,10 +764,20 @@
       '<div class="an-summary-card an-summary-danger"><div class="an-summary-val an-val-red">' +
       fmtNum(data.overdue || 0) +
       '</div><div class="an-summary-label">Просрочено</div></div>';
+    var debtSub = 'из прошлых мес.';
+    if ((data.debts_closed || 0) + (data.debts_hanging || 0) > 0) {
+      debtSub =
+        'закрыто ' +
+        fmtNum(data.debts_closed || 0) +
+        ' + висит ' +
+        fmtNum(data.debts_hanging || 0);
+    }
     html +=
       '<div class="an-summary-card an-summary-warn"><div class="an-summary-val an-val-yellow">' +
       fmtNum(data.debts_total || 0) +
-      '</div><div class="an-summary-label">Долги</div><div class="an-summary-sub">из прошлых мес.</div></div>';
+      '</div><div class="an-summary-label">Долги</div><div class="an-summary-sub">' +
+      debtSub +
+      '</div></div>';
     html +=
       '<div class="an-summary-card"><div class="an-summary-val">' +
       fmtHrs(data.plan_hours || 0) +

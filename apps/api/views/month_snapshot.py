@@ -8,9 +8,10 @@ GET /api/analytics/month_snapshot/
     &center_id=1         (необязательный; id НТЦ-центра)
     &project_id=12       (необязательный; id УП-проекта)
 
-Возвращает сводку по двум группам:
+Возвращает сводку по трём группам:
   1) Задачи месяца: done / done_early / overdue / inwork
   2) Долги прошлых месяцев: debt_closed / debt_hanging
+  3) Не распланированные: unplanned
 
 Правила (исторический снимок на конец выбранного месяца):
   • Долг (is_debt) — дедлайн строго ДО начала месяца М, и отчёта до начала М нет.
@@ -23,6 +24,9 @@ GET /api/analytics/month_snapshot/
   • inwork                — дедлайн > today (ещё не наступил) ИЛИ дедлайн > M_end, отчёта в M нет.
   • debt_closed           — долг, отчёт сдан в M.
   • debt_hanging          — долг, отчёта в M нет.
+  • unplanned             — задача попадает в таблицу СП за этот месяц по датам
+    (date_start..date_end пересекает M, или используется deadline),
+    НО план-часов на M нет, и это не долг, и не закрыта отчётом до начала M.
 """
 
 from datetime import date
@@ -84,6 +88,53 @@ def _as_date(value):
     return value
 
 
+def classify_work_for_month(work, year, month, today=None):
+    """
+    Публичная обёртка над `_classify` для использования из других модулей
+    (аналитика-отчёты и т.п.). Гарантирует одинаковые правила классификации
+    во всех местах, где считается «задача месяца» / «долг».
+
+    work ДОЛЖЕН иметь атрибут `_first_report_date` — дата первого отчёта
+    (приходит через Subquery в queryset'е; см. MonthSnapshotView).
+    """
+    if today is None:
+        today = timezone.now().date()
+    m_start, m_end = _month_bounds(year, month)
+    return _classify(work, year, month, m_start, m_end, today)
+
+
+def _intersects_month(work, m_start, m_end):
+    """
+    Проверяет, пересекает ли интервал задачи выбранный месяц [M_start, M_end).
+
+    Повторяет логику /api/tasks/ (tasks.py): берётся date_start..date_end,
+    если date_end пуст — используется deadline. Если все даты пусты — считаем
+    задачу «всегда активной».
+    """
+    ds = work.date_start
+    de = work.date_end
+    dl = getattr(work, "deadline", None)
+
+    if ds is None and de is None and dl is None:
+        return True
+
+    # date_start..date_end
+    if ds is not None and de is not None:
+        return ds < m_end and de >= m_start
+    # date_start есть, date_end нет — используем deadline
+    if ds is not None and de is None and dl is not None:
+        return ds < m_end and dl >= m_start
+    if ds is not None and de is None and dl is None:
+        return ds < m_end
+    # date_start нет, date_end есть
+    if ds is None and de is not None:
+        return de >= m_start
+    # date_start нет, date_end нет, есть deadline
+    if ds is None and de is None and dl is not None:
+        return dl >= m_start
+    return False
+
+
 def _classify(work, year, month, m_start, m_end, today):
     """
     Возвращает код статуса для задачи в снимке месяца (year, month).
@@ -95,6 +146,7 @@ def _classify(work, year, month, m_start, m_end, today):
       - "done_early"    — задача месяца, выполнена с опережением
       - "overdue"       — задача месяца, просрочена
       - "inwork"        — задача месяца, в работе
+      - "unplanned"     — в таблице СП за М по датам, но нет план-часов на М
       - None            — задача не попадает в снимок месяца
     """
     deadline = work.date_end
@@ -115,6 +167,13 @@ def _classify(work, year, month, m_start, m_end, today):
     # 2) Не долг — проверяем, попадает ли в «задачи месяца»
     has_plan = _has_plan_in_month(work.plan_hours, year, month)
     if not has_plan:
+        # Нет план-часов на М. Если задача по датам всё равно идёт в таблице
+        # СП за этот месяц и отчёт не сдан до начала М — это «не распланировано».
+        reported_before_month = first_report is not None and first_report < m_start
+        if reported_before_month:
+            return None
+        if _intersects_month(work, m_start, m_end):
+            return "unplanned"
         return None
 
     if deadline and m_start <= deadline < m_end:
@@ -175,13 +234,24 @@ class MonthSnapshotView(APIView):
         # plan_hours_key — ключ для поиска «на этот месяц»
         plan_key = f"{year:04d}-{month:02d}"
 
+        # Снимку нужны только id, date_end, plan_hours и дата первого отчёта —
+        # связанные объекты (department/sector/executor/project) не используются.
+        # Убираем select_related, используем only() — tysячи задач были главным
+        # источником тормозов.
         qs = (
             Work.objects.filter(vis_q, show_in_plan=True)
             .annotate(
                 _has_reports=has_reports,
                 _first_report_date=first_report,
             )
-            .select_related("department", "sector", "executor", "project", "pp_project")
+            .only(
+                "id",
+                "date_start",
+                "date_end",
+                "deadline",
+                "plan_hours",
+                "show_in_plan",
+            )
         )
 
         # Фильтры по подразделению / проекту
@@ -204,12 +274,31 @@ class MonthSnapshotView(APIView):
             except ValueError:
                 pass
 
-        # Сужаем выборку ДО Python-классификации:
+        # Сужаем выборку ДО Python-классификации.
         # В снимок потенциально входят:
         #   а) задачи с plan_hours на этот месяц (кандидаты на «задачу месяца»);
-        #   б) задачи с дедлайном до M_start (кандидаты на долг).
-        # Работы, у которых ни того ни другого — отсекаем, чтобы не тянуть лишнее.
-        qs = qs.filter(Q(plan_hours__has_key=plan_key) | Q(date_end__lt=m_start))
+        #   б) задачи с дедлайном до M_start (кандидаты на долг);
+        #   в) задачи, интервал которых пересекает месяц по датам
+        #      (кандидаты на «не распланировано» — без план-часов, но в работе).
+        intersect_q = (
+            Q(date_start__isnull=True, date_end__isnull=True, deadline__isnull=True)
+            | Q(date_start__lt=m_end, date_end__gte=m_start)
+            | Q(date_start__lt=m_end, date_end__isnull=True, deadline__gte=m_start)
+            | Q(
+                date_start__lt=m_end,
+                date_end__isnull=True,
+                deadline__isnull=True,
+            )
+            | Q(date_end__gte=m_start, date_start__isnull=True)
+            | Q(
+                date_end__isnull=True,
+                deadline__gte=m_start,
+                date_start__isnull=True,
+            )
+        )
+        qs = qs.filter(
+            Q(plan_hours__has_key=plan_key) | Q(date_end__lt=m_start) | intersect_q
+        )
 
         # ── Классификация в Python ──────────────────────────────────
         buckets = {
@@ -219,6 +308,7 @@ class MonthSnapshotView(APIView):
             "inwork": 0,
             "debt_closed": 0,
             "debt_hanging": 0,
+            "unplanned": 0,
         }
         task_ids_by_bucket = {k: [] for k in buckets}
 
@@ -279,6 +369,10 @@ class MonthSnapshotView(APIView):
                         "closed": task_ids_by_bucket["debt_closed"],
                         "hanging": task_ids_by_bucket["debt_hanging"],
                     },
+                },
+                "unplanned": {
+                    "total": buckets["unplanned"],
+                    "task_ids": task_ids_by_bucket["unplanned"],
                 },
             }
         )

@@ -1175,7 +1175,7 @@ tr.row-pinned td:first-child::after {
   bottom: auto;
   top: calc(100% + 6px);
 }
-/* Статус-пилюли — показ снизу */
+/* Статус-пилюли — показ снизу, с переносом длинного текста */
 .status-pills .sp[data-tip]::after {
   font-family: var(--sans, system-ui, sans-serif);
   font-weight: 500;
@@ -1183,6 +1183,11 @@ tr.row-pinned td:first-child::after {
   border-radius: 8px;
   bottom: auto;
   top: calc(100% + 6px);
+  white-space: normal;
+  width: max-content;
+  max-width: 280px;
+  line-height: 1.4;
+  text-align: left;
 }
 /* Вкладки и кнопки тулбара — тултип снизу */
 .seg-group .seg-btn[data-tip]::after,

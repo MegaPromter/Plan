@@ -32,73 +32,6 @@
 {% block content %}
 <!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
 <div class="toolbar" id="toolbar">
-<!-- ══ Снимок месяца (внутри тулбара: его высота учитывается в --toolbar-h) -->
-<section class="snapshot" id="monthSnapshot" aria-label="Снимок месяца">
-  <header class="snapshot__header" onclick="toggleSnapshot()">
-    <div class="snapshot__title">
-      <span class="snapshot__chevron" aria-hidden="true">▾</span>
-      <span>Снимок месяца</span>
-      <span class="snapshot__month" id="snapMonthLabel">—</span>
-    </div>
-    <div class="snapshot__summary-inline" id="snapSummaryInline">
-      <span class="snap-inline snap-inline--month">План: <b id="snapInlineMonth">—</b></span>
-      <span class="snap-inline snap-inline--debt">Долги: <b id="snapInlineDebt">—</b></span>
-    </div>
-  </header>
-  <div class="snapshot__body">
-    <!-- Задачи месяца -->
-    <div class="snap-group snap-group--month">
-      <div class="snap-group__head">
-        <span class="snap-group__title">Задачи месяца</span>
-        <span class="snap-group__total" id="snapMonthTotal">0</span>
-      </div>
-      <div class="snap-row snap-row--done" data-bucket="done">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">Выполнено в срок</span>
-        <span class="snap-row__count" id="snapDone">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDoneBar" style="width:0%"></span></span>
-      </div>
-      <div class="snap-row snap-row--early" data-bucket="done_early">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">С опережением</span>
-        <span class="snap-row__count" id="snapEarly">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapEarlyBar" style="width:0%"></span></span>
-      </div>
-      <div class="snap-row snap-row--overdue" data-bucket="overdue">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">Просрочено</span>
-        <span class="snap-row__count" id="snapOverdue">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapOverdueBar" style="width:0%"></span></span>
-      </div>
-      <div class="snap-row snap-row--inwork" data-bucket="inwork">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">В работе</span>
-        <span class="snap-row__count" id="snapInwork">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapInworkBar" style="width:0%"></span></span>
-      </div>
-    </div>
-    <!-- Долги -->
-    <div class="snap-group snap-group--debt">
-      <div class="snap-group__head">
-        <span class="snap-group__title">Долги</span>
-        <span class="snap-group__total" id="snapDebtTotal">0</span>
-      </div>
-      <div class="snap-row snap-row--debt-closed" data-bucket="debt_closed">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">Закрыто в этом месяце</span>
-        <span class="snap-row__count" id="snapDebtClosed">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtClosedBar" style="width:0%"></span></span>
-      </div>
-      <div class="snap-row snap-row--debt-hanging" data-bucket="debt_hanging">
-        <span class="snap-row__dot" aria-hidden="true"></span>
-        <span class="snap-row__label">Долги</span>
-        <span class="snap-row__count" id="snapDebtHanging">0</span>
-        <span class="snap-row__bar"><span class="snap-row__bar-fill" id="snapDebtHangingBar" style="width:0%"></span></span>
-      </div>
-    </div>
-  </div>
-</section>
-
   <!-- 1. Панель периода -->
   <div class="pp-period-bar">
     <span class="cal-label">Период:</span>
@@ -151,26 +84,29 @@
     <!-- Статус-фильтры: единый источник правды со Снимком месяца.
          Чип «Все» сбрасывает drill-down по корзине снимка. -->
     <div class="seg-group seg-status status-pills" id="spStatusPanel" style="display:none;">
-      <button class="sp sp-all" data-bucket="all" onclick="spFilterBucket('all')" data-tip="Все задачи выбранного месяца + долги">
+      <button class="sp sp-all" data-bucket="all" onclick="spFilterBucket('all')" data-tip="Все задачи выбранного месяца: задачи месяца + долги прошлых месяцев + не распланированные. Клик — сбросить фильтр по статусу.">
         Все <span class="num" id="spCountAll">0</span>
       </button>
-      <button class="sp sp-done" data-bucket="done" onclick="spFilterBucket('done')" data-tip="Выполнено в срок">
+      <button class="sp sp-done" data-bucket="done" onclick="spFilterBucket('done')" data-tip="Выполнено в срок: дедлайн в этом месяце, отчёт сдан в этом же месяце.">
         ✓ <span class="num" id="spCountDone">0</span>
       </button>
-      <button class="sp sp-early" data-bucket="done_early" onclick="spFilterBucket('done_early')" data-tip="Выполнено с опережением">
+      <button class="sp sp-early" data-bucket="done_early" onclick="spFilterBucket('done_early')" data-tip="Выполнено с опережением: отчёт сдан в этом месяце, а дедлайн — в следующих месяцах (или отсутствует).">
         ⚡ <span class="num" id="spCountEarly">0</span>
       </button>
-      <button class="sp sp-overdue" data-bucket="overdue" onclick="spFilterBucket('overdue')" data-tip="Просрочено (дедлайн в этом месяце, отчёта нет)">
+      <button class="sp sp-overdue" data-bucket="overdue" onclick="spFilterBucket('overdue')" data-tip="Просрочено: дедлайн в этом месяце уже наступил, но отчёта нет. Для прошедших месяцев — весь месяц считается истёкшим.">
         ⚠ <span class="num" id="spCountOverdue">0</span>
       </button>
-      <button class="sp sp-inwork" data-bucket="inwork" onclick="spFilterBucket('inwork')" data-tip="В работе">
+      <button class="sp sp-inwork" data-bucket="inwork" onclick="spFilterBucket('inwork')" data-tip="В работе: есть план-часы на этот месяц, отчёта ещё нет, дедлайн ещё не наступил или приходится на будущие месяцы.">
         ⟳ <span class="num" id="spCountInWork">0</span>
       </button>
-      <button class="sp sp-debt-closed" data-bucket="debt_closed" onclick="spFilterBucket('debt_closed')" data-tip="Долги прошлых месяцев, закрытые в этом">
+      <button class="sp sp-debt-closed" data-bucket="debt_closed" onclick="spFilterBucket('debt_closed')" data-tip="Долг закрыт в этом месяце: дедлайн был до начала месяца, отчёта до начала месяца не было, но в этом месяце его сдали.">
         ✓● <span class="num" id="spCountDebtClosed">0</span>
       </button>
-      <button class="sp sp-debt" data-bucket="debt_hanging" onclick="spFilterBucket('debt_hanging')" data-tip="Долги: дедлайн прошёл, отчёта нет">
+      <button class="sp sp-debt" data-bucket="debt_hanging" onclick="spFilterBucket('debt_hanging')" data-tip="Долг висит: дедлайн прошёл ещё до начала этого месяца, отчёта до сих пор нет.">
         ● <span class="num" id="spCountDebt">0</span>
+      </button>
+      <button class="sp sp-unplanned" data-bucket="unplanned" onclick="spFilterBucket('unplanned')" data-tip="Не распланировано: задача идёт по датам в этом месяце (интервал начало–окончание пересекает месяц), но план-часы на этот месяц не проставлены. Нужно дозаполнить план.">
+        ∅ <span class="num" id="spCountUnplanned">0</span>
       </button>
     </div>
 

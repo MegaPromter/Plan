@@ -36,6 +36,7 @@ from apps.works.models import (
 )
 
 from .analytics_plan import _get_role_info, _int_list_param, _str_list_param
+from .month_snapshot import classify_work_for_month
 
 
 def _get_calendar_norm_total(years, months_filter):
@@ -97,32 +98,60 @@ def _period_end(years, months_filter):
     return date(y, m + 1, 1)
 
 
-def _classify_task(w, today, period_start, period_end=None):
+def _iter_period_months(years, months_filter):
+    """Перечисляет (year, month) в периоде, раскрытом years × months_filter."""
+    months = months_filter if months_filter else list(range(1, 13))
+    for y in years:
+        for m in months:
+            yield (y, m)
+
+
+def _classify_task_detailed(w, today, years, months_filter):
     """
-    Классифицирует задачу:
-      done     — есть отчёт, заполненный в выбранном периоде
-      done_other — есть отчёт, но заполненный в другом периоде (не считается)
-      debt     — отчёта нет, срок < начало периода (долг из прошлых периодов)
-      overdue  — отчёта нет, срок прошёл внутри/после начала периода, но < сегодня
-      inwork   — срок ещё не наступил или дата не задана
+    Возвращает детальный код снимка (done / done_early / overdue / inwork /
+    debt_closed / debt_hanging / done_other / None) — агрегируя по месяцам
+    периода и выбирая наиболее значимый статус.
     """
-    is_done = getattr(w, "_done", False)
-    if is_done:
-        report_dt = getattr(w, "_report_created_at", None)
-        if report_dt and period_end:
-            report_date = report_dt.date() if hasattr(report_dt, "date") else report_dt
-            if period_start <= report_date < period_end:
-                return "done"
+    priority = {
+        "done": 0,
+        "done_early": 1,
+        "overdue": 2,
+        "debt_closed": 3,
+        "debt_hanging": 3,
+        "inwork": 4,
+        "unplanned": 5,
+    }
+    best = None
+    best_code = None
+    saw_any = False
+    for y, m in _iter_period_months(years, months_filter):
+        code = classify_work_for_month(w, y, m, today)
+        if code is None:
+            continue
+        saw_any = True
+        p = priority[code]
+        if best is None or p < best:
+            best = p
+            best_code = code
+    if not saw_any:
+        if getattr(w, "_done", False):
             return "done_other"
+        return None
+    return best_code
+
+
+def _classify_task(w, today, years, months_filter):
+    """
+    Упрощённый статус для совместимости: схлопывает done_early→done,
+    debt_closed/hanging→debt. Возвращает:
+    "done" | "overdue" | "debt" | "inwork" | "done_other" | None.
+    """
+    code = _classify_task_detailed(w, today, years, months_filter)
+    if code in ("done", "done_early"):
         return "done"
-    effective_end = w.date_end or w.deadline
-    if not effective_end:
-        return "inwork"
-    if effective_end < period_start:
+    if code in ("debt_closed", "debt_hanging"):
         return "debt"
-    if effective_end < today:
-        return "overdue"
-    return "inwork"
+    return code
 
 
 def _debt_depth(effective_end, period_start):
@@ -192,39 +221,47 @@ def _project_id(w):
 
 def _build_report_metrics(works, years, months_filter, today):
     """
-    Считает метрики выполнения для набора задач.
+    Считает метрики выполнения для набора задач по правилам «Снимка месяца».
+    Единый источник правды — classify_work_for_month(). Задачи разделяются на:
+      • задачи периода (done/overdue/inwork) — имеют plan_hours в периоде;
+      • долги прошлых периодов — date_end < начало периода, отчёта до начала нет.
     Возвращает dict со счётчиками и списками задач-долгов.
     """
     years_set = set(years)
     months_set = set(months_filter) if months_filter else None
     ps = _period_start(years, months_filter)
-    pe = _period_end(years, months_filter)
 
     total = 0
-    done = 0
+    done = 0  # done + done_early
+    done_intime = 0
+    done_early = 0
     overdue = 0
     inwork = 0
     debts_1m = 0
     debts_2_3m = 0
     debts_3plus = 0
+    debts_closed = 0
+    debts_hanging = 0
+    unplanned = 0
     plan_hours = 0.0
     debt_tasks = []
 
     for w in works:
-        # Проверяем, относится ли задача к периоду
-        has_hours = _has_hours_in_period(w, years_set, months_set)
-        effective_end = w.date_end or w.deadline
+        code = _classify_task_detailed(w, today, years, months_filter)
 
-        status = _classify_task(w, today, ps, pe)
-
-        # Выполнена в другом периоде — пропускаем
-        if status == "done_other":
+        # Не попала в снимок ни одного месяца периода / закрыта вне периода
+        if code is None or code == "done_other":
             continue
 
-        # Долги всегда включаем (они из прошлых периодов)
-        if status == "debt":
+        if code in ("debt_closed", "debt_hanging"):
+            # Долг по правилам снимка: date_end < начало периода, отчёта до начала нет
+            effective_end = w.date_end  # без deadline-fallback — как в снимке
             total += 1
-            depth = _debt_depth(effective_end, ps)
+            if code == "debt_closed":
+                debts_closed += 1
+            else:
+                debts_hanging += 1
+            depth = _debt_depth(effective_end, ps) if effective_end else "3plus"
             if depth == "1m":
                 debts_1m += 1
             elif depth == "2_3m":
@@ -242,53 +279,36 @@ def _build_report_metrics(works, years, months_filter, today):
                     "date_end": effective_end.isoformat() if effective_end else "",
                     "days_overdue": days_overdue,
                     "depth": depth,
+                    "closed": code == "debt_closed",
                 }
             )
             # Долги не учитываются в plan_hours текущего периода
             continue
 
-        # Просроченные без часов — это долги, не просрочка текущего периода
-        if status == "overdue" and not has_hours:
-            depth = _debt_depth(effective_end, ps)
-            if depth == "1m":
-                debts_1m += 1
-            elif depth == "2_3m":
-                debts_2_3m += 1
-            else:
-                debts_3plus += 1
-            total += 1
-            days_overdue = (today - effective_end).days if effective_end else 0
-            debt_tasks.append(
-                {
-                    "id": w.id,
-                    "work_name": w.work_name or w.work_num or "",
-                    "project_name": _project_name(w),
-                    "executor": w.executor.short_name if w.executor else "",
-                    "dept": w.department.code if w.department else "",
-                    "date_end": effective_end.isoformat() if effective_end else "",
-                    "days_overdue": days_overdue,
-                    "depth": depth,
-                }
-            )
-            continue
-
-        # Выполненные — считаем всегда (независимо от наличия часов)
-        if status == "done":
+        # Выполнено в периоде — учитываем plan_hours, если они есть
+        if code in ("done", "done_early"):
             total += 1
             done += 1
+            if code == "done":
+                done_intime += 1
+            else:
+                done_early += 1
             ph = _task_plan_hours_in_period(w, years_set, months_set)
             plan_hours += ph
             continue
 
-        # Остальные (overdue, inwork) — только если имеют часы в периоде
-        if not has_hours:
+        # unplanned — задача идёт в работе по датам, но нет план-часов.
+        # Часы в metrics не прибавляем (их нет), но задачу учитываем отдельно.
+        if code == "unplanned":
+            total += 1
+            unplanned += 1
             continue
 
+        # overdue / inwork — снимок уже требует plan_hours в месяце
         total += 1
         ph = _task_plan_hours_in_period(w, years_set, months_set)
         plan_hours += ph
-
-        if status == "overdue":
+        if code == "overdue":
             overdue += 1
         else:
             inwork += 1
@@ -302,12 +322,17 @@ def _build_report_metrics(works, years, months_filter, today):
     return {
         "total": total,
         "done": done,
+        "done_intime": done_intime,
+        "done_early": done_early,
         "overdue": overdue,
         "inwork": inwork,
         "debts_1m": debts_1m,
         "debts_2_3m": debts_2_3m,
         "debts_3plus": debts_3plus,
         "debts_total": debts_total,
+        "debts_closed": debts_closed,
+        "debts_hanging": debts_hanging,
+        "unplanned": unplanned,
         "debt_tasks": debt_tasks[:50],  # Топ-50 долгов
         "debt_tasks_total": len(debt_tasks),
         "plan_hours": round(plan_hours, 1),
@@ -325,10 +350,12 @@ def _build_debts_by_units(works, years, months_filter, today, group_by="center")
     units = defaultdict(lambda: {"debts_1m": 0, "debts_2_3m": 0, "debts_3plus": 0})
 
     for w in works:
-        status = _classify_task(w, today, ps)
+        status = _classify_task(w, today, years, months_filter)
         if status != "debt":
             continue
-        effective_end = w.date_end or w.deadline
+        effective_end = w.date_end  # без deadline-fallback (правила снимка)
+        if not effective_end:
+            continue
         depth = _debt_depth(effective_end, ps)
 
         if group_by == "center":
@@ -399,8 +426,6 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
     """Отчёт по одному сотруднику: метрики + список задач."""
     years_set = set(years)
     months_set = set(months_filter) if months_filter else None
-    ps = _period_start(years, months_filter)
-    pe = _period_end(years, months_filter)
 
     tasks = []
     total = 0
@@ -426,7 +451,6 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
 
         # Фильтруем часы по периоду
         ph_filtered = 0.0
-        has_hours = False
         for k, v in ph_raw.items():
             try:
                 y_str, m_str = k.split("-")
@@ -434,23 +458,17 @@ def _build_employee_report(emp_id, works, years, months_filter, today):
                 if y_int in years_set and (not months_set or m_int in months_set):
                     val = float(v) if v else 0
                     ph_filtered += val
-                    if val > 0:
-                        has_hours = True
             except (ValueError, TypeError):
                 pass
         ph_filtered = round(ph_filtered, 2)
 
-        status = _classify_task(w, today, ps, pe)
+        status = _classify_task(w, today, years, months_filter)
 
-        # Выполнена в другом периоде — пропускаем
-        if status == "done_other":
+        # Не попала в снимок периода / закрыта вне периода
+        if status is None or status == "done_other":
             continue
 
-        # Долги и выполненные — всегда; остальные — только с часами
-        if status not in ("debt", "done") and not has_hours:
-            continue
-
-        effective_end = w.date_end or w.deadline
+        effective_end = w.date_end  # без deadline-fallback (правила снимка)
         days_overdue = 0
         if status in ("overdue", "debt") and effective_end:
             days_overdue = (today - effective_end).days
@@ -529,7 +547,11 @@ class ReportsAnalyticsView(APIView):
 
         base = (
             Work.objects.filter(vis_q, show_in_plan=True)
-            .annotate(_done=has_reports, _report_created_at=first_report_created)
+            .annotate(
+                _done=has_reports,
+                _report_created_at=first_report_created,
+                _first_report_date=first_report_created,
+            )
             .select_related(
                 "department",
                 "department__ntc_center",
@@ -544,18 +566,14 @@ class ReportsAnalyticsView(APIView):
         if center_ids:
             base = base.filter(department__ntc_center_id__in=center_ids)
 
-        # Фильтр по годам + долги из прошлых периодов
-        year_q = Q(date_start__isnull=True, date_end__isnull=True)
-        min_year = min(years) - 1  # Захватываем прошлый год для долгов
-        for y in list(years) + [min_year]:
-            year_q |= (
-                Q(date_start__year__lte=y, date_end__year__gte=y)
-                | Q(date_start__year=y)
-                | Q(date_end__year=y)
-                | Q(date_start__isnull=True, date_end__year__gte=min_year)
-                | Q(date_end__isnull=True, date_start__year__lte=max(years))
-            )
-        base = base.filter(year_q)
+        # Сужаем queryset под правила снимка:
+        #   а) задачи с plan_hours на любой из выбранных месяцев → кандидаты «задачи периода»;
+        #   б) задачи с date_end < начала периода → кандидаты «долги».
+        period_start = _period_start(years, months_filter)
+        plan_q = Q()
+        for y, m in _iter_period_months(years, months_filter):
+            plan_q |= Q(plan_hours__has_key=f"{y:04d}-{m:02d}")
+        base = base.filter(plan_q | Q(date_end__lt=period_start))
 
         if product_ids:
             base = base.filter(pp_project__up_product_id__in=product_ids)

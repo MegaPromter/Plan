@@ -61,13 +61,14 @@ let _snapTaskIds = {
   inwork: new Set(),
   debt_closed: new Set(),
   debt_hanging: new Set(),
+  unplanned: new Set(),
 };
 
 // Последний загруженный месяц в формате YYYY-MM (чтобы избежать повторных запросов)
 let _snapLastMonth = null;
 
 // Drill-down фильтр по корзине снимка месяца (null = не активен)
-/** @type {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|null} */
+/** @type {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|'unplanned'|null} */
 let _snapBucketFilter = null;
 
 /**
@@ -124,44 +125,21 @@ function _bindSnapRowClicks() {
   });
 }
 
-/**
- * Переключает видимость блока снимка месяца.
- * Состояние сохраняется в localStorage.
- */
-function toggleSnapshot() {
-  const el = document.getElementById('monthSnapshot');
-  if (!el) return;
-  el.classList.toggle('is-open');
-  try {
-    localStorage.setItem('sp_snapshot_open', el.classList.contains('is-open') ? '1' : '0');
-  } catch (e) {
-    /* ignore quota */
-  }
-}
+// Снимок месяца как отдельный визуальный блок удалён — его данные дублируются
+// чипами статусов. API /api/analytics/month_snapshot/ по-прежнему нужен:
+// чипы читают счётчики из _snapTaskIds (заполняется ниже).
 
-// Восстановление состояния снимка при загрузке страницы
 document.addEventListener('DOMContentLoaded', function () {
-  const el = document.getElementById('monthSnapshot');
-  if (!el) return;
-  const saved = localStorage.getItem('sp_snapshot_open');
-  // По умолчанию — развёрнут
-  if (saved === null || saved === '1') {
-    el.classList.add('is-open');
-  }
   _bindSnapRowClicks();
 });
 
 /**
- * Подгружает снимок месяца и отрисовывает блок.
- * Если месяц не выбран или showAll — прячет блок.
+ * Подгружает снимок месяца (данные для чипов статусов).
+ * Если месяц не выбран или showAll — очищает Set'ы и прячет чипы.
  */
 async function loadMonthSnapshot() {
-  const el = document.getElementById('monthSnapshot');
-  if (!el) return;
-
   // Снимок — только для конкретного месяца
   if (!selectedMonth || showAll) {
-    el.style.display = 'none';
     _snapLastMonth = null;
     _snapClearIds();
     // Сбросить drill-down и подсветку чипов/строк — иначе фильтр прилипает
@@ -172,7 +150,6 @@ async function loadMonthSnapshot() {
     if (panel) panel.style.display = 'none';
     return;
   }
-  el.style.display = '';
 
   const monthKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   // При выборе ровно одного отдела — пробрасываем его в снимок.
@@ -193,7 +170,7 @@ async function loadMonthSnapshot() {
     }
     const data = await res.json();
     _snapLastMonth = monthKey;
-    renderMonthSnapshot(data);
+    _fillSnapTaskIds(data);
   } catch (e) {
     console.error('loadMonthSnapshot error:', e);
   }
@@ -204,55 +181,12 @@ function _snapClearIds() {
 }
 
 /**
- * Заполняет блок снимка данными из /api/analytics/month_snapshot/.
- * @param {Object} data
+ * Заполняет Set'ы _snapTaskIds из ответа /api/analytics/month_snapshot/.
+ * Используется чипами статусов для фильтрации и подсчёта.
  */
-function renderMonthSnapshot(data) {
-  const setText = (id, v) => {
-    const e = document.getElementById(id);
-    if (e) e.textContent = v;
-  };
-  const setBar = (id, pct) => {
-    const e = document.getElementById(id);
-    if (e) e.style.width = Math.max(0, Math.min(100, pct)) + '%';
-  };
-
-  // Заголовок — «Март 2026»
-  const months = [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-  ];
-  const [yStr, mStr] = (data.month || '').split('-');
-  const y = parseInt(yStr), m = parseInt(mStr);
-  setText('snapMonthLabel', isNaN(m) ? '—' : `${months[m - 1]} ${y}`);
-
+function _fillSnapTaskIds(data) {
   const mt = data.month_tasks || {};
   const d = data.debts || {};
-
-  setText('snapMonthTotal', mt.total || 0);
-  setText('snapDone', mt.done || 0);
-  setText('snapEarly', mt.done_early || 0);
-  setText('snapOverdue', mt.overdue || 0);
-  setText('snapInwork', mt.inwork || 0);
-
-  setBar('snapDoneBar', mt.done_pct || 0);
-  setBar('snapEarlyBar', mt.done_early_pct || 0);
-  setBar('snapOverdueBar', mt.overdue_pct || 0);
-  setBar('snapInworkBar', mt.inwork_pct || 0);
-
-  setText('snapDebtTotal', d.total || 0);
-  setText('snapDebtClosed', d.closed || 0);
-  setText('snapDebtHanging', d.hanging || 0);
-  setBar('snapDebtClosedBar', d.closed_pct || 0);
-  setBar('snapDebtHangingBar', d.hanging_pct || 0);
-
-  // Свёрнутое состояние — показываем короткую сводку
-  const closed = mt.closed || 0;
-  const total = mt.total || 0;
-  setText('snapInlineMonth', total ? `${closed}/${total}` : '0');
-  setText('snapInlineDebt', d.total ? `${d.closed}/${d.total}` : '0');
-
-  // Заполняем наборы ID для drill-down
   const ids = mt.task_ids || {};
   const dIds = d.task_ids || {};
   _snapTaskIds.done = new Set(ids.done || []);
@@ -261,6 +195,8 @@ function renderMonthSnapshot(data) {
   _snapTaskIds.inwork = new Set(ids.inwork || []);
   _snapTaskIds.debt_closed = new Set(dIds.closed || []);
   _snapTaskIds.debt_hanging = new Set(dIds.hanging || []);
+  const un = data.unplanned || {};
+  _snapTaskIds.unplanned = new Set(un.task_ids || []);
 
   // Обновляем чипы в тулбаре — те же цифры, что в снимке (единый источник правды)
   spUpdateStatusPanel();
@@ -349,7 +285,7 @@ function _fillSnapBadge(el, bucket) {
  * Возвращает код корзины снимка для конкретной задачи, либо null.
  * Используется для отрисовки цветных полос строк и бейджей.
  * @param {number} taskId
- * @returns {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|null}
+ * @returns {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|'unplanned'|null}
  */
 function _snapBucketOf(taskId) {
   if (_snapTaskIds.done.has(taskId)) return 'done';
@@ -358,6 +294,7 @@ function _snapBucketOf(taskId) {
   if (_snapTaskIds.inwork.has(taskId)) return 'inwork';
   if (_snapTaskIds.debt_closed.has(taskId)) return 'debt_closed';
   if (_snapTaskIds.debt_hanging.has(taskId)) return 'debt_hanging';
+  if (_snapTaskIds.unplanned.has(taskId)) return 'unplanned';
   return null;
 }
 
@@ -480,7 +417,8 @@ function spUpdateStatusPanel() {
   const inwork = _snapTaskIds.inwork.size;
   const debtClosed = _snapTaskIds.debt_closed.size;
   const debtHanging = _snapTaskIds.debt_hanging.size;
-  const all = done + early + overdue + inwork + debtClosed + debtHanging;
+  const unplanned = _snapTaskIds.unplanned.size;
+  const all = done + early + overdue + inwork + debtClosed + debtHanging + unplanned;
 
   setText('spCountAll', all);
   setText('spCountDone', done);
@@ -489,6 +427,7 @@ function spUpdateStatusPanel() {
   setText('spCountInWork', inwork);
   setText('spCountDebtClosed', debtClosed);
   setText('spCountDebt', debtHanging);
+  setText('spCountUnplanned', unplanned);
 
   // Подсветка активного чипа
   _syncSnapActiveUI();
@@ -563,8 +502,19 @@ let spSelectedDepts = new Set();
       localStorage.removeItem('sp_selected_dept');
     }
   }
-  // По умолчанию: не-admin видит только свой отдел
-  if (spSelectedDepts.size === 0 && USER_DEPT && !_isFullAccess()) {
+  // По умолчанию: начальники/замы отдела, сектора и все кроме user видят все
+  // отделы (на сервере get_visibility_filter возвращает Q() для всех кроме
+  // user). Только обычный user получает авто-фильтр по своему отделу.
+  // Флаг show_all_depts оставлен для обратной совместимости, но теперь
+  // дефолт «свой отдел» ставится только для role=user без этого флага.
+  var _showAllDepts = !!(_spCfg.colSettings && _spCfg.colSettings.show_all_depts);
+  var _isUserRole = USER_ROLE === 'user';
+  if (
+    spSelectedDepts.size === 0 &&
+    USER_DEPT &&
+    _isUserRole &&
+    !_showAllDepts
+  ) {
     spSelectedDepts.add(USER_DEPT);
   }
 })();
@@ -630,7 +580,7 @@ function _spRestoreFiltersFromUrl() {
   }
   if (
     f.bucket &&
-    ['done', 'done_early', 'overdue', 'inwork', 'debt_closed', 'debt_hanging'].includes(f.bucket)
+    ['done', 'done_early', 'overdue', 'inwork', 'debt_closed', 'debt_hanging', 'unplanned'].includes(f.bucket)
   ) {
     _snapBucketFilter = f.bucket;
     changed = true;
@@ -695,10 +645,18 @@ function _syncToolbarHeight() {
 let _spDeptFilter = null;
 
 function initDeptChips() {
-  var depts = [...new Set(tasks.map((t) => t.dept).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, 'ru'),
-  );
-  // Убираем несуществующие отделы из выбора
+  // Источник списка отделов — серверный список ВСЕХ отделов (_spCfg.deptCodes),
+  // а не список из загруженных задач. Иначе, если пользователь видит только
+  // свой отдел в данных, в dropdown будет одна строка и выбрать чужой отдел
+  // станет невозможно.
+  var allDepts =
+    _spCfg.deptCodes && _spCfg.deptCodes.length
+      ? _spCfg.deptCodes.slice()
+      : [...new Set(tasks.map((t) => t.dept).filter(Boolean))];
+  var depts = allDepts.sort(function (a, b) {
+    return String(a).localeCompare(String(b), 'ru');
+  });
+  // Убираем несуществующие отделы из выбора (защита от мусора в localStorage)
   var cleaned = new Set(
     [...spSelectedDepts].filter(function (d) {
       return depts.includes(d);
@@ -729,7 +687,8 @@ function initDeptChips() {
     onApply: function () {
       _syncDeptFilter();
       renderTable();
-      spUpdateStatusPanel();
+      // Снимок месяца зависит от выбранного отдела — обновляем цифры чипов
+      loadMonthSnapshot();
       _spSyncFiltersToUrl();
       _syncToolbarHeight();
     },
@@ -838,7 +797,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       onApply: function () {
         _syncDeptFilter();
         renderTable();
-        spUpdateStatusPanel();
+        // Снимок месяца зависит от выбранного отдела — обновляем цифры чипов
+        loadMonthSnapshot();
         _spSyncFiltersToUrl();
         _syncToolbarHeight();
       },
@@ -2589,7 +2549,7 @@ function renderTable() {
     return;
   }
   // Пустое состояние: нет строк после фильтрации
-  if (_spFiltered.length === 0 && (hasFilters || _snapBucketFilter)) {
+  if (_spFiltered.length === 0 && (hasExtraFilters || _snapBucketFilter || spSelectedDepts.size > 0)) {
     tbody.innerHTML = emptyStateHtml({
       icon: 'fas fa-search',
       title: 'Ничего не найдено',

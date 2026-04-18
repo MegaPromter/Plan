@@ -549,6 +549,11 @@ thead th:first-child {
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
+/* Для status-pills overflow отключён — иначе тултипы чипов обрезаются.
+   Скругление крайних элементов задаётся внутри самих чипов. */
+.seg-group.status-pills {
+  overflow: visible;
+}
 .seg-btn {
   padding: 5px 14px;
   background: transparent;
@@ -2090,7 +2095,8 @@ button.mf-trigger.mf-icon::after {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  /* overflow: hidden убран — обрезал тултипы чипов. Скругление крайних
+     элементов задаём через border-radius:first/last-child ниже. */
 }
 .view-tabs .status-pills .sp {
   border-radius: 0;
@@ -2101,8 +2107,14 @@ button.mf-trigger.mf-icon::after {
   margin: 0;
   height: auto;
 }
+.view-tabs .status-pills .sp:first-child {
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
 .view-tabs .status-pills .sp:last-child {
   border-right: none;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
 }
 /* Бледные цвета по умолчанию, яркие при active */
 .view-tabs .sp-all {
@@ -2162,6 +2174,15 @@ button.mf-trigger.mf-icon::after {
 }
 .view-tabs .sp-debt.active {
   background: rgb(249, 115, 22);
+  color: #fff;
+}
+/* Не распланировано — серый (нейтральный сигнал «нужно дозаполнить») */
+.view-tabs .sp-unplanned {
+  background: rgba(107, 114, 128, 0.1);
+  color: rgb(75, 85, 99);
+}
+.view-tabs .sp-unplanned.active {
+  background: rgb(107, 114, 128);
   color: #fff;
 }
 
