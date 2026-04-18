@@ -117,6 +117,94 @@ p  { color: #94a3b8; font-size: 13px; margin-bottom: 16px; max-width: 900px; }
 .sb-stack .sbk-row.debt { color: #fb923c; font-size: 11px; margin-top: 1px; }
 .sb-stack .sbk-row i { font-size: 9px; }
 
+/* ── Сумма: ведущая («Σ 3 504») ───────────────────────────────────── */
+.sb-split.with-total {
+  position: relative;
+}
+.sb-split .sbs-part.total {
+  background: rgba(100,116,139,0.18);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+.sb-split .sbs-part.total .sbs-lbl {
+  color: #cbd5e1;
+}
+
+/* Сумма вверху — «шапочка» над двумя зонами */
+.sb-cap {
+  display: inline-flex; flex-direction: column; align-items: stretch;
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  line-height: 1; font-weight: 600; font-size: 13px;
+}
+.sb-cap .sbc-total {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 5px 12px;
+  background: rgba(100,116,139,0.22); color: #f1f5f9;
+  font-size: 13px; font-weight: 700;
+}
+.sb-cap .sbc-total i { font-size: 11px; opacity: 0.8; }
+.sb-cap .sbc-split {
+  display: flex; align-items: center;
+}
+.sb-cap .sbc-part {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; cursor: pointer; transition: filter 0.15s;
+}
+.sb-cap .sbc-part:hover { filter: brightness(1.15); }
+.sb-cap .sbc-part.plan { background: rgba(59,130,246,0.18); color: #60a5fa; }
+.sb-cap .sbc-part.debt { background: rgba(249,115,22,0.18); color: #fb923c; }
+.sb-cap .sbc-divider { width: 1px; background: rgba(255,255,255,0.18); align-self: stretch; }
+
+/* Сумма справа — после сплита */
+.sb-trail {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 10px 5px 4px; margin-left: -2px;
+  border: 1px solid var(--border); border-left: none;
+  border-radius: 0 20px 20px 0;
+  background: rgba(100,116,139,0.18); color: #e2e8f0;
+  font-size: 13px; font-weight: 700;
+}
+.sb-trail .sbt-eq { color: #64748b; font-weight: 400; }
+
+/* Bar-вариант: одна линия = план+долг, сумма в тексте */
+.sb-bar {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 6px 12px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 600;
+}
+.sb-bar .sbb-total { color: #f1f5f9; display: inline-flex; align-items: center; gap: 5px; }
+.sb-bar .sbb-split {
+  display: inline-flex; align-items: center; gap: 0;
+  width: 140px; height: 6px; border-radius: 3px; overflow: hidden;
+  background: rgba(59,130,246,0.15);
+}
+.sb-bar .sbb-plan { height: 100%; background: #3b82f6; }
+.sb-bar .sbb-debt { height: 100%; background: #f97316; }
+.sb-bar .sbb-mini {
+  font-size: 11px; font-weight: 500; opacity: 0.8;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sb-bar .sbb-mini .p { color: #60a5fa; }
+.sb-bar .sbb-mini .d { color: #fb923c; }
+
+/* Вариант: сумма крупная + микро-подписи */
+.sb-hero {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  padding: 5px 12px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-weight: 700;
+}
+.sb-hero .sbh-num { font-size: 15px; color: #f1f5f9; }
+.sb-hero .sbh-num i { font-size: 11px; opacity: 0.7; margin-right: 3px; }
+.sb-hero .sbh-break {
+  display: inline-flex; gap: 8px; font-size: 11px; font-weight: 500;
+  opacity: 0.85;
+}
+.sb-hero .sbh-break .p { color: #60a5fa; }
+.sb-hero .sbh-break .d { color: #fb923c; }
+.sb-hero .sbh-break .sep { color: #475569; }
+
 /* ── Демо-шапка: что в итоге ───────────────────────────────────────── */
 .header-bar {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
@@ -266,6 +354,141 @@ p  { color: #94a3b8; font-size: 13px; margin-bottom: 16px; max-width: 900px; }
     </span>
     <span class="sbp-txt"><i class="fas fa-tachometer-alt"></i> 174%</span>
   </span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+
+<h2>С общей суммой · варианты размещения</h2>
+<p>
+  Ко всем вариантам выше добавляем общую цифру (3 504 ч = план + долг). Вот разные способы это сделать, от самого компактного к самому развёрнутому.
+</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">A1. Сумма в начале сплита («Σ всего · план · долг»)</h3>
+<div class="demo-row">
+  <span class="sb-split with-total">
+    <span class="sbs-part total"><i class="fas fa-calculator"></i> 3 504<span class="sbs-lbl">всего</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+  </span>
+</div>
+<p class="note">Три зоны в одной капсуле. Сумма выделена серым — не конкурирует цветом с планом и долгом. Подходит, если сумма — главная цифра.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">A2. Сумма в конце сплита («план · долг = Σ»)</h3>
+<div class="demo-row">
+  <span style="display:inline-flex;">
+    <span class="sb-split" style="border-radius:20px 0 0 20px;border-right:none;">
+      <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+      <span class="sbs-divider"></span>
+      <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+    </span>
+    <span class="sb-trail"><span class="sbt-eq">=</span> 3 504 ч</span>
+  </span>
+</div>
+<p class="note">План и долг слева, сумма — справа через знак «=». Читается как формула. Требует чуть больше места по ширине.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">A3. Сумма «шапочкой» сверху (двухэтажная капсула)</h3>
+<div class="demo-row">
+  <span class="sb-cap">
+    <span class="sbc-total"><i class="fas fa-clock"></i> 3 504 ч · Мар 2026</span>
+    <span class="sbc-split">
+      <span class="sbc-part plan"><i class="fas fa-clock"></i> 2 150 план</span>
+      <span class="sbc-divider"></span>
+      <span class="sbc-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354 долг</span>
+    </span>
+  </span>
+</div>
+<p class="note">Сверху — общая сумма и период, снизу — разбивка. Больше высоты, но очень наглядно. Подходит, если хочется, чтобы шапка «дышала».</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">B. Сумма крупная + микро-разбивка сбоку</h3>
+<div class="demo-row">
+  <span class="sb-hero">
+    <span class="sbh-num"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbh-break">
+      <span class="p">2 150 план</span>
+      <span class="sep">·</span>
+      <span class="d">1 354 долг</span>
+    </span>
+  </span>
+</div>
+<p class="note">Сумма — главный акцент, разбивка — мелкой подписью. Хорошо, когда сумма важнее деталей. Ширина средняя.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">C. Сумма + визуальный сплит-бар</h3>
+<div class="demo-row">
+  <span class="sb-bar">
+    <span class="sbb-total"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbb-split" title="План 61% · долг 39%">
+      <span class="sbb-plan" style="width:61%;"></span>
+      <span class="sbb-debt" style="width:39%;"></span>
+    </span>
+    <span class="sbb-mini">
+      <span class="p">2 150</span>
+      <span class="d">1 354</span>
+    </span>
+  </span>
+</div>
+<p class="note">Большая цифра, рядом — тонкая цветная полоска с пропорциями план/долг. Компактно, с визуальной долей. Хороший баланс.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">D. Сумма в отдельном бейдже рядом</h3>
+<div class="demo-row">
+  <span class="stat-badge sb-hours"><i class="fas fa-clock"></i> 3 504 ч</span>
+  <span class="sb-split">
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+  </span>
+</div>
+<p class="note">Сумма — отдельный бейдж слева, разбивка — справа. Просто в вёрстке, но шире всего. Если в шапке СП и так тесно — этот вариант съест место.</p>
+
+<h2>Полная шапка · лучшие кандидаты</h2>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант A1 (сумма в начале сплита)</h3>
+<div class="header-bar">
+  <span class="sb-split with-total">
+    <span class="sbs-part total"><i class="fas fa-calculator"></i> 3 504<span class="sbs-lbl">всего</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 106% / 174%</span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант B (крупная сумма + микро-подпись)</h3>
+<div class="header-bar">
+  <span class="sb-hero">
+    <span class="sbh-num"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbh-break">
+      <span class="p">2 150 план</span>
+      <span class="sep">·</span>
+      <span class="d">1 354 долг</span>
+    </span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 106% / 174%</span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант C (сумма + визуальный сплит-бар)</h3>
+<div class="header-bar">
+  <span class="sb-bar">
+    <span class="sbb-total"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbb-split">
+      <span class="sbb-plan" style="width:61%;"></span>
+      <span class="sbb-debt" style="width:39%;"></span>
+    </span>
+    <span class="sbb-mini">
+      <span class="p">2 150</span>
+      <span class="d">1 354</span>
+    </span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 106% / 174%</span>
   <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
 </div>
 
