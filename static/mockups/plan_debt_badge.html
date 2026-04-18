@@ -203,7 +203,63 @@ p  { color: #94a3b8; font-size: 13px; margin-bottom: 16px; max-width: 900px; }
 }
 .sb-hero .sbh-break .p { color: #60a5fa; }
 .sb-hero .sbh-break .d { color: #fb923c; }
+.sb-hero .sbh-break .n { color: #94a3b8; }
 .sb-hero .sbh-break .sep { color: #475569; }
+
+/* ── Норма: отдельный чип (фиолетовый) ─────────────────────────── */
+.sb-norm {
+  background: rgba(139,92,246,0.15); color: #c4b5fd;
+}
+.sb-split .sbs-part.norm {
+  background: rgba(139,92,246,0.18); color: #c4b5fd;
+}
+
+/* ── Шкала-термометр: план + долг на фоне нормы ───────────────── */
+.sb-gauge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 6px 12px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 600;
+}
+.sb-gauge .sbg-total { color: #f1f5f9; display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.sb-gauge .sbg-total i { font-size: 11px; opacity: 0.7; }
+.sb-gauge .sbg-track {
+  position: relative;
+  width: 160px; height: 8px; border-radius: 4px; overflow: hidden;
+  background: rgba(139,92,246,0.15);
+}
+.sb-gauge .sbg-plan { position: absolute; left: 0; top: 0; height: 100%; background: #3b82f6; }
+.sb-gauge .sbg-debt { position: absolute; top: 0; height: 100%; background: #f97316; }
+.sb-gauge .sbg-marker {
+  position: absolute; top: -2px; height: 12px; width: 2px;
+  background: #c4b5fd; border-radius: 1px;
+}
+.sb-gauge .sbg-mini {
+  font-size: 11px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sb-gauge .sbg-mini .p { color: #60a5fa; }
+.sb-gauge .sbg-mini .d { color: #fb923c; }
+.sb-gauge .sbg-mini .n { color: #c4b5fd; }
+.sb-gauge .sbg-mini .sep { color: #475569; }
+
+/* ── Дробь: факт / норма ──────────────────────────────────────── */
+.sb-ratio {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 6px 12px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-weight: 700;
+}
+.sb-ratio .sbr-num { color: #f1f5f9; font-size: 14px; }
+.sb-ratio .sbr-slash { color: #64748b; font-weight: 400; }
+.sb-ratio .sbr-norm { color: #c4b5fd; font-size: 13px; }
+.sb-ratio .sbr-break {
+  font-size: 11px; font-weight: 500; margin-left: 6px;
+  display: inline-flex; gap: 6px;
+}
+.sb-ratio .sbr-break .p { color: #60a5fa; }
+.sb-ratio .sbr-break .d { color: #fb923c; }
+.sb-ratio .sbr-break .sep { color: #475569; }
 
 /* ── Демо-шапка: что в итоге ───────────────────────────────────────── */
 .header-bar {
@@ -489,6 +545,159 @@ p  { color: #94a3b8; font-size: 13px; margin-bottom: 16px; max-width: 900px; }
   <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
   <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
   <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 106% / 174%</span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+
+<h2>С нормой · варианты</h2>
+<p>
+  Норма = часов в месяце (из производственного календаря) × число сотрудников.
+  Для марта 2026: 168 ч/сотр × 12 сотр = <b>2 016 ч</b>.
+  План 2 150 ч (106% нормы) + долг 1 354 ч (67% нормы) = 3 504 ч (174% нормы).
+</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">E1. Норма как отдельный фиолетовый чип</h3>
+<div class="demo-row">
+  <span class="sb-split">
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+  </span>
+  <span class="stat-badge sb-norm"><i class="fas fa-balance-scale"></i> Норма 2 016 ч</span>
+</div>
+<p class="note">Сплит план/долг остаётся как есть, норма — отдельным бейджем рядом. Простой вариант, но съедает место.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">E2. Норма третьей зоной в сплите</h3>
+<div class="demo-row">
+  <span class="sb-split">
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part norm"><i class="fas fa-balance-scale"></i> 2 016<span class="sbs-lbl">норма</span></span>
+  </span>
+</div>
+<p class="note">Четыре смысла в одной капсуле: план (факт планирования), долг (накопленное), норма (ограничение). Всё в одном месте.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">E3. Шкала-термометр: план + долг на фоне нормы</h3>
+<div class="demo-row">
+  <div class="demo-label">План 106%:</div>
+  <span class="sb-gauge" title="План 2 150 из нормы 2 016 · долг 1 354 сверху">
+    <span class="sbg-total"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbg-track">
+      <span class="sbg-plan" style="width:60.9%;"></span>
+      <span class="sbg-debt" style="left:60.9%; width:38.4%;"></span>
+      <span class="sbg-marker" style="left:57.1%;" title="Норма 2 016 ч"></span>
+    </span>
+    <span class="sbg-mini">
+      <span class="p">2 150</span>
+      <span class="d">+1 354</span>
+      <span class="sep">/</span>
+      <span class="n">2 016</span>
+    </span>
+  </span>
+</div>
+<div class="demo-row">
+  <div class="demo-label">Норма:</div>
+  <span class="sb-gauge" title="План 1 500 из нормы 2 016 — ниже нормы, долгов нет">
+    <span class="sbg-total"><i class="fas fa-clock"></i>1 500 ч</span>
+    <span class="sbg-track">
+      <span class="sbg-plan" style="width:74.4%;"></span>
+      <span class="sbg-marker" style="left:100%;" title="Норма 2 016 ч"></span>
+    </span>
+    <span class="sbg-mini">
+      <span class="p">1 500</span>
+      <span class="sep">/</span>
+      <span class="n">2 016</span>
+    </span>
+  </span>
+</div>
+<p class="note">Одна шкала шириной 160px, ширина = максимум (здесь — общая сумма 3 504 ч). Синяя полоса — план, оранжевая поверх — долг, фиолетовая вертикальная метка — где стоит норма (2 016 из 3 504 = 57%). Сразу видно: план уже перешёл норму, а долг — ещё сверху.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">E4. Дробь: факт / норма + разбивка</h3>
+<div class="demo-row">
+  <span class="sb-ratio">
+    <span class="sbr-num"><i class="fas fa-clock" style="font-size:11px;opacity:0.7;margin-right:4px;"></i>3 504</span>
+    <span class="sbr-slash">/</span>
+    <span class="sbr-norm">2 016 ч</span>
+    <span class="sbr-break">
+      <span class="p">2 150 план</span>
+      <span class="sep">·</span>
+      <span class="d">1 354 долг</span>
+    </span>
+  </span>
+</div>
+<p class="note">Дробь «факт / норма» — сразу видно загрузку 174%. Разбивка справа мелко. Компактно и самодостаточно.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">E5. Hero-стиль с нормой</h3>
+<div class="demo-row">
+  <span class="sb-hero">
+    <span class="sbh-num"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbh-break">
+      <span class="p">2 150 план</span>
+      <span class="sep">·</span>
+      <span class="d">1 354 долг</span>
+      <span class="sep">·</span>
+      <span class="n">норма 2 016</span>
+    </span>
+  </span>
+</div>
+<p class="note">Добавляем норму третьим пунктом к предыдущему B-варианту. Микро-подпись разрастается, но норма видна.</p>
+
+<h2>Полная шапка · с нормой</h2>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант E3 (шкала-термометр) — мой фаворит</h3>
+<div class="header-bar">
+  <span class="sb-gauge">
+    <span class="sbg-total"><i class="fas fa-clock"></i>3 504 ч</span>
+    <span class="sbg-track">
+      <span class="sbg-plan" style="width:60.9%;"></span>
+      <span class="sbg-debt" style="left:60.9%; width:38.4%;"></span>
+      <span class="sbg-marker" style="left:57.1%;"></span>
+    </span>
+    <span class="sbg-mini">
+      <span class="p">2 150</span>
+      <span class="d">+1 354</span>
+      <span class="sep">/</span>
+      <span class="n">2 016</span>
+    </span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 174%</span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+<p class="note">Шкала показывает и разбивку, и относительную норму. Процент загрузки 174% — отдельным бейджем как сейчас (или убрать, т.к. всё уже видно на шкале).</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант E4 (дробь факт/норма)</h3>
+<div class="header-bar">
+  <span class="sb-ratio">
+    <span class="sbr-num"><i class="fas fa-clock" style="font-size:11px;opacity:0.7;margin-right:4px;"></i>3 504</span>
+    <span class="sbr-slash">/</span>
+    <span class="sbr-norm">2 016 ч</span>
+    <span class="sbr-break">
+      <span class="p">2 150 план</span>
+      <span class="sep">·</span>
+      <span class="d">1 354 долг</span>
+    </span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
+</div>
+<p class="note">Бейдж «Загрузка %» не нужен — цифра и норма уже рядом, процент виден глазом.</p>
+
+<h3 style="font-size:13px;color:#cbd5e1;margin:18px 0 8px;font-weight:600;">Вариант E2 (три зоны в сплите)</h3>
+<div class="header-bar">
+  <span class="sb-split">
+    <span class="sbs-part plan"><i class="fas fa-clock"></i> 2 150<span class="sbs-lbl">план</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part debt"><i class="fas fa-triangle-exclamation"></i> 1 354<span class="sbs-lbl">долг</span></span>
+    <span class="sbs-divider"></span>
+    <span class="sbs-part norm"><i class="fas fa-balance-scale"></i> 2 016<span class="sbs-lbl">норма</span></span>
+  </span>
+  <span class="stat-badge sb-period"><i class="fas fa-calendar"></i> Мар 2026 · 223 задач</span>
+  <span class="stat-badge sb-staff"><i class="fas fa-users"></i> 12 сотр.</span>
+  <span class="stat-badge sb-load load-over"><i class="fas fa-tachometer-alt"></i> 174%</span>
   <span class="stat-badge sb-dept"><i class="fas fa-building"></i> 201</span>
 </div>
 
