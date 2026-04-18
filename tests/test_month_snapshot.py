@@ -410,3 +410,95 @@ class TestSummary:
         r = c.get("/api/analytics/month_snapshot/?month=2026-03")
         data = r.json()
         assert w_overdue.id in data["month_tasks"]["task_ids"]["overdue"]
+
+
+# ── Scope по роли (стартовый экран) ──────────────────────────────────────
+
+
+class TestRoleScope:
+    """
+    Снимок без явных фильтров должен показывать те же задачи, что и
+    стартовый экран пользователя в СП/Аналитике: dept_head → свой отдел.
+    Без этого начальник отдела видел задачи ВСЕХ отделов (баг).
+    """
+
+    def test_dept_head_without_filter_sees_only_own_dept(
+        self, dept_head_user, dept, db
+    ):
+        from apps.employees.models import Department
+
+        other_dept = Department.objects.create(code="999", name="Другой")
+        # Задача в своём отделе — должна попасть в снимок
+        Work.objects.create(
+            work_name="ours",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 10},
+        )
+        # Задача в чужом отделе — не должна попасть
+        Work.objects.create(
+            work_name="theirs",
+            show_in_plan=True,
+            department=other_dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 10},
+        )
+
+        c = Client()
+        c.login(username="dept_head_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        # Только одна задача — из своего отдела
+        assert data["month_tasks"]["total"] == 1
+        # Фильтр dept автоматически подставился
+        assert data["filters"]["dept"] == dept.code
+
+    def test_explicit_dept_filter_overrides_role_scope(self, dept_head_user, dept, db):
+        """Если клиент явно передал dept — автоподстановка не срабатывает."""
+        from apps.employees.models import Department
+
+        other_dept = Department.objects.create(code="999", name="Другой")
+        Work.objects.create(
+            work_name="theirs",
+            show_in_plan=True,
+            department=other_dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 10},
+        )
+
+        c = Client()
+        c.login(username="dept_head_test", password="testpass123")
+        r = c.get(
+            f"/api/analytics/month_snapshot/?month=2026-03&dept={other_dept.code}"
+        )
+        data = r.json()
+        # Пользователь явно запросил другой отдел — показываем его
+        assert data["month_tasks"]["total"] == 1
+        assert data["filters"]["dept"] == other_dept.code
+
+    def test_admin_without_filter_sees_all(self, admin_user, dept, db):
+        """Админ без фильтра — видит задачи всех отделов."""
+        from apps.employees.models import Department
+
+        other_dept = Department.objects.create(code="999", name="Другой")
+        Work.objects.create(
+            work_name="ours",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 10},
+        )
+        Work.objects.create(
+            work_name="theirs",
+            show_in_plan=True,
+            department=other_dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 10},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        assert data["month_tasks"]["total"] == 2
+        assert data["filters"]["dept"] is None

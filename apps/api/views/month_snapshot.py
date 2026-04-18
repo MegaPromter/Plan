@@ -221,6 +221,23 @@ class MonthSnapshotView(APIView):
         center_id = request.GET.get("center_id")
         project_id = request.GET.get("project_id")
 
+        # ── Стартовый scope по роли (как в analytics_reports.py) ─────
+        # Нужно, чтобы снимок показывал те же задачи, что видит пользователь
+        # на своих стартовых экранах СП/Аналитики. get_visibility_filter()
+        # для не-user ролей возвращает Q() (всё), а фактическая видимость
+        # определяется позицией: dept_head → свой отдел, sector_head → свой
+        # сектор. Если клиент не прислал явный фильтр dept/sector/center,
+        # подставляем сюда значение из профиля Employee.
+        employee = getattr(request.user, "employee", None)
+        if employee and not (dept_code or sector_id or center_id):
+            role = employee.role
+            if role in ("dept_head", "dept_deputy") and employee.department:
+                dept_code = employee.department.code or ""
+            elif role == "sector_head" and employee.sector_id:
+                sector_id = str(employee.sector_id)
+            elif role in ("ntc_head", "ntc_deputy") and employee.ntc_center_id:
+                center_id = str(employee.ntc_center_id)
+
         # ── Базовый queryset ─────────────────────────────────────────
         vis_q = get_visibility_filter(request.user)
 
