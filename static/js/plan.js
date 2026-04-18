@@ -882,6 +882,10 @@ async function loadTasks() {
   }
   _spBgLoading = false;
 
+  // Бейдж ошибок планирования устаревает при любой смене фильтров
+  // (год/месяц/отделы/«Показать всё») — сбрасываем к исходному виду.
+  if (typeof _resetPlanningErrorsBadge === 'function') _resetPlanningErrorsBadge();
+
   var baseUrl = _spBuildUrl();
 
   document.getElementById('taskBody').innerHTML = skeletonRows(10, 15);
@@ -1127,7 +1131,13 @@ async function calcPlanningErrors() {
     }
   });
 
-  const _allEmps = new Set((dirs['_ids_employees'] || []).map((e) => e.value));
+  // Сотрудники для проверки недозагрузки — по тому же скоупу отделов, что и задачи.
+  // Иначе «Недозагруженные» показывает сотрудников чужих отделов.
+  let _empSource = dirs['_ids_employees'] || [];
+  if (spSelectedDepts && spSelectedDepts.size > 0) {
+    _empSource = _empSource.filter((e) => e.dept && spSelectedDepts.has(e.dept));
+  }
+  const _allEmps = new Set(_empSource.map((e) => e.value));
   _allEmps.forEach((name) => {
     const hours = execLoad[name] || 0;
     const vacD = _vacDays[name] || 0;
@@ -1157,14 +1167,15 @@ async function calcPlanningErrors() {
   });
 
   // ── 5. Разбивка ошибок по отделам ─────────────────────────────────────
+  // В API задача сериализуется с полем `dept` (код отдела), не `department`.
   const deptStats = {};
   overdue.forEach((t) => {
-    const d = t.department || '—';
+    const d = t.dept || '—';
     if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
     deptStats[d].danger++;
   });
   debts.forEach((t) => {
-    const d = t.department || '—';
+    const d = t.dept || '—';
     if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
     deptStats[d].debt++;
   });
@@ -1172,7 +1183,7 @@ async function calcPlanningErrors() {
     // underloaded не имеет department — пропускаем
   });
   badDates.forEach((t) => {
-    const d = t.department || '—';
+    const d = t.dept || '—';
     if (!deptStats[d]) deptStats[d] = { danger: 0, debt: 0, warn: 0 };
     deptStats[d].warn++;
   });
