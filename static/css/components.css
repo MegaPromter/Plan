@@ -933,10 +933,11 @@ tr.row-pinned td:first-child::after {
 }
 
 /* ── Сплит-бейдж загрузки: план% / с долгом% ─────────────────── */
-/* Та же база .stat-badge, но содержимое делится на две «половинки». */
+/* Та же база .stat-badge, но содержимое делится на две «половинки».
+   ВАЖНО: overflow НЕ ставим — иначе обрежется тултип .stat-badge[data-tip]::after.
+   Скругления капсулы делаем на самих половинках. */
 .stat-badge.sb-load-split {
   padding: 0;
-  overflow: hidden;
   background: transparent;
   --tip-bg: var(--danger);
 }
@@ -945,6 +946,19 @@ tr.row-pinned td:first-child::after {
   align-items: center;
   gap: 4px;
   padding: 5px 10px;
+}
+/* Скругление углов капсулы — на крайних половинках */
+.sb-load-split .lsp-plan {
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+}
+.sb-load-split .lsp-total {
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+/* Если есть только левая половинка (долга нет) — скругляем все углы */
+.sb-load-split .lsp-plan:only-child {
+  border-radius: 20px;
 }
 .sb-load-split .lsp-part i {
   font-size: 11px;
