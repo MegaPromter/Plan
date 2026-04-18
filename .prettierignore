@@ -2,3 +2,6 @@ static/lib/
 static/vue/
 node_modules/
 *.min.js
+# Django-шаблоны содержат теги {% ... %}, которые prettier рвёт
+# переносами строк — это ломает рендер. Игнорируем все .html целиком.
+*.html
