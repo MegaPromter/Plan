@@ -509,12 +509,7 @@ let spSelectedDepts = new Set();
   // дефолт «свой отдел» ставится только для role=user без этого флага.
   var _showAllDepts = !!(_spCfg.colSettings && _spCfg.colSettings.show_all_depts);
   var _isUserRole = USER_ROLE === 'user';
-  if (
-    spSelectedDepts.size === 0 &&
-    USER_DEPT &&
-    _isUserRole &&
-    !_showAllDepts
-  ) {
+  if (spSelectedDepts.size === 0 && USER_DEPT && _isUserRole && !_showAllDepts) {
     spSelectedDepts.add(USER_DEPT);
   }
 })();
@@ -580,7 +575,15 @@ function _spRestoreFiltersFromUrl() {
   }
   if (
     f.bucket &&
-    ['done', 'done_early', 'overdue', 'inwork', 'debt_closed', 'debt_hanging', 'unplanned'].includes(f.bucket)
+    [
+      'done',
+      'done_early',
+      'overdue',
+      'inwork',
+      'debt_closed',
+      'debt_hanging',
+      'unplanned',
+    ].includes(f.bucket)
   ) {
     _snapBucketFilter = f.bucket;
     changed = true;
@@ -2549,7 +2552,10 @@ function renderTable() {
     return;
   }
   // Пустое состояние: нет строк после фильтрации
-  if (_spFiltered.length === 0 && (hasExtraFilters || _snapBucketFilter || spSelectedDepts.size > 0)) {
+  if (
+    _spFiltered.length === 0 &&
+    (hasExtraFilters || _snapBucketFilter || spSelectedDepts.size > 0)
+  ) {
     tbody.innerHTML = emptyStateHtml({
       icon: 'fas fa-search',
       title: 'Ничего не найдено',

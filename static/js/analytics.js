@@ -767,10 +767,7 @@
     var debtSub = 'из прошлых мес.';
     if ((data.debts_closed || 0) + (data.debts_hanging || 0) > 0) {
       debtSub =
-        'закрыто ' +
-        fmtNum(data.debts_closed || 0) +
-        ' + висит ' +
-        fmtNum(data.debts_hanging || 0);
+        'закрыто ' + fmtNum(data.debts_closed || 0) + ' + висит ' + fmtNum(data.debts_hanging || 0);
     }
     html +=
       '<div class="an-summary-card an-summary-warn"><div class="an-summary-val an-val-yellow">' +
@@ -2343,8 +2340,18 @@
     }
 
     var MONTHS = [
-      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+      'Январь',
+      'Февраль',
+      'Март',
+      'Апрель',
+      'Май',
+      'Июнь',
+      'Июль',
+      'Август',
+      'Сентябрь',
+      'Октябрь',
+      'Ноябрь',
+      'Декабрь',
     ];
     var parts = (data.month || '').split('-');
     var year = parseInt(parts[0]);
@@ -2383,10 +2390,7 @@
     if (!el) return;
     el.classList.toggle('is-open');
     try {
-      localStorage.setItem(
-        'an_snapshot_open',
-        el.classList.contains('is-open') ? '1' : '0',
-      );
+      localStorage.setItem('an_snapshot_open', el.classList.contains('is-open') ? '1' : '0');
     } catch (e) {
       /* ignore quota */
     }

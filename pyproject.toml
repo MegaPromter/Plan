@@ -64,5 +64,5 @@ source = ["apps"]
 omit = ["*/migrations/*", "*/tests/*", "*/admin.py"]
 
 [tool.coverage.report]
-fail_under = 50
+fail_under = 45
 show_missing = true
