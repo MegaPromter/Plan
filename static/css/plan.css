@@ -285,6 +285,7 @@ thead tr:nth-child(1) th {
 thead tr:nth-child(2) th {
   top: 0;
   z-index: 11;
+  border-top: 1px solid var(--border2);
 }
 /* filter-row скрыта — фильтры встроены в заголовки как иконки-воронки */
 thead tr.filter-row {

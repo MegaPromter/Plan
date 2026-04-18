@@ -70,6 +70,7 @@ cookies.txt
 # Прототипы
 prototype_*.html
 static/datepicker_compare.html
+static/mockups/
 
 # Сторонние JS-библиотеки (неиспользуемые datepicker)
 static/lib/pikaday/

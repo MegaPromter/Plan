@@ -3313,7 +3313,11 @@ function makeRow(t, num) {
     const editBtn = document.createElement('button');
     editBtn.className = 'row-action-btn' + (isFromPP ? ' btn-locked' : '');
     editBtn.innerHTML = isFromPP ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-pen"></i>';
-    editBtn.dataset.tip = isFromPP ? 'Частичное редактирование (из ПП)' : 'Редактировать';
+    // Замочек означает «часть полей зафиксирована ПП»:
+    // название/номер/этап/обоснование менять нельзя — они приходят из ПП.
+    editBtn.title = isFromPP
+      ? 'Задача из ПП — часть полей заблокирована (название, № работы, этап, обоснование). Можно менять даты, исполнителей, план-часы.'
+      : 'Редактировать';
     editBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -3325,14 +3329,14 @@ function makeRow(t, num) {
   const repBtn = document.createElement('button');
   repBtn.className = 'row-action-btn btn-report' + (t.has_reports ? ' has-report' : '');
   repBtn.innerHTML = '<i class="fas fa-clipboard-check"></i>';
-  repBtn.dataset.tip = 'Отчёт';
+  repBtn.title = 'Отчёт';
   repBtn.onclick = () => openReportModal(t);
   actWrap.appendChild(repBtn);
 
   const depsBtn = document.createElement('button');
   depsBtn.className = 'row-action-btn btn-deps';
   depsBtn.innerHTML = '<i class="fas fa-link"></i>';
-  depsBtn.dataset.tip = 'Зависимости';
+  depsBtn.title = 'Зависимости';
   depsBtn.onclick = () => openDepsModal(t);
   actWrap.appendChild(depsBtn);
 
@@ -3340,7 +3344,7 @@ function makeRow(t, num) {
     const delBtn = document.createElement('button');
     delBtn.className = 'row-action-btn btn-delete';
     delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-    delBtn.dataset.tip = 'Удалить';
+    delBtn.title = 'Удалить';
     delBtn.onclick = () => deleteTask(t.id, tr);
     actWrap.appendChild(delBtn);
   }

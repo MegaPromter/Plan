@@ -1425,9 +1425,9 @@ function _ppAppendBatch(count) {
     // Последний столбец: hover-действия
     html += '<td data-col-idx="18" data-label="Действия" class="td-actions-hover">';
     html += '<div class="row-actions">';
-    html += `<button class="row-action-btn btn-deps" data-tip="Зависимости" onclick="openPPDepsModal(${row.id})"><i class="fas fa-link"></i></button>`;
+    html += `<button class="row-action-btn btn-deps" title="Зависимости" onclick="openPPDepsModal(${row.id})"><i class="fas fa-link"></i></button>`;
     if (rowEditable) {
-      html += `<button class="row-action-btn btn-delete" data-tip="Удалить" data-id="${row.id}"><i class="fas fa-trash"></i></button>`;
+      html += `<button class="row-action-btn btn-delete" title="Удалить" data-id="${row.id}"><i class="fas fa-trash"></i></button>`;
     }
     html += '</div></td>';
 

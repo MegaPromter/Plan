@@ -327,6 +327,7 @@
 }
 .pp-table thead tr:nth-child(2) th {
   top: 0;
+  border-top: 1px solid var(--border);
 }
 /* filter-row скрыта — фильтры встроены в заголовки как иконки-воронки */
 .pp-table thead tr.filter-row {

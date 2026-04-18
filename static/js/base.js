@@ -426,12 +426,17 @@ function updateNotifBadge() {
     })
     .then(function (data) {
       var badge = document.getElementById('notifBadge');
+      var wrap = document.getElementById('notifWrap');
       if (!badge) return;
       if (data.count > 0) {
         badge.textContent = data.count > 99 ? '99+' : data.count;
         badge.style.display = '';
+        if (wrap) wrap.style.display = '';
       } else {
         badge.style.display = 'none';
+        // Если уведомлений нет — скрываем весь блок с колокольчиком,
+        // чтобы не занимать место в topbar
+        if (wrap) wrap.style.display = 'none';
       }
     });
 }

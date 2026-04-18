@@ -288,30 +288,32 @@ function _makeJiRow(n, idx) {
   var canClose = rowMod && (n.status === 'active' || n.status === 'expired');
   var canEdit = rowMod && !n.is_auto;
   var canDel = _isFullAccess() && !n.is_auto;
-  var actions = '<td class="col-actions" style="text-align:center;white-space:nowrap;">';
+  // Кнопки действий: стилистика row-action-btn из components.css — единая для СП/ПП/ЖИ.
+  // Обёртка .row-actions — inline-flex, иконки через FontAwesome.
+  var actions = '<td class="col-actions td-actions-hover"><div class="row-actions">';
   if (canEdit) {
     actions +=
-      '<button class="ji-btn" onclick="openEditModal(' +
+      '<button class="row-action-btn" onclick="openEditModal(' +
       n.id +
-      ')" title="Редактировать">&#9998;</button> ';
+      ')" title="Редактировать"><i class="fas fa-pen"></i></button>';
   }
   actions +=
-    '<button class="ji-btn" onclick="openDescModal(' +
+    '<button class="row-action-btn" onclick="openDescModal(' +
     n.id +
-    ')" title="Описание">&#128221;</button> ';
+    ')" title="Описание"><i class="fas fa-align-left"></i></button>';
   if (canClose) {
     actions +=
-      '<button class="ji-btn ji-btn-close" onclick="openCloseModal(' +
+      '<button class="row-action-btn btn-report" onclick="openCloseModal(' +
       n.id +
-      ')" title="Погасить">&#9745;</button> ';
+      ')" title="Погасить"><i class="fas fa-check"></i></button>';
   }
   if (canDel) {
     actions +=
-      '<button class="ji-btn ji-btn-del" onclick="deleteRow(' +
+      '<button class="row-action-btn btn-delete" onclick="deleteRow(' +
       n.id +
-      ')" title="Удалить">&#10005;</button>';
+      ')" title="Удалить"><i class="fas fa-trash"></i></button>';
   }
-  actions += '</td>';
+  actions += '</div></td>';
   return (
     '<tr>' +
     '<td style="color:var(--muted);text-align:center;">' +

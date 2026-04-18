@@ -3,7 +3,7 @@
 {% block title %}Журнал извещений — ПРИЗМА{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/notices.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'css/notices.css' %}?v=4">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -51,16 +51,16 @@
     <thead>
       <tr>
         <th rowspan="2">&#8470;</th>
-        <th rowspan="2" data-sort="ii_pi">ИИ/ПИ<div class="col-resize" data-col="ii_pi"></div></th>
-        <th rowspan="2" data-sort="notice_number">Номер изв.<div class="col-resize" data-col="notice_number"></div></th>
+        <th rowspan="2" data-sort="ii_pi" data-col-min="56">ИИ/ПИ<div class="col-resize" data-col="ii_pi"></div></th>
+        <th rowspan="2" data-sort="notice_number" data-col-min="80">Номер изв.<div class="col-resize" data-col="notice_number"></div></th>
         <th colspan="2" style="text-align:center;">Группа</th>
-        <th rowspan="2" data-sort="date_issued">Дата выпуска<div class="col-resize" data-col="date_issued"></div></th>
-        <th rowspan="2" data-sort="date_expires">Срок действия<div class="col-resize" data-col="date_expires"></div></th>
-        <th rowspan="2" data-sort="dept">Отдел<div class="col-resize" data-col="dept"></div></th>
-        <th rowspan="2" data-sort="sector">Сектор<div class="col-resize" data-col="sector"></div></th>
-        <th rowspan="2" data-sort="developer">Разработчик<div class="col-resize" data-col="executor"></div></th>
-        <th rowspan="2" data-sort="description">Описание<div class="col-resize" data-col="description"></div></th>
-        <th rowspan="2" data-sort="status">Статус<div class="col-resize" data-col="status"></div></th>
+        <th rowspan="2" data-sort="date_issued" data-col-min="80">Дата выпуска<div class="col-resize" data-col="date_issued"></div></th>
+        <th rowspan="2" data-sort="date_expires" data-col-min="80">Срок действия<div class="col-resize" data-col="date_expires"></div></th>
+        <th rowspan="2" data-sort="dept" data-col-min="50">Отдел<div class="col-resize" data-col="dept"></div></th>
+        <th rowspan="2" data-sort="sector" data-col-min="60">Сектор<div class="col-resize" data-col="sector"></div></th>
+        <th rowspan="2" data-sort="developer" data-col-min="100">Разработчик<div class="col-resize" data-col="executor"></div></th>
+        <th rowspan="2" data-sort="description" data-col-min="90">Описание<div class="col-resize" data-col="description"></div></th>
+        <th rowspan="2" data-sort="status" data-col-min="80">Статус<div class="col-resize" data-col="status"></div></th>
         <th rowspan="2" class="col-actions"></th>
       </tr>
       <tr>
@@ -227,5 +227,5 @@
   "userSector": "{{ request.user.employee.sector.code|default:'' }}",
   "colSettings": {{ col_settings|safe }}
 }</script>
-<script src="{% static 'js/notices.js' %}?v=10"></script>
+<script src="{% static 'js/notices.js' %}?v=11"></script>
 {% endblock %}
