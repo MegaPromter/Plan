@@ -889,6 +889,101 @@ tr.row-pinned td:first-child::after {
   --tip-bg: var(--danger);
 }
 
+/* ── Бейдж «факт / норма» с разбивкой план·долг ─────────────────── */
+.sb-ratio {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--surface2);
+  font-family: var(--mono);
+  font-weight: 700;
+  white-space: nowrap;
+  --tip-bg: var(--accent);
+}
+.sb-ratio .sbr-num {
+  color: var(--text);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sb-ratio .sbr-num i {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.sb-ratio .sbr-slash {
+  color: var(--muted);
+  font-weight: 400;
+}
+.sb-ratio .sbr-norm {
+  color: #8b5cf6;
+  font-size: 13px;
+}
+.sb-ratio .sbr-break {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 6px;
+  display: inline-flex;
+  gap: 6px;
+  font-family: inherit;
+}
+.sb-ratio .sbr-break .p {
+  color: var(--accent);
+}
+.sb-ratio .sbr-break .d {
+  color: #f97316;
+}
+.sb-ratio .sbr-break .sep {
+  color: var(--muted);
+}
+
+/* ── Сплит-бейдж загрузки: план% / с долгом% ─────────────────── */
+.sb-load-split {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--mono);
+  white-space: nowrap;
+  --tip-bg: var(--danger);
+}
+.sb-load-split .lsp-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+}
+.sb-load-split .lsp-part i {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.sb-load-split .lsp-plan {
+  background: rgba(249, 115, 22, 0.18);
+  color: #f97316;
+}
+.sb-load-split .lsp-total {
+  background: rgba(var(--danger-rgb), 0.18);
+  color: var(--danger);
+}
+.sb-load-split .lsp-sep {
+  color: var(--muted);
+  padding: 5px 2px;
+  font-weight: 400;
+}
+.sb-load-split.ok .lsp-plan {
+  background: rgba(var(--success-rgb), 0.14);
+  color: var(--success);
+}
+.sb-load-split.warn .lsp-plan {
+  background: rgba(var(--warning-rgb), 0.18);
+  color: var(--warning);
+}
+
 /* ── Переключатель темы ──────────────────────────────────────────── */
 .theme-toggle {
   display: inline-flex;

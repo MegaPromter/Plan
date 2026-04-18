@@ -67,6 +67,10 @@ let _snapTaskIds = {
 // Последний загруженный месяц в формате YYYY-MM (чтобы избежать повторных запросов)
 let _snapLastMonth = null;
 
+// Блок часов из снимка месяца: план / долг / норма / загрузка.
+// Заполняется из data.hours в ответе /api/analytics/month_snapshot/.
+let _snapHours = null;
+
 // Drill-down фильтр по корзине снимка месяца (null = не активен)
 /** @type {'done'|'done_early'|'overdue'|'inwork'|'debt_closed'|'debt_hanging'|'unplanned'|null} */
 let _snapBucketFilter = null;
@@ -178,6 +182,7 @@ async function loadMonthSnapshot() {
 
 function _snapClearIds() {
   for (const k of Object.keys(_snapTaskIds)) _snapTaskIds[k] = new Set();
+  _snapHours = null;
 }
 
 /**
@@ -197,9 +202,12 @@ function _fillSnapTaskIds(data) {
   _snapTaskIds.debt_hanging = new Set(dIds.hanging || []);
   const un = data.unplanned || {};
   _snapTaskIds.unplanned = new Set(un.task_ids || []);
+  _snapHours = data.hours || null;
 
   // Обновляем чипы в тулбаре — те же цифры, что в снимке (единый источник правды)
   spUpdateStatusPanel();
+  // Переотрисовываем бейджи «часы» и «загрузка» — данные из снимка, а не локальный расчёт
+  if (typeof updatePlanSummary === 'function') updatePlanSummary();
 
   // Применяем цветные полосы к уже отрисованным строкам таблицы,
   // не пересоздавая их целиком (чтобы не дёргать DOM лишний раз).
@@ -2058,28 +2066,35 @@ async function runMonthCheckIfNeeded() {
 }
 
 // ── PLAN SUMMARY ──────────────────────────────────────────────────────────
+
+// Форматирование целого числа часов с разделителем тысяч (русская локаль).
+function _fmtHours(v) {
+  const n = Math.round(parseFloat(v) || 0);
+  return n.toLocaleString('ru-RU');
+}
+
 function updatePlanSummary() {
-  let total = 0;
   const monthKey = selectedMonth
     ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
     : null;
 
-  // Трудоёмкость и сотрудники считаются без статус-фильтра,
-  // чтобы переключение чипов «Выполнено/Просрочено/В работе» не меняло итоги
+  // Исполнители считаются локально (для подписи «N сотр.»),
+  // часы/норма/загрузка — из снимка месяца (источник правды),
+  // либо (если месяц не выбран или снимок не загружен) локальная сумма plan_hours.
   const baseData = _spTasksWithoutStatusFilter();
   const executorSet = new Set();
+  let localTotal = 0;
   baseData.forEach((t) => {
     const ph = t.plan_hours_all || {};
     if (monthKey) {
-      total += parseFloat(ph[monthKey] || 0);
+      localTotal += parseFloat(ph[monthKey] || 0);
     } else if (showAll) {
-      total += Object.values(ph).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+      localTotal += Object.values(ph).reduce((s, v) => s + (parseFloat(v) || 0), 0);
     } else {
       Object.entries(ph).forEach(([k, v]) => {
-        if (k.startsWith(String(selectedYear))) total += parseFloat(v) || 0;
+        if (k.startsWith(String(selectedYear))) localTotal += parseFloat(v) || 0;
       });
     }
-    // Собираем уникальных исполнителей
     if (t.executor) executorSet.add(t.executor);
     if (t.executors_list) {
       t.executors_list.forEach(function (ex) {
@@ -2088,10 +2103,39 @@ function updatePlanSummary() {
     }
   });
 
-  // ── Бейдж: трудоёмкость ──
-  var laborText = total > 0 ? total.toLocaleString('ru-RU') + ' ч' : '0 ч';
-  document.getElementById('planSummaryValue').innerHTML =
-    '<i class="fas fa-clock"></i> ' + laborText;
+  // ── Бейдж: «факт / норма» с разбивкой ──
+  // Когда месяц выбран и снимок загружен — берём готовые числа (план, долг, норма).
+  // Иначе показываем просто локальную сумму часов (без нормы и долга).
+  const ratioEl = document.getElementById('planSummaryValue');
+  const useSnap = !!(monthKey && _snapHours && _snapLastMonth === monthKey);
+  if (useSnap) {
+    const plan = parseFloat(_snapHours.planned || 0);
+    const debt = parseFloat(_snapHours.debt || 0);
+    const total = parseFloat(_snapHours.total || plan + debt);
+    const norm = parseFloat(_snapHours.norm || 0);
+    let html = '<span class="sbr-num"><i class="fas fa-clock"></i>' + _fmtHours(total) + '</span>';
+    if (norm > 0) {
+      html +=
+        '<span class="sbr-slash">/</span>' +
+        '<span class="sbr-norm">' +
+        _fmtHours(norm) +
+        ' ч</span>';
+    } else {
+      html += '<span class="sbr-slash">ч</span>';
+    }
+    const parts = [];
+    if (plan > 0) parts.push('<span class="p">' + _fmtHours(plan) + ' план</span>');
+    if (debt > 0) parts.push('<span class="d">' + _fmtHours(debt) + ' долг</span>');
+    if (parts.length > 0) {
+      html += '<span class="sbr-break">' + parts.join('<span class="sep">·</span>') + '</span>';
+    }
+    ratioEl.innerHTML = html;
+  } else {
+    ratioEl.innerHTML =
+      '<span class="sbr-num"><i class="fas fa-clock"></i>' +
+      _fmtHours(localTotal) +
+      '</span><span class="sbr-slash">ч</span>';
+  }
 
   // ── Бейдж: период ──
   let periodLabel;
@@ -2116,32 +2160,55 @@ function updatePlanSummary() {
   document.getElementById('planSummaryDept').innerHTML =
     '<i class="fas fa-building"></i> ' + deptNames;
 
-  // ── Бейдж: загрузка (%) ──
-  const calYear = selectedYear || new Date().getFullYear();
-  const calArr = _spCalCache[calYear] || [];
-  let capacity = 0;
-  if (staffCount > 0 && calArr.length > 0) {
-    if (monthKey && selectedMonth) {
-      const ce = calArr.find(function (c) {
-        return c.month === selectedMonth;
-      });
-      capacity = staffCount * (ce ? ce.hours_norm : 160);
-    } else {
-      const yearNorm = calArr.reduce(function (s, c) {
-        return s + (c.hours_norm || 0);
-      }, 0);
-      capacity = staffCount * yearNorm;
-    }
-  }
+  // ── Сплит-бейдж загрузки: план% / с долгом% ──
+  // Когда снимка нет (год/все периоды) — считаем локально, одним числом «план%».
   const loadEl = document.getElementById('planSummaryLoad');
-  if (capacity > 0) {
-    const pct = Math.round((total / capacity) * 100);
-    loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> ' + pct + '%';
-    loadEl.className =
-      'stat-badge sb-load' + (pct <= 85 ? '' : pct <= 100 ? ' load-warn' : ' load-over');
+  if (useSnap) {
+    const planPct = Math.round(parseFloat(_snapHours.load_plan_pct || 0));
+    const totalPct = Math.round(parseFloat(_snapHours.load_total_pct || 0));
+    const hasDebt = parseFloat(_snapHours.debt || 0) > 0;
+    // Класс: ok — план ≤ 100; warn — план 101..125; (иначе sb-load-split — перегруз)
+    let cls = 'sb-load-split';
+    if (planPct <= 100) cls += ' ok';
+    else if (planPct <= 125) cls += ' warn';
+    let html =
+      '<span class="lsp-part lsp-plan"><i class="fas fa-tachometer-alt"></i>' +
+      planPct +
+      '%</span>';
+    if (hasDebt) {
+      html +=
+        '<span class="lsp-sep">/</span>' +
+        '<span class="lsp-part lsp-total">' +
+        totalPct +
+        '%</span>';
+    }
+    loadEl.className = cls;
+    loadEl.innerHTML = html;
   } else {
-    loadEl.innerHTML = '<i class="fas fa-tachometer-alt"></i> —';
-    loadEl.className = 'stat-badge sb-load';
+    // Фолбэк: локальный расчёт по _spCalCache (год целиком или показать —)
+    const calYear = selectedYear || new Date().getFullYear();
+    const calArr = _spCalCache[calYear] || [];
+    let capacity = 0;
+    if (staffCount > 0 && calArr.length > 0) {
+      if (monthKey && selectedMonth) {
+        const ce = calArr.find((c) => c.month === selectedMonth);
+        capacity = staffCount * (ce ? ce.hours_norm : 160);
+      } else {
+        const yearNorm = calArr.reduce((s, c) => s + (c.hours_norm || 0), 0);
+        capacity = staffCount * yearNorm;
+      }
+    }
+    loadEl.className = 'sb-load-split';
+    if (capacity > 0) {
+      const pct = Math.round((localTotal / capacity) * 100);
+      if (pct <= 100) loadEl.className = 'sb-load-split ok';
+      else if (pct <= 125) loadEl.className = 'sb-load-split warn';
+      loadEl.innerHTML =
+        '<span class="lsp-part lsp-plan"><i class="fas fa-tachometer-alt"></i>' + pct + '%</span>';
+    } else {
+      loadEl.innerHTML =
+        '<span class="lsp-part lsp-plan"><i class="fas fa-tachometer-alt"></i>—</span>';
+    }
   }
 }
 

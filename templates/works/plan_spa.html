@@ -1,35 +1,40 @@
-{% extends "base.html" %}
-{% load static employee_tags %}
-
-{% block title %}План/отчёт — ПРИЗМА{% endblock %}
-
-{% block styles %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'26' }}">
-{% endblock %}
-
-{% block breadcrumb %}
+{% extends "base.html" %} {% load static employee_tags %} {% block title %}План/отчёт — ПРИЗМА{%
+endblock %} {% block styles %}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{% static 'css/variables.css' %}" />
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'26' }}" />
+{% endblock %} {% block breadcrumb %}
 <span class="breadcrumb-sep" aria-hidden="true">/</span>
 <span class="breadcrumb-current" id="breadcrumbTitle">3. Сводное планирование (План/отчёт)</span>
-{% endblock %}
-
-{% block topbar_actions %}
-<button class="topbar-btn errors" id="errorsBtn" onclick="openPlanningErrors()" data-tip="Проверка ошибок в плановых данных">⚠️ Ошибки планирования</button>
+{% endblock %} {% block topbar_actions %}
+<button
+  class="topbar-btn errors"
+  id="errorsBtn"
+  onclick="openPlanningErrors()"
+  data-tip="Проверка ошибок в плановых данных"
+>
+  ⚠️ Ошибки планирования
+</button>
 {% if is_writer %}
 <button class="btn btn-primary btn-sm" onclick="openInlineNewRow()" data-tip="Создать новую задачу">
   <i class="fas fa-plus"></i> Добавить задачу
 </button>
-<button class="btn btn-outline btn-sm" id="bulkModeBtn" onclick="toggleBulkMode()" title="Массовое выделение">
+<button
+  class="btn btn-outline btn-sm"
+  id="bulkModeBtn"
+  onclick="toggleBulkMode()"
+  title="Массовое выделение"
+>
   <i class="far fa-check-square" aria-hidden="true"></i> Масс. выд.
 </button>
 {% endif %}
 <span id="exportBtnContainer"></span>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <!-- ══ Тулбар: период + поиск ══════════════════════════════════════════ -->
 <div class="toolbar" id="toolbar">
   <!-- 1. Панель периода -->
@@ -41,71 +46,168 @@
       <button class="cal-nav" onclick="changeYear(1)">›</button>
     </div>
     <div class="cal-months">
-      <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
-      <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
-      <span class="cal-month" data-m="5" onclick="selectMonth(5)">Май</span><span class="cal-month" data-m="6" onclick="selectMonth(6)">Июн</span>
-      <span class="cal-month" data-m="7" onclick="selectMonth(7)">Июл</span><span class="cal-month" data-m="8" onclick="selectMonth(8)">Авг</span>
-      <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
-      <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
+      <span class="cal-month" data-m="1" onclick="selectMonth(1)">Янв</span
+      ><span class="cal-month" data-m="2" onclick="selectMonth(2)">Фев</span>
+      <span class="cal-month" data-m="3" onclick="selectMonth(3)">Мар</span
+      ><span class="cal-month" data-m="4" onclick="selectMonth(4)">Апр</span>
+      <span class="cal-month" data-m="5" onclick="selectMonth(5)">Май</span
+      ><span class="cal-month" data-m="6" onclick="selectMonth(6)">Июн</span>
+      <span class="cal-month" data-m="7" onclick="selectMonth(7)">Июл</span
+      ><span class="cal-month" data-m="8" onclick="selectMonth(8)">Авг</span>
+      <span class="cal-month" data-m="9" onclick="selectMonth(9)">Сен</span
+      ><span class="cal-month" data-m="10" onclick="selectMonth(10)">Окт</span>
+      <span class="cal-month" data-m="11" onclick="selectMonth(11)">Ноя</span
+      ><span class="cal-month" data-m="12" onclick="selectMonth(12)">Дек</span>
     </div>
-    <span class="cal-clear" onclick="clearFilter()" data-tip="Сбросить фильтр периода">Показать все</span>
+    <span class="cal-clear" onclick="clearFilter()" data-tip="Сбросить фильтр периода"
+      >Показать все</span
+    >
     <div class="plan-summary badge-row">
-      <span class="stat-badge sb-labor" id="planSummaryValue" data-tip="Трудоёмкость (часы)"><i class="fas fa-clock"></i> —</span>
-      <span class="stat-badge sb-period" id="planSummaryPeriod" data-tip="Период и кол-во задач"><i class="fas fa-calendar"></i> —</span>
-      <span class="stat-badge sb-staff" id="planSummaryStaff" data-tip="Уникальных исполнителей"><i class="fas fa-users"></i> —</span>
-      <span class="stat-badge sb-load" id="planSummaryLoad" data-tip="Загрузка (план / норма)"><i class="fas fa-tachometer-alt"></i> —</span>
-      <span class="stat-badge sb-dept" id="planSummaryDept" data-tip="Выбранные отделы"><i class="fas fa-building"></i> —</span>
+      <span class="sb-ratio" id="planSummaryValue" data-tip="Факт (план + долг) / норма · разбивка"
+        ><span class="sbr-num"><i class="fas fa-clock"></i>—</span></span
+      >
+      <span class="stat-badge sb-period" id="planSummaryPeriod" data-tip="Период и кол-во задач"
+        ><i class="fas fa-calendar"></i> —</span
+      >
+      <span class="stat-badge sb-staff" id="planSummaryStaff" data-tip="Уникальных исполнителей"
+        ><i class="fas fa-users"></i> —</span
+      >
+      <span
+        class="sb-load-split"
+        id="planSummaryLoad"
+        data-tip="Загрузка: план% / с долгом%"
+      ></span>
+      <span class="stat-badge sb-dept" id="planSummaryDept" data-tip="Выбранные отделы"
+        ><i class="fas fa-building"></i> —</span
+      >
     </div>
   </div>
 
   <!-- 2. Отдел (чипы ≤5 / dropdown >5 — как в ПП) -->
   <div class="pp-dept-bar" id="deptBar">
-    <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Отдел:</span>
-    <div id="spDeptWrap" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    <span
+      style="
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      "
+      >Отдел:</span
+    >
+    <div id="spDeptWrap" style="display: flex; gap: 4px; flex-wrap: wrap"></div>
   </div>
 
   <!-- 3. Единая строка: вкладки | статус | плотность | поиск -->
   <div class="view-tabs" id="viewTabs">
     <!-- Вкладки Таблица/Гантт -->
     <div class="seg-group seg-views">
-      <button class="seg-btn view-tab active" data-view="table" onclick="switchView('table')" data-tip="Табличный вид">📋 Таблица</button>
-      <button class="seg-btn view-tab" data-view="gantt" onclick="switchView('gantt')" data-tip="Диаграмма Ганта">📊 Гантт</button>
+      <button
+        class="seg-btn view-tab active"
+        data-view="table"
+        onclick="switchView('table')"
+        data-tip="Табличный вид"
+      >
+        📋 Таблица
+      </button>
+      <button
+        class="seg-btn view-tab"
+        data-view="gantt"
+        onclick="switchView('gantt')"
+        data-tip="Диаграмма Ганта"
+      >
+        📊 Гантт
+      </button>
     </div>
-    <span class="gantt-scale-group" id="ganttScaleGroup" style="display:none;">
+    <span class="gantt-scale-group" id="ganttScaleGroup" style="display: none">
       <button class="gantt-scale-btn" data-scale="day" onclick="setGanttScale('day')">Дни</button>
-      <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">Недели</button>
-      <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">Месяцы</button>
-      <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">Годы</button>
+      <button class="gantt-scale-btn" data-scale="week" onclick="setGanttScale('week')">
+        Недели
+      </button>
+      <button class="gantt-scale-btn active" data-scale="month" onclick="setGanttScale('month')">
+        Месяцы
+      </button>
+      <button class="gantt-scale-btn" data-scale="year" onclick="setGanttScale('year')">
+        Годы
+      </button>
     </span>
-    <button class="gantt-filter-btn" id="ganttFilterDeps" onclick="toggleGanttDepsFilter()" style="display:none;" data-tip="Показать только задачи с зависимостями">🔗 Только зависимые</button>
+    <button
+      class="gantt-filter-btn"
+      id="ganttFilterDeps"
+      onclick="toggleGanttDepsFilter()"
+      style="display: none"
+      data-tip="Показать только задачи с зависимостями"
+    >
+      🔗 Только зависимые
+    </button>
 
     <span class="seg-divider"></span>
 
     <!-- Статус-фильтры: единый источник правды со Снимком месяца.
          Чип «Все» сбрасывает drill-down по корзине снимка. -->
-    <div class="seg-group seg-status status-pills" id="spStatusPanel" style="display:none;">
-      <button class="sp sp-all" data-bucket="all" onclick="spFilterBucket('all')" data-tip="Все задачи выбранного месяца: задачи месяца + долги прошлых месяцев + не распланированные. Клик — сбросить фильтр по статусу.">
+    <div class="seg-group seg-status status-pills" id="spStatusPanel" style="display: none">
+      <button
+        class="sp sp-all"
+        data-bucket="all"
+        onclick="spFilterBucket('all')"
+        data-tip="Все задачи выбранного месяца: задачи месяца + долги прошлых месяцев + не распланированные. Клик — сбросить фильтр по статусу."
+      >
         Все <span class="num" id="spCountAll">0</span>
       </button>
-      <button class="sp sp-done" data-bucket="done" onclick="spFilterBucket('done')" data-tip="Выполнено в срок: дедлайн в этом месяце, отчёт сдан в этом же месяце.">
+      <button
+        class="sp sp-done"
+        data-bucket="done"
+        onclick="spFilterBucket('done')"
+        data-tip="Выполнено в срок: дедлайн в этом месяце, отчёт сдан в этом же месяце."
+      >
         ✓ <span class="num" id="spCountDone">0</span>
       </button>
-      <button class="sp sp-early" data-bucket="done_early" onclick="spFilterBucket('done_early')" data-tip="Выполнено с опережением: отчёт сдан в этом месяце, а дедлайн — в следующих месяцах (или отсутствует).">
+      <button
+        class="sp sp-early"
+        data-bucket="done_early"
+        onclick="spFilterBucket('done_early')"
+        data-tip="Выполнено с опережением: отчёт сдан в этом месяце, а дедлайн — в следующих месяцах (или отсутствует)."
+      >
         ⚡ <span class="num" id="spCountEarly">0</span>
       </button>
-      <button class="sp sp-overdue" data-bucket="overdue" onclick="spFilterBucket('overdue')" data-tip="Просрочено: дедлайн в этом месяце уже наступил, но отчёта нет. Для прошедших месяцев — весь месяц считается истёкшим.">
+      <button
+        class="sp sp-overdue"
+        data-bucket="overdue"
+        onclick="spFilterBucket('overdue')"
+        data-tip="Просрочено: дедлайн в этом месяце уже наступил, но отчёта нет. Для прошедших месяцев — весь месяц считается истёкшим."
+      >
         ⚠ <span class="num" id="spCountOverdue">0</span>
       </button>
-      <button class="sp sp-inwork" data-bucket="inwork" onclick="spFilterBucket('inwork')" data-tip="В работе: есть план-часы на этот месяц, отчёта ещё нет, дедлайн ещё не наступил или приходится на будущие месяцы.">
+      <button
+        class="sp sp-inwork"
+        data-bucket="inwork"
+        onclick="spFilterBucket('inwork')"
+        data-tip="В работе: есть план-часы на этот месяц, отчёта ещё нет, дедлайн ещё не наступил или приходится на будущие месяцы."
+      >
         ⟳ <span class="num" id="spCountInWork">0</span>
       </button>
-      <button class="sp sp-debt-closed" data-bucket="debt_closed" onclick="spFilterBucket('debt_closed')" data-tip="Долг закрыт в этом месяце: дедлайн был до начала месяца, отчёта до начала месяца не было, но в этом месяце его сдали.">
+      <button
+        class="sp sp-debt-closed"
+        data-bucket="debt_closed"
+        onclick="spFilterBucket('debt_closed')"
+        data-tip="Долг закрыт в этом месяце: дедлайн был до начала месяца, отчёта до начала месяца не было, но в этом месяце его сдали."
+      >
         ✓● <span class="num" id="spCountDebtClosed">0</span>
       </button>
-      <button class="sp sp-debt" data-bucket="debt_hanging" onclick="spFilterBucket('debt_hanging')" data-tip="Долг висит: дедлайн прошёл ещё до начала этого месяца, отчёта до сих пор нет.">
+      <button
+        class="sp sp-debt"
+        data-bucket="debt_hanging"
+        onclick="spFilterBucket('debt_hanging')"
+        data-tip="Долг висит: дедлайн прошёл ещё до начала этого месяца, отчёта до сих пор нет."
+      >
         ● <span class="num" id="spCountDebt">0</span>
       </button>
-      <button class="sp sp-unplanned" data-bucket="unplanned" onclick="spFilterBucket('unplanned')" data-tip="Не распланировано: задача идёт по датам в этом месяце (интервал начало–окончание пересекает месяц), но план-часы на этот месяц не проставлены. Нужно дозаполнить план.">
+      <button
+        class="sp sp-unplanned"
+        data-bucket="unplanned"
+        onclick="spFilterBucket('unplanned')"
+        data-tip="Не распланировано: задача идёт по датам в этом месяце (интервал начало–окончание пересекает месяц), но план-часы на этот месяц не проставлены. Нужно дозаполнить план."
+      >
         ∅ <span class="num" id="spCountUnplanned">0</span>
       </button>
     </div>
@@ -113,408 +215,914 @@
     <span class="seg-divider"></span>
 
     <!-- Плотность -->
-    <div class="seg-group seg-density density-toggle" id="spViewModeToggle" data-tip="Режим отображения столбцов">
-      <button data-view="compact" data-tip="Компактно (10 колонок)"><i class="fas fa-compress-alt"></i> Компактно</button>
-      <button data-view="normal" data-tip="Обычно (12 колонок)"><i class="fas fa-bars"></i> Обычно</button>
-      <button data-view="full" data-tip="Все колонки"><i class="fas fa-expand-alt"></i> Все колонки</button>
+    <div
+      class="seg-group seg-density density-toggle"
+      id="spViewModeToggle"
+      data-tip="Режим отображения столбцов"
+    >
+      <button data-view="compact" data-tip="Компактно (10 колонок)">
+        <i class="fas fa-compress-alt"></i> Компактно
+      </button>
+      <button data-view="normal" data-tip="Обычно (12 колонок)">
+        <i class="fas fa-bars"></i> Обычно
+      </button>
+      <button data-view="full" data-tip="Все колонки">
+        <i class="fas fa-expand-alt"></i> Все колонки
+      </button>
     </div>
 
     <!-- Spacer -->
     <span class="seg-spacer"></span>
 
     <!-- Поиск + счётчик -->
-    <form autocomplete="off" style="display:contents;" onsubmit="return false;">
-      <input style="display:none;" type="text" name="fake_autocomplete_trap" tabindex="-1">
-      <input class="seg-search" id="searchInput" name="sp_search_q" type="search" placeholder="🔍 Поиск..." value="" autocomplete="off" role="searchbox">
+    <form autocomplete="off" style="display: contents" onsubmit="return false;">
+      <input style="display: none" type="text" name="fake_autocomplete_trap" tabindex="-1" />
+      <input
+        class="seg-search"
+        id="searchInput"
+        name="sp_search_q"
+        type="search"
+        placeholder="🔍 Поиск..."
+        value=""
+        autocomplete="off"
+        role="searchbox"
+      />
     </form>
     <span class="seg-count" id="searchCount"></span>
 
     <!-- Скрытые элементы для JS-совместимости -->
-    <span id="filtersActiveBadge" style="display:none;"></span>
-    <input type="checkbox" id="filterInstant" style="display:none;">
+    <span id="filtersActiveBadge" style="display: none"></span>
+    <input type="checkbox" id="filterInstant" style="display: none" />
   </div>
-
 </div>
 
 <!-- ══ Floating Bulk Actions Bar (СП) ════════════════════════════════════ -->
 <div class="bulk-bar" id="bulkBar">
   <span class="bulk-bar-count"><span id="bulkCount">0</span> выбрано</span>
-  <button class="btn btn-danger-outline btn-sm" onclick="bulkDelete()"><i class="fas fa-trash" aria-hidden="true"></i> Удалить</button>
-  <button class="btn btn-outline btn-sm" onclick="bulkExport()"><i class="fas fa-download" aria-hidden="true"></i> Экспорт</button>
-  <button class="bulk-bar-close" onclick="bulkDeselectAll()" title="Снять выбор"><i class="fas fa-times"></i></button>
+  <button class="btn btn-danger-outline btn-sm" onclick="bulkDelete()">
+    <i class="fas fa-trash" aria-hidden="true"></i> Удалить
+  </button>
+  <button class="btn btn-outline btn-sm" onclick="bulkExport()">
+    <i class="fas fa-download" aria-hidden="true"></i> Экспорт
+  </button>
+  <button class="bulk-bar-close" onclick="bulkDeselectAll()" title="Снять выбор">
+    <i class="fas fa-times"></i>
+  </button>
 </div>
 
 <!-- ══ Основная таблица задач ══════════════════════════════════════════════ -->
 <div class="table-wrap" id="tableView">
-<table id="mainTable">
-<thead>
-<tr>
-  <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№</div></th>
-  <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1"><div class="th-inner">Проект<button class="mf-trigger mf-icon" data-col="project" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="project"></div></div></th>
-  <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="2"><div class="th-inner">Код строки<button class="mf-trigger mf-icon" data-col="task_type" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="type"></div></div></th>
-  <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3"><div class="th-inner">Наряд-заказ<button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wo"></div></div></th>
-  <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="4"><div class="th-inner">№ Этапа<button class="mf-trigger mf-icon" data-col="stage" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="stage"></div></div></th>
-  <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="5"><div class="th-inner">№ работы<button class="mf-trigger mf-icon" data-col="work_number" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wnum"></div></div></th>
-  <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="6"><div class="th-inner">Обоснование<button class="mf-trigger mf-icon" data-col="justification" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="just"></div></div></th>
-  <th colspan="2" style="text-align:center;"><div class="th-inner" style="justify-content:center;">Группа</div></th>
-  <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9"><div class="th-inner">Отдел<button class="mf-trigger mf-icon" data-col="dept" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="dept"></div></div></th>
-  <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10"><div class="th-inner">Сектор /<br>Нач. сектора<button class="mf-trigger mf-icon" data-col="sector" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="sector"></div></div></th>
-  <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11"><div class="th-inner">Разработчик / план(ч)<button class="mf-trigger mf-icon" data-col="executor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="exec"></div></div></th>
-  <th colspan="2" style="text-align:center;" data-col-group="sp-dates"><div class="th-inner" style="justify-content:center;">Сроки выполнения</div></th>
-  <th colspan="2" style="text-align:center;" data-col-group="pp-dates"><div class="th-inner" style="justify-content:center;">Сроки согласно ПП</div></th>
-  <th id="th-rep" rowspan="2" style="width:190px;min-width:190px;" data-col-idx="16"><div class="th-inner">Действия</div></th>
-</tr>
-<tr>
-  <th id="th-desc" data-sort="description" data-col-idx="7"><div class="th-inner">обозначение<button class="mf-trigger mf-icon" data-col="description" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="desc"></div></div></th>
-  <th id="th-wname" data-sort="work_name" data-col-idx="8"><div class="th-inner">наименование<button class="mf-trigger mf-icon" data-col="work_name" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wname"></div></div></th>
-  <th id="th-spds" data-sort="date_start" data-col-idx="12"><div class="th-inner">Начало<button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="spds"></div></div></th>
-  <th id="th-spde" data-sort="date_end" data-col-idx="13"><div class="th-inner">Окончание<button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="spde"></div></div></th>
-  <th id="th-ppds" data-sort="date_start" data-col-idx="14"><div class="th-inner">Начало<button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="ppds"></div></div></th>
-  <th id="th-ppde" data-sort="date_end" data-col-idx="15"><div class="th-inner">Окончание<button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="ppde"></div></div></th>
-</tr>
-</thead>
-<tbody id="taskBody"></tbody>
-</table>
+  <table id="mainTable">
+    <thead>
+      <tr>
+        <th class="th-num" rowspan="2" data-col-idx="0">
+          <div class="th-inner" style="justify-content: center">№</div>
+        </th>
+        <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1">
+          <div class="th-inner">
+            Проект<button
+              class="mf-trigger mf-icon"
+              data-col="project"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="project"></div>
+          </div>
+        </th>
+        <th
+          id="th-type"
+          rowspan="2"
+          style="width: 110px; min-width: 110px"
+          data-sort="task_type"
+          data-col-idx="2"
+        >
+          <div class="th-inner">
+            Код строки<button
+              class="mf-trigger mf-icon"
+              data-col="task_type"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="type"></div>
+          </div>
+        </th>
+        <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3">
+          <div class="th-inner">
+            Наряд-заказ<button
+              class="mf-trigger mf-icon"
+              data-col="work_order"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="wo"></div>
+          </div>
+        </th>
+        <th id="th-stage" rowspan="2" data-sort="stage" data-col-idx="4">
+          <div class="th-inner">
+            № Этапа<button
+              class="mf-trigger mf-icon"
+              data-col="stage"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="stage"></div>
+          </div>
+        </th>
+        <th id="th-wnum" rowspan="2" data-sort="work_number" data-col-idx="5">
+          <div class="th-inner">
+            № работы<button
+              class="mf-trigger mf-icon"
+              data-col="work_number"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="wnum"></div>
+          </div>
+        </th>
+        <th id="th-just" rowspan="2" data-sort="justification" data-col-idx="6">
+          <div class="th-inner">
+            Обоснование<button
+              class="mf-trigger mf-icon"
+              data-col="justification"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="just"></div>
+          </div>
+        </th>
+        <th colspan="2" style="text-align: center">
+          <div class="th-inner" style="justify-content: center">Группа</div>
+        </th>
+        <th id="th-dept" rowspan="2" data-sort="department" data-col-idx="9">
+          <div class="th-inner">
+            Отдел<button
+              class="mf-trigger mf-icon"
+              data-col="dept"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="dept"></div>
+          </div>
+        </th>
+        <th id="th-sector" rowspan="2" data-sort="sector" data-col-idx="10">
+          <div class="th-inner">
+            Сектор /<br />Нач. сектора<button
+              class="mf-trigger mf-icon"
+              data-col="sector"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="sector"></div>
+          </div>
+        </th>
+        <th id="th-exec" rowspan="2" data-sort="executor" data-col-idx="11">
+          <div class="th-inner">
+            Разработчик / план(ч)<button
+              class="mf-trigger mf-icon"
+              data-col="executor"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="exec"></div>
+          </div>
+        </th>
+        <th colspan="2" style="text-align: center" data-col-group="sp-dates">
+          <div class="th-inner" style="justify-content: center">Сроки выполнения</div>
+        </th>
+        <th colspan="2" style="text-align: center" data-col-group="pp-dates">
+          <div class="th-inner" style="justify-content: center">Сроки согласно ПП</div>
+        </th>
+        <th id="th-rep" rowspan="2" style="width: 190px; min-width: 190px" data-col-idx="16">
+          <div class="th-inner">Действия</div>
+        </th>
+      </tr>
+      <tr>
+        <th id="th-desc" data-sort="description" data-col-idx="7">
+          <div class="th-inner">
+            обозначение<button
+              class="mf-trigger mf-icon"
+              data-col="description"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="desc"></div>
+          </div>
+        </th>
+        <th id="th-wname" data-sort="work_name" data-col-idx="8">
+          <div class="th-inner">
+            наименование<button
+              class="mf-trigger mf-icon"
+              data-col="work_name"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="wname"></div>
+          </div>
+        </th>
+        <th id="th-spds" data-sort="date_start" data-col-idx="12">
+          <div class="th-inner">
+            Начало<button
+              class="mf-trigger mf-icon"
+              data-col="date_start"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="spds"></div>
+          </div>
+        </th>
+        <th id="th-spde" data-sort="date_end" data-col-idx="13">
+          <div class="th-inner">
+            Окончание<button
+              class="mf-trigger mf-icon"
+              data-col="date_end"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="spde"></div>
+          </div>
+        </th>
+        <th id="th-ppds" data-sort="date_start" data-col-idx="14">
+          <div class="th-inner">
+            Начало<button
+              class="mf-trigger mf-icon"
+              data-col="date_start"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="ppds"></div>
+          </div>
+        </th>
+        <th id="th-ppde" data-sort="date_end" data-col-idx="15">
+          <div class="th-inner">
+            Окончание<button
+              class="mf-trigger mf-icon"
+              data-col="date_end"
+              onclick="
+                event.stopPropagation();
+                toggleMf(this);
+              "
+              title="Фильтр"
+            >
+              <i class="fas fa-sliders-h"></i>
+            </button>
+            <div class="col-resize" data-col="ppde"></div>
+          </div>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="taskBody"></tbody>
+  </table>
 </div>
-
 
 <!-- ══ Контейнер диаграммы Ганта ═══════════════════════════════════════════ -->
 <div id="ganttContainer"></div>
 
 <!-- ══ Модал выбора типа задачи ════════════════════════════════════════════ -->
 <div class="modal-overlay" id="typeModal">
-<div class="type-modal-box">
-  <div class="type-modal-title">Выберите тип задачи</div>
-  <div class="type-modal-sub">Нажмите — откроется форма заполнения</div>
-  <div class="type-options">
-    <div class="type-option" data-type="Разработка" onclick="selectTypeAndProceed(this)">
-      <span class="type-icon">⚙️</span><span class="type-label">Разработка</span>
+  <div class="type-modal-box">
+    <div class="type-modal-title">Выберите тип задачи</div>
+    <div class="type-modal-sub">Нажмите — откроется форма заполнения</div>
+    <div class="type-options">
+      <div class="type-option" data-type="Разработка" onclick="selectTypeAndProceed(this)">
+        <span class="type-icon">⚙️</span><span class="type-label">Разработка</span>
+      </div>
+      <div
+        class="type-option"
+        data-type="Выпуск нового документа"
+        onclick="selectTypeAndProceed(this)"
+      >
+        <span class="type-icon">📄</span><span class="type-label">Выпуск нового документа</span>
+      </div>
+      <div
+        class="type-option"
+        data-type="Корректировка документа"
+        onclick="selectTypeAndProceed(this)"
+      >
+        <span class="type-icon">✏️</span><span class="type-label">Корректировка документа</span>
+      </div>
+      <div
+        class="type-option"
+        data-type="Сопровождение (ОКАН)"
+        onclick="selectTypeAndProceed(this)"
+      >
+        <span class="type-icon">🔧</span><span class="type-label">Сопровождение (ОКАН)</span>
+      </div>
     </div>
-    <div class="type-option" data-type="Выпуск нового документа" onclick="selectTypeAndProceed(this)">
-      <span class="type-icon">📄</span><span class="type-label">Выпуск нового документа</span>
-    </div>
-    <div class="type-option" data-type="Корректировка документа" onclick="selectTypeAndProceed(this)">
-      <span class="type-icon">✏️</span><span class="type-label">Корректировка документа</span>
-    </div>
-    <div class="type-option" data-type="Сопровождение (ОКАН)" onclick="selectTypeAndProceed(this)">
-      <span class="type-icon">🔧</span><span class="type-label">Сопровождение (ОКАН)</span>
+    <div style="margin-top: 20px; text-align: right">
+      <button class="topbar-btn" onclick="closeTypeModal()">Отмена</button>
     </div>
   </div>
-  <div style="margin-top:20px;text-align:right">
-    <button class="topbar-btn" onclick="closeTypeModal()">Отмена</button>
-  </div>
-</div>
 </div>
 
 <!-- NEW TASK / EDIT TASK FORM MODAL -->
 <div class="modal-overlay" id="newTaskModal">
-<div class="new-task-box">
-  <div class="new-task-header">
-    <div>
-      <div class="new-task-title" id="newTaskModalTitle">Новая задача</div>
-      <div id="newTaskRowCode" style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:2px;display:none;"></div>
-      <div id="newTaskTypeBadgeWrap" style="margin-top:6px"></div>
+  <div class="new-task-box">
+    <div class="new-task-header">
+      <div>
+        <div class="new-task-title" id="newTaskModalTitle">Новая задача</div>
+        <div
+          id="newTaskRowCode"
+          style="
+            font-size: 13px;
+            color: var(--muted);
+            font-family: var(--mono);
+            margin-top: 2px;
+            display: none;
+          "
+        ></div>
+        <div id="newTaskTypeBadgeWrap" style="margin-top: 6px"></div>
+      </div>
+      <button class="modal-close" onclick="closeNewTaskModal()">✕</button>
     </div>
-    <button class="modal-close" onclick="closeNewTaskModal()">✕</button>
-  </div>
-  <div class="new-task-body">
-    <div class="form-grid">
-      <div class="form-field">
-        <label class="form-label">Отдел</label>
-        <select class="form-select" id="nt-dept" onchange="onNewTaskDeptChange()"></select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Сектор</label>
-        <select class="form-select" id="nt-sector" onchange="onNewTaskSectorChange()"></select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Проект</label>
-        <select class="form-select" id="nt-project" onchange="onNewTaskProjectChange()"></select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">№ Этапа</label>
-        <select class="form-select" id="nt-stage"></select>
-      </div>
-      <div class="form-field full">
-        <label class="form-label">№ работы</label>
-        <span class="form-input" style="color:var(--muted);cursor:default;">(авто)</span>
-      </div>
-      <input id="nt-deadline" type="hidden">
-      <div class="form-field full">
-        <label class="form-label">Обозначение</label>
-        <input class="form-input" id="nt-description" type="text" placeholder="Обозначение документа">
-      </div>
-      <div class="form-field full">
-        <label class="form-label">Наименование работ</label>
-        <input class="form-input" id="nt-work_name" type="text" placeholder="Наименование работ">
-      </div>
-      <div class="form-field full">
-        <label class="form-label">Разработчик</label>
-        <div style="display:flex;gap:10px;margin-bottom:10px;">
-          <select class="form-select" id="nt-executor-select" style="flex:1;">
-            <option value="">Выберите сотрудника...</option>
-          </select>
-          <button class="topbar-btn primary" type="button" onclick="addExecutorToNewTask()">+ Добавить</button>
+    <div class="new-task-body">
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label">Отдел</label>
+          <select class="form-select" id="nt-dept" onchange="onNewTaskDeptChange()"></select>
         </div>
-        <div id="nt-executors-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
-      <div class="form-field full" id="nt-justification-wrap" style="display:none">
-        <label class="form-label">Обоснование выполнения работ</label>
-        <textarea class="form-textarea" id="nt-justification" placeholder="Обоснование..."></textarea>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Дата начала</label>
-        <input class="form-input" id="nt-date_start" type="date" onchange="onNewTaskDateChange()">
-      </div>
-      <div class="form-field">
-        <label class="form-label">Дата окончания</label>
-        <input class="form-input" id="nt-date_end" type="date" onchange="onNewTaskDateChange()">
-      </div>
-      <div class="form-field" id="nt-plan-single-wrap" style="display:none">
-        <label class="form-label">План труд (часы)</label>
-        <input class="form-input" id="nt-plan_hours_single" type="number" placeholder="0" oninput="updateTotalHours()">
-      </div>
-      <div class="form-field full" id="nt-plan-months-wrap" style="display:none">
-        <label class="form-label" style="margin-bottom:10px">📅 План труд по месяцам (ч)</label>
-      </div>
-      <div class="form-field full" id="nt-labor-row" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;">
-          <div id="nt-total-wrap">
-            <label class="form-label" style="font-size:11px;">Распланированная трудоёмкость (ч)</label>
-            <div id="nt-total-hours" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--accent);min-height:38px;display:flex;align-items:center;margin-top:6px;">0</div>
+        <div class="form-field">
+          <label class="form-label">Сектор</label>
+          <select class="form-select" id="nt-sector" onchange="onNewTaskSectorChange()"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Проект</label>
+          <select class="form-select" id="nt-project" onchange="onNewTaskProjectChange()"></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">№ Этапа</label>
+          <select class="form-select" id="nt-stage"></select>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">№ работы</label>
+          <span class="form-input" style="color: var(--muted); cursor: default">(авто)</span>
+        </div>
+        <input id="nt-deadline" type="hidden" />
+        <div class="form-field full">
+          <label class="form-label">Обозначение</label>
+          <input
+            class="form-input"
+            id="nt-description"
+            type="text"
+            placeholder="Обозначение документа"
+          />
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Наименование работ</label>
+          <input
+            class="form-input"
+            id="nt-work_name"
+            type="text"
+            placeholder="Наименование работ"
+          />
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Разработчик</label>
+          <div style="display: flex; gap: 10px; margin-bottom: 10px">
+            <select class="form-select" id="nt-executor-select" style="flex: 1">
+              <option value="">Выберите сотрудника...</option>
+            </select>
+            <button class="topbar-btn primary" type="button" onclick="addExecutorToNewTask()">
+              + Добавить
+            </button>
           </div>
-          <div id="nt-pp-labor-wrap" style="display:none">
-            <label class="form-label" style="font-size:11px;">Плановая трудоемкость (ч)</label>
-            <div id="nt-pp-labor" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;color:var(--success);min-height:38px;display:flex;align-items:center;margin-top:6px;">—</div>
+          <div id="nt-executors-list" style="display: flex; flex-direction: column; gap: 8px"></div>
+        </div>
+        <div class="form-field full" id="nt-justification-wrap" style="display: none">
+          <label class="form-label">Обоснование выполнения работ</label>
+          <textarea
+            class="form-textarea"
+            id="nt-justification"
+            placeholder="Обоснование..."
+          ></textarea>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Дата начала</label>
+          <input
+            class="form-input"
+            id="nt-date_start"
+            type="date"
+            onchange="onNewTaskDateChange()"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-input" id="nt-date_end" type="date" onchange="onNewTaskDateChange()" />
+        </div>
+        <div class="form-field" id="nt-plan-single-wrap" style="display: none">
+          <label class="form-label">План труд (часы)</label>
+          <input
+            class="form-input"
+            id="nt-plan_hours_single"
+            type="number"
+            placeholder="0"
+            oninput="updateTotalHours()"
+          />
+        </div>
+        <div class="form-field full" id="nt-plan-months-wrap" style="display: none">
+          <label class="form-label" style="margin-bottom: 10px">📅 План труд по месяцам (ч)</label>
+        </div>
+        <div class="form-field full" id="nt-labor-row" style="display: none">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end">
+            <div id="nt-total-wrap">
+              <label class="form-label" style="font-size: 11px"
+                >Распланированная трудоёмкость (ч)</label
+              >
+              <div
+                id="nt-total-hours"
+                style="
+                  padding: 8px 12px;
+                  background: var(--bg);
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  font-size: 18px;
+                  font-weight: 600;
+                  color: var(--accent);
+                  min-height: 38px;
+                  display: flex;
+                  align-items: center;
+                  margin-top: 6px;
+                "
+              >
+                0
+              </div>
+            </div>
+            <div id="nt-pp-labor-wrap" style="display: none">
+              <label class="form-label" style="font-size: 11px">Плановая трудоемкость (ч)</label>
+              <div
+                id="nt-pp-labor"
+                style="
+                  padding: 8px 12px;
+                  background: var(--bg);
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  font-size: 18px;
+                  font-weight: 600;
+                  color: var(--success);
+                  min-height: 38px;
+                  display: flex;
+                  align-items: center;
+                  margin-top: 6px;
+                "
+              >
+                —
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="form-field full" id="nt-actions-wrap" style="display:none;">
-        <textarea class="form-textarea" id="nt-actions" style="display:none;"></textarea>
+        <div class="form-field full" id="nt-actions-wrap" style="display: none">
+          <textarea class="form-textarea" id="nt-actions" style="display: none"></textarea>
+        </div>
       </div>
     </div>
+    <div class="new-task-footer">
+      <button class="topbar-btn" onclick="closeNewTaskModal()">Отмена</button>
+      <button class="topbar-btn primary" id="newTaskSubmitBtn" onclick="submitNewTask()">
+        ✓ Создать задачу
+      </button>
+    </div>
   </div>
-  <div class="new-task-footer">
-    <button class="topbar-btn" onclick="closeNewTaskModal()">Отмена</button>
-    <button class="topbar-btn primary" id="newTaskSubmitBtn" onclick="submitNewTask()">✓ Создать задачу</button>
-  </div>
-</div>
 </div>
 
 <!-- REPORT MODAL -->
 <div class="modal-overlay" id="reportModal">
-<div class="modal" style="max-width:98vw;width:auto;min-width:900px;min-height:0;">
-  <div class="modal-header">
-    <div>
-      <div class="modal-title">📄 Отчёт по задаче</div>
-      <div class="modal-task-ref" id="reportTaskRef"></div>
+  <div class="modal" style="max-width: 98vw; width: auto; min-width: 900px; min-height: 0">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📄 Отчёт по задаче</div>
+        <div class="modal-task-ref" id="reportTaskRef"></div>
+      </div>
+      <button class="modal-close" onclick="closeReportModal()">✕</button>
     </div>
-    <button class="modal-close" onclick="closeReportModal()">✕</button>
-  </div>
-  <div class="modal-body" style="padding:16px 12px;">
-    <div class="report-table-wrap">
-    <table class="report-table">
-      <thead id="reportThead">
-        <tr>
-          <th id="rh_ii_pi" style="display:none;width:60px;">ИИ/ПИ</th>
-          <th id="rh_doc_title" style="width:170px;">Наименование</th>
-          <th style="width:170px;">Обозначение</th>
-          <th id="rh_inventory" style="width:100px;">Инвентарный №</th>
-          <th style="width:110px;">Дата выпуска</th>
-          <th id="rh_date_expires" style="display:none;width:110px;">Срок действия</th>
-          <th style="width:70px;">Вид doc</th>
-          <th style="width:70px;">Класс doc</th>
-          <th style="width:65px;">Листов А4</th>
-          <th style="width:80px;">Норматив</th>
-          <th style="width:65px;">Коэфф.</th>
-          <th style="width:60px;">БВД (ч)</th>
-          <th style="width:100px;">Нормо-контроль</th>
-          <th style="width:80px;">Ссылка</th>
-          <th style="width:95px;">Дата заполнения</th>
-          <th style="width:44px;"></th>
-        </tr>
-      </thead>
-      <tbody id="reportBody"></tbody>
-    </table>
+    <div class="modal-body" style="padding: 16px 12px">
+      <div class="report-table-wrap">
+        <table class="report-table">
+          <thead id="reportThead">
+            <tr>
+              <th id="rh_ii_pi" style="display: none; width: 60px">ИИ/ПИ</th>
+              <th id="rh_doc_title" style="width: 170px">Наименование</th>
+              <th style="width: 170px">Обозначение</th>
+              <th id="rh_inventory" style="width: 100px">Инвентарный №</th>
+              <th style="width: 110px">Дата выпуска</th>
+              <th id="rh_date_expires" style="display: none; width: 110px">Срок действия</th>
+              <th style="width: 70px">Вид doc</th>
+              <th style="width: 70px">Класс doc</th>
+              <th style="width: 65px">Листов А4</th>
+              <th style="width: 80px">Норматив</th>
+              <th style="width: 65px">Коэфф.</th>
+              <th style="width: 60px">БВД (ч)</th>
+              <th style="width: 100px">Нормо-контроль</th>
+              <th style="width: 80px">Ссылка</th>
+              <th style="width: 95px">Дата заполнения</th>
+              <th style="width: 44px"></th>
+            </tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        class="topbar-btn primary"
+        onclick="addReportRow()"
+        id="btnAddReportRow"
+        style="display: none"
+      >
+        ＋ Добавить строку
+      </button>
+      <button class="topbar-btn" onclick="closeReportModal()">Закрыть</button>
     </div>
   </div>
-  <div class="modal-footer">
-    <button class="topbar-btn primary" onclick="addReportRow()" id="btnAddReportRow" style="display:none;">＋ Добавить строку</button>
-    <button class="topbar-btn" onclick="closeReportModal()">Закрыть</button>
-  </div>
-</div>
 </div>
 
 <!-- USERS MODAL -->
 <div class="modal-overlay" id="usersModal">
-<div class="modal" style="max-width:600px">
-  <div class="modal-header">
-    <div class="modal-title">👥 Управление пользователями</div>
-    <button class="modal-close" onclick="document.getElementById('usersModal').classList.remove('open')">✕</button>
-  </div>
-  <div class="modal-body">
-    <table class="users-table" id="usersTable"></table>
-    <div style="margin-top:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input id="newUser" placeholder="Логин" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none;width:140px">
-      <input id="newPass" type="password" placeholder="Пароль" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none;width:140px">
-      <select id="newRole" style="padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:16px;outline:none">
-        <option value="user">Пользователь</option><option value="admin">Администратор</option>
-      </select>
-      <button class="topbar-btn primary" onclick="createUser()">Создать</button>
+  <div class="modal" style="max-width: 600px">
+    <div class="modal-header">
+      <div class="modal-title">👥 Управление пользователями</div>
+      <button
+        class="modal-close"
+        onclick="document.getElementById('usersModal').classList.remove('open')"
+      >
+        ✕
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="users-table" id="usersTable"></table>
+      <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap">
+        <input
+          id="newUser"
+          placeholder="Логин"
+          style="
+            padding: 7px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            outline: none;
+            width: 140px;
+          "
+        />
+        <input
+          id="newPass"
+          type="password"
+          placeholder="Пароль"
+          style="
+            padding: 7px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            outline: none;
+            width: 140px;
+          "
+        />
+        <select
+          id="newRole"
+          style="
+            padding: 7px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            outline: none;
+          "
+        >
+          <option value="user">Пользователь</option>
+          <option value="admin">Администратор</option>
+        </select>
+        <button class="topbar-btn primary" onclick="createUser()">Создать</button>
+      </div>
     </div>
   </div>
-</div>
 </div>
 
 <!-- EXECUTORS MODAL -->
 <div class="modal-overlay" id="executorsModal">
-<div class="modal" style="max-width:900px">
-  <div class="modal-header">
-    <div>
-      <div class="modal-title">👥 Управление исполнителями</div>
-      <div class="modal-task-ref" id="executorsTaskRef"></div>
-    </div>
-    <button class="modal-close" onclick="closeExecutorsModal()">✕</button>
-  </div>
-  <div class="modal-body">
-    <div style="margin-bottom:20px;">
-      <div class="form-label">Добавить исполнителя</div>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
-        <select id="newExecutorSelect" class="form-select" style="flex:1;">
-          <option value="">Выберите сотрудника...</option>
-        </select>
-        <button class="topbar-btn primary" onclick="addExecutorToTask()">+ Добавить</button>
+  <div class="modal" style="max-width: 900px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">👥 Управление исполнителями</div>
+        <div class="modal-task-ref" id="executorsTaskRef"></div>
       </div>
+      <button class="modal-close" onclick="closeExecutorsModal()">✕</button>
     </div>
-    <div id="executorsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+    <div class="modal-body">
+      <div style="margin-bottom: 20px">
+        <div class="form-label">Добавить исполнителя</div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px">
+          <select id="newExecutorSelect" class="form-select" style="flex: 1">
+            <option value="">Выберите сотрудника...</option>
+          </select>
+          <button class="topbar-btn primary" onclick="addExecutorToTask()">+ Добавить</button>
+        </div>
+      </div>
+      <div id="executorsList" style="display: flex; flex-direction: column; gap: 12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="topbar-btn primary" onclick="saveTaskExecutors()">💾 Сохранить</button>
+      <button class="topbar-btn" onclick="closeExecutorsModal()">Закрыть</button>
+    </div>
   </div>
-  <div class="modal-footer">
-    <button class="topbar-btn primary" onclick="saveTaskExecutors()">💾 Сохранить</button>
-    <button class="topbar-btn" onclick="closeExecutorsModal()">Закрыть</button>
-  </div>
-</div>
 </div>
 
 <!-- DATE CHANGE CONFIRMATION MODAL -->
 <div class="modal-overlay" id="dateChangeModal">
-<div class="modal" style="max-width:500px">
-  <div class="modal-header">
-    <div class="modal-title">⚠️ Изменение периода задачи</div>
-    <button class="modal-close" onclick="closeDateChangeModal()">✕</button>
-  </div>
-  <div class="modal-body">
-    <p id="dateChangeMessage" style="font-size:17px;color:var(--text);line-height:1.6;margin-bottom:20px;"></p>
-    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;font-size:16px;color:var(--warning);">
-      <strong>📌 Внимание:</strong> Для новых месяцев часы исполнителей будут равны нулю. Вам нужно заполнить их вручную в окне редактирования.
+  <div class="modal" style="max-width: 500px">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Изменение периода задачи</div>
+      <button class="modal-close" onclick="closeDateChangeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p
+        id="dateChangeMessage"
+        style="font-size: 17px; color: var(--text); line-height: 1.6; margin-bottom: 20px"
+      ></p>
+      <div
+        style="
+          background: rgba(245, 158, 11, 0.1);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          border-radius: 8px;
+          padding: 12px;
+          font-size: 16px;
+          color: var(--warning);
+        "
+      >
+        <strong>📌 Внимание:</strong> Для новых месяцев часы исполнителей будут равны нулю. Вам
+        нужно заполнить их вручную в окне редактирования.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="topbar-btn" onclick="cancelDateChange()">Отмена</button>
+      <button class="topbar-btn" onclick="fillLaterDateChange()">Заполню позже</button>
+      <button class="topbar-btn primary" onclick="confirmDateChange()">
+        Открыть редактирование
+      </button>
     </div>
   </div>
-  <div class="modal-footer">
-    <button class="topbar-btn" onclick="cancelDateChange()">Отмена</button>
-    <button class="topbar-btn" onclick="fillLaterDateChange()">Заполню позже</button>
-    <button class="topbar-btn primary" onclick="confirmDateChange()">Открыть редактирование</button>
-  </div>
-</div>
 </div>
 
 <!-- VACATION CONFLICT MODAL -->
 <div class="modal-overlay" id="vacationConflictModal">
-<div class="modal" style="max-width:500px">
-  <div class="modal-header">
-    <div class="modal-title">⚠️ Пересечение с отпусками</div>
-    <button class="modal-close" onclick="closeVacationConflictModal('cancel')">✕</button>
-  </div>
-  <div class="modal-body">
-    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px;margin-bottom:16px;">
-      <strong style="color:#ef4444;">❌ Обнаружены пересечения!</strong>
+  <div class="modal" style="max-width: 500px">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Пересечение с отпусками</div>
+      <button class="modal-close" onclick="closeVacationConflictModal('cancel')">✕</button>
     </div>
-    <p style="font-size:17px;color:var(--text);margin-bottom:12px;">Задача пересекается с отпусками сотрудников:</p>
-    <pre id="vacationConflictMessage" style="font-size:16px;color:var(--text);line-height:1.6;background:var(--surface2);padding:12px;border-radius:6px;white-space:pre-wrap;font-family:var(--mono);"></pre>
+    <div class="modal-body">
+      <div
+        style="
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+        "
+      >
+        <strong style="color: #ef4444">❌ Обнаружены пересечения!</strong>
+      </div>
+      <p style="font-size: 17px; color: var(--text); margin-bottom: 12px">
+        Задача пересекается с отпусками сотрудников:
+      </p>
+      <pre
+        id="vacationConflictMessage"
+        style="
+          font-size: 16px;
+          color: var(--text);
+          line-height: 1.6;
+          background: var(--surface2);
+          padding: 12px;
+          border-radius: 6px;
+          white-space: pre-wrap;
+          font-family: var(--mono);
+        "
+      ></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="topbar-btn" onclick="closeVacationConflictModal('cancel')">Отмена</button>
+      <button class="topbar-btn" onclick="closeVacationConflictModal('later')">
+        Заполню позже
+      </button>
+      <button class="topbar-btn primary" onclick="closeVacationConflictModal('adjust')">
+        Откорректировать сроки
+      </button>
+    </div>
   </div>
-  <div class="modal-footer">
-    <button class="topbar-btn" onclick="closeVacationConflictModal('cancel')">Отмена</button>
-    <button class="topbar-btn" onclick="closeVacationConflictModal('later')">Заполню позже</button>
-    <button class="topbar-btn primary" onclick="closeVacationConflictModal('adjust')">Откорректировать сроки</button>
-  </div>
-</div>
 </div>
 
 <!-- DEPENDENCIES MODAL -->
 <div class="modal-overlay" id="depsModal">
-<div class="modal deps-modal">
-  <div class="modal-header">
-    <div>
-      <div class="modal-title" id="depsModalTitle">Зависимости задачи</div>
-      <div id="depsModalDates" style="font-size:17px;font-weight:600;color:var(--text2);margin-top:4px;"></div>
+  <div class="modal deps-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="depsModalTitle">Зависимости задачи</div>
+        <div
+          id="depsModalDates"
+          style="font-size: 17px; font-weight: 600; color: var(--text2); margin-top: 4px"
+        ></div>
+      </div>
+      <button class="modal-close" onclick="closeDepsModal()">✕</button>
     </div>
-    <button class="modal-close" onclick="closeDepsModal()">✕</button>
-  </div>
-  <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
-    <div class="deps-section-title">⬅ Предшественники <span id="depsPredCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
-    <div id="depsPredBody"></div>
-    <div class="deps-add-form" id="depsAddForm" style="display:none;">
-      <div style="flex:1;min-width:200px;">
-        <label>Задача-предшественник</label>
-        <div class="search-dropdown" id="depsAddPredDropdown" style="margin-top:4px;">
-          <input type="text" class="search-dropdown-input" id="depsAddPredInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
-          <span class="search-dropdown-arrow">▼</span>
-          <div class="search-dropdown-list" id="depsAddPredList"></div>
-          <input type="hidden" id="depsAddPredSelect" value="">
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto">
+      <div class="deps-section-title">
+        ⬅ Предшественники
+        <span
+          id="depsPredCount"
+          style="color: var(--muted); font-weight: 400; font-size: 13px"
+        ></span>
+      </div>
+      <div id="depsPredBody"></div>
+      <div class="deps-add-form" id="depsAddForm" style="display: none">
+        <div style="flex: 1; min-width: 200px">
+          <label>Задача-предшественник</label>
+          <div class="search-dropdown" id="depsAddPredDropdown" style="margin-top: 4px">
+            <input
+              type="text"
+              class="search-dropdown-input"
+              id="depsAddPredInput"
+              placeholder="Поиск задачи..."
+              aria-label="Поиск задачи"
+              autocomplete="off"
+            />
+            <span class="search-dropdown-arrow">▼</span>
+            <div class="search-dropdown-list" id="depsAddPredList"></div>
+            <input type="hidden" id="depsAddPredSelect" value="" />
+          </div>
         </div>
-      </div>
-      <div>
-        <label>Тип связи</label>
-        <select id="depsAddType" style="margin-top:4px;">
-          <option value="FS">FS — Окончание–Начало</option>
-          <option value="SS">SS — Начало–Начало</option>
-          <option value="FF">FF — Окончание–Окончание</option>
-          <option value="SF">SF — Начало–Окончание</option>
-        </select>
-      </div>
-      <div>
-        <label>Лаг (дней)</label>
-        <input type="number" id="depsAddLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
-      </div>
-      <button class="topbar-btn primary" onclick="addPredecessor()" style="margin-top:18px;">Добавить</button>
-    </div>
-    <div class="deps-section-title" style="margin-top:24px;">➡ Последователи <span id="depsSuccCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
-    <div id="depsSuccBody"></div>
-    <div class="deps-add-form" id="depsAddSuccForm" style="display:none;">
-      <div style="flex:1;min-width:200px;">
-        <label>Задача-последователь</label>
-        <div class="search-dropdown" id="depsAddSuccDropdown" style="margin-top:4px;">
-          <input type="text" class="search-dropdown-input" id="depsAddSuccInput" placeholder="Поиск задачи..." aria-label="Поиск задачи" autocomplete="off">
-          <span class="search-dropdown-arrow">▼</span>
-          <div class="search-dropdown-list" id="depsAddSuccList"></div>
-          <input type="hidden" id="depsAddSuccSelect" value="">
+        <div>
+          <label>Тип связи</label>
+          <select id="depsAddType" style="margin-top: 4px">
+            <option value="FS">FS — Окончание–Начало</option>
+            <option value="SS">SS — Начало–Начало</option>
+            <option value="FF">FF — Окончание–Окончание</option>
+            <option value="SF">SF — Начало–Окончание</option>
+          </select>
         </div>
+        <div>
+          <label>Лаг (дней)</label>
+          <input
+            type="number"
+            id="depsAddLag"
+            value="0"
+            style="width: 70px; margin-top: 4px"
+            min="-365"
+            max="365"
+          />
+        </div>
+        <button class="topbar-btn primary" onclick="addPredecessor()" style="margin-top: 18px">
+          Добавить
+        </button>
       </div>
-      <div>
-        <label>Тип связи</label>
-        <select id="depsAddSuccType" style="margin-top:4px;">
-          <option value="FS">FS — Окончание–Начало</option>
-          <option value="SS">SS — Начало–Начало</option>
-          <option value="FF">FF — Окончание–Окончание</option>
-          <option value="SF">SF — Начало–Окончание</option>
-        </select>
+      <div class="deps-section-title" style="margin-top: 24px">
+        ➡ Последователи
+        <span
+          id="depsSuccCount"
+          style="color: var(--muted); font-weight: 400; font-size: 13px"
+        ></span>
       </div>
-      <div>
-        <label>Лаг (дней)</label>
-        <input type="number" id="depsAddSuccLag" value="0" style="width:70px;margin-top:4px;" min="-365" max="365">
+      <div id="depsSuccBody"></div>
+      <div class="deps-add-form" id="depsAddSuccForm" style="display: none">
+        <div style="flex: 1; min-width: 200px">
+          <label>Задача-последователь</label>
+          <div class="search-dropdown" id="depsAddSuccDropdown" style="margin-top: 4px">
+            <input
+              type="text"
+              class="search-dropdown-input"
+              id="depsAddSuccInput"
+              placeholder="Поиск задачи..."
+              aria-label="Поиск задачи"
+              autocomplete="off"
+            />
+            <span class="search-dropdown-arrow">▼</span>
+            <div class="search-dropdown-list" id="depsAddSuccList"></div>
+            <input type="hidden" id="depsAddSuccSelect" value="" />
+          </div>
+        </div>
+        <div>
+          <label>Тип связи</label>
+          <select id="depsAddSuccType" style="margin-top: 4px">
+            <option value="FS">FS — Окончание–Начало</option>
+            <option value="SS">SS — Начало–Начало</option>
+            <option value="FF">FF — Окончание–Окончание</option>
+            <option value="SF">SF — Начало–Окончание</option>
+          </select>
+        </div>
+        <div>
+          <label>Лаг (дней)</label>
+          <input
+            type="number"
+            id="depsAddSuccLag"
+            value="0"
+            style="width: 70px; margin-top: 4px"
+            min="-365"
+            max="365"
+          />
+        </div>
+        <button class="topbar-btn primary" onclick="addSuccessor()" style="margin-top: 18px">
+          Добавить
+        </button>
       </div>
-      <button class="topbar-btn primary" onclick="addSuccessor()" style="margin-top:18px;">Добавить</button>
-    </div>
-    <div class="deps-align-bar" id="depsAlignBar" style="display:none;">
-      <span class="warn-icon">⚠️</span>
-      <span class="warn-text" id="depsAlignText"></span>
-      <button class="topbar-btn primary" id="depsAlignPredBtn" onclick="alignDates(false)" style="display:none;">Выровнять по предшественникам</button>
-      <button class="topbar-btn primary" id="depsAlignSuccBtn" onclick="alignDates(true)" style="display:none;">Выровнять последователей</button>
+      <div class="deps-align-bar" id="depsAlignBar" style="display: none">
+        <span class="warn-icon">⚠️</span>
+        <span class="warn-text" id="depsAlignText"></span>
+        <button
+          class="topbar-btn primary"
+          id="depsAlignPredBtn"
+          onclick="alignDates(false)"
+          style="display: none"
+        >
+          Выровнять по предшественникам
+        </button>
+        <button
+          class="topbar-btn primary"
+          id="depsAlignSuccBtn"
+          onclick="alignDates(true)"
+          style="display: none"
+        >
+          Выровнять последователей
+        </button>
+      </div>
     </div>
   </div>
-</div>
 </div>
 
 <!-- PLANNING ERRORS MODAL -->
-<div class="pe-overlay" id="peModal" onclick="if(event.target===this)closePeModal()">
+<div class="pe-overlay" id="peModal" onclick="if (event.target === this) closePeModal();">
   <div class="pe-box">
     <div class="pe-header">
       <div>
@@ -536,19 +1144,44 @@
 <div class="slideout-overlay" id="activityOverlay" onclick="closeActivityPanel()"></div>
 <div class="slideout" id="activityPanel">
   <div class="slideout-header">
-    <div class="slideout-title" id="activityTitle" style="font-size:17px;font-weight:700;color:var(--text);"></div>
+    <div
+      class="slideout-title"
+      id="activityTitle"
+      style="font-size: 17px; font-weight: 700; color: var(--text)"
+    ></div>
     <button class="slideout-close" onclick="closeActivityPanel()">✕</button>
   </div>
   <div class="slideout-tabs">
-    <button class="slideout-tab active" data-tab="details" onclick="switchActivityTab('details')">Детали</button>
-    <button class="slideout-tab" data-tab="activity" onclick="switchActivityTab('activity')">Комментарии</button>
+    <button class="slideout-tab active" data-tab="details" onclick="switchActivityTab('details')">
+      Детали
+    </button>
+    <button class="slideout-tab" data-tab="activity" onclick="switchActivityTab('activity')">
+      Комментарии
+    </button>
   </div>
-  <div class="slideout-body" style="padding:0;">
-    <div id="activityDetails" style="padding:24px;"></div>
-    <div id="activityFeed" style="display:none;overflow-y:auto;flex:1;padding:16px 20px;"></div>
+  <div class="slideout-body" style="padding: 0">
+    <div id="activityDetails" style="padding: 24px"></div>
+    <div
+      id="activityFeed"
+      style="display: none; overflow-y: auto; flex: 1; padding: 16px 20px"
+    ></div>
   </div>
-  <div class="slideout-footer" id="activityFooter" style="display:none;">
-    <input type="text" id="commentInput" placeholder="Написать комментарий..." style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;outline:none;">
+  <div class="slideout-footer" id="activityFooter" style="display: none">
+    <input
+      type="text"
+      id="commentInput"
+      placeholder="Написать комментарий..."
+      style="
+        flex: 1;
+        padding: 8px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+      "
+    />
     <button class="topbar-btn primary" onclick="postComment()">Отправить</button>
   </div>
 </div>
@@ -563,43 +1196,49 @@
     <div class="month-check-body" id="monthCheckBody"></div>
     <div class="month-check-footer">
       <span class="mcc-progress" id="mccProgress"></span>
-      <div style="display:flex;gap:8px">
+      <div style="display: flex; gap: 8px">
         <button class="topbar-btn" onclick="closeMonthCheckModal()">Закрыть</button>
-        <button class="topbar-btn primary" id="mccDoneAllBtn" onclick="mccDoneAll()">Применить все</button>
+        <button class="topbar-btn primary" id="mccDoneAllBtn" onclick="mccDoneAll()">
+          Применить все
+        </button>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <!-- utils.js уже загружен из base.html -->
 <script src="{% static 'js/shared-toolbar.js' %}?v={{ v|default:'4' }}"></script>
 <script src="{% static 'js/export.js' %}"></script>
 <script src="{% static 'js/modal.js' %}?v={{ v|default:'4' }}"></script>
 <script src="{% static 'js/filters.js' %}?v={{ v|default:'1' }}"></script>
-<script id="sp-config" type="application/json">{
-  "isWriter": {{ is_writer|yesno:"true,false" }},
-  "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
-  "userRole": "{{ request.user.employee.role|default:''|escapejs }}",
-  "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
-  "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
-  "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
-  "colSettings": {{ col_settings|safe }},
-  "deptCodes": {{ dept_codes_json|safe }}
-}</script>
+<script id="sp-config" type="application/json">
+  {
+    "isWriter": {{ is_writer|yesno:"true,false" }},
+    "isAdmin": {% if request.user|is_admin_role %}true{% else %}false{% endif %},
+    "userRole": "{{ request.user.employee.role|default:''|escapejs }}",
+    "userDept": "{{ request.user.employee.department.code|default:''|escapejs }}",
+    "userSector": "{{ request.user.employee.sector.code|default:''|escapejs }}",
+    "userCenter": "{{ request.user.employee.effective_ntc_center.code|default:''|escapejs }}",
+    "colSettings": {{ col_settings|safe }},
+    "deptCodes": {{ dept_codes_json|safe }}
+  }
+</script>
 <script src="{% static 'js/gantt_common.js' %}?v={{ v|default:'2' }}"></script>
 <script src="{% static 'js/plan.js' %}?v={{ v|default:'43' }}"></script>
 <script>
-// Гарантийная калибровка sticky top для multi-row thead
-// _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),
-// но при первой загрузке layout может быть не готов — повторяем с задержкой
-(function(){
-  var wrap = document.querySelector('.table-wrap');
-  if (wrap && typeof _fixStickyHeaderTops === 'function') {
-    setTimeout(function(){ _fixStickyHeaderTops(wrap); }, 100);
-    setTimeout(function(){ _fixStickyHeaderTops(wrap); }, 300);
-  }
-})();
+  // Гарантийная калибровка sticky top для multi-row thead
+  // _fixStickyHeaderTops уже вызывается из _applyViewMode (utils.js),
+  // но при первой загрузке layout может быть не готов — повторяем с задержкой
+  (function () {
+    var wrap = document.querySelector('.table-wrap');
+    if (wrap && typeof _fixStickyHeaderTops === 'function') {
+      setTimeout(function () {
+        _fixStickyHeaderTops(wrap);
+      }, 100);
+      setTimeout(function () {
+        _fixStickyHeaderTops(wrap);
+      }, 300);
+    }
+  })();
 </script>
 {% endblock %}
