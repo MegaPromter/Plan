@@ -41,3 +41,16 @@ repos:
         # поэтому дублируем исключения здесь
         exclude: ^(ntc_simulator/|docs/|scripts/|deploy_timeweb\.py)
         args: ["--extend-ignore=E501,W503,E203,E402", "--max-line-length=88"]
+
+  # Prettier — автоформатирование JS/CSS (то же, что проверяет CI Lint JS)
+  # Используем локальный хук с `npx prettier`, чтобы версия prettier была
+  # ровно такая же, как в package.json и в CI (иначе разные версии находят
+  # разные проблемы, и CI падает после «чистого» коммита локально).
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (JS/CSS)
+        entry: npx --no-install prettier --write
+        language: system
+        files: ^static/(js|css)/.*\.(js|css)$
+        exclude: ^static/(lib|vue)/|\.min\.(js|css)$

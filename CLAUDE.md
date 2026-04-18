@@ -55,7 +55,10 @@
 - Объяснения — человеческим языком. Названия переменных/полей — в скобках после обычного слова. Пример: «дата заполнения отчёта (`created_at`)», а не «`created_at` отчёта»
 
 ## Линтеры (dev)
-- black, flake8, isort
+- Python: black, flake8, isort
+- JS/CSS: prettier (форматирование), eslint (ошибки)
+- Все линтеры запускаются автоматически через pre-commit hook (`pre-commit install`)
+- Перед пушем: `npm run format` (авто-фикс JS/CSS) и `pre-commit run --all-files` (полный прогон)
 
 ## Деплой
 - **Деплоить сюда: https://managesystems.ru/**
