@@ -2168,7 +2168,7 @@ function updatePlanSummary() {
     const totalPct = Math.round(parseFloat(_snapHours.load_total_pct || 0));
     const hasDebt = parseFloat(_snapHours.debt || 0) > 0;
     // Класс: ok — план ≤ 100; warn — план 101..125; (иначе sb-load-split — перегруз)
-    let cls = 'sb-load-split';
+    let cls = 'stat-badge sb-load-split';
     if (planPct <= 100) cls += ' ok';
     else if (planPct <= 125) cls += ' warn';
     let html =
@@ -2198,11 +2198,11 @@ function updatePlanSummary() {
         capacity = staffCount * yearNorm;
       }
     }
-    loadEl.className = 'sb-load-split';
+    loadEl.className = 'stat-badge sb-load-split';
     if (capacity > 0) {
       const pct = Math.round((localTotal / capacity) * 100);
-      if (pct <= 100) loadEl.className = 'sb-load-split ok';
-      else if (pct <= 125) loadEl.className = 'sb-load-split warn';
+      if (pct <= 100) loadEl.className = 'stat-badge sb-load-split ok';
+      else if (pct <= 125) loadEl.className = 'stat-badge sb-load-split warn';
       loadEl.innerHTML =
         '<span class="lsp-part lsp-plan"><i class="fas fa-tachometer-alt"></i>' + pct + '%</span>';
     } else {
