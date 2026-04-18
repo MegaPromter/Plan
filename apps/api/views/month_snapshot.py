@@ -38,7 +38,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.api.utils import get_visibility_filter
-from apps.works.models import Work, WorkReport
+from apps.employees.models import Employee
+from apps.works.models import Work, WorkCalendar, WorkReport
 
 
 def _parse_month(month_str):
@@ -65,18 +66,53 @@ def _month_bounds(year, month):
     return m_start, m_end
 
 
-def _has_plan_in_month(plan_hours, year, month):
-    """Есть ли в plan_hours ненулевые часы на YYYY-MM?"""
+def _plan_hours_for_month(plan_hours, year, month):
+    """Возвращает количество плановых часов задачи на YYYY-MM (float)."""
     if not plan_hours:
-        return False
+        return 0.0
     key = f"{year:04d}-{month:02d}"
     val = plan_hours.get(key)
     if val is None:
-        return False
+        return 0.0
     try:
-        return float(val) > 0
+        return float(val)
     except (TypeError, ValueError):
-        return False
+        return 0.0
+
+
+def _has_plan_in_month(plan_hours, year, month):
+    """Есть ли в plan_hours ненулевые часы на YYYY-MM?"""
+    return _plan_hours_for_month(plan_hours, year, month) > 0
+
+
+def _debt_residual_hours(plan_hours, year, month):
+    """
+    Оценка «часов долга» по задаче: сколько ещё предстоит сделать
+    для закрытия просрочки.
+
+    Порядок:
+      1) Если в plan_hours есть часы на текущий месяц — берём их
+         (план был перенесён, и это уже правильная оценка).
+      2) Иначе берём последний известный план в прошлом (по любому
+         месяцу < curMonth) — это наиболее свежая «нарезка» объёма.
+      3) Если в plan_hours вообще ничего нет — 0.
+    """
+    if not plan_hours:
+        return 0.0
+    cur_key = f"{year:04d}-{month:02d}"
+    cur = _plan_hours_for_month(plan_hours, year, month)
+    if cur > 0:
+        return cur
+    # Ищем последний месяц < cur_key с ненулевыми часами
+    past_keys = sorted((k for k in plan_hours.keys() if k < cur_key), reverse=True)
+    for k in past_keys:
+        try:
+            v = float(plan_hours[k])
+            if v > 0:
+                return v
+        except (TypeError, ValueError):
+            continue
+    return 0.0
 
 
 def _as_date(value):
@@ -328,6 +364,11 @@ class MonthSnapshotView(APIView):
             "unplanned": 0,
         }
         task_ids_by_bucket = {k: [] for k in buckets}
+        # Часы:
+        #   planned_hours — сумма plan_hours на текущий месяц для «задач месяца»
+        #   debt_hours    — оценка часов для закрытия долгов (см. _debt_residual_hours)
+        planned_hours = 0.0
+        debt_hours = 0.0
 
         for w in qs:
             code = _classify(w, year, month, m_start, m_end, today)
@@ -335,6 +376,10 @@ class MonthSnapshotView(APIView):
                 continue
             buckets[code] += 1
             task_ids_by_bucket[code].append(w.id)
+            if code in ("done", "done_early", "overdue", "inwork"):
+                planned_hours += _plan_hours_for_month(w.plan_hours, year, month)
+            elif code in ("debt_hanging", "debt_closed"):
+                debt_hours += _debt_residual_hours(w.plan_hours, year, month)
 
         month_total = (
             buckets["done"]
@@ -348,6 +393,31 @@ class MonthSnapshotView(APIView):
         def _pct(num, denom):
             return round(num / denom * 100, 1) if denom > 0 else 0.0
 
+        # ── Норма: часы × число сотрудников в выбранном скоупе ──────
+        # Берём hours_norm из производственного календаря; если записи нет —
+        # фронт отрисует бейдж без нормы (norm_hours = 0).
+        try:
+            cal = WorkCalendar.objects.get(year=year, month=month)
+            month_norm = float(cal.hours_norm or 0)
+        except WorkCalendar.DoesNotExist:
+            month_norm = 0.0
+
+        emp_qs = Employee.objects.filter(is_active=True)
+        if dept_code:
+            emp_qs = emp_qs.filter(department__code=dept_code)
+        if sector_id:
+            try:
+                emp_qs = emp_qs.filter(sector_id=int(sector_id))
+            except ValueError:
+                pass
+        if center_id:
+            try:
+                emp_qs = emp_qs.filter(ntc_center_id=int(center_id))
+            except ValueError:
+                pass
+        staff_count = emp_qs.count()
+        norm_hours = month_norm * staff_count
+
         return Response(
             {
                 "month": f"{year:04d}-{month:02d}",
@@ -356,6 +426,16 @@ class MonthSnapshotView(APIView):
                     "sector_id": int(sector_id) if sector_id else None,
                     "center_id": int(center_id) if center_id else None,
                     "project_id": int(project_id) if project_id else None,
+                },
+                "hours": {
+                    "planned": round(planned_hours, 2),
+                    "debt": round(debt_hours, 2),
+                    "total": round(planned_hours + debt_hours, 2),
+                    "norm_per_employee": month_norm,
+                    "staff_count": staff_count,
+                    "norm": round(norm_hours, 2),
+                    "load_plan_pct": _pct(planned_hours, norm_hours),
+                    "load_total_pct": _pct(planned_hours + debt_hours, norm_hours),
                 },
                 "month_tasks": {
                     "total": month_total,

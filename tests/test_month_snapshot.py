@@ -502,3 +502,147 @@ class TestRoleScope:
         data = r.json()
         assert data["month_tasks"]["total"] == 2
         assert data["filters"]["dept"] is None
+
+
+# ── Блок «hours» — план/долг/норма в часах ───────────────────────────────
+
+
+class TestHoursBlock:
+    """Проверяем новые поля: planned_hours, debt_hours, norm_hours, load_*_pct."""
+
+    def test_hours_block_structure(self, admin_user, w_done_in_march):
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03")
+        data = r.json()
+        assert "hours" in data
+        h = data["hours"]
+        for k in (
+            "planned",
+            "debt",
+            "total",
+            "norm_per_employee",
+            "staff_count",
+            "norm",
+            "load_plan_pct",
+            "load_total_pct",
+        ):
+            assert k in h, f"Нет поля {k} в hours"
+
+    def test_planned_hours_sum(self, admin_user, dept, db):
+        """Сумма plan_hours на текущий месяц по задачам месяца."""
+        # Задача месяца с 40 часами на март
+        Work.objects.create(
+            work_name="w1",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 40},
+        )
+        # Задача месяца с 25 часами на март
+        Work.objects.create(
+            work_name="w2",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 28),
+            plan_hours={"2026-03": 25},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03&dept=" + dept.code)
+        data = r.json()
+        assert data["hours"]["planned"] == 65.0
+        assert data["hours"]["debt"] == 0.0
+
+    def test_debt_hours_from_last_past_plan(self, admin_user, dept, db):
+        """
+        Для долга без часов на текущий месяц — берётся последний план
+        из прошлого (fallback).
+        """
+        # Долг: дедлайн в феврале, часы только на февраль
+        Work.objects.create(
+            work_name="debt-feb",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 2, 20),
+            plan_hours={"2026-02": 32},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03&dept=" + dept.code)
+        data = r.json()
+        assert data["debts"]["hanging"] == 1
+        assert data["hours"]["debt"] == 32.0  # взяли февральский план
+        assert data["hours"]["planned"] == 0.0
+
+    def test_debt_hours_prefers_current_month_if_set(self, admin_user, dept, db):
+        """Если у долга есть часы на текущий месяц — берём их, а не прошлые."""
+        Work.objects.create(
+            work_name="debt-replan",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 2, 20),
+            plan_hours={"2026-02": 32, "2026-03": 10},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03&dept=" + dept.code)
+        data = r.json()
+        assert data["debts"]["hanging"] == 1
+        assert data["hours"]["debt"] == 10.0  # именно мартовский, не февральский
+
+    def test_norm_and_load(self, admin_user, dept, db):
+        """
+        Норма = hours_norm × staff_count. Загрузка — по плану и с долгом.
+        """
+        from apps.works.models import WorkCalendar
+
+        WorkCalendar.objects.update_or_create(
+            year=2026, month=3, defaults={"hours_norm": 160}
+        )
+        # Один сотрудник в этом отделе — норма = 160
+        from django.contrib.auth.models import User
+
+        from apps.employees.models import Employee
+
+        u = User.objects.create_user(username="emp_for_norm", password="testpass123")
+        Employee.objects.create(
+            user=u,
+            last_name="Т",
+            first_name="Т",
+            department=dept,
+            is_active=True,
+        )
+        Work.objects.create(
+            work_name="plan-task",
+            show_in_plan=True,
+            department=dept,
+            date_end=date(2026, 3, 20),
+            plan_hours={"2026-03": 80},
+        )
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2026-03&dept=" + dept.code)
+        data = r.json()
+        assert data["hours"]["norm_per_employee"] == 160.0
+        assert data["hours"]["staff_count"] >= 1
+        assert data["hours"]["norm"] >= 160.0
+        # Загрузка по плану = 80 / norm
+        assert data["hours"]["load_plan_pct"] > 0
+
+    def test_no_calendar_entry_means_zero_norm(self, admin_user, dept, db):
+        """
+        Если в производственном календаре на этот месяц нет записи —
+        norm = 0, load_* = 0. Фронт должен корректно обработать.
+        """
+        from apps.works.models import WorkCalendar
+
+        WorkCalendar.objects.filter(year=2099, month=1).delete()
+        c = Client()
+        c.login(username="admin_test", password="testpass123")
+        r = c.get("/api/analytics/month_snapshot/?month=2099-01")
+        data = r.json()
+        assert data["hours"]["norm_per_employee"] == 0.0
+        assert data["hours"]["norm"] == 0.0
+        assert data["hours"]["load_plan_pct"] == 0.0
+        assert data["hours"]["load_total_pct"] == 0.0
