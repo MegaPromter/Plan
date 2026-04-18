@@ -1,7 +1,7 @@
 """
 API отчётных документов (WorkReport).
 
-Аналог Flask-эндпоинтов:
+Эндпоинты:
   GET    /api/reports/<task_id>  — список отчётов по задаче
   POST   /api/reports           — создание отчёта
   PUT    /api/reports/<id>      — обновление отчёта

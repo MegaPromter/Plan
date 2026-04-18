@@ -1,6 +1,5 @@
 /**
- * Inline-редактирование ячеек таблицы.
- * Аналог inline-editing из Flask plan.html.
+ * Inline-редактирование ячеек таблицы (одиночный клик на td → поле ввода).
  *
  * Использование:
  *   <td data-field="work_name" data-id="123" data-editable="true">Текст</td>

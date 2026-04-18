@@ -1330,6 +1330,8 @@ function _ppAppendBatch(count) {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
     tr.dataset.draggable = 'true';
+    // updated_at — для оптимистичной блокировки при inline-сохранении поля
+    if (row.updated_at) tr.dataset.updatedAt = row.updated_at;
     // Подсветка строки по статусу
     const _st = _ppGetStatus(row);
     if (_st === 'done') tr.classList.add('row-done');
@@ -1628,10 +1630,15 @@ async function handleCellChange(e) {
   // Синяя подсветка ячейки пока идёт запрос
   if (td) td.style.outline = '1px solid rgba(59,130,246,0.5)';
 
+  // Оптимистичная блокировка: забираем timestamp из строки
+  const _row = input.closest('tr');
+  const _payload = { value: value };
+  if (_row && _row.dataset.updatedAt) _payload.updated_at = _row.dataset.updatedAt;
+
   // PUT /api/production_plan/<id>/?field=<field> — сохранить одно поле
   const resp = await fetchJson('/api/production_plan/' + id + '/?field=' + field, {
     method: 'PUT',
-    body: JSON.stringify({ value: value }),
+    body: JSON.stringify(_payload),
   });
 
   // Ошибка конфликта (например, попытка изменить заблокированное поле from_pp)
@@ -1645,6 +1652,13 @@ async function handleCellChange(e) {
     cellOutline(td, 'rgba(239,68,68,0.7)', 3000);
     flashCell(td, 'error');
     return;
+  }
+
+  // Обновляем локальный timestamp для следующего PUT
+  if (resp && resp.updated_at) {
+    if (_row) _row.dataset.updatedAt = resp.updated_at;
+    const _rowObj = rows.find((r) => String(r.id) === String(id));
+    if (_rowObj) _rowObj.updated_at = resp.updated_at;
   }
 
   // Успех: зелёная подсветка на 700мс
@@ -1702,14 +1716,21 @@ async function handleCellChange(e) {
       // Синяя подсветка ячейки трудоёмкости
       if (laborTd) laborTd.style.outline = '1px solid rgba(59,130,246,0.5)';
       // Сохраняем вычисленную трудоёмкость на сервере
+      const _payload2 = { value: laborVal };
+      const _tr2 = laborInput ? laborInput.closest('tr') : null;
+      if (_tr2 && _tr2.dataset.updatedAt) _payload2.updated_at = _tr2.dataset.updatedAt;
       const r2 = await fetchJson('/api/production_plan/' + id + '/?field=labor', {
         method: 'PUT',
-        body: JSON.stringify({ value: laborVal }),
+        body: JSON.stringify(_payload2),
       });
       if (!r2._error && !r2._conflict) {
         cellOutline(laborTd, 'rgba(34,197,94,0.5)', 700);
         flashCell(laborTd);
         if (rowObj) rowObj.labor = laborVal;
+        if (r2.updated_at) {
+          if (_tr2) _tr2.dataset.updatedAt = r2.updated_at;
+          if (rowObj) rowObj.updated_at = r2.updated_at;
+        }
       } else {
         cellOutline(laborTd, 'rgba(239,68,68,0.7)', 3000);
         flashCell(laborTd, 'error');
@@ -3640,25 +3661,31 @@ function ppSetupGantt() {
   gantt.init('ppGanttContainer');
   gantt.attachEvent('onGanttRender', () => ganttInjectResizers('ppGanttContainer', _PP_COL_KEY));
 
-  // Drag → сохранение дат на сервере
-  gantt.attachEvent('onAfterTaskDrag', function (id) {
+  // Drag → сохранение дат на сервере (последовательно: каждый PUT обновляет
+  // updated_at, и второй должен использовать свежий timestamp)
+  gantt.attachEvent('onAfterTaskDrag', async function (id) {
     const task = gantt.getTask(id);
     if (!task) return;
     const startStr = ganttFormatDate(task.start_date);
     const endStr = ganttFormatDate(task.end_date);
-    Promise.all([
-      fetchJson('/api/production_plan/' + id + '/?field=date_start', {
-        method: 'PUT',
-        body: JSON.stringify({ value: startStr }),
-      }),
-      fetchJson('/api/production_plan/' + id + '/?field=date_end', {
-        method: 'PUT',
-        body: JSON.stringify({ value: endStr }),
-      }),
-    ])
+    const row = rows.find((r) => r.id === id);
+    const body1 = { value: startStr };
+    if (row && row.updated_at) body1.updated_at = row.updated_at;
+    const r1 = await fetchJson('/api/production_plan/' + id + '/?field=date_start', {
+      method: 'PUT',
+      body: JSON.stringify(body1),
+    });
+    if (r1 && r1.updated_at && row) row.updated_at = r1.updated_at;
+    const body2 = { value: endStr };
+    if (row && row.updated_at) body2.updated_at = row.updated_at;
+    const r2 = await fetchJson('/api/production_plan/' + id + '/?field=date_end', {
+      method: 'PUT',
+      body: JSON.stringify(body2),
+    });
+    if (r2 && r2.updated_at && row) row.updated_at = r2.updated_at;
+    return Promise.resolve([r1, r2])
       .then(([r1, r2]) => {
         // Обновить локальные данные
-        const row = rows.find((r) => r.id === id);
         if (row) {
           row.date_start = startStr;
           row.date_end = endStr;

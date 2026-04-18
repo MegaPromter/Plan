@@ -1,10 +1,10 @@
 """
-API задач (Work show_in_plan=True).
+API задач (Work, show_in_plan=True).
 
-Аналог Flask-эндпоинтов:
+Эндпоинты:
   GET    /api/tasks           — список задач с фильтрацией и пагинацией
   POST   /api/tasks           — создание задачи
-  PUT    /api/tasks/<id>      — обновление задачи (+ optimistic locking, _mcc_finish)
+  PUT    /api/tasks/<id>      — обновление задачи (+ оптимистичная блокировка, _mcc_finish)
   DELETE /api/tasks/<id>      — удаление задачи
   DELETE /api/tasks/all       — удаление ВСЕХ задач (admin)
   GET    /api/tasks/<id>/executors — список исполнителей задачи
@@ -743,7 +743,14 @@ class TaskDetailView(APIView):
             object_id=work.id,
             object_repr=work.work_name,
         )
-        return Response({"ok": True})
+        # Возвращаем свежий updated_at для оптимистичной блокировки
+        work.refresh_from_db(fields=["updated_at"])
+        return Response(
+            {
+                "ok": True,
+                "updated_at": (work.updated_at.isoformat() if work.updated_at else ""),
+            }
+        )
 
     def _mcc_finish(self, work):
         """Закрытие задачи: date_end = последний день прошлого месяца."""
@@ -753,7 +760,12 @@ class TaskDetailView(APIView):
         work.date_end = last_day
         work.plan_hours = ph
         work.save(update_fields=["date_end", "plan_hours", "updated_at"])
-        return Response({"ok": True})
+        return Response(
+            {
+                "ok": True,
+                "updated_at": (work.updated_at.isoformat() if work.updated_at else ""),
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -878,7 +890,7 @@ class TaskExecutorsView(APIView):
 
 def _set_work_fk_fields(work, d, request):
     """Устанавливает FK-поля Work по текстовым значениям из запроса."""
-    # task_type — теперь просто CharField (не FK на WorkType)
+    # task_type — CharField (тип задачи хранится строкой: "Выпуск…"/"Корректировка…")
     task_type = d.get("task_type", "")
     if task_type:
         work.task_type = task_type

@@ -2683,6 +2683,9 @@ function makeRow(t, num) {
   const tr = document.createElement('tr');
   tr.dataset.id = t.id;
   tr.dataset.draggable = 'true';
+  // updated_at — для оптимистичной блокировки: клиент возвращает timestamp на PUT,
+  // сервер сверяет с БД; при несовпадении — 409
+  if (t.updated_at) tr.dataset.updatedAt = t.updated_at;
   // Подсветка строки по статусу.
   // Если снимок месяца активен (выбран ровно один месяц) — используем
   // его корзину как единый источник правды. Иначе — fallback на _spGetStatus
@@ -3332,6 +3335,8 @@ function getRowData(tr) {
     data.plan_hours_update = {};
     data.plan_hours_update[key] = parseFloat(phInp.value) || 0;
   }
+  // Оптимистичная блокировка: передаём timestamp последнего обновления
+  if (tr.dataset.updatedAt) data.updated_at = tr.dataset.updatedAt;
   return data;
 }
 
@@ -3358,6 +3363,13 @@ async function saveTask(id, tr) {
       return;
     }
     if (!res.ok) throw new Error('HTTP ' + res.status);
+    // Обновляем локальный timestamp для следующего PUT
+    try {
+      const ok = await res.json();
+      if (ok && ok.updated_at) tr.dataset.updatedAt = ok.updated_at;
+    } catch (_) {
+      /* ignored */
+    }
     tr.style.outline = '1px solid rgba(34,197,94,0.5)';
     setTimeout(() => {
       tr.style.outline = '';
@@ -4411,6 +4423,10 @@ async function submitNewTask() {
   if (editingTaskId && _editingTaskOriginal) {
     data.actions = _editingTaskOriginal.actions || null;
     data.executor = _editingTaskOriginal.executor || null;
+    // Оптимистичная блокировка: проверим, не изменил ли другой пользователь
+    if (_editingTaskOriginal.updated_at) {
+      data.updated_at = _editingTaskOriginal.updated_at;
+    }
   }
 
   if (editingTaskId) {
@@ -4419,6 +4435,17 @@ async function submitNewTask() {
       headers: apiHeaders(),
       body: JSON.stringify(data),
     });
+    if (res.status === 409) {
+      let msg = 'Задачу изменил другой пользователь. Перезагрузите данные и повторите правки.';
+      try {
+        const e = await res.json();
+        if (e && e.message) msg = e.message;
+      } catch (_) {
+        /* ignored */
+      }
+      notify('⚠ ' + msg, 'err');
+      return;
+    }
     if (!res.ok) {
       let msg = 'Ошибка сохранения';
       try {
@@ -6138,15 +6165,24 @@ function setupGantt() {
     if (!task) return;
     const startStr = ganttFormatDate(task.start_date);
     const endStr = ganttFormatDate(task.end_date);
+    const srcTask = tasks.find((r) => r.id === id);
+    const payload = { date_start: startStr, date_end: endStr };
+    if (srcTask && srcTask.updated_at) payload.updated_at = srcTask.updated_at;
     fetchJson('/api/tasks/' + id + '/', {
       method: 'PUT',
-      body: JSON.stringify({ date_start: startStr, date_end: endStr }),
+      body: JSON.stringify(payload),
     })
       .then((res) => {
+        if (res && res._conflict) {
+          alert('Задачу изменил другой пользователь. Обновите страницу.');
+          renderGantt();
+          return;
+        }
         const t = tasks.find((r) => r.id === id);
         if (t) {
           t.date_start = startStr;
           t.date_end = endStr;
+          if (res && res.updated_at) t.updated_at = res.updated_at;
         }
         if (res._error) {
           alert('Ошибка сохранения дат');

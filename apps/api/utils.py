@@ -1,6 +1,5 @@
 """
-Утилиты для API: фильтрация по ролям, нормализация данных.
-Аналог Flask-хелперов: _get_visibility_filter, _norm_plan_hours и т.д.
+Утилиты для API: фильтрация по ролям, нормализация данных, валидация JSON-полей.
 """
 
 # Стандартный модуль JSON (используется при парсинге строк в dict)
@@ -258,8 +257,7 @@ def build_employee_q(name):
 
 def get_visibility_filter(user):
     """
-    Возвращает Q-объект для фильтрации Work/TaskWork по роли пользователя.
-    Аналог Flask _get_visibility_filter().
+    Возвращает Q-объект для фильтрации Work по роли пользователя.
 
     Работает через связи Django ORM:
     - Work.ntc_center, Work.department, Work.sector, Work.executor
@@ -457,7 +455,7 @@ def validate_executors_list(el) -> tuple[list, str | None]:
 
 def validate_actions(actions) -> tuple[dict, str | None]:
     """
-    Валидирует поле actions (TaskWork).
+    Валидирует поле actions (Work.actions, JSONField).
     Ожидается dict или None.
     """
     if actions is None:
@@ -508,8 +506,9 @@ def validate_task_type(value):
 
 def norm_plan_hours(ph):
     """
-    Нормализация plan_hours. Аналог Flask _norm_plan_hours().
-    Принимает dict или str, возвращает dict.
+    Нормализация plan_hours.
+    Принимает dict или str (JSON), возвращает dict {month: hours(float)}.
+    Пустые значения отбрасываются.
     """
     if ph is None:
         # Нет данных — пустой словарь
@@ -548,8 +547,8 @@ def parse_json_hours(raw):
 
 def mcc_finish_data():
     """
-    Возвращает (last_day_prev_month, cutoff_key) для закрытия задачи.
-    Аналог Flask _mcc_finish логики.
+    Возвращает (last_day_prev_month, cutoff_key) для закрытия задачи
+    последним днём предыдущего месяца (используется в _mcc_finish).
     """
     # Сегодняшняя дата
     today = timezone.now().date()

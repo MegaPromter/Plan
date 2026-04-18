@@ -1,6 +1,6 @@
 """
 Миксины для API-вьюх.
-Аналог Flask-декораторов login_required, admin_required, write_required.
+Проверяют аутентификацию и роли: login_required / admin_required / writer_required.
 """
 
 # Стандартный модуль для работы с JSON

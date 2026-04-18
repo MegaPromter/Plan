@@ -1,7 +1,7 @@
 """
-API производственного плана (Work show_in_pp=True).
+API производственного плана (Work, show_in_pp=True).
 
-Аналог Flask-эндпоинтов:
+Эндпоинты:
   GET    /api/production_plan        — список записей ПП
   POST   /api/production_plan        — создание записи ПП
   PUT    /api/production_plan/<id>   — обновление записи ПП (inline single-field)
@@ -553,7 +553,14 @@ class ProductionPlanDetailView(APIView):
                 details={"field": field, "value": str(value)[:200]},
             )
 
-        return Response({"ok": True})
+        # Возвращаем свежий updated_at для оптимистичной блокировки
+        work.refresh_from_db(fields=["updated_at"])
+        return Response(
+            {
+                "ok": True,
+                "updated_at": (work.updated_at.isoformat() if work.updated_at else ""),
+            }
+        )
 
     def _update_field(self, work, field, value, save=True, skip_date_check=False):
         """Обновляет одно поле в Work."""

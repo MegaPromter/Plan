@@ -315,3 +315,93 @@ class TestSerialization:
         )
         assert resp.status_code == 400
         assert "5 лет" in resp.json().get("error", "")
+
+
+# ---------------------------------------------------------------------------
+#  Тесты оптимистичной блокировки (защита от гонок)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestOptimisticLocking:
+    def test_sp_put_returns_fresh_updated_at(self, admin_user, pure_sp_work):
+        """После успешного PUT в СП сервер отдаёт новый updated_at."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/tasks/{pure_sp_work.id}/",
+            data=json.dumps({"work_name": "Обновлено"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data.get("updated_at"), "в ответе должен быть updated_at"
+
+    def test_sp_put_with_stale_updated_at_returns_409(self, admin_user, pure_sp_work):
+        """Если клиент прислал устаревший updated_at — сервер возвращает 409."""
+        client = Client()
+        client.force_login(admin_user)
+        # Сначала делаем успешное изменение — это обновит updated_at в БД
+        client.put(
+            f"/api/tasks/{pure_sp_work.id}/",
+            data=json.dumps({"work_name": "Первое"}),
+            content_type="application/json",
+        )
+        # Затем шлём PUT с «старым» timestamp (заведомо неподходящий)
+        resp = client.put(
+            f"/api/tasks/{pure_sp_work.id}/",
+            data=json.dumps(
+                {
+                    "work_name": "Второе",
+                    "updated_at": "2000-01-01T00:00:00",
+                }
+            ),
+            content_type="application/json",
+        )
+        assert resp.status_code == 409
+        data = resp.json()
+        assert data.get("error") == "conflict"
+
+    def test_sp_put_with_fresh_updated_at_succeeds(self, admin_user, pure_sp_work):
+        """Клиент присылает свежий updated_at → PUT проходит."""
+        client = Client()
+        client.force_login(admin_user)
+        # Читаем текущий updated_at через GET
+        list_resp = client.get("/api/tasks/")
+        tasks = list_resp.json()
+        task = next(t for t in tasks if t["id"] == pure_sp_work.id)
+        fresh_ts = task["updated_at"]
+        resp = client.put(
+            f"/api/tasks/{pure_sp_work.id}/",
+            data=json.dumps({"work_name": "Новое имя", "updated_at": fresh_ts}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("updated_at") != fresh_ts  # timestamp обновился
+
+    def test_pp_put_returns_fresh_updated_at(self, admin_user, pp_work):
+        """После успешного PUT в ПП сервер отдаёт новый updated_at."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/production_plan/{pp_work.id}/?field=work_name",
+            data=json.dumps({"value": "Изменённое"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data.get("updated_at"), "в ответе ПП должен быть updated_at"
+
+    def test_pp_put_with_stale_updated_at_returns_409(self, admin_user, pp_work):
+        """В ПП устаревший updated_at → 409."""
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.put(
+            f"/api/production_plan/{pp_work.id}/?field=work_name",
+            data=json.dumps({"value": "X", "updated_at": "2000-01-01T00:00:00"}),
+            content_type="application/json",
+        )
+        assert resp.status_code == 409
+        assert resp.json().get("error") == "conflict"

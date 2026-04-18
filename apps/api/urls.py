@@ -1,6 +1,6 @@
 """
 URL-маршрутизация REST API.
-Реплицирует все /api/* маршруты из Flask app.py.
+Все эндпоинты под префиксом /api/*.
 """
 
 # path — функция формирования URL-паттернов в Django
@@ -108,7 +108,7 @@ from .views.pp_projects import (
 )
 from .views.pp_stages import PPStageCreateView, PPStageDetailView, PPStageListView
 
-# Вьюхи производственного плана (PPWork)
+# Вьюхи производственного плана (Work с show_in_pp=True)
 from .views.production_plan import (
     PPCrossStagesView,
     ProductionPlanCreateView,
