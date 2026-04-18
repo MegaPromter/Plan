@@ -694,6 +694,8 @@ function initDeptChips() {
       loadMonthSnapshot();
       _spSyncFiltersToUrl();
       _syncToolbarHeight();
+      // Сбросить бейдж ошибок планирования — при смене скоупа цифра устаревает
+      _resetPlanningErrorsBadge();
     },
   });
   _syncDeptFilter();
@@ -804,6 +806,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         loadMonthSnapshot();
         _spSyncFiltersToUrl();
         _syncToolbarHeight();
+        // Сбросить бейдж ошибок планирования — при смене скоупа цифра устаревает
+        _resetPlanningErrorsBadge();
       },
     });
     _syncDeptFilter();
@@ -1025,14 +1029,12 @@ async function calcPlanningErrors() {
 
   [allTasks, calData, vacData] = await Promise.all([tasksPromise, calPromise, vacPromise]);
 
-  // Фильтр по видимости: не-admin видят только задачи своего подразделения
-  if (!_isFullAccess()) {
-    allTasks = allTasks.filter((t) => {
-      if (USER_DEPT && t.dept === USER_DEPT) return true;
-      if (USER_SECTOR && t.sector_head === USER_SECTOR) return true;
-      if (USER_CENTER && t.center === USER_CENTER) return true;
-      return false;
-    });
+  // Скоуп подразделения = тот же, что и в СП-таблице (spSelectedDepts).
+  // По умолчанию там стоит отдел/сектор/центр по роли (см. initDeptChips),
+  // но пользователь может вручную расширить/поменять выбор через чипы.
+  // Для роли user — бэк уже вернул только его скоуп (get_visibility_filter).
+  if (spSelectedDepts && spSelectedDepts.size > 0) {
+    allTasks = allTasks.filter((t) => spSelectedDepts.has(t.dept));
   }
 
   // Норма рабочего времени из производственного календаря
@@ -1237,6 +1239,16 @@ async function calcPlanningErrors() {
   };
 }
 
+// Сбрасывает бейдж «Ошибки планирования» к исходному виду —
+// вызывается при смене скоупа (отделы/год/месяц), чтобы цифра не вводила в заблуждение.
+function _resetPlanningErrorsBadge() {
+  const btn = document.getElementById('errorsBtn');
+  if (!btn) return;
+  btn.innerHTML = '⚠️ Ошибки планирования';
+  btn.className = 'topbar-btn errors';
+  btn.disabled = false;
+}
+
 async function refreshPlanningErrors() {
   const btn = document.getElementById('errorsBtn');
   btn.disabled = true;
@@ -1293,8 +1305,16 @@ async function openPlanningErrors() {
     totalTasks,
   } = result;
 
+  // Скоуп подразделения: тот же, что и в СП-таблице
+  let _peScope = 'Все отделы';
+  if (spSelectedDepts && spSelectedDepts.size > 0) {
+    _peScope =
+      spSelectedDepts.size === 1
+        ? `Отдел ${[...spSelectedDepts][0]}`
+        : `${spSelectedDepts.size} отд.`;
+  }
   document.getElementById('peMeta').textContent =
-    `${MONTHS_FULL[curMonth]} ${curYear} · Норма: ${monthNorm} ч/мес`;
+    `${MONTHS_FULL[curMonth]} ${curYear} · ${_peScope} · Норма: ${monthNorm} ч/мес`;
   document.getElementById('peLastCheck').textContent =
     'Проверено: ' + new Date().toLocaleTimeString('ru-RU');
 
