@@ -402,6 +402,51 @@
   z-index: 13;
 }
 
+/* ── Sticky-right: колонка «Действия» (последняя, data-col-idx=18) ─────
+   Прилипает к правому краю при горизонтальной прокрутке.
+   Фон — плоский (не rgba), чтобы содержимое других колонок не просвечивало. */
+.pp-table thead th[data-col-idx='18'] {
+  position: sticky;
+  right: 0;
+  z-index: 13;
+  background: var(--th-bg);
+  border-left: 2px solid var(--border2);
+}
+.pp-table tbody td.td-actions-hover {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--row-odd);
+  border-left: 2px solid var(--border2) !important;
+  background-clip: padding-box;
+}
+.pp-table tbody tr:nth-child(even) td.td-actions-hover {
+  background: var(--row-even);
+}
+.pp-table tbody tr:hover td.td-actions-hover {
+  background: var(--row-hover);
+}
+/* Статусные цвета строк — плоские, чтобы sticky-ячейка не просвечивала.
+   !important — чтобы перебить базовый nth-child/hover для td.td-actions-hover. */
+.pp-table tbody tr.row-done:not(.row-pinned) td.td-actions-hover {
+  background-color: rgb(225, 245, 231) !important;
+}
+.pp-table tbody tr.row-overdue:not(.row-pinned) td.td-actions-hover {
+  background-color: rgb(250, 225, 225) !important;
+}
+.pp-table tbody tr.row-inwork:not(.row-pinned) td.td-actions-hover {
+  background-color: rgb(251, 243, 223) !important;
+}
+.pp-table tbody tr.row-done:not(.row-pinned):hover td.td-actions-hover {
+  background-color: rgb(204, 235, 215) !important;
+}
+.pp-table tbody tr.row-overdue:not(.row-pinned):hover td.td-actions-hover {
+  background-color: rgb(244, 199, 199) !important;
+}
+.pp-table tbody tr.row-inwork:not(.row-pinned):hover td.td-actions-hover {
+  background-color: rgb(248, 236, 205) !important;
+}
+
 /* .cell-edit, .cell-num — в tables.css */
 
 /* .btn-delete — в tables.css; pp-специфичный hover: */
