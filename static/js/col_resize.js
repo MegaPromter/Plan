@@ -276,24 +276,17 @@
   }
 
   /**
-   * Зафиксировать суммарную ширину колонок как min-width таблицы.
+   * Синхронизировать ширину таблицы с контейнером.
    *
-   * Почему именно min-width, а не width:
-   *   — При `table.style.width = sum(cols)` таблица становится жёсткой этой
-   *     ширины. Если контейнер шире (широкий монитор) — справа зияет пустое
-   *     поле, sticky-«Действия» визуально не прилипает к правому краю.
-   *   — При `table.style.width = max(sum, wrapW)` таблица всегда занимает
-   *     всю ширину контейнера, НО fixed-layout пропорционально делит
-   *     остаток между всеми колонками → drag одной колонки съедается
-   *     перерасчётом, ресайз визуально не работает.
-   *   — При `min-width: sum(cols)` + CSS `width: 100%` таблица занимает
-   *     всю ширину контейнера, ПРИ ЭТОМ drag одной колонки увеличивает
-   *     min-width, таблица расширяется, колонка реально становится шире.
+   * Принцип: `min-width` = сумма колонок (таблица не уже). Если сумма
+   * меньше ширины контейнера — растягиваем таблицу до контейнера через
+   * `width = wrapW`. Тогда sticky-right колонка прилипает к правому краю
+   * экрана. Побочный эффект в fixed-layout: остаток делится между всеми
+   * <col>, колонки становятся чуть шире — приемлемый trade-off.
    *
-   * Если суммарная ширина > контейнера — сработает min-width, таблица
-   * выходит за пределы контейнера → появляется горизонтальный скролл
-   * (в точности как было раньше). sticky-колонка прилипает к краю
-   * контейнера при скролле.
+   * При drag сумма меняется, `_syncTableWidth` вызывается снова и либо
+   * продолжает растягивать до контейнера (если сумма всё ещё меньше),
+   * либо убирает width и даёт таблице выйти за контейнер (появится скролл).
    */
   function _syncTableWidth(table) {
     const colgroup = table.querySelector(':scope > colgroup');
@@ -305,9 +298,13 @@
     }
     if (sum <= 0) return;
     table.style.minWidth = sum + 'px';
-    // Явный width оставляем пустым — CSS `width: 100%` даст растягивание
-    // до контейнера, а min-width не даст уйти ниже суммы колонок.
-    if (table.style.width) table.style.width = '';
+    const wrap = table.parentElement;
+    const wrapW = wrap ? wrap.clientWidth : 0;
+    if (wrapW > 0 && sum < wrapW) {
+      table.style.width = wrapW + 'px';
+    } else if (table.style.width) {
+      table.style.width = '';
+    }
   }
 
   function attachColResize(table, opts) {
@@ -318,6 +315,22 @@
     // Один раз фиксируем текущие ширины всех колонок в <colgroup>,
     // чтобы при drag соседи не двигались (Excel-поведение).
     _freezeAllWidths(table);
+
+    // Пересчитываем ширину таблицы при изменении размера окна (свёртывание
+    // сайдбара, ресайз браузера), чтобы sticky-right колонка всегда лепилась
+    // к правому краю контейнера.
+    if (!table._resizeListener) {
+      let rafId = null;
+      const onWinResize = () => {
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          _syncTableWidth(table);
+        });
+      };
+      window.addEventListener('resize', onWinResize);
+      table._resizeListener = onWinResize;
+    }
 
     table.querySelectorAll('th .col-resize[data-col]').forEach((handle) => {
       const th = handle.closest('th');
