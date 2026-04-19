@@ -266,7 +266,20 @@
     _syncTableWidth(table);
   }
 
-  /** Выставить на таблицу явный width = сумма ширин всех <col>. */
+  /**
+   * Выставить на таблицу явный width.
+   *
+   * Логика:
+   *   — сумма(cols) > ширина контейнера → скролл, table.width = сумма(cols);
+   *   — сумма(cols) ≤ ширина контейнера → table.width = ширина контейнера,
+   *     чтобы таблица растягивалась во всю ширину (иначе справа остаётся
+   *     пустое поле и sticky-колонка «Действия» не прилипает к правому краю).
+   *
+   * Последняя колонка при этом получает «остаток» через CSS-логику fixed:
+   * колонки с явным width остаются жёсткими, а колонка без width занимает
+   * свободное место. Если ВСЕ колонки с width — браузер распределяет
+   * пропорционально, что тоже ок (визуально колонки становятся чуть шире).
+   */
   function _syncTableWidth(table) {
     const colgroup = table.querySelector(':scope > colgroup');
     if (!colgroup) return;
@@ -275,7 +288,19 @@
       const w = parseInt(col.style.width, 10);
       if (Number.isFinite(w) && w > 0) sum += w;
     }
-    if (sum > 0) table.style.width = sum + 'px';
+    if (sum <= 0) return;
+    // Ширина скролл-контейнера (ближайший overflow-auto/scroll).
+    let wrapW = 0;
+    let el = table.parentElement;
+    while (el && el !== document.body) {
+      const ox = getComputedStyle(el).overflowX;
+      if (ox === 'auto' || ox === 'scroll') {
+        wrapW = el.clientWidth;
+        break;
+      }
+      el = el.parentElement;
+    }
+    table.style.width = Math.max(sum, wrapW || 0) + 'px';
   }
 
   function attachColResize(table, opts) {
