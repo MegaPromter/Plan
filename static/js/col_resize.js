@@ -212,10 +212,80 @@
    * @param {(col: string, widthPx: number) => void} [opts.onResize]
    * @returns {() => void} функция отвязки всех обработчиков
    */
+  /**
+   * Заморозить все ширины колонок в <colgroup> — сразу при инициализации.
+   *
+   * Смысл: table-layout:fixed уважает ширины из <col>, но если у <col>
+   * нет width, браузер делит остаток поровну между «безширинными»
+   * колонками. Тянем одну — соседи с пустым width расползаются.
+   *
+   * Чтобы ресайз работал «по-экселевски» (сосед не двигается), нужно,
+   * чтобы у КАЖДОГО <col> был явный width. Здесь мы один раз снимаем
+   * offsetWidth всех th с colspan=1 и записываем в соответствующий <col>.
+   * Если у <col> уже есть width (например, из сохранённых настроек) —
+   * не трогаем.
+   */
+  function _freezeAllWidths(table) {
+    const thead = table.tHead;
+    if (!thead) return;
+    // ШАГ 1. Снимаем ширины ДО переключения в fixed.
+    // Приоритет: inline style на <th> → offsetWidth.
+    // В fixed с пустым <colgroup> offsetWidth колонок «схлопывается»
+    // (делится поровну), поэтому читаем сейчас, пока ещё auto/inherit.
+    const measurements = [];
+    for (const row of thead.rows) {
+      for (const th of row.cells) {
+        const span = parseInt(th.getAttribute('colspan') || '1', 10) || 1;
+        if (span !== 1) continue;
+        let w = parseInt(th.style.width, 10);
+        if (!Number.isFinite(w) || w <= 0) w = th.offsetWidth;
+        if (!w) continue;
+        measurements.push({ th, w });
+      }
+    }
+    // ШАГ 2. Ensure colgroup и форс fixed.
+    const colgroup = _ensureColgroup(table);
+    if (getComputedStyle(table).tableLayout !== 'fixed') {
+      table.style.tableLayout = 'fixed';
+    }
+    // ШАГ 3. Записываем снятые ширины в <col> — только в те, где width пусто
+    // (не затираем сохранённые из col_settings).
+    for (const { th, w } of measurements) {
+      const idx = _colIdxForTh(table, th);
+      const col = colgroup.children[idx];
+      if (col && !col.style.width) col.style.width = w + 'px';
+      // Снимаем inline width с <th> — иначе в fixed-режиме он может
+      // перекрыть ширину из <col>, и drag будет «не работать».
+      // В fixed единственный источник правды — <colgroup>.
+      if (th.style.width) th.style.width = '';
+    }
+    // ШАГ 4. Выставляем таблице явную ширину = сумма <col>.
+    // Без этого при `width: auto` + `min-width: 100%` браузер может
+    // перерасчитывать колонки сам (особенно когда содержимое длиннее
+    // заданной ширины), и <col>-значения превращаются в «подсказки».
+    _syncTableWidth(table);
+  }
+
+  /** Выставить на таблицу явный width = сумма ширин всех <col>. */
+  function _syncTableWidth(table) {
+    const colgroup = table.querySelector(':scope > colgroup');
+    if (!colgroup) return;
+    let sum = 0;
+    for (const col of colgroup.children) {
+      const w = parseInt(col.style.width, 10);
+      if (Number.isFinite(w) && w > 0) sum += w;
+    }
+    if (sum > 0) table.style.width = sum + 'px';
+  }
+
   function attachColResize(table, opts) {
     opts = opts || {};
     const prefix = _tablePrefix(table);
     const cleanups = [];
+
+    // Один раз фиксируем текущие ширины всех колонок в <colgroup>,
+    // чтобы при drag соседи не двигались (Excel-поведение).
+    _freezeAllWidths(table);
 
     table.querySelectorAll('th .col-resize[data-col]').forEach((handle) => {
       const th = handle.closest('th');
@@ -244,6 +314,10 @@
 
         function applyWidth(w) {
           if (colEl) colEl.style.width = w + 'px';
+          // Синхронизируем ширину таблицы = сумма <col>. Иначе при
+          // `width: auto` + `min-width: 100%` браузер игнорирует <col>
+          // когда содержимое ячеек шире заданной ширины.
+          _syncTableWidth(table);
           if (typeof opts.onResize === 'function') {
             try {
               opts.onResize(col, w);
@@ -286,6 +360,7 @@
   global.ColResize = {
     attach: attachColResize,
     apply: applyColWidths,
+    freeze: _freezeAllWidths, // пере-заморозка после перерисовки таблицы
     _flush: _flushSave, // для тестов
   };
 })(window);

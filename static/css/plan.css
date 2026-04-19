@@ -268,6 +268,11 @@ table {
   width: 100%;
   font-size: 15px;
 }
+/* Excel-поведение ресайза: ширины берутся строго из <colgroup>/<th>, */
+/* соседи при перетаскивании границы не двигаются, появляется скролл. */
+#mainTable {
+  table-layout: fixed;
+}
 thead th {
   position: sticky;
   z-index: 10;

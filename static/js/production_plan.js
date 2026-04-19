@@ -992,9 +992,15 @@ function _initPPColResize() {
   // Применяем ранее сохранённые ширины
   window.ColResize.apply(table, (_ppCfg && _ppCfg.colSettings) || {});
   // Drag-хэндлеры вешаем один раз
-  if (_ppColResizeInitialized) return;
-  window.ColResize.attach(table);
-  _ppColResizeInitialized = true;
+  if (!_ppColResizeInitialized) {
+    window.ColResize.attach(table);
+    _ppColResizeInitialized = true;
+  }
+  // При смене проекта таблица перерисовывается — пере-замораживаем
+  // ширины новых колонок (старые не трогаем — у них уже стоит width).
+  // Без этого соседи будут разъезжаться при ресайзе (fixed делит остаток
+  // между <col> без явной width).
+  if (window.ColResize.freeze) window.ColResize.freeze(table);
 }
 
 // Возврат на лендинг
