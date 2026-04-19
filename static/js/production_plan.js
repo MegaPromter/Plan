@@ -2971,56 +2971,13 @@ document.addEventListener(
   true,
 );
 
-/* ── Изменение ширины столбцов drag-handle ───────────────────────────── */
-// Инициализирует drag-resize хэндлы на всех th таблицы
+/* ── Ресайз столбцов — через общий модуль ColResize (col_resize.js) ──── */
+// Старая initColumnResize() удалена: она создавала свои .resize-handle
+// на всех th (включая colspan-шапки) и писала ширину в th.style.width /
+// td.style.width, что конфликтовало с ColResize (работающим через
+// <colgroup>). Теперь единственный источник правды — ColResize.
 function initColumnResize() {
-  document.querySelectorAll('.pp-table th').forEach((th) => {
-    // Не добавляем повторно если хэндл уже есть
-    if (th.querySelector('.resize-handle')) return;
-    const handle = document.createElement('div');
-    handle.className = 'resize-handle';
-    th.appendChild(handle);
-
-    handle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      // Добавляем визуальный класс при начале перетаскивания
-      th.classList.add('resizing');
-      handle.classList.add('resizing');
-      const startX = e.pageX;
-      const startWidth = th.offsetWidth;
-      const colIndex = th.cellIndex;
-      const tblRows = th.closest('table').querySelectorAll('tbody tr');
-
-      // Перемещение мыши: меняем ширину колонки (с rAF throttle)
-      let _rafResize = null;
-      const onMouseMove = (ev) => {
-        if (_rafResize) return;
-        _rafResize = requestAnimationFrame(() => {
-          _rafResize = null;
-          const width = startWidth + (ev.pageX - startX);
-          if (width > 30) {
-            th.style.width = width + 'px';
-            th.style.minWidth = width + 'px';
-            tblRows.forEach((row) => {
-              if (row.cells[colIndex]) {
-                row.cells[colIndex].style.width = width + 'px';
-                row.cells[colIndex].style.minWidth = width + 'px';
-              }
-            });
-          }
-        });
-      };
-      // Отпустили кнопку мыши: снимаем визуальные классы
-      const onMouseUp = () => {
-        th.classList.remove('resizing');
-        handle.classList.remove('resizing');
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      };
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-    });
-  });
+  /* no-op, оставлен для совместимости с вызовом из init() */
 }
 
 /* ── Синхронизация фильтров ПП с URL ──────────────────────────────────── */

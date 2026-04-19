@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'29' }}">
+<link rel="stylesheet" href="{% static 'css/plan.css' %}?v={{ v|default:'30' }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -149,7 +149,7 @@
 <table id="mainTable" data-col-table="plan">
 <thead>
 <tr>
-  <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№</div></th>
+  <th class="th-num" rowspan="2" data-col-idx="0"><div class="th-inner" style="justify-content:center;">№<div class="col-resize" data-col="num"></div></div></th>
   <th id="th-project" rowspan="2" data-sort="project" data-col-idx="1"><div class="th-inner">Проект<button class="mf-trigger mf-icon" data-col="project" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="project"></div></div></th>
   <th id="th-type" rowspan="2" style="width:110px;min-width:110px;" data-sort="task_type" data-col-idx="2"><div class="th-inner">Код строки<button class="mf-trigger mf-icon" data-col="task_type" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="type"></div></div></th>
   <th id="th-wo" rowspan="2" data-sort="work_order" data-col-idx="3"><div class="th-inner">Наряд-заказ<button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="wo"></div></div></th>

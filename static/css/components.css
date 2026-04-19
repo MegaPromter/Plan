@@ -2208,12 +2208,18 @@ tbody tr:hover .row-action-btn {
 
 /* ── Ручка изменения ширины колонки таблицы (col_resize.js) ──────── */
 /* Работает во всех SPA-таблицах, у которых <table data-col-table="..."> */
+/* ВАЖНО: ручка НЕ должна вылезать за правый край своей <th>.
+   Каждая thead th в SPA-таблицах имеет position: sticky + z-index:10 и,
+   как следствие, создаёт собственный stacking context. Если ручка торчит
+   за правый край (right: -8px), следующая th того же z-index перекрывает
+   её по source order → клики по ручке ловит соседняя ячейка, ресайз не
+   работает. Поэтому держим ручку строго внутри своей th. */
 .col-resize {
   position: absolute;
-  right: -8px;
+  right: 0;
   top: 0;
   bottom: 0;
-  width: 16px;
+  width: 10px;
   z-index: 20;
   cursor: col-resize;
   flex-shrink: 0;

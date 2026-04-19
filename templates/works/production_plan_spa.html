@@ -198,7 +198,7 @@
       <thead>
         <!-- Первая строка заголовков (основные столбцы) -->
         <tr>
-          <th style="width:40px;" rowspan="2" data-col-idx="0">№</th>
+          <th style="width:56px;" rowspan="2" data-col-idx="0">№<div class="col-resize" data-col="num"></div></th>
           <th style="width:100px;" rowspan="2" data-sort="row_code" data-col-idx="1">Код строки <button class="mf-trigger mf-icon" data-col="row_code" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="row_code"></div></th>
           <th style="width:110px;" rowspan="2" data-sort="work_order" data-col-idx="2">Наряд-заказ <button class="mf-trigger mf-icon" data-col="work_order" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="work_order"></div></th>
           <th style="width:90px;" rowspan="2" data-sort="stage_num" data-col-idx="3">№ этапа <button class="mf-trigger mf-icon" data-col="stage_num" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="stage_num"></div></th>
@@ -215,14 +215,14 @@
         </tr>
         <!-- Вторая строка заголовков: детализация -->
         <tr>
-          <th style="width:300px;" data-sort="work_designation" data-col-idx="5">Обозначение <button class="mf-trigger mf-icon" data-col="work_designation" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:350px;" data-sort="work_name" data-col-idx="6">Наименование <button class="mf-trigger mf-icon" data-col="work_name" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:140px;" data-sort="date_start" data-col-idx="7">Начало <button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:140px;" data-sort="date_end" data-col-idx="8">Окончание <button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:100px;" data-sort="sheets_a4" data-col-idx="9">Ф, А4 <button class="mf-trigger mf-icon" data-col="sheets_a4" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:100px;" data-sort="norm" data-col-idx="10">Норматив <button class="mf-trigger mf-icon" data-col="norm" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:100px;" data-sort="coeff" data-col-idx="11">Коэфф <button class="mf-trigger mf-icon" data-col="coeff" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
-          <th style="width:130px;" data-sort="labor" data-col-idx="12">Плановая<br>трудоёмкость <button class="mf-trigger mf-icon" data-col="labor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button></th>
+          <th style="width:300px;" data-sort="work_designation" data-col-idx="5">Обозначение <button class="mf-trigger mf-icon" data-col="work_designation" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="work_designation"></div></th>
+          <th style="width:350px;" data-sort="work_name" data-col-idx="6">Наименование <button class="mf-trigger mf-icon" data-col="work_name" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="work_name"></div></th>
+          <th style="width:140px;" data-sort="date_start" data-col-idx="7">Начало <button class="mf-trigger mf-icon" data-col="date_start" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="date_start"></div></th>
+          <th style="width:140px;" data-sort="date_end" data-col-idx="8">Окончание <button class="mf-trigger mf-icon" data-col="date_end" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="date_end"></div></th>
+          <th style="width:100px;" data-sort="sheets_a4" data-col-idx="9">Ф, А4 <button class="mf-trigger mf-icon" data-col="sheets_a4" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="sheets_a4"></div></th>
+          <th style="width:100px;" data-sort="norm" data-col-idx="10">Норматив <button class="mf-trigger mf-icon" data-col="norm" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="norm"></div></th>
+          <th style="width:100px;" data-sort="coeff" data-col-idx="11">Коэфф <button class="mf-trigger mf-icon" data-col="coeff" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="coeff"></div></th>
+          <th style="width:130px;" data-sort="labor" data-col-idx="12">Плановая<br>трудоёмкость <button class="mf-trigger mf-icon" data-col="labor" onclick="event.stopPropagation();toggleMf(this)" title="Фильтр"><i class="fas fa-sliders-h"></i></button><div class="col-resize" data-col="labor"></div></th>
         </tr>
       </thead>
       <!-- Тело таблицы: заполняется функцией renderPPTable() -->
@@ -477,7 +477,7 @@
 }</script>
 <script src="{% static 'js/shared-toolbar.js' %}?v={{ v|default:'3' }}"></script>
 <script src="{% static 'js/gantt_common.js' %}?v={{ v|default:'2' }}"></script>
-<script src="{% static 'js/production_plan.js' %}?v={{ v|default:'30' }}"></script>
+<script src="{% static 'js/production_plan.js' %}?v={{ v|default:'31' }}"></script>
 <script src="{% static 'js/sandbox.js' %}?v={{ v|default:'8' }}"></script>
 <script src="{% static 'js/drag-sort.js' %}?v={{ v|default:'1' }}"></script>
 <script>

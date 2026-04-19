@@ -228,6 +228,15 @@
   function _freezeAllWidths(table) {
     const thead = table.tHead;
     if (!thead) return;
+    // Идемпотентность: если таблица уже заморожена — только синхронизируем
+    // размер, но НЕ измеряем заново. Повторное измерение опасно: после
+    // предыдущего прохода мы стёрли th.style.width, и offsetWidth теперь
+    // отражает уже растянутые (вследствие width:100% + min-width:sum)
+    // ширины колонок, которые могут отличаться от исходных в разы.
+    if (table.dataset.colFrozen === '1') {
+      _syncTableWidth(table);
+      return;
+    }
     // ШАГ 1. Снимаем ширины ДО переключения в fixed.
     // Приоритет: inline style на <th> → offsetWidth.
     // В fixed с пустым <colgroup> offsetWidth колонок «схлопывается»
@@ -250,35 +259,41 @@
     }
     // ШАГ 3. Записываем снятые ширины в <col> — только в те, где width пусто
     // (не затираем сохранённые из col_settings).
+    // И СРАЗУ стираем inline-width на <th>, чтобы в fixed-режиме <colgroup>
+    // был единственным источником ширин (иначе `th.style.width` перекрывает
+    // <col>, и ресайз через <col> визуально не работает — проверено).
+    // Идемпотентность обеспечивает флаг data-col-frozen: повторный freeze
+    // сразу уходит в return, не перезаписывая уже корректные ширины.
     for (const { th, w } of measurements) {
       const idx = _colIdxForTh(table, th);
       const col = colgroup.children[idx];
       if (col && !col.style.width) col.style.width = w + 'px';
-      // Снимаем inline width с <th> — иначе в fixed-режиме он может
-      // перекрыть ширину из <col>, и drag будет «не работать».
-      // В fixed единственный источник правды — <colgroup>.
       if (th.style.width) th.style.width = '';
     }
-    // ШАГ 4. Выставляем таблице явную ширину = сумма <col>.
-    // Без этого при `width: auto` + `min-width: 100%` браузер может
-    // перерасчитывать колонки сам (особенно когда содержимое длиннее
-    // заданной ширины), и <col>-значения превращаются в «подсказки».
+    table.dataset.colFrozen = '1';
+    // ШАГ 4. Выставляем таблице min-width = сумма <col>.
     _syncTableWidth(table);
   }
 
   /**
-   * Выставить на таблицу явный width.
+   * Зафиксировать суммарную ширину колонок как min-width таблицы.
    *
-   * Логика:
-   *   — сумма(cols) > ширина контейнера → скролл, table.width = сумма(cols);
-   *   — сумма(cols) ≤ ширина контейнера → table.width = ширина контейнера,
-   *     чтобы таблица растягивалась во всю ширину (иначе справа остаётся
-   *     пустое поле и sticky-колонка «Действия» не прилипает к правому краю).
+   * Почему именно min-width, а не width:
+   *   — При `table.style.width = sum(cols)` таблица становится жёсткой этой
+   *     ширины. Если контейнер шире (широкий монитор) — справа зияет пустое
+   *     поле, sticky-«Действия» визуально не прилипает к правому краю.
+   *   — При `table.style.width = max(sum, wrapW)` таблица всегда занимает
+   *     всю ширину контейнера, НО fixed-layout пропорционально делит
+   *     остаток между всеми колонками → drag одной колонки съедается
+   *     перерасчётом, ресайз визуально не работает.
+   *   — При `min-width: sum(cols)` + CSS `width: 100%` таблица занимает
+   *     всю ширину контейнера, ПРИ ЭТОМ drag одной колонки увеличивает
+   *     min-width, таблица расширяется, колонка реально становится шире.
    *
-   * Последняя колонка при этом получает «остаток» через CSS-логику fixed:
-   * колонки с явным width остаются жёсткими, а колонка без width занимает
-   * свободное место. Если ВСЕ колонки с width — браузер распределяет
-   * пропорционально, что тоже ок (визуально колонки становятся чуть шире).
+   * Если суммарная ширина > контейнера — сработает min-width, таблица
+   * выходит за пределы контейнера → появляется горизонтальный скролл
+   * (в точности как было раньше). sticky-колонка прилипает к краю
+   * контейнера при скролле.
    */
   function _syncTableWidth(table) {
     const colgroup = table.querySelector(':scope > colgroup');
@@ -289,18 +304,10 @@
       if (Number.isFinite(w) && w > 0) sum += w;
     }
     if (sum <= 0) return;
-    // Ширина скролл-контейнера (ближайший overflow-auto/scroll).
-    let wrapW = 0;
-    let el = table.parentElement;
-    while (el && el !== document.body) {
-      const ox = getComputedStyle(el).overflowX;
-      if (ox === 'auto' || ox === 'scroll') {
-        wrapW = el.clientWidth;
-        break;
-      }
-      el = el.parentElement;
-    }
-    table.style.width = Math.max(sum, wrapW || 0) + 'px';
+    table.style.minWidth = sum + 'px';
+    // Явный width оставляем пустым — CSS `width: 100%` даст растягивание
+    // до контейнера, а min-width не даст уйти ниже суммы колонок.
+    if (table.style.width) table.style.width = '';
   }
 
   function attachColResize(table, opts) {
